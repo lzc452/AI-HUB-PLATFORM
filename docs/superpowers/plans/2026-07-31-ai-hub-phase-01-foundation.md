@@ -179,7 +179,6 @@ export interface OutboxStorePort {
 - Create: `.editorconfig`
 - Create: `.gitattributes`
 - Create: `.gitignore`
-- Create: `.npmrc`
 - Create: `scripts/check-workspace.mjs`
 - Create: `scripts/check-workspace.test.mjs`
 
@@ -333,7 +332,7 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json vitest.workspace.ts eslint.config.mjs prettier.config.mjs .editorconfig .gitattributes .gitignore .npmrc scripts/check-workspace.mjs scripts/check-workspace.test.mjs
+git add package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json vitest.workspace.ts eslint.config.mjs prettier.config.mjs .editorconfig .gitattributes .gitignore scripts/check-workspace.mjs scripts/check-workspace.test.mjs
 git commit -m "chore: bootstrap pnpm workspace"
 ```
 
@@ -352,9 +351,10 @@ git commit -m "chore: bootstrap pnpm workspace"
 - Create: `packages/config/src/runtime-config.test.ts`
 - Create: `.env.example`
 - Modify: `.gitignore`
-- Modify: `.npmrc`
+- Delete: `.npmrc`
 - Modify: `package.json`
 - Modify: `pnpm-lock.yaml`
+- Modify: `pnpm-workspace.yaml`
 
 **Interfaces:**
 - Consumes: Zod.
@@ -412,9 +412,11 @@ Expected: FAIL because the package and `parseRuntimeConfig` do not exist.
 
 - [ ] **Step 3: Restore a deterministic Windows package environment**
 
-The default user-level pnpm store is read-only in the Windows sandbox, and Vitest 4.0.0 does not support the Vite 8 baseline used later in this phase. Apply the approved environment correction:
+The default user-level pnpm store is read-only in the Windows sandbox, and Vitest 4.0.0 does not support the Vite 8 baseline used later in this phase. pnpm 11 reads project settings from `pnpm-workspace.yaml`; `.npmrc` is reserved for registry and authentication settings. Apply the approved environment correction:
 
-- Add `store-dir=.pnpm-store` to `.npmrc`.
+- Add `nodeLinker: hoisted` and `storeDir: .pnpm-store` to `pnpm-workspace.yaml`.
+- Keep `allowBuilds.esbuild: true` in `pnpm-workspace.yaml`.
+- Delete `.npmrc`; do not move `engineStrict` into workspace settings because the approved Node 24.15.0 host exception must remain a warning while the project engine range stays `>=24.18.0 <25`.
 - Add `.pnpm-store/` to `.gitignore`.
 - Change the root `vitest` dev dependency to `^4.1.7`.
 - Resolve the absolute `node_modules` path and verify it is exactly inside this worktree before removing that generated directory.
@@ -424,11 +426,11 @@ The default user-level pnpm store is read-only in the Windows sandbox, and Vites
 Run:
 
 ```powershell
-corepack pnpm --config.node-linker=hoisted install --no-frozen-lockfile
-corepack pnpm --config.node-linker=hoisted exec vitest run packages/config/src/runtime-config.test.ts
+corepack pnpm install --no-frozen-lockfile
+corepack pnpm exec vitest run packages/config/src/runtime-config.test.ts
 ```
 
-Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is 4.1.7 or a compatible 4.1 patch and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
+Before installation, `corepack pnpm store path` must resolve inside this worktree without a CLI `--store-dir` override. Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is 4.1.7 or a compatible 4.1 patch and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
 
 - [ ] **Step 4: Create the contracts**
 
