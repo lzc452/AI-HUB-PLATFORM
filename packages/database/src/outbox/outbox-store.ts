@@ -52,7 +52,7 @@ export class OutboxStore implements OutboxStorePort {
         .selectFrom("outbox_events")
         .select("id")
         .where("status", "=", "pending")
-        .where("available_at", "<=", new Date())
+        .where(sql<boolean>`available_at <= now()`)
         .orderBy("available_at")
         .orderBy("created_at")
         .forUpdate()

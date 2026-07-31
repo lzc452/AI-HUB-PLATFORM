@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { sql } from "kysely";
 import { createDatabase, runMigrations } from "../index.js";
@@ -142,6 +142,45 @@ describe("OutboxStore", () => {
     expect(persisted.claimed_by).toBe("worker-skip-locked");
     expect(persisted.claimed_at).toBeInstanceOf(Date);
     expect(persisted.attempts).toBe(1);
+  });
+
+  it("uses database time when deciding whether an event is available", async () => {
+    await store.append({
+      eventType: "system.clock-skew.requested",
+      aggregateType: "system",
+      aggregateId: "clock-skew",
+      payload: { source: "clock-skew-test" },
+      idempotencyKey: "clock-skew-probe-1",
+    });
+    const snapshot = await db!
+      .selectFrom("outbox_events")
+      .select(["available_at", sql<Date>`now()`.as("database_now")])
+      .where("idempotency_key", "=", "clock-skew-probe-1")
+      .executeTakeFirstOrThrow();
+    const hostCutoff = new Date(snapshot.available_at.getTime() - 60_000);
+    expect(snapshot.available_at.getTime()).toBeLessThanOrEqual(
+      snapshot.database_now.getTime(),
+    );
+
+    vi.useFakeTimers({ now: hostCutoff });
+    let claimed: Awaited<ReturnType<OutboxStore["claim"]>>;
+    try {
+      claimed = await store.claim(100, "worker-clock-skew");
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(
+      claimed.some(
+        (candidate) => candidate.idempotencyKey === "clock-skew-probe-1",
+      ),
+      JSON.stringify({
+        availableAt: snapshot.available_at.toISOString(),
+        hostCutoff: hostCutoff.toISOString(),
+        databaseNow: snapshot.database_now.toISOString(),
+        claimedKeys: claimed.map((candidate) => candidate.idempotencyKey),
+      }),
+    ).toBe(true);
   });
 
   it("completes only a processing event and clears its claim", async () => {
