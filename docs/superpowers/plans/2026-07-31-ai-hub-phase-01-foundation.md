@@ -291,7 +291,7 @@ Run:
 
 ```powershell
 corepack use pnpm@11.0.0
-pnpm add -Dw typescript@~5.9.3 turbo@^2.5.8 vitest@^4.0.0 eslint@^9.39.1 typescript-eslint@^8.46.0 prettier@^3.6.2 dependency-cruiser@^18.1.0 @types/node@^24.10.0
+pnpm add -Dw typescript@~5.9.3 turbo@^2.5.8 vitest@^4.1.7 eslint@^9.39.1 typescript-eslint@^8.46.0 prettier@^3.6.2 dependency-cruiser@^18.1.0 @types/node@^24.10.0
 ```
 
 Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is created.
@@ -351,6 +351,10 @@ git commit -m "chore: bootstrap pnpm workspace"
 - Create: `packages/config/src/runtime-config.ts`
 - Create: `packages/config/src/runtime-config.test.ts`
 - Create: `.env.example`
+- Modify: `.gitignore`
+- Modify: `.npmrc`
+- Modify: `package.json`
+- Modify: `pnpm-lock.yaml`
 
 **Interfaces:**
 - Consumes: Zod.
@@ -406,7 +410,27 @@ pnpm --filter @ai-hub/config test
 
 Expected: FAIL because the package and `parseRuntimeConfig` do not exist.
 
-- [ ] **Step 3: Create the contracts**
+- [ ] **Step 3: Restore a deterministic Windows package environment**
+
+The default user-level pnpm store is read-only in the Windows sandbox, and Vitest 4.0.0 does not support the Vite 8 baseline used later in this phase. Apply the approved environment correction:
+
+- Add `store-dir=.pnpm-store` to `.npmrc`.
+- Add `.pnpm-store/` to `.gitignore`.
+- Change the root `vitest` dev dependency to `^4.1.7`.
+- Resolve the absolute `node_modules` path and verify it is exactly inside this worktree before removing that generated directory.
+- Do not remove or modify the user-level pnpm store.
+- Regenerate `pnpm-lock.yaml` from the manifests and install through the project-local store.
+
+Run:
+
+```powershell
+corepack pnpm --config.node-linker=hoisted install --no-frozen-lockfile
+corepack pnpm --config.node-linker=hoisted exec vitest run packages/config/src/runtime-config.test.ts
+```
+
+Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is 4.1.7 or a compatible 4.1 patch and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
+
+- [ ] **Step 4: Create the contracts**
 
 ```ts
 // packages/contracts/src/problem-details.ts
@@ -430,7 +454,7 @@ export interface HealthSnapshot {
 }
 ```
 
-- [ ] **Step 4: Implement fail-fast configuration parsing**
+- [ ] **Step 5: Implement fail-fast configuration parsing**
 
 ```ts
 // packages/config/src/runtime-config.ts
@@ -467,7 +491,7 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
 }
 ```
 
-- [ ] **Step 5: Create package manifests and exports**
+- [ ] **Step 6: Create package manifests and exports**
 
 Create manifests named `@ai-hub/contracts` and `@ai-hub/config`. Both packages must expose only `./src/index.ts` through `exports`, include `build`, `lint`, `test`, and `typecheck` scripts, and extend the workspace TypeScript settings. Export every public contract from the package index; do not expose deep import paths.
 
@@ -477,7 +501,7 @@ Run:
 pnpm --filter @ai-hub/config add zod@^4.1.0
 ```
 
-- [ ] **Step 6: Run tests and type checking**
+- [ ] **Step 7: Run tests and type checking**
 
 Run:
 
@@ -489,7 +513,7 @@ pnpm --filter @ai-hub/contracts typecheck
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```powershell
 git add packages/config packages/contracts .env.example pnpm-lock.yaml
@@ -990,7 +1014,7 @@ Run:
 
 ```powershell
 pnpm --filter @ai-hub/web add react@^19.2.0 react-dom@^19.2.0 react-router-dom@^7.9.0 antd@^6.5.0 @ant-design/icons@^6.1.0 @tanstack/react-query@^5.90.0 @ai-hub/contracts@workspace:* @ai-hub/ui@workspace:*
-pnpm --filter @ai-hub/web add -D vite@^8.1.0 @vitejs/plugin-react@^6.0.0 tailwindcss@^4.3.0 @tailwindcss/vite@^4.3.0 vitest@^4.0.0 @testing-library/react@^16.3.0 @testing-library/jest-dom@^6.9.0 jsdom@^27.0.0
+pnpm --filter @ai-hub/web add -D vite@^8.1.0 @vitejs/plugin-react@^6.0.0 tailwindcss@^4.3.0 @tailwindcss/vite@^4.3.0 vitest@^4.1.7 @testing-library/react@^16.3.0 @testing-library/jest-dom@^6.9.0 jsdom@^27.0.0
 pnpm --filter @ai-hub/ui add -D antd@^6.5.0
 ```
 
