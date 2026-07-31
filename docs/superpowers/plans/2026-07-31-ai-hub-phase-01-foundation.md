@@ -290,7 +290,7 @@ Run:
 
 ```powershell
 corepack use pnpm@11.0.0
-pnpm add -Dw typescript@~5.9.3 turbo@^2.5.8 vitest@^4.0.0 eslint@^9.39.1 typescript-eslint@^8.46.0 prettier@^3.6.2 dependency-cruiser@^17.3.0 @types/node@^24.10.0
+pnpm add -Dw typescript@~5.9.3 turbo@^2.5.8 vitest@^4.0.0 eslint@^9.39.1 typescript-eslint@^8.46.0 prettier@^3.6.2 dependency-cruiser@^18.1.0 @types/node@^24.10.0
 ```
 
 Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is created.
