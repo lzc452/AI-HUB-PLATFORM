@@ -60,8 +60,8 @@ const domainForbiddenRuntimePath = [
   "axios(?:/|$)|got(?:/|$)|undici(?:/|$)|node-fetch(?:/|$)|superagent(?:/|$)|",
   "@aws-sdk/|@azure/|@google-cloud/|@anthropic-ai/|",
   "openai(?:/|$)|stripe(?:/|$)|",
-  "[^/]*(?:-sdk|-client)(?:/|$)|",
-  "@[^/]+/[^/]*(?:-sdk|-client)(?:/|$)",
+  "[^/]*-sdk(?:/|$)|",
+  "@[^/]+/[^/]*-sdk(?:/|$)",
   ")",
 ].join("");
 
