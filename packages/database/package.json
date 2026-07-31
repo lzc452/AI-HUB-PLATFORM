@@ -1,0 +1,23 @@
+{
+  "name": "@ai-hub/database",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-hub/contracts": "workspace:*",
+    "kysely": "^0.28.8",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@ai-hub/testing": "workspace:*",
+    "@types/pg": "^8.15.0"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}
