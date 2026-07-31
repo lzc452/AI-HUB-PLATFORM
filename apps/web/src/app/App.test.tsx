@@ -38,6 +38,17 @@ describe("App", () => {
     expect(screen.getByRole("link", { name: /创新广场/ })).toBeInTheDocument();
   });
 
+  it("lets the responsive header size itself to its content", () => {
+    render(<App />);
+
+    expect(screen.getByRole("banner")).toHaveStyle({
+      background: "#fff",
+      height: "auto",
+      lineHeight: "normal",
+      padding: "0px",
+    });
+  });
+
   it("keeps the skip target focusable for keyboard users", () => {
     render(<App />);
 

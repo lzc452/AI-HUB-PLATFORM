@@ -181,7 +181,15 @@ function AppShell() {
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
-      <Header className="h-auto border-b border-solid border-[#d9d9d9] bg-white px-0 py-0">
+      <Header
+        className="border-b border-solid border-[#d9d9d9]"
+        style={{
+          background: "#fff",
+          height: "auto",
+          lineHeight: "normal",
+          padding: 0,
+        }}
+      >
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>

@@ -53,6 +53,50 @@ async function readInstalledPackageJson(packageName, packageDirectory) {
   );
 }
 
+async function resolveInstalledPackage(
+  packageName,
+  packageDirectory,
+  optional = false,
+) {
+  const workspaceRoot = path.resolve(".");
+  let searchDirectory = path.resolve(packageDirectory);
+
+  while (searchDirectory.startsWith(workspaceRoot)) {
+    const packageJsonPath = path.join(
+      searchDirectory,
+      "node_modules",
+      packageName,
+      "package.json",
+    );
+
+    try {
+      return {
+        packageDirectory: path.dirname(packageJsonPath),
+        packageJson: await readJson(packageJsonPath),
+        packageJsonPath,
+      };
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw error;
+      }
+    }
+
+    if (searchDirectory === workspaceRoot) {
+      break;
+    }
+
+    searchDirectory = path.dirname(searchDirectory);
+  }
+
+  if (optional) {
+    return null;
+  }
+
+  throw new Error(
+    `Could not resolve installed runtime dependency ${packageName} from ${packageDirectory}`,
+  );
+}
+
 test("direct third-party dependencies support the Node 18.18 platform baseline", async () => {
   const rootPackageJson = await readJson("package.json");
   const rootTsconfig = await readJson("tsconfig.base.json");
@@ -113,5 +157,92 @@ test("direct third-party dependencies support the Node 18.18 platform baseline",
     incompatibilities,
     [],
     `all direct third-party dependencies must support Node ${minimumSupportedNodeVersion}+`,
+  );
+});
+
+test("installed runtime dependency graph supports the Node 18.18 platform baseline", async () => {
+  const packageJsonPaths = [
+    "package.json",
+    ...(
+      await Promise.all(
+        workspaceDirectories.map((directory) =>
+          findWorkspacePackageJsonPaths(directory),
+        ),
+      )
+    ).flat(),
+  ];
+  const queue = [];
+
+  for (const packageJsonPath of packageJsonPaths) {
+    const packageJson = await readJson(packageJsonPath);
+
+    for (const dependencySection of ["dependencies", "devDependencies"]) {
+      for (const [packageName, version] of Object.entries(
+        packageJson[dependencySection] ?? {},
+      )) {
+        if (!version.startsWith("workspace:")) {
+          queue.push({
+            packageDirectory: path.dirname(packageJsonPath),
+            packageName,
+            requiredBy: packageJsonPath,
+          });
+        }
+      }
+    }
+  }
+
+  const incompatibilities = [];
+  const visited = new Set();
+
+  while (queue.length > 0) {
+    const dependency = queue.shift();
+    const installed = await resolveInstalledPackage(
+      dependency.packageName,
+      dependency.packageDirectory,
+      dependency.optional,
+    );
+
+    if (!installed || visited.has(installed.packageJsonPath)) {
+      continue;
+    }
+
+    visited.add(installed.packageJsonPath);
+
+    const nodeEngineRange = installed.packageJson.engines?.node;
+    if (
+      nodeEngineRange &&
+      !semver.satisfies(minimumSupportedNodeVersion, nodeEngineRange)
+    ) {
+      incompatibilities.push(
+        `${dependency.packageName}@${installed.packageJson.version} declares ${nodeEngineRange} (required by ${dependency.requiredBy})`,
+      );
+    }
+
+    for (const packageName of Object.keys(
+      installed.packageJson.dependencies ?? {},
+    )) {
+      queue.push({
+        packageDirectory: installed.packageDirectory,
+        packageName,
+        requiredBy: `${dependency.packageName}@${installed.packageJson.version}`,
+      });
+    }
+
+    for (const packageName of Object.keys(
+      installed.packageJson.optionalDependencies ?? {},
+    )) {
+      queue.push({
+        optional: true,
+        packageDirectory: installed.packageDirectory,
+        packageName,
+        requiredBy: `${dependency.packageName}@${installed.packageJson.version}`,
+      });
+    }
+  }
+
+  assert.deepEqual(
+    incompatibilities,
+    [],
+    `all installed runtime dependencies must support Node ${minimumSupportedNodeVersion}+`,
   );
 });

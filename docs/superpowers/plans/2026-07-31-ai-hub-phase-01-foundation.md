@@ -1022,7 +1022,7 @@ Run:
 
 ```powershell
 pnpm --filter @ai-hub/web add react@^19.2.0 react-dom@^19.2.0 react-router-dom@6.30.4 antd@^6.5.0 @ant-design/icons@^6.1.0 @tanstack/react-query@^5.90.0 @ai-hub/contracts@workspace:* @ai-hub/ui@workspace:*
-pnpm --filter @ai-hub/web add -D vite@6.4.3 @vitejs/plugin-react@^4.7.0 tailwindcss@^4.3.0 @tailwindcss/vite@^4.3.0 vitest@3.2.4 @testing-library/react@^16.3.0 @testing-library/jest-dom@6.9.1 jsdom@26.1.0
+pnpm --filter @ai-hub/web add -D vite@6.4.3 @vitejs/plugin-react@^4.7.0 tailwindcss@4.1.18 @tailwindcss/vite@4.1.18 vitest@3.2.4 @testing-library/react@^16.3.0 @testing-library/jest-dom@6.9.1 jsdom@26.1.0
 pnpm --filter @ai-hub/ui add -D antd@^6.5.0
 ```
 
