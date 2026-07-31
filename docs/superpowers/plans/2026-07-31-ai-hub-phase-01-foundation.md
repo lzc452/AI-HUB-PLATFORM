@@ -248,7 +248,7 @@ Expected: FAIL because the root workspace files do not exist.
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24.18.0 <25"
+    "node": ">=18"
   },
   "scripts": {
     "build": "turbo run build",
@@ -417,7 +417,7 @@ The default user-level pnpm store is read-only in the Windows sandbox, and Vites
 
 - Add `nodeLinker: hoisted` and `storeDir: .pnpm-store` to `pnpm-workspace.yaml`.
 - Keep `allowBuilds.esbuild: true` in `pnpm-workspace.yaml`.
-- Delete `.npmrc`; do not move `engineStrict` into workspace settings because the approved Node 24.15.0 host exception must remain a warning while the project engine range stays `>=24.18.0 <25`.
+- Delete `.npmrc`; do not move `engineStrict` into workspace settings. The project accepts Node 18 or newer, while CI and container verification continue to use the pinned Phase 1 Node version.
 - Add `.pnpm-store/` to `.gitignore`.
 - Change the root `vitest` dev dependency to `^4.1.7`.
 - Resolve the absolute `node_modules` path and verify it is exactly inside this worktree before removing that generated directory.
