@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc --project tsconfig.build.json",
     "dev": "node --import tsx src/main.ts",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",

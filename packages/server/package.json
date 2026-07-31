@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc --project tsconfig.build.json",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src",
     "test": "vitest run --passWithNoTests",

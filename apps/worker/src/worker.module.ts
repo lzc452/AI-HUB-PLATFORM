@@ -3,10 +3,15 @@ import { createDatabase, OutboxStore } from "@ai-hub/database";
 import {
   HealthModule,
   OutboxWorker,
+  type OutboxHandler,
   type OutboxHandlerMap,
 } from "@ai-hub/server";
 
-const outboxHandlers: OutboxHandlerMap = {};
+export const systemProbeRequestedHandler: OutboxHandler = async () => {};
+
+export const outboxHandlers: OutboxHandlerMap = {
+  "system.probe.requested": systemProbeRequestedHandler,
+};
 
 const createWorkerDatabaseCheck = (databaseUrl: string) => {
   return async () => {
