@@ -17,22 +17,53 @@ function directoriesIn(directory) {
     .map((entry) => entry.name);
 }
 
+function flattenExportTargets(value) {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap(flattenExportTargets);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.values(value).flatMap(flattenExportTargets);
+  }
+
+  return [];
+}
+
+function sourceExportPattern(packageName, target) {
+  const sourcePath = `packages/${packageName}/${target.slice(2)}`;
+
+  return `^${escapeRegularExpression(sourcePath).replace(/\\\*/g, ".*")}$`;
+}
+
 function exportedSourcePatterns(packageName) {
   const packageJsonPath = path.join("packages", packageName, "package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-  const exportTargets = Object.values(packageJson.exports ?? {}).flatMap(
-    (target) => (typeof target === "string" ? [target] : Object.values(target)),
-  );
+  const exportTargets = flattenExportTargets(packageJson.exports);
 
-  return exportTargets
-    .filter(
-      (target) => typeof target === "string" && target.startsWith("./src/"),
-    )
-    .map(
-      (target) =>
-        `^packages/${escapeRegularExpression(packageName)}/${escapeRegularExpression(target.slice(2))}$`,
-    );
+  return [
+    ...new Set(
+      exportTargets
+        .filter((target) => target.startsWith("./src/"))
+        .map((target) => sourceExportPattern(packageName, target)),
+    ),
+  ];
 }
+
+const domainForbiddenRuntimePath = [
+  "^node_modules/(?:",
+  "@nestjs/|",
+  "kysely(?:/|$)|pg(?:/|$)|",
+  "axios(?:/|$)|got(?:/|$)|undici(?:/|$)|node-fetch(?:/|$)|superagent(?:/|$)|",
+  "@aws-sdk/|@azure/|@google-cloud/|@anthropic-ai/|",
+  "openai(?:/|$)|stripe(?:/|$)|",
+  "[^/]*(?:-sdk|-client)(?:/|$)|",
+  "@[^/]+/[^/]*(?:-sdk|-client)(?:/|$)",
+  ")",
+].join("");
 
 const packageDeepImportRules = directoriesIn("packages").map((packageName) => {
   const escapedPackageName = escapeRegularExpression(packageName);
@@ -87,17 +118,7 @@ module.exports = {
       comment:
         "Server domain code must remain independent from frameworks, persistence, HTTP clients, and external SDKs.",
       from: { path: "^packages/server/src/(?:domain|.{1,240}/domain)/" },
-      to: {
-        dependencyTypes: [
-          "npm",
-          "npm-bundled",
-          "npm-dev",
-          "npm-no-pkg",
-          "npm-optional",
-          "npm-peer",
-          "npm-unknown",
-        ],
-      },
+      to: { path: domainForbiddenRuntimePath },
     },
     {
       name: "server-domain-does-not-use-node-http",
