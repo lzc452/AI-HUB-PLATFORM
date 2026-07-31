@@ -1190,10 +1190,12 @@ git commit -m "chore: enforce module boundaries"
 - Create: `infra/docker/web.Dockerfile`
 - Create: `infra/docker/worker.Dockerfile`
 - Create: `infra/docker/nginx.conf`
+- Create: `infra/garage/garage.toml`
+- Create: `docs/adr/0003-garage-object-storage.md`
 - Create: `docs/development/windows-docker-compose.md`
 
 **Interfaces:**
-- Consumes: API, worker, web, PostgreSQL, MinIO, ClamAV.
+- Consumes: API, worker, web, PostgreSQL, Garage, ClamAV.
 - Produces: `docker compose -f compose.yaml -f compose.dev.yaml up`.
 
 - [ ] **Step 1: Write an invalid Compose reference**
@@ -1215,8 +1217,8 @@ Expected: FAIL because `missing-service` is undefined.
 `compose.yaml` must define:
 
 - `postgres` using `postgres:18.4-bookworm`.
-- `minio` using `quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z`.
-- `clamav` using `clamav/clamav:1.4_base`.
+- `garage` using `dxflrs/garage:v2.3.0` as accepted by ADR 0003.
+- `clamav` using `clamav/clamav:1.4.5-debian`.
 - `api`, `worker`, `web`, and `proxy`.
 - Named volumes for database, object storage, and virus definitions.
 - Health checks for all dependency containers.
@@ -1226,11 +1228,11 @@ Expected: FAIL because `missing-service` is undefined.
 Before writing the Compose file, run:
 
 ```powershell
-docker manifest inspect quay.io/minio/minio:RELEASE.2025-10-15T17-29-55Z
-docker manifest inspect clamav/clamav:1.4_base
+docker manifest inspect dxflrs/garage:v2.3.0
+docker manifest inspect clamav/clamav:1.4.5-debian
 ```
 
-Expected: both manifests resolve. If either image is unavailable, stop this task, select a maintained S3-compatible or malware-scanner image through an ADR, and update this plan before implementation. Do not silently substitute `latest`.
+Expected: both replacement manifests resolve. The original MinIO manifest failed with `no such manifest`; ADR 0003 records the required replacement decision. If either replacement image is unavailable, stop and amend the ADR before implementation. Do not silently substitute `latest`.
 
 - [ ] **Step 4: Implement the development override**
 
@@ -1238,7 +1240,7 @@ Expected: both manifests resolve. If either image is unavailable, stop this task
 
 - Bind source directories for hot reload.
 - Expose proxy only on `127.0.0.1:8080`.
-- Expose PostgreSQL and MinIO admin ports only on `127.0.0.1`.
+- Expose PostgreSQL plus Garage S3/admin ports only on `127.0.0.1`.
 - Use development credentials from `.env`.
 - Start Vite, Nest watch mode, and worker watch mode.
 - Remove the temporary `missing-service`.
