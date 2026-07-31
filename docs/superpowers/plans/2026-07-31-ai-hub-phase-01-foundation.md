@@ -80,6 +80,7 @@ packages/
   contracts/
     package.json
     src/index.ts
+    src/outbox.ts
     src/problem-details.ts
     src/system/health.ts
   database/
@@ -527,6 +528,8 @@ git commit -m "feat: add shared contracts and runtime config"
 ### Task 3: Establish PostgreSQL, migrations, and the outbox store
 
 **Files:**
+- Create: `packages/contracts/src/outbox.ts`
+- Modify: `packages/contracts/src/index.ts`
 - Create: `packages/database/package.json`
 - Create: `packages/database/src/database.ts`
 - Create: `packages/database/src/index.ts`
@@ -542,6 +545,7 @@ git commit -m "feat: add shared contracts and runtime config"
 **Interfaces:**
 - Consumes: `RuntimeConfig.databaseUrl`.
 - Produces: `createDatabase(databaseUrl)`, `runMigrations(db)`, `OutboxStore` implementing `OutboxStorePort`.
+- Publishes `OutboxEventInput`, `ClaimedOutboxEvent`, and `OutboxStorePort` from `@ai-hub/contracts`, using the exact stable interface definitions declared above.
 
 - [ ] **Step 1: Write a failing outbox integration test**
 
@@ -601,6 +605,8 @@ Expected: FAIL because database and testing packages do not exist.
 - [ ] **Step 3: Create package manifests and install database tooling**
 
 Create manifests named `@ai-hub/database` and `@ai-hub/testing`. Both packages expose only `./src/index.ts`, use the common `build`, `lint`, `test`, and `typecheck` scripts, and depend on workspace packages through `workspace:*`.
+
+Create `packages/contracts/src/outbox.ts` with the exact phase-stable `OutboxEventInput`, `ClaimedOutboxEvent`, and `OutboxStorePort` interfaces, and export them through `packages/contracts/src/index.ts`. `OutboxStore` must import and implement `OutboxStorePort` through the `@ai-hub/contracts` package export.
 
 Run:
 
@@ -695,7 +701,7 @@ Expected: both runs PASS without leaked containers or ports.
 - [ ] **Step 9: Commit**
 
 ```powershell
-git add packages/database packages/testing pnpm-lock.yaml
+git add packages/contracts packages/database packages/testing pnpm-lock.yaml
 git commit -m "feat: add postgres migration and outbox foundation"
 ```
 
