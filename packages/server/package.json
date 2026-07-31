@@ -1,0 +1,22 @@
+{
+  "name": "@ai-hub/server",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-hub/contracts": "workspace:*",
+    "@ai-hub/database": "workspace:*",
+    "@nestjs/common": "11.1.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  }
+}
