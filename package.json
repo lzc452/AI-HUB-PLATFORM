@@ -1,0 +1,29 @@
+{
+  "name": "ai-hub-platform",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.18.0 <25"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "boundaries": "dependency-cruiser apps packages --config dependency-cruiser.cjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "verify": "node scripts/verify.mjs"
+  },
+  "packageManager": "pnpm@11.0.0+sha512.5bd187500e49cc6c3d891d973b432c02b844a5eb7209172c90a517a3ef4f579ed5c23d409b699e6a9dc418ff7b2b1890e63f6d74f1d3fc49848f37779c89c84c",
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "dependency-cruiser": "18.1.0",
+    "eslint": "9.39.1",
+    "prettier": "3.6.2",
+    "turbo": "2.5.8",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "8.46.0",
+    "vitest": "4.0.0"
+  }
+}
