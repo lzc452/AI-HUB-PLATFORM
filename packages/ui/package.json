@@ -1,0 +1,20 @@
+{
+  "name": "@ai-hub/ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "devDependencies": {
+    "antd": "^6.5.0"
+  },
+  "peerDependencies": {
+    "antd": "^6.5.0"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  }
+}
