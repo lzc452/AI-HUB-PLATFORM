@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "testcontainers": "^11.7.0"
+    "testcontainers": "10.18.0"
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",

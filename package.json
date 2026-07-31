@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=18.18.0"
   },
   "scripts": {
     "build": "turbo run build",
+    "compat:node": "node --test scripts/check-web-tooling-node-compat.test.mjs",
     "boundaries": "dependency-cruiser apps packages --config dependency-cruiser.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -15,15 +16,17 @@
     "typecheck": "turbo run typecheck",
     "verify": "node scripts/verify.mjs"
   },
-  "packageManager": "pnpm@11.0.0+sha512.5bd187500e49cc6c3d891d973b432c02b844a5eb7209172c90a517a3ef4f579ed5c23d409b699e6a9dc418ff7b2b1890e63f6d74f1d3fc49848f37779c89c84c",
+  "packageManager": "pnpm@10.34.5",
   "devDependencies": {
-    "@types/node": "24.10.0",
-    "dependency-cruiser": "18.1.0",
+    "@types/node": "18.19.130",
+    "dependency-cruiser": "16.10.4",
     "eslint": "9.39.1",
+    "jsdom": "26.1.0",
     "prettier": "3.6.2",
     "turbo": "2.5.8",
     "typescript": "~5.9.3",
+    "semver": "7.7.4",
     "typescript-eslint": "8.46.0",
-    "vitest": "^4.1.7"
+    "vitest": "3.2.4"
   }
 }

@@ -6,7 +6,7 @@
 
 **Architecture:** React/Vite Web、NestJS API 和 NestJS worker 作为三个运行入口，共享 contracts、config、database、server、ui 和 testing package。PostgreSQL 是主数据源，后台可靠任务从事务发件箱开始；所有进程提供结构化日志、追踪 ID 和健康检查。
 
-**Tech Stack:** Node.js 24 LTS、pnpm 11、TypeScript 5.9、React 19.2、Vite 8.1、Ant Design 6、Tailwind CSS 4、NestJS 11、PostgreSQL 18、Kysely、Zod、Vitest、Testing Library、Supertest、Docker Compose。
+**Tech Stack:** Node.js >=18.18（Node.js 24 LTS 作为首选 CI/容器基线）、pnpm 10、TypeScript 5.9、React 19.2、React Router 6.30、Vite 6.4、Ant Design 6、Tailwind CSS 4、NestJS 10.4、PostgreSQL 18、Kysely 0.28.2、Zod、Vitest 3.2、Testing Library、Supertest、Docker Compose。
 
 ## Global Constraints
 
@@ -248,7 +248,7 @@ Expected: FAIL because the root workspace files do not exist.
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=18.18.0"
   },
   "scripts": {
     "build": "turbo run build",
@@ -290,8 +290,8 @@ Create `turbo.json`:
 Run:
 
 ```powershell
-corepack use pnpm@11.0.0
-pnpm add -Dw typescript@~5.9.3 turbo@^2.5.8 vitest@^4.1.7 eslint@^9.39.1 typescript-eslint@^8.46.0 prettier@^3.6.2 dependency-cruiser@^18.1.0 @types/node@^24.10.0
+corepack use pnpm@10.34.5
+pnpm add -Dw typescript@~5.9.3 turbo@2.5.8 vitest@3.2.4 jsdom@26.1.0 eslint@9.39.1 typescript-eslint@8.46.0 prettier@3.6.2 dependency-cruiser@16.10.4 @types/node@18.19.130 semver@7.7.4
 ```
 
 Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is created.
@@ -311,7 +311,7 @@ Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is cr
     "verbatimModuleSyntax": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "target": "ES2023",
+    "target": "ES2022",
     "skipLibCheck": true
   }
 }
@@ -413,13 +413,13 @@ Expected: FAIL because the package and `parseRuntimeConfig` do not exist.
 
 - [ ] **Step 3: Restore a deterministic Windows package environment**
 
-The default user-level pnpm store is read-only in the Windows sandbox, and Vitest 4.0.0 does not support the Vite 8 baseline used later in this phase. pnpm 11 reads project settings from `pnpm-workspace.yaml`; `.npmrc` is reserved for registry and authentication settings. Apply the approved environment correction:
+The default user-level pnpm store is read-only in the Windows sandbox. pnpm 10 reads project settings from `pnpm-workspace.yaml`; `.npmrc` is reserved for registry and authentication settings. Apply the approved environment correction:
 
 - Add `nodeLinker: hoisted` and `storeDir: .pnpm-store` to `pnpm-workspace.yaml`.
 - Keep `allowBuilds.esbuild: true` in `pnpm-workspace.yaml`.
-- Delete `.npmrc`; do not move `engineStrict` into workspace settings. The project accepts Node 18 or newer, while CI and container verification continue to use the pinned Phase 1 Node version.
+- Delete `.npmrc`; do not move `engineStrict` into workspace settings. The project accepts Node 18.18 or newer, while CI and container verification continue to prefer the pinned Phase 1 Node 24 version.
 - Add `.pnpm-store/` to `.gitignore`.
-- Change the root `vitest` dev dependency to `^4.1.7`.
+- Keep the root `vitest` dev dependency pinned to `3.2.4`, the latest compatible line for the Node 18 baseline.
 - Resolve the absolute `node_modules` path and verify it is exactly inside this worktree before removing that generated directory.
 - Do not remove or modify the user-level pnpm store.
 - Regenerate `pnpm-lock.yaml` from the manifests and install through the project-local store.
@@ -431,7 +431,7 @@ corepack pnpm install --no-frozen-lockfile
 corepack pnpm exec vitest run packages/config/src/runtime-config.test.ts
 ```
 
-Before installation, `corepack pnpm store path` must resolve inside this worktree without a CLI `--store-dir` override. Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is 4.1.7 or a compatible 4.1 patch and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
+Before installation, `corepack pnpm store path` must resolve inside this checkout without a CLI `--store-dir` override. Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is `3.2.4` and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
 
 - [ ] **Step 4: Create the contracts**
 
@@ -611,9 +611,9 @@ Create `packages/contracts/src/outbox.ts` with the exact phase-stable `OutboxEve
 Run:
 
 ```powershell
-pnpm --filter @ai-hub/database add kysely@^0.28.8 pg@^8.16.0 @ai-hub/contracts@workspace:*
+pnpm --filter @ai-hub/database add kysely@0.28.2 pg@^8.16.0 @ai-hub/contracts@workspace:*
 pnpm --filter @ai-hub/database add -D @types/pg@^8.15.0 @ai-hub/testing@workspace:*
-pnpm --filter @ai-hub/testing add testcontainers@^11.7.0
+pnpm --filter @ai-hub/testing add testcontainers@10.18.0
 ```
 
 - [ ] **Step 4: Define the initial schema**
@@ -791,10 +791,10 @@ Create manifests named `@ai-hub/api`, `@ai-hub/worker`, and `@ai-hub/server`. AP
 Run:
 
 ```powershell
-pnpm --filter @ai-hub/server add @nestjs/common@^11.1.0 reflect-metadata@^0.2.2 rxjs@^7.8.2 @ai-hub/contracts@workspace:* @ai-hub/database@workspace:*
-pnpm --filter @ai-hub/api add @nestjs/common@^11.1.0 @nestjs/core@^11.1.0 @nestjs/platform-express@^11.1.0 reflect-metadata@^0.2.2 rxjs@^7.8.2 @ai-hub/config@workspace:* @ai-hub/database@workspace:* @ai-hub/server@workspace:*
-pnpm --filter @ai-hub/api add -D @nestjs/testing@^11.1.0 supertest@^7.1.0 @types/supertest@^6.0.3
-pnpm --filter @ai-hub/worker add @nestjs/common@^11.1.0 @nestjs/core@^11.1.0 reflect-metadata@^0.2.2 rxjs@^7.8.2 @ai-hub/config@workspace:* @ai-hub/database@workspace:* @ai-hub/server@workspace:*
+pnpm --filter @ai-hub/server add @nestjs/common@10.4.22 reflect-metadata@0.2.2 rxjs@7.8.2 @ai-hub/contracts@workspace:* @ai-hub/database@workspace:*
+pnpm --filter @ai-hub/api add @nestjs/common@10.4.22 @nestjs/core@10.4.22 @nestjs/platform-express@10.4.22 reflect-metadata@0.2.2 rxjs@7.8.2 @ai-hub/config@workspace:* @ai-hub/database@workspace:* @ai-hub/server@workspace:*
+pnpm --filter @ai-hub/api add -D @nestjs/testing@10.4.22 supertest@7.1.0 @types/supertest@6.0.3
+pnpm --filter @ai-hub/worker add @nestjs/common@10.4.22 @nestjs/core@10.4.22 reflect-metadata@0.2.2 rxjs@7.8.2 @ai-hub/config@workspace:* @ai-hub/database@workspace:* @ai-hub/server@workspace:*
 ```
 
 - [ ] **Step 4: Implement `HealthReader`**
@@ -1021,8 +1021,8 @@ Create `apps/web/package.json` with name `@ai-hub/web`, `private: true`, and `de
 Run:
 
 ```powershell
-pnpm --filter @ai-hub/web add react@^19.2.0 react-dom@^19.2.0 react-router-dom@^7.9.0 antd@^6.5.0 @ant-design/icons@^6.1.0 @tanstack/react-query@^5.90.0 @ai-hub/contracts@workspace:* @ai-hub/ui@workspace:*
-pnpm --filter @ai-hub/web add -D vite@^8.1.0 @vitejs/plugin-react@^6.0.0 tailwindcss@^4.3.0 @tailwindcss/vite@^4.3.0 vitest@^4.1.7 @testing-library/react@^16.3.0 @testing-library/jest-dom@^6.9.0 jsdom@^27.0.0
+pnpm --filter @ai-hub/web add react@^19.2.0 react-dom@^19.2.0 react-router-dom@6.30.4 antd@^6.5.0 @ant-design/icons@^6.1.0 @tanstack/react-query@^5.90.0 @ai-hub/contracts@workspace:* @ai-hub/ui@workspace:*
+pnpm --filter @ai-hub/web add -D vite@6.4.3 @vitejs/plugin-react@^4.7.0 tailwindcss@^4.3.0 @tailwindcss/vite@^4.3.0 vitest@3.2.4 @testing-library/react@^16.3.0 @testing-library/jest-dom@6.9.1 jsdom@26.1.0
 pnpm --filter @ai-hub/ui add -D antd@^6.5.0
 ```
 
