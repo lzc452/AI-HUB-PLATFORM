@@ -185,7 +185,8 @@ export interface OutboxStorePort {
 
 **Interfaces:**
 - Consumes: Node.js built-in test runner.
-- Produces: root commands `format:check`, `lint`, `typecheck`, `test`, `build`, `boundaries`, `verify`.
+- Produces: runnable root commands `format:check`, `lint`, `typecheck`, `test`, and `build`.
+- Declares reserved root command names `boundaries` and `verify`; `boundaries` becomes runnable in Task 7 and `verify` becomes runnable in Task 10. Do not create placeholder implementations in Task 1.
 
 - [ ] **Step 1: Write the failing repository-structure test**
 
