@@ -2,6 +2,7 @@ import { Module, type OnApplicationShutdown } from "@nestjs/common";
 import { createDatabase, OutboxStore } from "@ai-hub/database";
 import {
   HealthModule,
+  ObservabilityMetrics,
   OutboxWorker,
   type OutboxHandler,
   type OutboxHandlerMap,
@@ -41,7 +42,10 @@ export class WorkerOutboxRuntime implements OnApplicationShutdown {
 
 @Module({})
 export class WorkerModule {
-  static register(databaseUrl: string) {
+  static register(
+    databaseUrl: string,
+    metrics: ObservabilityMetrics = new ObservabilityMetrics(),
+  ) {
     return {
       module: WorkerModule,
       imports: [HealthModule.register(createWorkerDatabaseCheck(databaseUrl))],
@@ -53,6 +57,8 @@ export class WorkerModule {
             const outboxWorker = new OutboxWorker(
               new OutboxStore(database),
               outboxHandlers,
+              undefined,
+              metrics,
             );
             return new WorkerOutboxRuntime(database, outboxWorker);
           },

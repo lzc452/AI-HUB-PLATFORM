@@ -7,6 +7,7 @@ const schema = z.object({
   COOKIE_SECRET: z.string().min(32),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).default(1000),
+  WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
 });
 
 export interface RuntimeConfig {
@@ -16,6 +17,7 @@ export interface RuntimeConfig {
   cookieSecret: string;
   logLevel: "debug" | "info" | "warn" | "error";
   outboxPollIntervalMs: number;
+  workerMetricsPort: number;
 }
 
 export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
@@ -27,5 +29,6 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     cookieSecret: value.COOKIE_SECRET,
     logLevel: value.LOG_LEVEL,
     outboxPollIntervalMs: value.OUTBOX_POLL_INTERVAL_MS,
+    workerMetricsPort: value.WORKER_METRICS_PORT,
   };
 }

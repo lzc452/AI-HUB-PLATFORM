@@ -1,5 +1,10 @@
 import type { ClaimedOutboxEvent, OutboxStorePort } from "@ai-hub/contracts";
 
+import type {
+  WorkerHandlerOutcome,
+  WorkerMetricsPort,
+} from "../observability/metrics.js";
+
 const OUTBOX_BATCH_SIZE = 20;
 const RETRY_DELAY_MS = 1_000;
 
@@ -13,6 +18,7 @@ export class OutboxWorker {
     private readonly store: OutboxStore,
     private readonly handlers: OutboxHandlerMap,
     private readonly now: () => Date = () => new Date(),
+    private readonly metrics?: WorkerMetricsPort,
   ) {}
 
   public async runOnce(workerId: string): Promise<number> {
@@ -30,6 +36,8 @@ export class OutboxWorker {
     const errorCode = handler
       ? "OUTBOX_HANDLER_FAILED"
       : "OUTBOX_HANDLER_MISSING";
+    const startedAt = process.hrtime.bigint();
+    let outcome: WorkerHandlerOutcome = handler ? "failed" : "missing";
 
     try {
       if (!handler) {
@@ -38,6 +46,7 @@ export class OutboxWorker {
 
       await handler(event);
       await this.store.complete(event.id);
+      outcome = "completed";
     } catch {
       try {
         const nextAvailableAt = new Date(this.now().getTime() + RETRY_DELAY_MS);
@@ -45,6 +54,12 @@ export class OutboxWorker {
       } catch {
         // A store failure must not prevent the rest of the claimed batch running.
       }
+    } finally {
+      this.metrics?.recordWorkerHandler(
+        event.eventType,
+        Number(process.hrtime.bigint() - startedAt) / 1_000_000_000,
+        outcome,
+      );
     }
   }
 }

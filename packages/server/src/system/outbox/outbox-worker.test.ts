@@ -146,4 +146,54 @@ describe("OutboxWorker", () => {
 
     expect(store.claim).toHaveBeenCalledWith(20, "worker-a");
   });
+
+  it("records successful and failed handler outcomes", async () => {
+    const store = {
+      claim: vi.fn().mockResolvedValue([
+        {
+          id: "event-1",
+          eventType: "system.probe.requested",
+          aggregateType: "system",
+          aggregateId: "probe",
+          payload: {},
+          idempotencyKey: "probe-1",
+          attempts: 1,
+        },
+        {
+          id: "event-2",
+          eventType: "system.failed",
+          aggregateType: "system",
+          aggregateId: "failed",
+          payload: {},
+          idempotencyKey: "failed-1",
+          attempts: 1,
+        },
+      ]),
+      complete: vi.fn().mockResolvedValue(undefined),
+      fail: vi.fn().mockResolvedValue(undefined),
+    };
+    const metrics = { recordWorkerHandler: vi.fn() };
+    const worker = new OutboxWorker(
+      store,
+      {
+        "system.probe.requested": vi.fn().mockResolvedValue(undefined),
+        "system.failed": vi.fn().mockRejectedValue(new Error("secret")),
+      },
+      () => new Date("2026-07-31T00:00:00.000Z"),
+      metrics,
+    );
+
+    await worker.runOnce("worker-a");
+
+    expect(metrics.recordWorkerHandler).toHaveBeenCalledWith(
+      "system.probe.requested",
+      expect.any(Number),
+      "completed",
+    );
+    expect(metrics.recordWorkerHandler).toHaveBeenCalledWith(
+      "system.failed",
+      expect.any(Number),
+      "failed",
+    );
+  });
 });

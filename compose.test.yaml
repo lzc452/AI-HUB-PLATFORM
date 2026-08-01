@@ -1,6 +1,9 @@
 name: ai-hub-platform-test
 
 services:
+  prometheus:
+    profiles: ["application"]
+
   api:
     profiles: ["application"]
 

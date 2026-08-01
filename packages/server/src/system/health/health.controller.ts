@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpCode,
-  Inject,
-  ServiceUnavailableException,
-} from "@nestjs/common";
+import { Controller, Get, HttpCode, Inject, Res } from "@nestjs/common";
 
 import { HealthReader } from "./health.reader.js";
 
@@ -21,11 +15,13 @@ export class HealthController {
 
   @Get("ready")
   @HttpCode(200)
-  async ready() {
+  async ready(
+    @Res({ passthrough: true }) response: { status(code: number): unknown },
+  ) {
     const snapshot = await this.healthReader.ready();
 
     if (snapshot.status === "degraded") {
-      throw new ServiceUnavailableException(snapshot);
+      response.status(503);
     }
 
     return snapshot;

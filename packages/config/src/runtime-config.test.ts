@@ -21,6 +21,7 @@ describe("parseRuntimeConfig", () => {
         COOKIE_SECRET: "12345678901234567890123456789012",
         LOG_LEVEL: "warn",
         OUTBOX_POLL_INTERVAL_MS: "750",
+        WORKER_METRICS_PORT: "9465",
       }),
     ).toEqual({
       nodeEnv: "test",
@@ -29,6 +30,7 @@ describe("parseRuntimeConfig", () => {
       cookieSecret: "12345678901234567890123456789012",
       logLevel: "warn",
       outboxPollIntervalMs: 750,
+      workerMetricsPort: 9465,
     });
   });
 });
