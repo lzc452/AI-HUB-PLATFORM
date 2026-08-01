@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "paths": {
+      "@ai-hub/config": ["packages/config/src/index.ts"],
+      "@ai-hub/contracts": ["packages/contracts/src/index.ts"],
+      "@ai-hub/database": ["packages/database/src/index.ts"],
+      "@ai-hub/server": ["packages/server/src/index.ts"],
+      "@ai-hub/testing": ["packages/testing/src/index.ts"],
+      "@ai-hub/ui": ["packages/ui/src/index.ts"]
+    }
+  }
+}

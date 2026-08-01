@@ -1,0 +1,149 @@
+x-runtime-environment: &runtime-environment
+  NODE_ENV: ${NODE_ENV:-production}
+  API_PORT: 3000
+  DATABASE_URL: postgres://${POSTGRES_USER:-ai_hub}:${POSTGRES_PASSWORD:-ai_hub_local_only}@postgres:5432/${POSTGRES_DB:-ai_hub}
+  COOKIE_SECRET: ${COOKIE_SECRET:-ai-hub-local-cookie-secret-change-me}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+
+services:
+  postgres:
+    image: postgres:18.4-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_hub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_hub_local_only}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_hub}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - application
+
+  garage:
+    image: dxflrs/garage:v2.3.0
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:-ai-hub-local-admin-token}
+      GARAGE_DEFAULT_ACCESS_KEY: ${GARAGE_DEFAULT_ACCESS_KEY:-GKAIHUBLOCALDEVELOPMENT000000}
+      GARAGE_DEFAULT_BUCKET: ${GARAGE_DEFAULT_BUCKET:-ai-hub}
+      GARAGE_DEFAULT_SECRET_KEY: ${GARAGE_DEFAULT_SECRET_KEY:-ai-hub-local-secret-key-replace-before-shared-use}
+      GARAGE_METRICS_TOKEN: ${GARAGE_METRICS_TOKEN:-ai-hub-local-metrics-token}
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - garage-metadata:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+    networks:
+      - application
+
+  clamav:
+    image: clamav/clamav:1.4.5-debian
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --ping=1 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    volumes:
+      - clamav-definitions:/var/lib/clamav
+    networks:
+      - application
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: production
+    environment: *runtime-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    networks:
+      - application
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      target: production
+    environment: *runtime-environment
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.kill(1, 0)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    networks:
+      - application
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: production
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - application
+
+  proxy:
+    image: nginx:1.29.4-alpine
+    environment:
+      NGINX_ENVSUBST_FILTER: WEB_UPSTREAM
+      WEB_UPSTREAM: web:80
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - ./infra/docker/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    networks:
+      - application
+
+volumes:
+  postgres-data:
+  garage-metadata:
+  garage-data:
+  clamav-definitions:
+
+networks:
+  application:

@@ -1182,17 +1182,26 @@ git commit -m "chore: enforce module boundaries"
 ### Task 8: Add Windows development and isolated test Compose stacks
 
 **Files:**
+- Create: `.dockerignore`
 - Create: `compose.yaml`
 - Create: `compose.dev.yaml`
 - Create: `compose.test.yaml`
 - Modify: `.env.example`
+- Modify: `.gitignore`
+- Modify: `package.json`
+- Modify: `pnpm-lock.yaml`
+- Create: `tsconfig.runtime.json`
+- Modify: `apps/api/package.json`
+- Modify: `apps/worker/package.json`
 - Create: `infra/docker/api.Dockerfile`
 - Create: `infra/docker/web.Dockerfile`
 - Create: `infra/docker/worker.Dockerfile`
 - Create: `infra/docker/nginx.conf`
+- Create: `infra/docker/web.nginx.conf`
 - Create: `infra/garage/garage.toml`
 - Create: `docs/adr/0003-garage-object-storage.md`
 - Create: `docs/development/windows-docker-compose.md`
+- Create: `scripts/migrate.mts`
 
 **Interfaces:**
 - Consumes: API, worker, web, PostgreSQL, Garage, ClamAV.

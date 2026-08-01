@@ -1,0 +1,66 @@
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+  garage:
+    ports:
+      - "127.0.0.1:${GARAGE_S3_PORT:-3900}:3900"
+      - "127.0.0.1:${GARAGE_ADMIN_PORT:-3903}:3903"
+
+  api:
+    build:
+      target: development
+    command: ["sh", "-c", "pnpm migrate && exec pnpm --filter @ai-hub/api dev"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/workspace
+      - workspace-node-modules:/workspace/node_modules
+      - api-node-modules:/workspace/apps/api/node_modules
+      - database-node-modules:/workspace/packages/database/node_modules
+      - server-node-modules:/workspace/packages/server/node_modules
+
+  worker:
+    build:
+      target: development
+    command: ["pnpm", "--filter", "@ai-hub/worker", "dev"]
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/workspace
+      - workspace-node-modules:/workspace/node_modules
+      - worker-node-modules:/workspace/apps/worker/node_modules
+      - database-node-modules:/workspace/packages/database/node_modules
+      - server-node-modules:/workspace/packages/server/node_modules
+
+  web:
+    build:
+      target: development
+    command: ["pnpm", "--filter", "@ai-hub/web", "dev", "--host", "0.0.0.0"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+    volumes:
+      - .:/workspace
+      - workspace-node-modules:/workspace/node_modules
+      - web-node-modules:/workspace/apps/web/node_modules
+
+  proxy:
+    environment:
+      WEB_UPSTREAM: web:5173
+    ports:
+      - "127.0.0.1:${PROXY_PORT:-8080}:80"
+
+volumes:
+  api-node-modules:
+  database-node-modules:
+  server-node-modules:
+  web-node-modules:
+  worker-node-modules:
+  workspace-node-modules:

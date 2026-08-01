@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "dev": "node --import tsx src/main.ts",
+    "dev": "tsx watch --tsconfig ../../tsconfig.runtime.json src/main.ts",
     "lint": "eslint src test",
+    "start": "tsx --tsconfig ../../tsconfig.runtime.json src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },

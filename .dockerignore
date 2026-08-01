@@ -1,0 +1,10 @@
+.git
+.env
+.pnpm-store
+.superpowers
+.turbo
+**/dist
+**/node_modules
+coverage
+node_modules
+output

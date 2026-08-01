@@ -1,0 +1,48 @@
+name: ai-hub-platform-test
+
+services:
+  api:
+    profiles: ["application"]
+
+  worker:
+    profiles: ["application"]
+
+  web:
+    profiles: ["application"]
+
+  proxy:
+    profiles: ["application"]
+
+  test:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: development
+    command: ["pnpm", "verify"]
+    environment:
+      AWS_EC2_METADATA_DISABLED: "true"
+      COOKIE_SECRET: ai-hub-test-cookie-secret-at-least-32-characters
+      DATABASE_URL: postgres://ai_hub:ai_hub_test@postgres:5432/ai_hub_test
+      EXTERNAL_NETWORK_DISABLED: "true"
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      NODE_ENV: test
+      NO_PROXY: "*"
+      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+    depends_on:
+      clamav:
+        condition: service_healthy
+      garage:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - application
+
+  postgres:
+    environment:
+      POSTGRES_DB: ai_hub_test
+      POSTGRES_PASSWORD: ai_hub_test
+      POSTGRES_USER: ai_hub

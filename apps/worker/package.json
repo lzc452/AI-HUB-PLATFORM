@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc --project tsconfig.build.json",
-    "dev": "node --import tsx src/main.ts",
+    "dev": "tsx watch --tsconfig ../../tsconfig.runtime.json src/main.ts",
     "lint": "eslint src",
+    "start": "tsx --tsconfig ../../tsconfig.runtime.json src/main.ts",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
