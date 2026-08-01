@@ -3,7 +3,11 @@
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
     "lint": { "dependsOn": ["^lint"], "outputs": [] },
-    "test": { "dependsOn": ["^build"], "outputs": ["coverage/**"] },
+    "test": {
+      "dependsOn": ["^build"],
+      "env": ["TEST_DATABASE_URL"],
+      "outputs": ["coverage/**"]
+    },
     "typecheck": { "dependsOn": ["^typecheck"], "outputs": [] }
   }
 }

@@ -110,6 +110,11 @@ test("direct third-party dependencies support the Node 18.18 platform baseline",
     rootPackageJson.packageManager?.startsWith("pnpm@10."),
     `packageManager must pin pnpm 10, got ${rootPackageJson.packageManager}`,
   );
+  assert.equal(
+    rootPackageJson.scripts?.test,
+    "node --test scripts/*.test.mjs && turbo run test --concurrency=1",
+    "the root checks and complete test graph must fit constrained local and CI runners",
+  );
 
   const packageJsonPaths = [
     "package.json",

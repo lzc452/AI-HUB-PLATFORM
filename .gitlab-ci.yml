@@ -1,0 +1,60 @@
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
+stages:
+  - verify
+  - container-smoke
+
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  PNPM_STORE_DIR: .pnpm-store
+
+default:
+  interruptible: true
+
+verify:
+  stage: verify
+  image: node:24.15.0-bookworm-slim
+  services:
+    - name: docker:29.4.1-dind
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store/
+    policy: pull-push
+  before_script:
+    - apt-get update
+    - apt-get install --yes --no-install-recommends ca-certificates curl
+    - curl --fail --silent --show-error --location https://download.docker.com/linux/static/stable/x86_64/docker-29.4.1.tgz --output /tmp/docker.tgz
+    - tar --extract --gzip --file /tmp/docker.tgz --directory /tmp
+    - install /tmp/docker/docker /usr/local/bin/docker
+    - install --directory /usr/local/lib/docker/cli-plugins
+    - curl --fail --silent --show-error --location https://github.com/docker/compose/releases/download/v5.1.3/docker-compose-linux-x86_64 --output /usr/local/lib/docker/cli-plugins/docker-compose
+    - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    - corepack enable
+    - corepack prepare pnpm@10.34.5 --activate
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm verify
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      - coverage/
+      - reports/
+
+container-smoke:
+  stage: container-smoke
+  image: docker:29.4.1-cli
+  services:
+    - name: docker:29.4.1-dind
+  needs: ["verify"]
+  script:
+    - docker compose -f compose.yaml -f compose.test.yaml config --quiet
+    - docker build --target production --file infra/docker/api.Dockerfile --tag ai-hub-api:${CI_COMMIT_SHA} .
+    - docker build --target production --file infra/docker/worker.Dockerfile --tag ai-hub-worker:${CI_COMMIT_SHA} .
+    - docker build --target production --file infra/docker/web.Dockerfile --tag ai-hub-web:${CI_COMMIT_SHA} .
