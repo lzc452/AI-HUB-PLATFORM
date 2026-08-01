@@ -20,12 +20,14 @@ Copy-Item .env.example .env
 Review every value before sharing the stack with another machine. Then start the development environment:
 
 ```powershell
-docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-timeout 600
 docker compose -f compose.yaml -f compose.dev.yaml ps
 Invoke-RestMethod http://127.0.0.1:8080/internal/health/ready
 ```
 
 Open `http://127.0.0.1:8080`. Garage's S3 API is available at `http://127.0.0.1:3900`; its admin API is on `http://127.0.0.1:3903`. PostgreSQL is exposed on `127.0.0.1:5432`.
+
+Application and shared-package source directories are bind-mounted for hot reload. After changing a package manifest or `pnpm-lock.yaml`, rerun the first-start command to rebuild dependencies; database and object-storage volumes are preserved.
 
 ## Migrations
 
@@ -46,7 +48,7 @@ docker compose -f compose.yaml -f compose.test.yaml up --build --abort-on-contai
 docker compose -f compose.yaml -f compose.test.yaml down -v
 ```
 
-The test service runs `pnpm verify`, which is completed in Phase 1 Task 10. It disables configured external integrations and mounts the Docker socket only so the existing Testcontainers integration suite can create isolated PostgreSQL containers.
+The test service runs `pnpm verify`, which is completed in Phase 1 Task 10. Its Docker network is internal, has no Docker socket, and uses the isolated Compose PostgreSQL through `TEST_DATABASE_URL`. The test image includes only the Docker CLI and Compose plugin needed for static Compose validation.
 
 ## Logs and shutdown
 
@@ -59,7 +61,7 @@ Use `docker compose ... ps` before inspecting individual logs. A first ClamAV st
 
 ## Data reset
 
-Warning: the following command permanently deletes the local PostgreSQL database, Garage objects and metadata, ClamAV definitions, and cached container workspace dependencies for this project.
+Warning: the following command permanently deletes the local PostgreSQL database, Garage objects and metadata, and ClamAV definitions for this project.
 
 ```powershell
 docker compose -f compose.yaml -f compose.dev.yaml down -v

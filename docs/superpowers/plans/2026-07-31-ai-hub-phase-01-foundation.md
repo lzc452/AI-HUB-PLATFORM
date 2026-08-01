@@ -1193,6 +1193,9 @@ git commit -m "chore: enforce module boundaries"
 - Create: `tsconfig.runtime.json`
 - Modify: `apps/api/package.json`
 - Modify: `apps/worker/package.json`
+- Modify: `packages/testing/src/postgres-test-container.ts`
+- Create: `packages/testing/test/postgres-test-container.test.ts`
+- Modify: `packages/testing/package.json`
 - Create: `infra/docker/api.Dockerfile`
 - Create: `infra/docker/web.Dockerfile`
 - Create: `infra/docker/worker.Dockerfile`
@@ -1280,7 +1283,7 @@ Expected: PASS.
 Run:
 
 ```powershell
-docker compose -f compose.yaml -f compose.dev.yaml up -d --build
+docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-timeout 600
 docker compose -f compose.yaml -f compose.dev.yaml ps
 Invoke-RestMethod http://127.0.0.1:8080/internal/health/ready
 ```

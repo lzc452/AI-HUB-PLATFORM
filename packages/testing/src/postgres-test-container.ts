@@ -6,6 +6,15 @@ export async function startPostgresTestContainer(): Promise<{
   databaseUrl: string;
   stop: () => Promise<void>;
 }> {
+  const sharedDatabaseUrl = process.env.TEST_DATABASE_URL;
+
+  if (sharedDatabaseUrl) {
+    return {
+      databaseUrl: sharedDatabaseUrl,
+      stop: async () => undefined,
+    };
+  }
+
   const container = await new GenericContainer("postgres:18.4-bookworm")
     .withEnvironment({
       POSTGRES_DB: "ai_hub_test",

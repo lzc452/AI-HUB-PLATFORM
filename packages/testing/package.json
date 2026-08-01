@@ -9,8 +9,8 @@
     "testcontainers": "10.18.0"
   },
   "scripts": {
-    "build": "tsc --project tsconfig.json",
-    "lint": "eslint src",
+    "build": "node -e \"require('node:fs').rmSync('dist', { force: true, recursive: true })\" && tsc --project tsconfig.json",
+    "lint": "eslint src test",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   }

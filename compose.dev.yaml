@@ -15,11 +15,11 @@ services:
     environment:
       NODE_ENV: development
     volumes:
-      - .:/workspace
-      - workspace-node-modules:/workspace/node_modules
-      - api-node-modules:/workspace/apps/api/node_modules
-      - database-node-modules:/workspace/packages/database/node_modules
-      - server-node-modules:/workspace/packages/server/node_modules
+      - ./apps/api/src:/workspace/apps/api/src
+      - ./packages/config/src:/workspace/packages/config/src
+      - ./packages/contracts/src:/workspace/packages/contracts/src
+      - ./packages/database/src:/workspace/packages/database/src
+      - ./packages/server/src:/workspace/packages/server/src
 
   worker:
     build:
@@ -28,11 +28,11 @@ services:
     environment:
       NODE_ENV: development
     volumes:
-      - .:/workspace
-      - workspace-node-modules:/workspace/node_modules
-      - worker-node-modules:/workspace/apps/worker/node_modules
-      - database-node-modules:/workspace/packages/database/node_modules
-      - server-node-modules:/workspace/packages/server/node_modules
+      - ./apps/worker/src:/workspace/apps/worker/src
+      - ./packages/config/src:/workspace/packages/config/src
+      - ./packages/contracts/src:/workspace/packages/contracts/src
+      - ./packages/database/src:/workspace/packages/database/src
+      - ./packages/server/src:/workspace/packages/server/src
 
   web:
     build:
@@ -47,20 +47,12 @@ services:
           "fetch('http://127.0.0.1:5173').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
     volumes:
-      - .:/workspace
-      - workspace-node-modules:/workspace/node_modules
-      - web-node-modules:/workspace/apps/web/node_modules
+      - ./apps/web/index.html:/workspace/apps/web/index.html
+      - ./apps/web/src:/workspace/apps/web/src
+      - ./packages/ui/src:/workspace/packages/ui/src
 
   proxy:
     environment:
       WEB_UPSTREAM: web:5173
     ports:
       - "127.0.0.1:${PROXY_PORT:-8080}:80"
-
-volumes:
-  api-node-modules:
-  database-node-modules:
-  server-node-modules:
-  web-node-modules:
-  worker-node-modules:
-  workspace-node-modules:

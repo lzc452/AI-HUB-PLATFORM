@@ -17,18 +17,14 @@ services:
     build:
       context: .
       dockerfile: infra/docker/api.Dockerfile
-      target: development
+      target: test
     command: ["pnpm", "verify"]
     environment:
       AWS_EC2_METADATA_DISABLED: "true"
       COOKIE_SECRET: ai-hub-test-cookie-secret-at-least-32-characters
       DATABASE_URL: postgres://ai_hub:ai_hub_test@postgres:5432/ai_hub_test
-      EXTERNAL_NETWORK_DISABLED: "true"
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
       NODE_ENV: test
-      NO_PROXY: "*"
-      TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+      TEST_DATABASE_URL: postgres://ai_hub:ai_hub_test@postgres:5432/ai_hub_test
     depends_on:
       clamav:
         condition: service_healthy
@@ -36,13 +32,19 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - application
+
+  clamav:
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "true"
 
   postgres:
     environment:
       POSTGRES_DB: ai_hub_test
       POSTGRES_PASSWORD: ai_hub_test
       POSTGRES_USER: ai_hub
+
+networks:
+  application:
+    internal: true
