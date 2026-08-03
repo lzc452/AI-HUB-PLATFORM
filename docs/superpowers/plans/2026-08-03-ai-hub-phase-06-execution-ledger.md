@@ -200,3 +200,22 @@ result.
   rejected at the handler boundary.
 - Commit: pending until the final exact gates, local two-axis audit, push, and
   Draft PR status are recorded.
+
+### Step 11: Final gates and delivery evidence
+
+- Final exact gate command passed with Docker Desktop Linux engine:
+  `corepack pnpm format:check`, `corepack pnpm lint`,
+  `corepack pnpm typecheck`, `corepack pnpm boundaries`,
+  `corepack pnpm test`, `corepack pnpm build`,
+  `node scripts/verify-doc-links.mjs`, and
+  `docker compose -f compose.yaml -f compose.test.yaml config --quiet`.
+- Full test evidence: 15 Turbo tasks passed; database 3 files/24 tests,
+  server 24 files/98 tests, API 10 files/19 tests, Web 4 files/18 tests,
+  Worker 3 files/7 tests. Build completed with the pre-existing frontend
+  chunk-size warning only.
+- Follow-up audit rechecked every finding from the two prior standards/spec
+  reviews against the final boundary-hardening diff; no actionable finding is
+  left open. No Phase 3-5 business semantics were changed, no tenant_id or
+  prohibited infrastructure was introduced, and Phase 7 remains deferred.
+- Commit: `5ccc132 fix(phase-06): harden final analytics boundaries`.
+- Remaining external delivery evidence: branch push and Draft PR status.
