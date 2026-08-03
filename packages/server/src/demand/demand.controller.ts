@@ -3,12 +3,14 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  Get,
   Headers,
   Inject,
   NotFoundException,
   Param,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common";
 import type { ActorContext } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
@@ -83,6 +85,131 @@ export class DemandController {
     );
   }
 
+  @Get()
+  list(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Query("status") status?: Parameters<DemandService["list"]>[1]["status"],
+    @Query("query") query?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    const parsedPage = this.parsePositive(page, 1);
+    const parsedPageSize = this.parsePositive(pageSize, 20);
+    return this.call(async () =>
+      this.demands.list(await this.actor(employeeId, sessionId), {
+        ...(status === undefined ? {} : { status }),
+        ...(query === undefined ? {} : { query }),
+        page: parsedPage,
+        pageSize: parsedPageSize,
+      }),
+    );
+  }
+
+  @Get(":demandId")
+  detail(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.getDetail(await this.actor(employeeId, sessionId), demandId),
+    );
+  }
+
+  @Post(":demandId/like")
+  like(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.toggleLike(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
+  @Get(":demandId/comments")
+  comments(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listComments(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
+  @Post(":demandId/comments")
+  comment(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      parentCommentId: string | null;
+      body: string;
+      displayAnonymously?: boolean;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.addComment(await this.actor(employeeId, sessionId), {
+        demandId,
+        ...body,
+      }),
+    );
+  }
+
+  @Post(":demandId/reports")
+  report(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: { commentId: string | null; reason: string },
+  ) {
+    return this.call(async () =>
+      this.demands.report(await this.actor(employeeId, sessionId), {
+        demandId,
+        ...body,
+      }),
+    );
+  }
+
+  @Post(":demandId/reports/:reportId/resolve")
+  resolveReport(
+    @Param("reportId") reportId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: { status: "dismissed" | "hidden" | "restored" },
+  ) {
+    return this.call(async () =>
+      this.demands.resolveReport(
+        await this.actor(employeeId, sessionId),
+        reportId,
+        body.status,
+      ),
+    );
+  }
+
+  @Get(":demandId/comments/:commentId/anonymous-author")
+  anonymousAuthor(
+    @Param("commentId") commentId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () => ({
+      employeeId: await this.demands.lookupAnonymousAuthor(
+        await this.actor(employeeId, sessionId),
+        commentId,
+      ),
+    }));
+  }
+
   private async actor(
     employeeId: string | undefined,
     sessionId: string | undefined,
@@ -102,11 +229,21 @@ export class DemandController {
       if (code === "DEMAND_NOT_FOUND") throw new NotFoundException(code);
       if (
         code === "DEMAND_REVIEW_FORBIDDEN" ||
+        code === "DEMAND_MODERATION_FORBIDDEN" ||
         code === "DEMAND_NOT_AUTHORIZED"
       ) {
         throw new ForbiddenException(code);
       }
       throw new BadRequestException(code);
     }
+  }
+
+  private parsePositive(value: string | undefined, fallback: number): number {
+    if (value === undefined) return fallback;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new BadRequestException("DEMAND_PAGINATION_INVALID");
+    }
+    return parsed;
   }
 }

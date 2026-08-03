@@ -5,8 +5,11 @@ import type {
 } from "@ai-hub/contracts";
 import type {
   DemandAuthorizationPort,
+  DemandCommentRecord,
   DemandDraftInput,
   DemandEntry,
+  DemandListResult,
+  DemandReportRecord,
   DemandRepository,
 } from "./demand.types.js";
 
@@ -134,6 +137,252 @@ export class DemandService {
       );
       return reviewed;
     });
+  }
+
+  async list(
+    actor: ActorContext,
+    input: {
+      status?: DemandStatus;
+      query?: string;
+      page: number;
+      pageSize: number;
+    },
+  ): Promise<DemandListResult> {
+    if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
+      throw new Error("DEMAND_PAGINATION_INVALID");
+    }
+    await this.assertAllowed(actor, "read");
+    const visible = await this.repository.listVisible({
+      actor,
+      ...(input.status === undefined ? {} : { status: input.status }),
+      ...(input.query === undefined ? {} : { query: input.query }),
+    });
+    const start = (input.page - 1) * input.pageSize;
+    return {
+      items: visible
+        .slice(start, start + input.pageSize)
+        .map((demand) => this.projectDemand(actor, demand)),
+      total: visible.length,
+      page: input.page,
+      pageSize: input.pageSize,
+    };
+  }
+
+  async getDetail(actor: ActorContext, demandId: string): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "read", demandId);
+    const demand = await this.repository.findVisible(actor, demandId);
+    if (demand === null) throw new Error("DEMAND_NOT_FOUND");
+    return this.projectDemand(actor, demand);
+  }
+
+  async toggleLike(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<{ liked: boolean }> {
+    await this.assertAllowed(actor, "interact", demandId);
+    await this.getDetail(actor, demandId);
+    return this.repository.withTransaction(async (repository) => {
+      const currentlyLiked = await repository.hasLike(
+        demandId,
+        actor.employeeId,
+      );
+      if (currentlyLiked) {
+        await repository.removeLike(demandId, actor.employeeId);
+      } else {
+        await repository.addLike(demandId, actor.employeeId);
+      }
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: currentlyLiked ? "demand.unliked" : "demand.liked",
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: currentlyLiked ? "demand.unliked" : "demand.liked",
+      });
+      return { liked: !currentlyLiked };
+    });
+  }
+
+  async addComment(
+    actor: ActorContext,
+    input: {
+      demandId: string;
+      parentCommentId: string | null;
+      body: string;
+      displayAnonymously?: boolean;
+    },
+  ): Promise<DemandCommentRecord> {
+    await this.assertAllowed(actor, "interact", input.demandId);
+    await this.getDetail(actor, input.demandId);
+    const body = input.body.trim();
+    if (body.length < 2 || body.length > 5_000) {
+      throw new Error("DEMAND_COMMENT_INVALID");
+    }
+    if (input.parentCommentId !== null) {
+      const parent = await this.repository.findComment(input.parentCommentId);
+      if (parent === null || parent.demandId !== input.demandId) {
+        throw new Error("DEMAND_COMMENT_NOT_FOUND");
+      }
+      if (parent.parentCommentId !== null) {
+        throw new Error("DEMAND_COMMENT_DEPTH_EXCEEDED");
+      }
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const comment = await repository.createComment({
+        demandId: input.demandId,
+        parentCommentId: input.parentCommentId,
+        authorEmployeeId: actor.employeeId,
+        body,
+        displayAnonymously: input.displayAnonymously ?? false,
+        hiddenAt: null,
+      });
+      await repository.recordAudit({
+        demandId: input.demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.comment.created",
+        details: { commentId: comment.commentId },
+      });
+      await repository.emitOutbox({
+        demandId: input.demandId,
+        eventType: "demand.comment.created",
+      });
+      return comment;
+    });
+  }
+
+  async listComments(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandCommentRecord[]> {
+    await this.getDetail(actor, demandId);
+    const comments = await this.repository.listComments(demandId);
+    return comments
+      .filter((comment) => comment.hiddenAt === null)
+      .map((comment) => this.projectComment(actor, comment));
+  }
+
+  async report(
+    actor: ActorContext,
+    input: { demandId: string; commentId: string | null; reason: string },
+  ): Promise<DemandReportRecord> {
+    await this.assertAllowed(actor, "interact", input.demandId);
+    await this.getDetail(actor, input.demandId);
+    if (input.commentId !== null) {
+      const comment = await this.repository.findComment(input.commentId);
+      if (comment === null || comment.demandId !== input.demandId) {
+        throw new Error("DEMAND_COMMENT_NOT_FOUND");
+      }
+    }
+    const reason = input.reason.trim();
+    if (reason.length < 3 || reason.length > 2_000) {
+      throw new Error("DEMAND_REPORT_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const report = await repository.createReport({
+        demandId: input.demandId,
+        commentId: input.commentId,
+        reporterEmployeeId: actor.employeeId,
+        reason,
+        status: "open",
+        resolvedByEmployeeId: null,
+        resolvedAt: null,
+      });
+      await repository.recordAudit({
+        demandId: input.demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.report.created",
+        details: { reportId: report.reportId },
+      });
+      await repository.emitOutbox({
+        demandId: input.demandId,
+        eventType: "demand.report.created",
+      });
+      return report;
+    });
+  }
+
+  async resolveReport(
+    actor: ActorContext,
+    reportId: string,
+    status: DemandReportRecord["status"],
+  ): Promise<DemandReportRecord> {
+    await this.assertAllowed(actor, "moderate");
+    if (
+      !actor.roleCodes.some((role) =>
+        ["demand_moderator", "demand_operator", "super_admin"].includes(role),
+      )
+    ) {
+      throw new Error("DEMAND_MODERATION_FORBIDDEN");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const report = await repository.resolveReport(
+        reportId,
+        status,
+        actor.employeeId,
+      );
+      if (
+        report.commentId !== null &&
+        (status === "hidden" || status === "restored")
+      ) {
+        await repository.setCommentHidden(
+          report.commentId,
+          status === "hidden" ? new Date() : null,
+        );
+      }
+      await repository.recordAudit({
+        demandId: report.demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.report.resolved",
+        details: { reportId, status },
+      });
+      await repository.emitOutbox({
+        demandId: report.demandId,
+        eventType: "demand.report.resolved",
+      });
+      return report;
+    });
+  }
+
+  async lookupAnonymousAuthor(
+    actor: ActorContext,
+    commentId: string,
+  ): Promise<string> {
+    await this.assertAllowed(actor, "anonymous_audit");
+    const comment = await this.repository.findComment(commentId);
+    if (comment === null) throw new Error("DEMAND_COMMENT_NOT_FOUND");
+    await this.repository.recordAudit({
+      demandId: comment.demandId,
+      actorEmployeeId: actor.employeeId,
+      eventType: "demand.anonymous_identity.viewed",
+      details: { commentId },
+    });
+    return comment.authorEmployeeId;
+  }
+
+  private projectDemand(actor: ActorContext, demand: DemandEntry): DemandEntry {
+    if (
+      !demand.displayAnonymously ||
+      demand.requesterEmployeeId === actor.employeeId ||
+      actor.roleCodes.includes("super_admin")
+    ) {
+      return demand;
+    }
+    return { ...demand, requesterEmployeeId: null };
+  }
+
+  private projectComment(
+    actor: ActorContext,
+    comment: DemandCommentRecord,
+  ): DemandCommentRecord {
+    if (
+      !comment.displayAnonymously ||
+      comment.authorEmployeeId === actor.employeeId ||
+      actor.roleCodes.includes("super_admin")
+    ) {
+      return comment;
+    }
+    return { ...comment, authorEmployeeId: "" };
   }
 
   private normalizeInput(

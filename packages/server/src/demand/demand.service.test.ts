@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 import { DemandService } from "./demand.service.js";
-import type { DemandEntry, DemandRepository } from "./demand.types.js";
+import type {
+  DemandCommentRecord,
+  DemandEntry,
+  DemandRepository,
+} from "./demand.types.js";
 
 const requester: ActorContext = {
   employeeId: "E100",
@@ -150,5 +154,163 @@ describe("DemandService submission lifecycle", () => {
     demand.status = "pending_review";
     await service.review(reviewer, demand.demandId, "publish");
     expect(demand.status).toBe("published");
+  });
+});
+
+describe("DemandService innovation-square interactions", () => {
+  it("filters by repository audience, masks anonymous identity, and toggles likes idempotently", async () => {
+    const demand = {
+      demandId: "demand-public",
+      requesterEmployeeId: "E100",
+      title: "Public demand",
+      problemStatement: "Teams need a governed internal assistant.",
+      desiredOutcome: "A reviewed assistant is available to every team.",
+      status: "published" as const,
+      audienceType: "all" as const,
+      audienceDepartmentId: null,
+      displayAnonymously: true,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: null,
+      primarySolutionApplicationId: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    let liked = false;
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      listVisible: async () => [demand],
+      findVisible: async () => demand,
+      hasLike: async () => liked,
+      addLike: async () => {
+        liked = true;
+      },
+      removeLike: async () => {
+        liked = false;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    const list = await service.list(requester, { page: 1, pageSize: 20 });
+    expect(list.items).toHaveLength(1);
+    expect(
+      (await service.getDetail(reviewer, demand.demandId)).requesterEmployeeId,
+    ).toBe(null);
+    expect(await service.toggleLike(requester, demand.demandId)).toEqual({
+      liked: true,
+    });
+    expect(await service.toggleLike(requester, demand.demandId)).toEqual({
+      liked: false,
+    });
+  });
+
+  it("creates one-level discussion and preserves real identity for authorized anonymous audit", async () => {
+    const comment: DemandCommentRecord = {
+      commentId: "comment-1",
+      demandId: "demand-public",
+      parentCommentId: null,
+      authorEmployeeId: "E100",
+      body: "Please include source links.",
+      displayAnonymously: true,
+      hiddenAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const audits: string[] = [];
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findVisible: async () => ({
+        demandId: "demand-public",
+        requesterEmployeeId: "E100",
+        title: "Public demand",
+        problemStatement: "Teams need a governed internal assistant.",
+        desiredOutcome: "A reviewed assistant is available to every team.",
+        status: "published" as const,
+        audienceType: "all" as const,
+        audienceDepartmentId: null,
+        displayAnonymously: false,
+        reviewReason: null,
+        likeCount: 0,
+        commentCount: 0,
+        priorityScore: null,
+        priorityExplanation: null,
+        ownerEmployeeId: null,
+        primarySolutionApplicationId: null,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      findComment: async () => comment,
+      createComment: async () => comment,
+      recordAudit: async ({ eventType }: { eventType: string }) => {
+        audits.push(eventType);
+      },
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = new DemandService(repository, { authorize: allowAll });
+
+    await service.addComment(requester, {
+      demandId: "demand-public",
+      parentCommentId: null,
+      body: "Please include source links.",
+      displayAnonymously: true,
+    });
+    comment.parentCommentId = "comment-root";
+    await expect(
+      service.addComment(requester, {
+        demandId: "demand-public",
+        parentCommentId: "comment-1",
+        body: "A nested reply is not allowed.",
+      }),
+    ).rejects.toThrow("DEMAND_COMMENT_DEPTH_EXCEEDED");
+    await expect(
+      service.lookupAnonymousAuthor(reviewer, "comment-1"),
+    ).resolves.toBe("E100");
+    expect(audits).toContain("demand.anonymous_identity.viewed");
+  });
+
+  it("hides and restores reported comments without deleting them", async () => {
+    const operator: ActorContext = {
+      ...reviewer,
+      roleCodes: ["demand_operator"],
+    };
+    let hiddenAt: Date | null = null;
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      resolveReport: async () => ({
+        reportId: "report-1",
+        demandId: "demand-public",
+        commentId: "comment-1",
+        reporterEmployeeId: "E100",
+        reason: "Needs review",
+        status: "hidden" as const,
+        resolvedByEmployeeId: "E900",
+        resolvedAt: new Date(),
+        createdAt: new Date(),
+      }),
+      setCommentHidden: async (_commentId: string, value: Date | null) => {
+        hiddenAt = value;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = new DemandService(repository, { authorize: allowAll });
+
+    await service.resolveReport(operator, "report-1", "hidden");
+    expect(hiddenAt).toBeInstanceOf(Date);
+    await service.resolveReport(operator, "report-1", "restored");
+    expect(hiddenAt).toBeNull();
   });
 });

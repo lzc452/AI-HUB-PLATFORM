@@ -341,7 +341,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   for (const table of [
     "ai_demands",
     "ai_demand_collaborators",
-    "ai_demand_likes",
     "ai_demand_comments",
     "ai_demand_reports",
     "ai_demand_progress_updates",

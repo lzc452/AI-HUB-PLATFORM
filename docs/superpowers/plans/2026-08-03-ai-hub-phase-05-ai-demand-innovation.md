@@ -153,11 +153,11 @@ export interface DemandRepository {
 
 **Files:** repository/service/controller, interaction contracts if needed, service tests, API/Web tests, router/App.
 
-- [ ] Write failing tests proving list/search/detail filter before pagination for all/department/employee audiences, and ordinary readers cannot see requester identity when anonymous.
-- [ ] Write failing tests for idempotent like/unlike, append-only one-level discussion, hidden-content filtering, report creation, moderation hide/restore, and authorized anonymous identity lookup audit.
-- [ ] Implement the read and write paths with the same audience semantics as Phase 4 catalog reads; preserve identity in storage and reject physical delete.
-- [ ] Add innovation-square and demand-detail routes with loading, empty, rejected, hidden, and closed states.
-- [ ] Run focused server/API/Web tests and commit `feat(phase-05): add demand square interactions`.
+- [x] Write failing tests proving list/search/detail filter before pagination for all/department/employee audiences, and ordinary readers cannot see requester identity when anonymous.
+- [x] Write failing tests for idempotent like/unlike, append-only one-level discussion, hidden-content filtering, report creation, moderation hide/restore, and authorized anonymous identity lookup audit.
+- [x] Implement the read and write paths with the same audience semantics as Phase 4 catalog reads; preserve identity in storage and reject physical delete.
+- [x] Add innovation-square and demand-detail routes with loading, empty, rejected, hidden, and closed states.
+- [x] Run focused server/API/Web tests and commit `feat(phase-05): add demand square interactions`.
 
 ### Task 5: Claim, owner, collaborators, operator selection and concurrency protection
 

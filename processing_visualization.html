@@ -758,9 +758,9 @@
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
             status: "进行中",
-            progress: 5,
+            progress: 25,
             summary:
-              "已建立 Phase 5 基线、详细计划、执行台账、ADR 0006 和处理可视化记录，待继续实现需求与创新广场闭环。",
+              "已完成 Phase 5 基线、Contracts/迁移、结构化需求提交审核，以及受众过滤、匿名展示、点赞、讨论、举报与治理 API/Web/真实 PostgreSQL e2e；认领、排序、状态、合并和上架闭环待继续实现。",
             tasks: [
               [
                 "结构化需求表单与轻量审核",
@@ -1058,6 +1058,22 @@
               "保留 .codex 用户工作区状态不纳入提交，明确复用 ActorContext、RBAC、受众授权、事务 Audit/Outbox 和 Phase 3 应用生命周期门禁。",
             skip: "尚未实现需求业务、未执行 Phase 5 测试和全门禁；Phase 6 分析/导出/Dify 继续延期。",
           },
+          {
+            id: "t-009",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 5 需求提交与创新广场互动",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成结构化需求草稿、轻量审核、受众先过滤、匿名展示、点赞、一级讨论、举报、隐藏/恢复和授权匿名追溯。",
+            problem:
+              "匿名展示、可见范围和治理记录必须与 Phase 4 的 ActorContext/RBAC/事务边界一致，同时支持真实 PostgreSQL 验证。",
+            solution:
+              "复用受众谓词和 IdentityService，在事务内写 Audit/Outbox；匿名仅为输出投影，讨论和举报保留真实身份并禁止物理删除。",
+            skip: "认领、优先级、进展、合并、应用关联和正式上架仍按计划顺序执行。",
+          },
         ],
         events: [
           {
@@ -1065,6 +1081,13 @@
             phase: "product",
             title: "Phase 5 baseline and execution plan established",
             body: "Created feature/phase-05-ai-demand-innovation from the accepted Phase 4 commit f60def66699bfbb0192b60fa1d256d98159d198b, recorded the ordered AI demand and innovation-square plan, execution ledger, ADR 0006, and explicit Phase 3/4 gate reuse and Phase 6 deferrals.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title:
+              "Phase 5 demand submission and interaction evidence recorded",
+            body: "Demand service tests passed for validation, draft/review/rejection, audience projection, idempotent likes, one-level discussion, moderation hide/restore, and anonymous audit. Web focused tests passed 17/17, and Docker-backed API/PostgreSQL e2e passed 8 files/15 tests with audience filtering, anonymity, interactions, reports, Audit and Outbox evidence.",
           },
           {
             date: "2026-08-03",

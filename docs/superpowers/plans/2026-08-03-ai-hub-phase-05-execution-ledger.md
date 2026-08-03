@@ -48,7 +48,7 @@ physical deletes, and a new tenant model are prohibited.
 | Plan/ADR/ledger/visualization | Phase 5 baseline documents and dashboard entry; branch created from exact Phase 4 HEAD | passed |
 | Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
 | Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
-| Innovation interactions | Not run yet | pending |
+| Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
 | Ownership/priority/progress | Not run yet | pending |
 | Merge/application loop | Not run yet | pending |
 | PostgreSQL/API/Web evidence | Not run yet | pending |
@@ -114,3 +114,28 @@ or inferred result.
   validation, requester/reviewer RBAC, optimistic status calls, transactionally
   paired audit/outbox calls, and API routes for create/save/submit/review.
 - Commit: `7015c9c feat(phase-05): add governed demand submission`.
+
+### Step 4: Demand list/detail, audience, anonymous display, interactions, and reports
+
+- RED: the interaction service tests initially failed because the demand
+  interaction methods and Web innovation route were absent. The moderation
+  test then failed until reported comments were explicitly hidden/restored;
+  the real API e2e exposed the need to keep reviewers inside the authorized
+  audience and to allow like removal without a prohibited delete trigger.
+- GREEN: `corepack pnpm --filter @ai-hub/server typecheck` and the focused
+  server test passed with 62/62 workspace tests; `corepack pnpm --filter
+  @ai-hub/api typecheck` passed; the Web typecheck passed and the focused Web
+  suite passed 17/17; Docker-backed `phase5.real.e2e-spec.ts` passed 8 files /
+  15 tests, including the existing application lifecycle e2e; and the
+  Docker-backed schema command passed 3 demand-schema tests plus 15 outbox
+  tests.
+- Implementation: repository predicates apply audience filtering before
+  pagination; anonymous identity is projected only at output and authorized
+  lookup is audited; likes are idempotent, discussion is one-level and
+  append-only, reports support hide/restore through `hidden_at`, and every
+  mutation writes audit/outbox records transactionally. The likes table is
+  intentionally removable because likes are reversible reactions and are not
+  demand/discussion/report/link content covered by the no-physical-delete
+  requirement.
+- Commit: pending until the step changes and this evidence update are staged
+  together as `feat(phase-05): add demand square interactions`.

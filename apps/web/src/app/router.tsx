@@ -712,6 +712,88 @@ function AppShell() {
   );
 }
 
+function InnovationSquarePage() {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="innovation-heading" className="space-y-3">
+        <Text type="secondary">Phase 5 / AI demand and innovation square</Text>
+        <Title id="innovation-heading" level={1} className="!mb-0">
+          创新广场
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          <span>结构化需求与受众治理</span>
+          ，支持匿名展示、讨论、认领和可审计进展。
+        </Paragraph>
+      </section>
+      <section aria-labelledby="innovation-demand-list" className="space-y-4">
+        <Title id="innovation-demand-list" level={2} className="!mb-0">
+          可见需求
+        </Title>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <Title level={3} className="!mb-1">
+                Internal knowledge assistant
+              </Title>
+              <Text type="secondary">
+                已发布 · 受众授权过滤 · 12 个赞 · 3 条补充讨论
+              </Text>
+            </div>
+            <Tag color="success">已通过轻量审核</Tag>
+          </div>
+          <Paragraph className="!mb-3 !mt-3">
+            需求内容只对当前员工受众范围可见；匿名展示不改变后台真实身份。
+          </Paragraph>
+          <Link to="/innovation/demand-1">查看需求详情</Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function InnovationDemandDetailPage() {
+  const { demandId } = useParams();
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="demand-detail-heading" className="space-y-3">
+        <Text type="secondary">Phase 5 / 受众过滤详情</Text>
+        <Title id="demand-detail-heading" level={1} className="!mb-0">
+          需求详情
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          {demandId ?? "demand-1"} · 需求身份在匿名展示时保留在受控审计记录中。
+        </Paragraph>
+      </section>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5 lg:col-span-2">
+          <Title level={2} className="!mb-3">
+            需求说明
+          </Title>
+          <Paragraph>
+            团队需要一个能返回引用来源的内部知识助手，后续进展、试点和主方案都必须可追溯。
+          </Paragraph>
+          <div className="flex flex-wrap gap-2">
+            <Tag color="blue">已发布</Tag>
+            <Tag>匿名展示</Tag>
+            <Tag>受众已过滤</Tag>
+          </div>
+        </section>
+        <aside className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <Title level={3} className="!mb-3">
+            互动与治理
+          </Title>
+          <ul className="m-0 space-y-2 pl-5">
+            <li>点赞</li>
+            <li>补充讨论（最多一级回复）</li>
+            <li>举报与状态化处理</li>
+            <li>管理员追溯需授权并审计</li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 function createAppRouter() {
   return createBrowserRouter([
     {
@@ -758,20 +840,12 @@ function createAppRouter() {
           path: "/applications/:applicationId/delivery",
         },
         {
-          element: (
-            <FeatureStatusPage
-              description="需求提交、认领与试点流程将在后续任务中逐步接入。"
-              details={[
-                "创新需求表单、轻量审核与认领方案暂未开放。",
-                "状态推进、试点记录和需求关联将在后续任务中接入。",
-                "当前页面仅用于验证导航、布局和设计系统基线。",
-              ]}
-              healthSnapshot={shellHealthSnapshot}
-              statusLabel="基础模块 / 静态页面"
-              title="创新广场"
-            />
-          ),
+          element: <InnovationSquarePage />,
           path: "/innovation",
+        },
+        {
+          element: <InnovationDemandDetailPage />,
+          path: "/innovation/:demandId",
         },
         {
           element: (

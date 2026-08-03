@@ -7,7 +7,7 @@ import type {
 
 export interface DemandEntry {
   demandId: string;
-  requesterEmployeeId: string;
+  requesterEmployeeId: string | null;
   title: string;
   problemStatement: string;
   desiredOutcome: string;
@@ -45,6 +45,15 @@ export interface DemandRepository {
     displayAnonymously: boolean;
   }): Promise<DemandEntry>;
   findById(demandId: string): Promise<DemandEntry | null>;
+  listVisible(input: {
+    actor: ActorContext;
+    status?: DemandStatus;
+    query?: string;
+  }): Promise<readonly DemandEntry[]>;
+  findVisible(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<DemandEntry | null>;
   updateDraft(
     demandId: string,
     expectedVersion: number,
@@ -65,6 +74,23 @@ export interface DemandRepository {
     expectedVersion: number,
     reviewReason?: string | null,
   ): Promise<DemandEntry>;
+  hasLike(demandId: string, employeeId: string): Promise<boolean>;
+  addLike(demandId: string, employeeId: string): Promise<void>;
+  removeLike(demandId: string, employeeId: string): Promise<void>;
+  findComment(commentId: string): Promise<DemandCommentRecord | null>;
+  createComment(
+    input: Omit<DemandCommentRecord, "commentId" | "createdAt" | "updatedAt">,
+  ): Promise<DemandCommentRecord>;
+  listComments(demandId: string): Promise<readonly DemandCommentRecord[]>;
+  setCommentHidden(commentId: string, hiddenAt: Date | null): Promise<void>;
+  createReport(
+    input: Omit<DemandReportRecord, "reportId" | "createdAt">,
+  ): Promise<DemandReportRecord>;
+  resolveReport(
+    reportId: string,
+    status: DemandReportRecord["status"],
+    employeeId: string,
+  ): Promise<DemandReportRecord>;
   recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -72,6 +98,37 @@ export interface DemandRepository {
     details?: unknown;
   }): Promise<void>;
   emitOutbox(input: { demandId: string; eventType: string }): Promise<void>;
+}
+
+export interface DemandListResult {
+  items: readonly DemandEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface DemandCommentRecord {
+  commentId: string;
+  demandId: string;
+  parentCommentId: string | null;
+  authorEmployeeId: string;
+  body: string;
+  displayAnonymously: boolean;
+  hiddenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DemandReportRecord {
+  reportId: string;
+  demandId: string;
+  commentId: string | null;
+  reporterEmployeeId: string;
+  reason: string;
+  status: "open" | "dismissed" | "hidden" | "restored";
+  resolvedByEmployeeId: string | null;
+  resolvedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface DemandAuthorizationPort {

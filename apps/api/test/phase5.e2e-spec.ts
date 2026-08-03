@@ -72,7 +72,8 @@ describe("Phase 5 demand endpoints", () => {
       .set({ "x-employee-id": "E100", "x-session-id": "session-E100" })
       .send({
         title: "Internal knowledge assistant",
-        problemStatement: "Teams cannot find approved internal guidance quickly.",
+        problemStatement:
+          "Teams cannot find approved internal guidance quickly.",
         desiredOutcome: "Return cited guidance in under one minute.",
         audienceType: "all",
       })

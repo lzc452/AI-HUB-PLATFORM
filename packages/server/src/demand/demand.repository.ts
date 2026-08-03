@@ -2,12 +2,19 @@ import type { CreateDemandInput, DemandStatus } from "@ai-hub/contracts";
 import type { DatabaseSchema } from "@ai-hub/database";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Selectable } from "kysely";
-import type { DemandEntry, DemandRepository } from "./demand.types.js";
+import type {
+  DemandCommentRecord,
+  DemandEntry,
+  DemandReportRecord,
+  DemandRepository,
+} from "./demand.types.js";
 
 type DemandRow = Selectable<DatabaseSchema["ai_demands"]> & {
   like_count: number | string;
   comment_count: number | string;
 };
+type CommentRow = Selectable<DatabaseSchema["ai_demand_comments"]>;
+type ReportRow = Selectable<DatabaseSchema["ai_demand_reports"]>;
 
 export class KyselyDemandRepository implements DemandRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -71,6 +78,43 @@ export class KyselyDemandRepository implements DemandRepository {
 
   async findById(demandId: string): Promise<DemandEntry | null> {
     const row = await this.selectDemand()
+      .where("ai_demands.demand_id", "=", demandId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapRow(row);
+  }
+
+  async listVisible(input: {
+    actor: Parameters<DemandRepository["listVisible"]>[0]["actor"];
+    status?: DemandEntry["status"];
+    query?: string;
+  }): Promise<readonly DemandEntry[]> {
+    let query = this.selectDemand().where(this.audiencePredicate(input.actor));
+    if (input.status !== undefined) {
+      query = query.where("ai_demands.status", "=", input.status);
+    }
+    if (input.query !== undefined && input.query.trim().length > 0) {
+      const pattern = `%${input.query.trim()}%`;
+      query = query.where(
+        sql<boolean>`(
+          ai_demands.title ilike ${pattern}
+          or ai_demands.problem_statement ilike ${pattern}
+          or ai_demands.desired_outcome ilike ${pattern}
+        )`,
+      );
+    }
+    const rows = await query
+      .orderBy("ai_demands.created_at", "desc")
+      .orderBy("ai_demands.demand_id", "asc")
+      .execute();
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  async findVisible(
+    actor: Parameters<DemandRepository["findVisible"]>[0],
+    demandId: string,
+  ): Promise<DemandEntry | null> {
+    const row = await this.selectDemand()
+      .where(this.audiencePredicate(actor))
       .where("ai_demands.demand_id", "=", demandId)
       .executeTakeFirst();
     return row === undefined ? null : this.mapRow(row);
@@ -151,6 +195,123 @@ export class KyselyDemandRepository implements DemandRepository {
     return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
   }
 
+  async hasLike(demandId: string, employeeId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("ai_demand_likes")
+      .select("demand_id")
+      .where("demand_id", "=", demandId)
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row !== undefined;
+  }
+
+  async addLike(demandId: string, employeeId: string): Promise<void> {
+    await this.db
+      .insertInto("ai_demand_likes")
+      .values({ demand_id: demandId, employee_id: employeeId })
+      .onConflict((oc) => oc.columns(["demand_id", "employee_id"]).doNothing())
+      .execute();
+  }
+
+  async removeLike(demandId: string, employeeId: string): Promise<void> {
+    await this.db
+      .deleteFrom("ai_demand_likes")
+      .where("demand_id", "=", demandId)
+      .where("employee_id", "=", employeeId)
+      .execute();
+  }
+
+  async findComment(commentId: string): Promise<DemandCommentRecord | null> {
+    const row = await this.db
+      .selectFrom("ai_demand_comments")
+      .selectAll()
+      .where("comment_id", "=", commentId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapComment(row);
+  }
+
+  async createComment(
+    input: Omit<DemandCommentRecord, "commentId" | "createdAt" | "updatedAt">,
+  ): Promise<DemandCommentRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_comments")
+      .values({
+        demand_id: input.demandId,
+        parent_comment_id: input.parentCommentId,
+        author_employee_id: input.authorEmployeeId,
+        body: input.body,
+        display_anonymously: input.displayAnonymously,
+        hidden_at: input.hiddenAt,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapComment(row);
+  }
+
+  async listComments(
+    demandId: string,
+  ): Promise<readonly DemandCommentRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_comments")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "asc")
+      .execute();
+    return rows.map((row) => this.mapComment(row));
+  }
+
+  async setCommentHidden(
+    commentId: string,
+    hiddenAt: Date | null,
+  ): Promise<void> {
+    const result = await this.db
+      .updateTable("ai_demand_comments")
+      .set({ hidden_at: hiddenAt })
+      .where("comment_id", "=", commentId)
+      .executeTakeFirst();
+    if (Number(result.numUpdatedRows) !== 1) {
+      throw new Error("DEMAND_COMMENT_NOT_FOUND");
+    }
+  }
+
+  async createReport(
+    input: Omit<DemandReportRecord, "reportId" | "createdAt">,
+  ): Promise<DemandReportRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_reports")
+      .values({
+        demand_id: input.demandId,
+        comment_id: input.commentId,
+        reporter_employee_id: input.reporterEmployeeId,
+        reason: input.reason,
+        status: input.status,
+        resolved_by_employee_id: input.resolvedByEmployeeId,
+        resolved_at: input.resolvedAt,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapReport(row);
+  }
+
+  async resolveReport(
+    reportId: string,
+    status: DemandReportRecord["status"],
+    employeeId: string,
+  ): Promise<DemandReportRecord> {
+    const row = await this.db
+      .updateTable("ai_demand_reports")
+      .set({
+        status,
+        resolved_by_employee_id: employeeId,
+        resolved_at: new Date(),
+      })
+      .where("report_id", "=", reportId)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_REPORT_NOT_FOUND");
+    return this.mapReport(row);
+  }
+
   async recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -207,6 +368,29 @@ export class KyselyDemandRepository implements DemandRepository {
       ]);
   }
 
+  private audiencePredicate(
+    actor: Parameters<DemandRepository["findVisible"]>[0],
+  ) {
+    const departments =
+      actor.departmentIds.length === 0
+        ? sql`null`
+        : sql.join(
+            actor.departmentIds.map((departmentId) => sql`${departmentId}`),
+          );
+    return sql<boolean>`(
+      ai_demands.requester_employee_id = ${actor.employeeId}
+      or ai_demands.audience_type = 'all'
+      or (
+        ai_demands.audience_type = 'employee'
+        and ai_demands.audience_employee_id = ${actor.employeeId}
+      )
+      or (
+        ai_demands.audience_type = 'department'
+        and ai_demands.audience_department_id in (${departments})
+      )
+    )`;
+  }
+
   private mapRow(row: DemandRow): DemandEntry {
     return {
       demandId: row.demand_id,
@@ -231,6 +415,34 @@ export class KyselyDemandRepository implements DemandRepository {
       version: row.version,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+    };
+  }
+
+  private mapComment(row: CommentRow): DemandCommentRecord {
+    return {
+      commentId: row.comment_id,
+      demandId: row.demand_id,
+      parentCommentId: row.parent_comment_id,
+      authorEmployeeId: row.author_employee_id,
+      body: row.body,
+      displayAnonymously: row.display_anonymously,
+      hiddenAt: row.hidden_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private mapReport(row: ReportRow): DemandReportRecord {
+    return {
+      reportId: row.report_id,
+      demandId: row.demand_id,
+      commentId: row.comment_id,
+      reporterEmployeeId: row.reporter_employee_id,
+      reason: row.reason,
+      status: row.status,
+      resolvedByEmployeeId: row.resolved_by_employee_id,
+      resolvedAt: row.resolved_at,
+      createdAt: row.created_at,
     };
   }
 }
