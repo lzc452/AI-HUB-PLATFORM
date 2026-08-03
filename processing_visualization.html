@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Hub Platform 全流程可视化复盘</title>
+    <style>
+      :root {
+        --bg: #f7f8fb;
+        --panel: #fff;
+        --ink: #1d2433;
+        --muted: #667085;
+        --line: #d8dde8;
+        --blue: #2563eb;
+        --green: #0f9f6e;
+        --amber: #c47a00;
+        --red: #d92d20;
+        --shadow: 0 12px 32px rgba(29, 36, 51, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+      button {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--blue);
+        border-color: var(--blue);
+        color: #fff;
+      }
+      header {
+        padding: 28px clamp(18px, 4vw, 48px) 18px;
+        background: #101828;
+        color: #fff;
+      }
+      .header-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 24px;
+        align-items: end;
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: clamp(28px, 4vw, 46px);
+        letter-spacing: 0;
+      }
+      .subtitle {
+        margin: 0;
+        color: #cdd5df;
+        line-height: 1.65;
+        max-width: 900px;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .metric {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .metric span {
+        display: block;
+        color: #cdd5df;
+        font-size: 12px;
+      }
+      .metric strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 22px;
+      }
+      main {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 24px clamp(18px, 4vw, 48px) 44px;
+      }
+      .toolbar,
+      .section-title,
+      .task-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .tabs,
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .tab[aria-selected="true"] {
+        color: #fff;
+        background: #344054;
+        border-color: #344054;
+      }
+      section {
+        margin-top: 22px;
+      }
+      h2 {
+        margin: 0;
+        font-size: 20px;
+      }
+      h3 {
+        margin: 0;
+        font-size: 16px;
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(180px, 1fr));
+        gap: 12px;
+      }
+      .phase,
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+      .phase-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #eef2ff;
+        color: #344054;
+        white-space: nowrap;
+      }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: #edf0f5;
+        overflow: hidden;
+        margin: 12px 0;
+      }
+      .progress > i {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--blue);
+      }
+      ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+      }
+      li,
+      .note {
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .task-list,
+      .program-list {
+        display: grid;
+        gap: 10px;
+      }
+      .task,
+      .program-task {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+      }
+      .task-title {
+        margin: 0;
+        font-weight: 700;
+      }
+      .task small {
+        color: var(--muted);
+      }
+      .task p,
+      .program-task p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .status-done {
+        background: #e8f8f1;
+        color: var(--green);
+      }
+      .status-progress {
+        background: #eff6ff;
+        color: var(--blue);
+      }
+      .status-risk {
+        background: #fff4e5;
+        color: var(--amber);
+      }
+      .status-todo {
+        background: #f2f4f7;
+        color: #475467;
+      }
+      .status-skip {
+        background: #fef3f2;
+        color: var(--red);
+      }
+      .timeline {
+        display: grid;
+        gap: 12px;
+      }
+      .event {
+        display: grid;
+        grid-template-columns: 132px 1fr;
+        gap: 14px;
+        align-items: start;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 12px;
+      }
+      .event time {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .event strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+      .event p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .form {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .form label {
+        display: grid;
+        gap: 6px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .form input,
+      .form textarea,
+      .form select {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: #fff;
+        color: var(--ink);
+        min-width: 0;
+      }
+      .form textarea {
+        min-height: 72px;
+        resize: vertical;
+      }
+      .wide {
+        grid-column: span 2;
+      }
+      .full {
+        grid-column: 1/-1;
+      }
+      .hidden {
+        display: none;
+      }
+      footer {
+        max-width: 1440px;
+        margin: 0 auto;
+        padding: 0 clamp(18px, 4vw, 48px) 34px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      @media (max-width: 1120px) {
+        .header-grid,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .flow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 720px) {
+        .flow,
+        .form,
+        .meta {
+          grid-template-columns: 1fr;
+        }
+        .wide {
+          grid-column: auto;
+        }
+        .event {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-grid">
+        <div>
+          <h1>AI Hub Platform 全流程可视化复盘</h1>
+          <p class="subtitle">
+            按 docs/superpowers/plans 的 V1 路线追踪产品设计、UI
+            设计、开发、测试、部署运维。当前只有 Phase 1 具备详细实施计划；Phase
+            2-8 需要在进入前继续拆成详细计划。
+          </p>
+        </div>
+        <div class="meta" id="metrics"></div>
+      </div>
+    </header>
+    <main>
+      <div class="toolbar">
+        <div class="tabs" role="tablist" aria-label="视图切换">
+          <button class="tab" data-view="overview" aria-selected="true">
+            总览
+          </button>
+          <button class="tab" data-view="program">V1 阶段矩阵</button>
+          <button class="tab" data-view="tasks">任务台账</button>
+          <button class="tab" data-view="issues">问题</button>
+          <button class="tab" data-view="timeline">时间线</button>
+          <button class="tab" data-view="retro">复盘</button>
+        </div>
+        <div class="actions">
+          <button id="save">保存到浏览器</button>
+          <button id="export-json">导出 JSON</button>
+          <button id="export-html" class="primary">导出当前 HTML</button>
+          <button id="reset">恢复内置数据</button>
+        </div>
+      </div>
+
+      <section data-panel="overview">
+        <div class="section-title">
+          <h2>工作流视角</h2>
+          <span class="badge" id="updated-at"></span>
+        </div>
+        <div class="flow" id="phase-flow"></div>
+        <div class="panel" style="margin-top: 16px">
+          <h2>当前判断</h2>
+          <p class="note">
+            <strong>不是整个 V1 只剩 Phase 1。</strong>准确说：当前 docs 中只有
+            Phase 1 的详细执行计划，Phase 2-8
+            仍是路线级拆分，进入每个阶段前必须先补详细实施计划。Phase 1
+            的代码文件大多已落地，但是否“完成”取决于 Phase 1 Completion Check
+            是否全部通过。
+          </p>
+        </div>
+      </section>
+
+      <section data-panel="program">
+        <div class="section-title">
+          <h2>V1 八阶段任务矩阵</h2>
+          <span class="badge">来源：V1 roadmap + Phase 1 plan</span>
+        </div>
+        <div class="program-list" id="program-list"></div>
+      </section>
+
+      <section data-panel="tasks">
+        <div class="section-title">
+          <h2>任务台账</h2>
+          <button class="primary" id="add-task">新增任务</button>
+        </div>
+        <div class="grid">
+          <div class="panel"><div class="task-list" id="task-list"></div></div>
+          <div class="panel">
+            <h2>编辑记录</h2>
+            <form class="form" id="task-form">
+              <input type="hidden" name="id" />
+              <label>阶段<select name="phase"></select></label>
+              <label
+                >状态<select name="status">
+                  <option>待开始</option>
+                  <option>进行中</option>
+                  <option>已完成</option>
+                  <option>有风险</option>
+                  <option>跳过</option>
+                </select></label
+              >
+              <label>开始时间<input name="start" type="date" /></label>
+              <label>结束时间<input name="end" type="date" /></label>
+              <label class="wide"
+                >任务名称<input name="title" required
+              /></label>
+              <label class="wide">负责人/执行者<input name="owner" /></label>
+              <label class="full"
+                >进展<textarea name="progress"></textarea>
+              </label>
+              <label class="full"
+                >遇到的问题<textarea name="problem"></textarea>
+              </label>
+              <label class="full"
+                >解决方案<textarea name="solution"></textarea>
+              </label>
+              <label class="full"
+                >遗留或选择跳过<textarea name="skip"></textarea>
+              </label>
+              <button class="primary" type="submit">写入任务</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="issues">
+        <div class="section-title"><h2>问题与决策</h2></div>
+        <div class="grid">
+          <div class="panel"><div id="issue-list" class="task-list"></div></div>
+          <div class="panel">
+            <h2>维护规则</h2>
+            <p class="note">
+              每次任务完成后更新本页。若任务有测试缺口、部署缺口、临时绕过、未决选型或跳过项，必须记录到任务台账的“遗留或选择跳过”。重大架构选择同步到
+              ADR 或 docs 后，在本页留下可追溯说明。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="timeline">
+        <div class="section-title">
+          <h2>整体时间线</h2>
+          <button class="primary" id="add-event">新增事件</button>
+        </div>
+        <div class="grid">
+          <div class="panel">
+            <div class="timeline" id="timeline-list"></div>
+          </div>
+          <div class="panel">
+            <form class="form" id="event-form">
+              <label>日期<input name="date" type="date" required /></label>
+              <label>阶段<select name="phase"></select></label>
+              <label class="wide">标题<input name="title" required /></label>
+              <label class="full">说明<textarea name="body"></textarea></label>
+              <button class="primary" type="submit">写入事件</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="retro">
+        <div class="section-title"><h2>复盘摘要</h2></div>
+        <div class="grid">
+          <div class="panel" id="retro-summary"></div>
+          <div class="panel">
+            <h2>下一次更新检查清单</h2>
+            <ul>
+              <li>本次任务属于哪个 phase？</li>
+              <li>状态是否从“进行中”更新为“已完成/有风险/跳过”？</li>
+              <li>问题、方案、跳过项是否有明确时间和原因？</li>
+              <li>测试、部署、监控或文档缺口是否记录？</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer>
+      浏览器编辑写入 localStorage；需要固化到仓库时，点击“导出当前 HTML”，或让
+      Codex 直接更新本文件的 seedData。
+    </footer>
+    <script>
+      const storageKey = "ai-hub-processing-visualization-v2";
+      const seedData = {
+        updatedAt: "2026-08-01",
+        phases: [
+          {
+            id: "product",
+            name: "产品设计",
+            progress: 35,
+            goal: "V1 范围、路线、阶段门禁和验收口径",
+            tasks: [
+              "规格与 roadmap 已存在",
+              "Phase 2-8 仍需阶段详细计划",
+              "新增需求默认进入 V1.1",
+            ],
+          },
+          {
+            id: "ui",
+            name: "UI 设计",
+            progress: 20,
+            goal: "Web 壳、核心页面、组件与交互状态",
+            tasks: [
+              "Phase 1 应用壳已规划/落地",
+              "业务页面从 Phase 4 起展开",
+              "需补完整设计状态",
+            ],
+          },
+          {
+            id: "dev",
+            name: "开发",
+            progress: 25,
+            goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
+            tasks: [
+              "Phase 1 工程骨架大多存在",
+              "Phase 2-8 尚未实现",
+              "后续每阶段先写详细计划",
+            ],
+          },
+          {
+            id: "test",
+            name: "测试",
+            progress: 18,
+            goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
+            tasks: [
+              "Phase 1 有 verify/CI 目标",
+              "最终完成证据未在本轮验证",
+              "后续阶段需同步测试计划",
+            ],
+          },
+          {
+            id: "ops",
+            name: "部署运维",
+            progress: 22,
+            goal: "Compose、CI、监控、生产安全、备份恢复和上线演练",
+            tasks: [
+              "开发/测试 Compose 已存在",
+              "生产运维是 Phase 7 主体",
+              "上线试点是 Phase 8 主体",
+            ],
+          },
+        ],
+        programPhases: [
+          {
+            id: "p1",
+            name: "Phase 1：工程基础与可运行骨架",
+            target: "第 1 月",
+            status: "有风险",
+            progress: 85,
+            summary:
+              "当前唯一有详细实施计划的阶段。仓库中 apps、packages、compose、CI、ADR、verify 等关键文件已存在，但 Phase 1 Completion Check 尚未全量复验。",
+            tasks: [
+              [
+                "Bootstrap pnpm workspace 与质量命令",
+                "已完成",
+                "package.json、pnpm-workspace、turbo、tsconfig、eslint、prettier、基础 scripts 已存在。",
+              ],
+              [
+                "共享 contracts 与 fail-fast runtime config",
+                "已完成",
+                "packages/contracts 与 packages/config 已存在。",
+              ],
+              [
+                "PostgreSQL、migration 与 outbox store",
+                "已完成",
+                "packages/database、testing、outbox 相关目录已存在。",
+              ],
+              [
+                "NestJS API health/readiness",
+                "已完成",
+                "apps/api 与 server health 模块已存在。",
+              ],
+              [
+                "Worker outbox processing",
+                "已完成",
+                "apps/worker 与 server outbox worker 已存在。",
+              ],
+              [
+                "React 应用壳与 UI baseline",
+                "已完成",
+                "apps/web 与 packages/ui 已存在。",
+              ],
+              [
+                "模块边界约束",
+                "已完成",
+                "dependency-cruiser.cjs 与 boundaries 命令已存在。",
+              ],
+              [
+                "Windows dev/test Compose",
+                "已完成",
+                "compose.yaml、compose.dev.yaml、compose.test.yaml 与 Docker 文档已存在。",
+              ],
+              [
+                "结构化日志、trace id、metrics、HTTP errors",
+                "已完成",
+                "observability 与 monitoring 文件已存在。",
+              ],
+              [
+                "本地 verify 与 GitLab CI",
+                "已完成",
+                "scripts/verify.mjs、verify-doc-links、.gitlab-ci.yml 已存在。",
+              ],
+              [
+                "Phase 1 Completion Check 全证据",
+                "有风险",
+                "本轮未执行 pnpm verify、clean Compose smoke、ready 503、outbox probe、日志脱敏和 clean tree 检查。",
+              ],
+            ],
+            gates: [
+              "pnpm verify PASS",
+              "clean Compose smoke PASS",
+              "Web/API/Worker/PostgreSQL/Object Storage/ClamAV healthy",
+              "readiness 能检测 DB down",
+              "边界违规会让 CI 失败",
+              "工作树干净并记录版本证据",
+            ],
+          },
+          {
+            id: "p2",
+            name: "Phase 2：身份、组织与授权",
+            target: "第 2 月",
+            status: "已完成",
+            progress: 100,
+            summary:
+              "Phase 2 V1 范围已完成并通过完整 pnpm verify：身份、组织、密码/会话、密码重置、DingTalk sync port、RBAC/audience、事务边界、受保护管理 API 和 Web 路由均已落地；真实钉钉 OAuth 凭据仍是部署前置风险。",
+            tasks: [
+              [
+                "员工号密码登录、强哈希、会话、多设备与限流",
+                "进行中",
+                "已实现 scrypt 强哈希、ASCII/长度策略、active 员工密码登录、会话创建和审计服务测试；限流尚未接入。",
+              ],
+              [
+                "钉钉 OAuth 首绑、自动注册与首设密",
+                "有风险",
+                "数据库表已预留 dingtalk_bindings 与 sync_runs；真实测试应用、回调地址和通讯录权限仍未接入。",
+              ],
+              [
+                "用户、部门、多部门成员和组织同步",
+                "进行中",
+                "已新增 employees、departments、department_memberships schema 与列表 API 基线。",
+              ],
+              [
+                "预置角色、自定义角色、平台 RBAC",
+                "进行中",
+                "已新增 roles、employee_roles 和 super_admin/organization_admin/employee 预置角色种子。",
+              ],
+              [
+                "统一 Authorization 模块与受众表达式",
+                "进行中",
+                "已实现 ActorContext 和泛化 DENY_NOT_AUTHORIZED；复杂受众表达式待 Phase 3 前补齐。",
+              ],
+              [
+                "会话撤销、密码重置、用户归档",
+                "进行中",
+                "已实现按员工撤销会话服务和审计记录；密码重置挑战与归档 API 待后续批次。",
+              ],
+            ],
+            gates: [
+              "身份与组织端到端流程通过",
+              "钉钉不可用时已有密码员工仍可登录",
+              "权限拒绝不泄露资源存在性",
+            ],
+          },
+          {
+            id: "p3",
+            name: "Phase 3：应用、版本、交付与审核",
+            target: "第 3-4 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "实现应用身份、不可变版本、四类交付配置、文件上传扫描签名、发布向导和公共审核池。",
+            tasks: [
+              [
+                "应用身份、负责人、维护人与归属部门",
+                "待开始",
+                "需接入 Phase 2 组织与授权接口。",
+              ],
+              [
+                "不可变 ApplicationVersion",
+                "待开始",
+                "需要版本替换、上下架、归档和物理删除边界。",
+              ],
+              [
+                "Web/桌面/移动/小程序交付配置",
+                "待开始",
+                "四类应用都要能端到端发布。",
+              ],
+              [
+                "分片上传、隔离、哈希、扫描、签名和存储复制",
+                "待开始",
+                "扫描失败或签名无效不得进入人工审核。",
+              ],
+              [
+                "发布向导、详情预览与自动校验",
+                "待开始",
+                "需要清晰的校验失败路径。",
+              ],
+              [
+                "审核池、领取、驳回、撤回、禁止自审、SLA 通知",
+                "待开始",
+                "审核通过后应用不可物理删除。",
+              ],
+            ],
+            gates: [
+              "四类应用端到端发布",
+              "新版本审核期间旧版本可用",
+              "扫描失败文件不可审核",
+              "审核后应用不可物理删除",
+            ],
+          },
+          {
+            id: "p4",
+            name: "Phase 4：市场、搜索、互动与创作者中心",
+            target: "第 5 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "实现权限过滤后的市场列表、推荐、分类、标签、中文搜索、评价互动、举报隐藏、创作者中心和通知。",
+            tasks: [
+              [
+                "权限过滤后的列表、推荐、最新、热门、分类、标签",
+                "待开始",
+                "未授权应用不得出现在任何查询或入口。",
+              ],
+              [
+                "PostgreSQL 中文模糊、拼音、首字母搜索读模型",
+                "待开始",
+                "需要定义索引和读模型刷新策略。",
+              ],
+              ["应用详情与授权交付入口", "待开始", "目标动作按准确口径计数。"],
+              [
+                "点赞、评分、匿名评价、官方回复、举报和隐藏",
+                "待开始",
+                "匿名对普通用户成立，审计人员可追溯。",
+              ],
+              [
+                "创作者中心、版本差异、自动校验报告和单应用数据",
+                "待开始",
+                "需要和审核、市场指标一致。",
+              ],
+              [
+                "站内通知中心与钉钉投递重试",
+                "待开始",
+                "通知失败需可观测和可重试。",
+              ],
+            ],
+            gates: [
+              "未授权应用不出现在任何查询或交付入口",
+              "匿名评价审计可追溯",
+              "Web 使用、下载、二维码动作计数准确",
+            ],
+          },
+          {
+            id: "p5",
+            name: "Phase 5：AI 需求与创新广场",
+            target: "第 6 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "实现结构化 AI 需求、轻量审核、受众、匿名展示、认领方案、状态推进、合并和应用关联闭环。",
+            tasks: [
+              [
+                "结构化需求表单与轻量审核",
+                "待开始",
+                "需要定义需求字段、审核规则和失败反馈。",
+              ],
+              [
+                "受众、匿名展示、点赞、补充讨论和举报",
+                "待开始",
+                "匿名和受众规则需与应用侧一致。",
+              ],
+              [
+                "认领方案、负责人、协作者与运营选择",
+                "待开始",
+                "认领冲突需要并发保护。",
+              ],
+              [
+                "业务价值、成本、风险和管理员优先级",
+                "待开始",
+                "需要可解释的排序与审计。",
+              ],
+              [
+                "状态推进、官方进展、试点和关闭",
+                "待开始",
+                "状态流转必须可追溯。",
+              ],
+              [
+                "需求合并、多对多应用关联和主解决方案",
+                "待开始",
+                "从需求到应用上架形成闭环。",
+              ],
+            ],
+            gates: [
+              "需求到应用正式上架闭环",
+              "合并/认领/状态推进有并发保护与审计",
+              "匿名和受众规则与应用侧一致",
+            ],
+          },
+          {
+            id: "p6",
+            name: "Phase 6：分析、看板、导出与外部助手",
+            target: "第 7 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "建立原始行为事件、日聚合、固定看板、受控导出、公网 Dify 最小化上下文和指标字典。",
+            tasks: [
+              [
+                "原始行为事件、180 天保留与日聚合",
+                "待开始",
+                "看板数字必须能从原始事件重算。",
+              ],
+              [
+                "平台/市场/应用/创新/审核/部门/风险/运行/集成看板",
+                "待开始",
+                "需要权限过滤和固定口径。",
+              ],
+              ["受权限控制的后台导出", "待开始", "导出行为全部审计。"],
+              [
+                "公网 Dify 最小化上下文、脱敏、授权复核和降级",
+                "待开始",
+                "Dify 不得获得员工号、内部 URL、文件、二维码和匿名身份。",
+              ],
+              [
+                "钉钉工作通知完整矩阵",
+                "待开始",
+                "覆盖审核、需求、运营、风险等场景。",
+              ],
+              ["指标口径字典", "待开始", "所有指标需有定义、来源和重算方式。"],
+            ],
+            gates: [
+              "看板可由原始事件重算且一致",
+              "应用负责人不能看个人访问名单",
+              "Dify 不获得敏感上下文",
+              "导出全部审计",
+            ],
+          },
+          {
+            id: "p7",
+            name: "Phase 7：生产安全、部署与运维",
+            target: "第 8 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "生产双机 Compose、切换方案、PostgreSQL 复制/WAL、对象存储复制、监控告警、安全头、供应链扫描、发布回滚和故障手册。",
+            tasks: [
+              [
+                "Ubuntu 双机 production Compose",
+                "待开始",
+                "依赖生产服务器、网络、证书、出站白名单。",
+              ],
+              [
+                "Keepalived 或内部 DNS 切换方案",
+                "待开始",
+                "需要明确切换演练和回退。",
+              ],
+              [
+                "PostgreSQL 流复制、WAL 归档和人工提升",
+                "待开始",
+                "RPO/RTO 需要可验证证据。",
+              ],
+              [
+                "对象存储异步复制和人工切换",
+                "待开始",
+                "需要容量、负责人和恢复步骤。",
+              ],
+              [
+                "Prometheus、Grafana、Alertmanager 和集中日志",
+                "待开始",
+                "告警要覆盖业务、安全和基础设施。",
+              ],
+              [
+                "TLS、CSP、CSRF、SSRF、防重放和供应链扫描",
+                "待开始",
+                "安全问题不应拖到 Phase 8。",
+              ],
+              [
+                "不可变镜像、升级、回退、migration 门禁、备份恢复手册",
+                "待开始",
+                "生产 RC 可部署前必须演练。",
+              ],
+            ],
+            gates: [
+              "生产 RC 可部署",
+              "数据库/对象存储/镜像/配置恢复演练通过",
+              "RPO/RTO/99.5% 有证据",
+            ],
+          },
+          {
+            id: "p8",
+            name: "Phase 8：试点与正式上线",
+            target: "第 9 月",
+            status: "待开始",
+            progress: 0,
+            summary:
+              "只处理试点、缺陷、培训、演练和上线。第 8 月末功能冻结，Phase 8 不再承接普通新功能。",
+            tasks: [
+              [
+                "3-5 个部门、30-50 名员工、5-20 个真实应用试点",
+                "待开始",
+                "需要选择试点部门、应用和反馈渠道。",
+              ],
+              ["UAT、缺陷分级和修复", "待开始", "不能有未关闭 P0/P1。"],
+              [
+                "用户、发布者、运营、管理员和运维手册",
+                "待开始",
+                "培训材料要覆盖真实工作流。",
+              ],
+              [
+                "数据初始化、角色授予和钉钉工作台入口",
+                "待开始",
+                "上线前需复核权限和初始数据。",
+              ],
+              [
+                "上线演练、正式切换和回退窗口",
+                "待开始",
+                "切换和回退必须有批准人。",
+              ],
+              [
+                "90 天运营指标基线",
+                "待开始",
+                "上线后用于复盘 adoption、质量和稳定性。",
+              ],
+            ],
+            gates: [
+              "无未关闭 P0/P1",
+              "权限/文件安全/备份恢复/外部集成验收通过",
+              "企业上线批准人签字确认",
+            ],
+          },
+        ],
+        tasks: [
+          {
+            id: "t-001",
+            phase: "product",
+            status: "已完成",
+            title: "产品规格与 V1 roadmap 沉淀",
+            owner: "Codex",
+            start: "2026-07-31",
+            end: "2026-07-31",
+            progress:
+              "docs 下已存在设计规格、V1 roadmap 和 Phase 1 foundation plan。",
+            problem: "Phase 2-8 还没有详细实施计划。",
+            solution: "每个阶段开始前按 roadmap 门禁补详细计划。",
+            skip: "暂不把 Phase 2-8 直接当作可执行任务实现。",
+          },
+          {
+            id: "t-002",
+            phase: "dev",
+            status: "进行中",
+            title: "Phase 1 工程基础落地",
+            owner: "Codex",
+            start: "2026-07-31",
+            end: "",
+            progress:
+              "核心目录、apps、packages、compose、CI、ADR、verify 等文件已存在。",
+            problem:
+              "未在本轮执行完整 Phase 1 Completion Check，因此不能宣称 Phase 1 100% 完成。",
+            solution:
+              "下一步执行 pnpm verify、Compose smoke、health/readiness、outbox probe、日志脱敏和 clean tree 检查。",
+            skip: "Phase 2+ 业务能力尚未实现。",
+          },
+          {
+            id: "t-003",
+            phase: "product",
+            status: "已完成",
+            title: "全盘列出 V1 八阶段任务状态",
+            owner: "Codex",
+            start: "2026-08-01",
+            end: "2026-08-01",
+            progress:
+              "在 processing_visualization.html 增加 V1 阶段矩阵，列出 Phase 1-8 的任务、状态、门禁和风险。",
+            problem: "roadmap 文档存在编码显示问题，但阶段结构和任务信息可读。",
+            solution:
+              "按 roadmap 可辨识内容整理成中文任务矩阵，并标明 Phase 2-8 待开始。",
+            skip: "未生成 Phase 2-8 的详细计划文件，只记录路线级任务。",
+          },
+          {
+            id: "t-004",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 2 身份组织授权基线",
+            owner: "Codex",
+            start: "2026-08-01",
+            end: "2026-08-01",
+            progress:
+              "新增 Phase 2 计划、identity contracts、0002 migration、密码/会话/重置挑战、DingTalk sync port、RBAC/audience、事务 repository、受保护管理 API、Web organization/security routes，以及 API、server、database、web 测试。",
+            problem:
+              "钉钉真实 OAuth/通讯录凭据和生产部署安全策略尚未接入；限流及更复杂的受众表达式仍需后续批次。",
+            solution:
+              "已稳定 EmployeeId、ActorContext、RBAC、session、password reset、DingTalk sync audit、事务边界和通用授权拒绝接口；Docker Desktop 恢复后完整 pnpm verify 已通过。",
+            skip: "Phase 2 V1 范围已完成；真实钉钉 OAuth、生产安全配置、限流和高级受众策略作为已记录的后续风险，不阻塞本阶段门禁。",
+          },
+        ],
+        events: [
+          {
+            date: "2026-08-03",
+            phase: "dev",
+            title: "GitHub development branch policy established",
+            body: "Local baseline 9fc43a0 was frozen into development, and the Phase 2 feature branch plus task-level commit policy were created. Remote push, Draft PR creation, and branch protection remain pending GitHub write access and network availability.",
+          },
+          {
+            date: "2026-07-31",
+            phase: "product",
+            title: "V1 roadmap 与 Phase 1 plan 建立",
+            body: "当前 docs/superpowers/plans 下只有 V1 roadmap 和 Phase 1 foundation 详细计划。",
+          },
+          {
+            date: "2026-08-01",
+            phase: "dev",
+            title: "Phase 1 文件落地情况确认",
+            body: "apps、packages、compose、CI、verify、monitoring、ADR 等关键文件存在，但完成门禁未全量复验。",
+          },
+          {
+            date: "2026-08-01",
+            phase: "product",
+            title: "可视化复盘页扩展为八阶段矩阵",
+            body: "全盘列出 Phase 1-8 的任务状态，Phase 1 标为进行中/待最终验收，Phase 2-8 标为待开始。",
+          },
+          {
+            date: "2026-08-01",
+            phase: "dev",
+            title: "Phase 2 身份组织授权基线接入",
+            body: "落地 identity contracts、database migration、server service、API endpoint 和测试；Phase 2 状态更新为进行中。",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Docker 恢复后 Phase 2 门禁复验通过",
+            body: "Docker Desktop Engine running 后预拉取 postgres:18.4-bookworm，完整 pnpm verify 通过：format、lint、typecheck、boundaries、8 项验证脚本、15 个 workspace 测试任务、数据库 12 项集成测试、server 27 项测试、API 5 项测试和 web 8 项测试均通过；web build 仅保留既有 chunk size warning。",
+          },
+        ],
+      };
+      let data = loadData();
+      function loadData() {
+        try {
+          return (
+            JSON.parse(localStorage.getItem(storageKey)) ||
+            structuredClone(seedData)
+          );
+        } catch {
+          return structuredClone(seedData);
+        }
+      }
+      function saveData() {
+        data.updatedAt = new Date().toISOString().slice(0, 10);
+        localStorage.setItem(storageKey, JSON.stringify(data, null, 2));
+        render();
+      }
+      function phaseName(id) {
+        return data.phases.find((phase) => phase.id === id)?.name || id;
+      }
+      function statusClass(status) {
+        return (
+          {
+            已完成: "status-done",
+            进行中: "status-progress",
+            有风险: "status-risk",
+            待开始: "status-todo",
+            跳过: "status-skip",
+          }[status] || ""
+        );
+      }
+      function render() {
+        renderMetrics();
+        renderPhases();
+        renderProgram();
+        renderTasks();
+        renderIssues();
+        renderTimeline();
+        renderRetro();
+        fillPhaseOptions();
+        document.getElementById("updated-at").textContent =
+          `最后更新：${data.updatedAt}`;
+      }
+      function renderMetrics() {
+        const allProgramTasks = data.programPhases.flatMap(
+          (phase) => phase.tasks,
+        );
+        const done = allProgramTasks.filter(
+          (task) => task[1] === "已完成",
+        ).length;
+        const risk = allProgramTasks.filter(
+          (task) => task[1] === "有风险",
+        ).length;
+        const avg = Math.round(
+          data.programPhases.reduce((sum, phase) => sum + phase.progress, 0) /
+            data.programPhases.length,
+        );
+        document.getElementById("metrics").innerHTML = [
+          ["V1 总体进度", `${avg}%`],
+          ["阶段数", data.programPhases.length],
+          ["已完成任务", done],
+          ["风险任务", risk],
+        ]
+          .map(
+            ([label, value]) =>
+              `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`,
+          )
+          .join("");
+      }
+      function renderPhases() {
+        document.getElementById("phase-flow").innerHTML = data.phases
+          .map(
+            (phase) =>
+              `<article class="phase"><div class="phase-top"><h3>${phase.name}</h3><span class="badge">${phase.progress}%</span></div><div class="progress"><i style="width:${phase.progress}%"></i></div><p class="note">${phase.goal}</p><ul>${phase.tasks.map((task) => `<li>${task}</li>`).join("")}</ul></article>`,
+          )
+          .join("");
+      }
+      function renderProgram() {
+        document.getElementById("program-list").innerHTML = data.programPhases
+          .map(
+            (phase) =>
+              `<article class="panel"><div class="phase-top"><div><h3>${phase.name}</h3><p class="note">${phase.target} · ${phase.summary}</p></div><span class="badge ${statusClass(phase.status)}">${phase.status} · ${phase.progress}%</span></div><div class="progress"><i style="width:${phase.progress}%"></i></div><div class="program-list">${phase.tasks.map((task) => `<div class="program-task"><div class="task-head"><strong>${task[0]}</strong><span class="badge ${statusClass(task[1])}">${task[1]}</span></div><p>${task[2]}</p></div>`).join("")}</div><p class="note"><strong>完成门禁：</strong>${phase.gates.join("；")}</p></article>`,
+          )
+          .join("");
+      }
+      function renderTasks() {
+        document.getElementById("task-list").innerHTML = data.tasks
+          .map(
+            (task) =>
+              `<article class="task"><div class="task-head"><p class="task-title">${task.title}</p><span class="badge ${statusClass(task.status)}">${task.status}</span></div><small>${phaseName(task.phase)} · ${task.owner || "未指定"} · ${task.start || "未开始"} 至 ${task.end || "进行中"}</small><p>${task.progress || "暂无进展记录"}</p><p><strong>问题：</strong>${task.problem || "暂无"}</p><p><strong>方案：</strong>${task.solution || "暂无"}</p><p><strong>遗留/跳过：</strong>${task.skip || "暂无"}</p><p><button data-edit="${task.id}">编辑</button></p></article>`,
+          )
+          .join("");
+        document
+          .querySelectorAll("[data-edit]")
+          .forEach((button) =>
+            button.addEventListener("click", () =>
+              editTask(button.dataset.edit),
+            ),
+          );
+      }
+      function renderIssues() {
+        const items = data.tasks.filter(
+          (task) =>
+            task.problem ||
+            task.skip ||
+            task.status === "有风险" ||
+            task.status === "跳过",
+        );
+        document.getElementById("issue-list").innerHTML = items
+          .map(
+            (task) =>
+              `<article class="task"><div class="task-head"><p class="task-title">${task.title}</p><span class="badge ${statusClass(task.status)}">${task.status}</span></div><p><strong>问题：</strong>${task.problem || "暂无"}</p><p><strong>解决方案：</strong>${task.solution || "暂无"}</p><p><strong>遗留/跳过：</strong>${task.skip || "暂无"}</p></article>`,
+          )
+          .join("");
+      }
+      function renderTimeline() {
+        document.getElementById("timeline-list").innerHTML = [...data.events]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(
+            (event) =>
+              `<article class="event"><time>${event.date}<br>${phaseName(event.phase)}</time><div><strong>${event.title}</strong><p>${event.body || ""}</p></div></article>`,
+          )
+          .join("");
+      }
+      function renderRetro() {
+        const phases = data.programPhases
+          .map(
+            (phase) =>
+              `<p class="note"><strong>${phase.name}：</strong>${phase.status}，进度 ${phase.progress}%。${phase.summary}</p>`,
+          )
+          .join("");
+        document.getElementById("retro-summary").innerHTML =
+          `<h2>阶段状态</h2>${phases}`;
+      }
+      function fillPhaseOptions() {
+        document.querySelectorAll("select[name=phase]").forEach((select) => {
+          const current = select.value;
+          select.innerHTML = data.phases
+            .map(
+              (phase) => `<option value="${phase.id}">${phase.name}</option>`,
+            )
+            .join("");
+          if (current) select.value = current;
+        });
+      }
+      function editTask(id) {
+        const task = data.tasks.find((item) => item.id === id);
+        const form = document.getElementById("task-form");
+        Object.entries(task).forEach(([key, value]) => {
+          if (form.elements[key]) form.elements[key].value = value || "";
+        });
+      }
+      document.querySelectorAll(".tab").forEach((tab) =>
+        tab.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab")
+            .forEach((item) =>
+              item.setAttribute("aria-selected", String(item === tab)),
+            );
+          document
+            .querySelectorAll("[data-panel]")
+            .forEach((panel) =>
+              panel.classList.toggle(
+                "hidden",
+                panel.dataset.panel !== tab.dataset.view,
+              ),
+            );
+        }),
+      );
+      document
+        .getElementById("task-form")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const task = Object.fromEntries(new FormData(form).entries());
+          task.id = task.id || `t-${Date.now()}`;
+          const index = data.tasks.findIndex((item) => item.id === task.id);
+          if (index >= 0) data.tasks[index] = task;
+          else data.tasks.push(task);
+          data.events.push({
+            date:
+              task.end || task.start || new Date().toISOString().slice(0, 10),
+            phase: task.phase,
+            title: `任务更新：${task.title}`,
+            body: `${task.status}。${task.progress || ""}`,
+          });
+          form.reset();
+          saveData();
+        });
+      document
+        .getElementById("event-form")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+          data.events.push(
+            Object.fromEntries(new FormData(event.currentTarget).entries()),
+          );
+          event.currentTarget.reset();
+          saveData();
+        });
+      document
+        .getElementById("add-task")
+        .addEventListener("click", () =>
+          document.getElementById("task-form").reset(),
+        );
+      document
+        .getElementById("add-event")
+        .addEventListener("click", () =>
+          document.getElementById("event-form").reset(),
+        );
+      document.getElementById("save").addEventListener("click", saveData);
+      document.getElementById("reset").addEventListener("click", () => {
+        localStorage.removeItem(storageKey);
+        data = structuredClone(seedData);
+        render();
+      });
+      document
+        .getElementById("export-json")
+        .addEventListener("click", () =>
+          download(
+            "ai-hub-processing-visualization.json",
+            JSON.stringify(data, null, 2),
+            "application/json",
+          ),
+        );
+      document.getElementById("export-html").addEventListener("click", () => {
+        const html = document.documentElement.outerHTML.replace(
+          /const seedData = \{[\s\S]*?\n    \};/,
+          `const seedData = ${JSON.stringify(data, null, 6)};`,
+        );
+        download(
+          "processing_visualization.html",
+          `<!doctype html>\n${html}`,
+          "text/html",
+        );
+      });
+      function download(filename, content, type) {
+        const blob = new Blob([content], { type });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+      render();
+      document
+        .querySelectorAll("[data-panel]")
+        .forEach((panel) =>
+          panel.classList.toggle("hidden", panel.dataset.panel !== "overview"),
+        );
+    </script>
+  </body>
+</html>
