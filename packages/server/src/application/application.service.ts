@@ -61,24 +61,32 @@ export class ApplicationService {
     actor: ActorContext,
     input: CreateApplicationInput,
   ): Promise<ApplicationRecord> {
+    return this.repository.withTransaction((repository) =>
+      this.createApplicationInTransaction(actor, input, repository),
+    );
+  }
+
+  async createApplicationInTransaction(
+    actor: ActorContext,
+    input: CreateApplicationInput,
+    repository: ApplicationRepository,
+  ): Promise<ApplicationRecord> {
     await this.assertAuthorized(actor, allowedActions.create);
-    return this.repository.withTransaction(async (repository) => {
-      const application = await repository.createApplication({
-        ownerEmployeeId: actor.employeeId,
-        maintainerEmployeeId: input.maintainerEmployeeId ?? actor.employeeId,
-        departmentId: input.departmentId ?? actor.primaryDepartmentId,
-        name: input.name,
-        summary: input.summary,
-      });
-      await this.recordChange(
-        repository,
-        "application.created",
-        application.applicationId,
-        null,
-        actor.employeeId,
-      );
-      return application;
+    const application = await repository.createApplication({
+      ownerEmployeeId: actor.employeeId,
+      maintainerEmployeeId: input.maintainerEmployeeId ?? actor.employeeId,
+      departmentId: input.departmentId ?? actor.primaryDepartmentId,
+      name: input.name,
+      summary: input.summary,
     });
+    await this.recordChange(
+      repository,
+      "application.created",
+      application.applicationId,
+      null,
+      actor.employeeId,
+    );
+    return application;
   }
 
   async createVersion(

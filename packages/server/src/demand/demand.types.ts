@@ -6,6 +6,7 @@ import type {
   DemandApplicationRole,
   DemandStatus,
 } from "@ai-hub/contracts";
+import type { ApplicationRepository } from "../application/application.types.js";
 
 export interface DemandEntry {
   demandId: string;
@@ -36,7 +37,7 @@ export interface DemandEntry {
 }
 
 export interface DemandApplicationBridge {
-  createApplication(
+  createApplicationInTransaction(
     actor: ActorContext,
     input: {
       name: string;
@@ -44,12 +45,19 @@ export interface DemandApplicationBridge {
       maintainerEmployeeId?: string;
       departmentId?: string;
     },
+    repository: ApplicationRepository,
   ): Promise<{ applicationId: string }>;
 }
 
 export interface DemandRepository {
   withTransaction<T>(
     operation: (repository: DemandRepository) => Promise<T>,
+  ): Promise<T>;
+  withApplicationTransaction<T>(
+    operation: (
+      demandRepository: DemandRepository,
+      applicationRepository: ApplicationRepository,
+    ) => Promise<T>,
   ): Promise<T>;
   createDraft(input: {
     requesterEmployeeId: string;

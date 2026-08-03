@@ -766,6 +766,16 @@ describe("DemandService merge and application links", () => {
       withTransaction: async <T>(
         operation: (repo: DemandRepository) => Promise<T>,
       ) => operation(repository as unknown as DemandRepository),
+      withApplicationTransaction: async <T>(
+        operation: (
+          demandRepository: DemandRepository,
+          applicationRepository: never,
+        ) => Promise<T>,
+      ) =>
+        operation(
+          repository as unknown as DemandRepository,
+          undefined as never,
+        ),
       linkApplication: async (
         demandId: string,
         applicationId: string,
@@ -789,7 +799,7 @@ describe("DemandService merge and application links", () => {
       emitOutbox: async () => undefined,
     } as unknown as DemandRepository;
     const applicationBridge = {
-      createApplication: async () => ({
+      createApplicationInTransaction: async () => ({
         applicationId: "application-from-demand",
       }),
     };

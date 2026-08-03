@@ -2,6 +2,7 @@ import type { CreateDemandInput, DemandStatus } from "@ai-hub/contracts";
 import type { DatabaseSchema } from "@ai-hub/database";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Selectable } from "kysely";
+import { KyselyApplicationRepository } from "../application/application.repository.js";
 import type {
   DemandCommentRecord,
   DemandCollaboratorRecord,
@@ -32,6 +33,22 @@ export class KyselyDemandRepository implements DemandRepository {
       .transaction()
       .execute(async (transaction) =>
         operation(new KyselyDemandRepository(transaction)),
+      );
+  }
+
+  withApplicationTransaction<T>(
+    operation: (
+      demandRepository: DemandRepository,
+      applicationRepository: import("../application/application.types.js").ApplicationRepository,
+    ) => Promise<T>,
+  ): Promise<T> {
+    return this.db
+      .transaction()
+      .execute(async (transaction) =>
+        operation(
+          new KyselyDemandRepository(transaction),
+          new KyselyApplicationRepository(transaction),
+        ),
       );
   }
 
@@ -712,7 +729,27 @@ export class KyselyDemandRepository implements DemandRepository {
       )
       or (
         ai_demands.audience_type = 'department'
-        and ai_demands.audience_department_id in (${departments})
+        and (
+          ai_demands.audience_department_id in (${departments})
+          or (
+            ai_demands.include_children = true
+            and exists (
+              with recursive department_tree as (
+                select d.department_id
+                from departments d
+                where d.department_id = ai_demands.audience_department_id
+                union all
+                select child.department_id
+                from departments child
+                inner join department_tree parent
+                  on child.parent_department_id = parent.department_id
+              )
+              select 1
+              from department_tree
+              where department_id in (${departments})
+            )
+          )
+        )
       )
     )`;
   }

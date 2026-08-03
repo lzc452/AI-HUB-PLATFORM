@@ -570,23 +570,43 @@ export class DemandService {
     if (this.applicationBridge === undefined) {
       throw new Error("DEMAND_APPLICATION_BRIDGE_UNAVAILABLE");
     }
-    const application = await this.applicationBridge.createApplication(actor, {
-      name: input.name,
-      summary: input.summary,
-      ...(input.maintainerEmployeeId === undefined
-        ? {}
-        : { maintainerEmployeeId: input.maintainerEmployeeId }),
-      ...(input.departmentId === undefined
-        ? {}
-        : { departmentId: input.departmentId }),
-    });
-    return this.linkApplication(
-      actor,
-      demandId,
-      application.applicationId,
-      input.role,
-      input.isPrimary,
-      input.expectedVersion,
+    return this.repository.withApplicationTransaction(
+      async (repository, applicationRepository) => {
+        const application =
+          await this.applicationBridge!.createApplicationInTransaction(
+            actor,
+            {
+              name: input.name,
+              summary: input.summary,
+              ...(input.maintainerEmployeeId === undefined
+                ? {}
+                : { maintainerEmployeeId: input.maintainerEmployeeId }),
+              ...(input.departmentId === undefined
+                ? {}
+                : { departmentId: input.departmentId }),
+            },
+            applicationRepository,
+          );
+        const link = await repository.linkApplication(
+          demandId,
+          application.applicationId,
+          input.role,
+          input.isPrimary,
+          input.expectedVersion,
+          actor.employeeId,
+        );
+        await repository.recordAudit({
+          demandId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "demand.application.created_from_demand",
+          details: { applicationId: application.applicationId },
+        });
+        await repository.emitOutbox({
+          demandId,
+          eventType: "demand.application.created_from_demand",
+        });
+        return link;
+      },
     );
   }
 
