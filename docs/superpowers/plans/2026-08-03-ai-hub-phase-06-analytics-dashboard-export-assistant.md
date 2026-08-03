@@ -87,9 +87,9 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/server/src/analytics/aggregation.*`, `metric-dictionary.*`, tests, database integration tests, `apps/api/test/phase6.real.e2e-spec.ts`.
 
-- [ ] Write failing tests proving day bucketing, duplicate event idempotency, 180-day boundary, rebuild equivalence, stable formulas, and dictionary metadata.
-- [ ] Observe RED, then implement the smallest SQL aggregation/rebuild service and versioned metric definitions.
-- [ ] Verify focused unit and real PostgreSQL aggregation tests; commit `feat(phase-06): add rebuildable daily analytics`.
+- [x] Write failing tests proving day bucketing, duplicate event idempotency, 180-day boundary, rebuild equivalence, stable formulas, and dictionary metadata.
+- [x] Observe RED, then implement the smallest SQL aggregation/rebuild service and versioned metric definitions.
+- [x] Verify focused unit and real PostgreSQL aggregation tests; commit `feat(phase-06): add rebuildable daily analytics`.
 
 ### Task 4: Platform, market, application, and innovation dashboards
 

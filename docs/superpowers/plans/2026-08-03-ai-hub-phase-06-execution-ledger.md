@@ -49,7 +49,7 @@ are prohibited.
 | Phase 6 branch | Created from exact Phase 5 latest commit | passed |
 | Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
 | Behavior events/schema | Commit `66c3f5`; contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
-| Daily aggregation/metric dictionary | Not executed yet | pending |
+| Daily aggregation/metric dictionary | Server focused command 16 files/72 tests; typecheck/lint passed; rebuild service uses 180-day raw-event window and fixed dictionary | passed |
 | Fixed dashboards | Not executed yet | pending |
 | Permissioned audited export | Not executed yet | pending |
 | Dify boundary | Not executed yet | pending |
@@ -79,3 +79,11 @@ result.
 - Schema: migration `0008_analytics_events` adds allow-listed raw events with 180-day expiry, idempotency, audience context, daily aggregate keys, metric definition metadata, append-only analytics audit, delete protection with an explicit retention-job escape, and indexes. No `tenant_id` was added.
 - Boundary: `AnalyticsEventService` validates events, records the raw event, audit row, and Outbox event in one repository transaction; idempotent replays do not create duplicate audit/outbox rows.
 - Commit: `66c3f5 feat(phase-06): add behavior event and retention schema`.
+
+### Step 3: Daily aggregation, rebuild, and metric dictionary
+
+- RED: `aggregation.service.test.ts` failed because the aggregation service and metric dictionary were absent.
+- GREEN: `corepack pnpm --filter @ai-hub/server test -- src/analytics/aggregation.service.test.ts` passed 16 files/72 tests; `@ai-hub/server` typecheck and lint passed; `git diff --check` exited 0.
+- Implementation: raw events are deduplicated by idempotency key, bounded to the retained 180-day window, bucketed by UTC day and audience scope, and deterministically upserted into daily aggregates. The fixed metric dictionary records source events, formula, time range, permission, audience rule, and recomputation method.
+- Real PostgreSQL aggregation e2e: deferred to Step 9 cross-layer verification; no cached result is treated as evidence.
+- Commit: pending until the Step 3 diff is staged and committed.

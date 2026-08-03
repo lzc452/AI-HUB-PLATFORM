@@ -135,8 +135,16 @@ export type {
 } from "./demand/demand.types.js";
 export { AnalyticsEventService } from "./analytics/analytics.service.js";
 export { KyselyAnalyticsEventRepository } from "./analytics/analytics.repository.js";
+export { AnalyticsAggregationService } from "./analytics/aggregation.service.js";
+export { KyselyAnalyticsAggregationRepository } from "./analytics/aggregation.repository.js";
 export type {
   AnalyticsAuditRecord,
   AnalyticsEventRepository,
   PersistedBehaviorEvent,
 } from "./analytics/analytics.types.js";
+export type {
+  AnalyticsAggregationRepository,
+  AnalyticsMetricDefinition,
+  DailyAggregate,
+  RawBehaviorEvent,
+} from "./analytics/aggregation.types.js";
