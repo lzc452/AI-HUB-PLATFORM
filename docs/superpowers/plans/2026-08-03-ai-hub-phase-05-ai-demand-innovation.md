@@ -197,11 +197,11 @@ export interface DemandRepository {
 
 **Files:** Phase 5 API real e2e, Web tests, ledger, ADR, visualization, review notes.
 
-- [ ] Run the focused service/API/Web tests and real PostgreSQL e2e for audience, moderation, concurrency, merge, audit, outbox, and application lifecycle gates.
-- [ ] Run exactly the Phase 5 final gate commands: format, lint, typecheck, boundaries, full test, build, doc links, and Compose config.
-- [ ] Review `git diff f60def66699bfbb0192b60fa1d256d98159d198b..HEAD` on standards and spec axes; resolve actionable findings.
-- [ ] Record exact counts, skipped external capabilities, and any environmental blockers in the ledger; update visualization.
-- [ ] Commit `docs(phase-05): close AI demand innovation gates`.
+- [x] Run the focused service/API/Web tests and real PostgreSQL e2e for audience, moderation, concurrency, merge, audit, outbox, and application lifecycle gates.
+- [x] Run exactly the Phase 5 final gate commands: format, lint, typecheck, boundaries, full test, build, doc links, and Compose config.
+- [x] Review `git diff f60def66699bfbb0192b60fa1d256d98159d198b..HEAD` on standards and spec axes; resolve actionable findings.
+- [x] Record exact counts, skipped external capabilities, and any environmental blockers in the ledger; update visualization.
+- [x] Commit `docs(phase-05): close AI demand innovation gates`.
 
 ### Task 10: GitHub handoff
 

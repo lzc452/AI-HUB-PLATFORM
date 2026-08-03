@@ -51,8 +51,8 @@ physical deletes, and a new tenant model are prohibited.
 | Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
 | Ownership/priority/progress | Ownership, priority, and progress: server 66/66; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
 | Merge/application loop | Server 68/68; focused mock API demand suite 1/1; Docker-backed Phase 5 real API 3/3 and existing application lifecycle 3/3 | passed |
-| PostgreSQL/API/Web evidence | Not run yet | pending |
-| Final gates/two-axis review | Not run yet | pending |
+| PostgreSQL/API/Web evidence | Docker-backed Phase 5 real API 3/3; application lifecycle 3/3; Web 17/17; full workspace test 17 API tests, 68 server tests, 18 database tests | passed |
+| Final gates/two-axis review | All required final commands passed; two-axis review completed after closeout | passed |
 | GitHub push/Draft PR | Not run yet | pending; external permission must be reported if blocked |
 
 ## Decisions and risks
@@ -80,7 +80,7 @@ or inferred result.
 - Branch creation: `feature/phase-05-ai-demand-innovation` created from that HEAD.
 - Documents: plan, ledger, ADR 0006, and `processing_visualization.html` updated.
 - Verification: `git diff --check` and `corepack pnpm format:check` both exited 0.
-- Commit: pending until the documentation files are staged and committed independently of `.codex/`.
+- Commit: `76cc835 docs(phase-05): establish AI demand innovation plan`.
 
 ### Step 2: Contracts, migration, and boundaries
 
@@ -113,7 +113,7 @@ or inferred result.
 - Implementation: added demand service/repository/controller/module, draft
   validation, requester/reviewer RBAC, optimistic status calls, transactionally
   paired audit/outbox calls, and API routes for create/save/submit/review.
-- Commit: `7015c9c feat(phase-05): add governed demand submission`.
+- Commit: `9c369aa feat(phase-05): add governed demand submission`.
 
 ### Step 4: Demand list/detail, audience, anonymous display, interactions, and reports
 
@@ -137,8 +137,7 @@ or inferred result.
   intentionally removable because likes are reversible reactions and are not
   demand/discussion/report/link content covered by the no-physical-delete
   requirement.
-- Commit: pending until the step changes and this evidence update are staged
-  together as `feat(phase-05): add demand square interactions`.
+- Commit: `02ee2c0 feat(phase-05): add demand square interactions`.
 
 ### Step 5: Claim, owner, collaborators, operator selection, and concurrency
 
@@ -159,8 +158,7 @@ or inferred result.
   listing, transactionally paired Audit/Outbox events, and migration `0007`
   with a partial unique operator index. Claim and assignment both update the
   demand version conditionally, so stale writers fail with `DEMAND_CONFLICT`.
-- Commit: pending until the step implementation and evidence are staged as
-  `feat(phase-05): protect demand ownership concurrency`.
+- Commit: `17c0831 feat(phase-05): protect demand ownership concurrency`.
 
 ### Step 6: Explainable value/cost/risk/admin priority and ordering
 
@@ -178,8 +176,7 @@ or inferred result.
   request priority ordering. PostgreSQL ordering uses score descending,
   created time descending, and demand ID ascending as the deterministic tie
   breaker.
-- Commit: pending until staged as `feat(phase-05): add explainable demand
-  prioritization`.
+- Commit: `3c2ca1c feat(phase-05): add explainable demand prioritization`.
 
 ### Step 7: Status progression, official progress, pilot, and close
 
@@ -196,8 +193,7 @@ or inferred result.
   append-only, pilot records retain outcome/status history fields, and every
   state/progress/pilot mutation emits Audit and Outbox entries in the same
   transaction. Closing requires a reason.
-- Commit: pending until staged as
-  `feat(phase-05): add demand progress and pilot lifecycle`.
+- Commit: `c2e58c0 feat(phase-05): add demand progress and pilot lifecycle`.
 
 ### Step 8: Merge, application links, primary solution, and formal application bridge
 
@@ -212,11 +208,52 @@ or inferred result.
 - Implementation: merge uses conditional source and target version updates;
   application links are many-to-many with a database-enforced primary
   solution invariant and deterministic listing; every merge/link mutation
-  records Audit and Outbox in the demand transaction. The new bridge calls
-  the existing `ApplicationService.createApplication` to create a draft and
-  then links it to the demand. The real e2e completes version creation,
-  artifact verification, all four delivery channels, review, and publication
-  through the existing Phase 3 application routes; the demand service never
-  writes application publication state directly.
-- Commit: pending until staged as
-  `feat(phase-05): close demand to application loop`.
+  records Audit and Outbox in the demand transaction. The bridge now shares
+  one PostgreSQL transaction across application draft creation, demand
+  association, version updates, and both modules' Audit/Outbox records. A
+  primary solution requires the linked application to already be published;
+  existing candidate links can be promoted after the Phase 3 lifecycle gate.
+  Department audiences with `includeChildren` use the department hierarchy
+  recursively before pagination/detail/action visibility checks. The real e2e
+  completes artifact verification, all four delivery channels, review, and
+  publication through the existing Phase 3 application routes; the demand
+  service never writes application publication state directly.
+- Commits: `36ebf76 feat(phase-05): close demand to application loop`,
+  `ff90b75 fix(phase-05): make application bridge atomic`,
+  `2df8a63 fix(phase-05): honor hierarchical demand audiences`, and
+  `5e4fe9e fix(phase-05): gate primary solutions on publication`.
+
+### Step 9: Final gates and two-axis review
+
+- Focused evidence: `corepack pnpm --filter @ai-hub/server test --
+  src/demand/demand.service.test.ts` passed 68/68; the API demand contract
+  passed 1/1; Docker-backed `phase5.real.e2e-spec.ts` passed 3/3 and the
+  existing `application.real.e2e-spec.ts` passed 3/3. The Web focused suite
+  passed 17/17.
+- Final gate commands all exited 0:
+  `corepack pnpm format:check`, `corepack pnpm lint`,
+  `corepack pnpm typecheck`, `corepack pnpm boundaries`,
+  `corepack pnpm test`, `corepack pnpm build`,
+  `node scripts/verify-doc-links.mjs`, and
+  `docker compose -f compose.yaml -f compose.test.yaml config --quiet`.
+  The Compose command emitted only a local Docker config permission warning
+  and returned `exit=0`.
+- Full test evidence included API 8 files/17 tests, server 14 files/68
+  tests, database 2 files/18 tests, Web 3 files/17 tests, worker 3 files/5
+  tests, and the repository Node checks 8/8.
+- Two-axis review was run against
+  `f60def66699bfbb0192b60fa1d256d98159d198b` over the complete non-empty
+  branch diff. Findings and dispositions are recorded in the closeout notes
+  below; no unresolved actionable finding remains.
+
+#### Two-axis review dispositions
+
+- Standards axis: the only hard finding was the non-atomic application
+  bridge; fixed in `ff90b75`. The reported divergent-change, duplicated
+  transaction orchestration, and controller input data-clump items are
+  documented Fowler smell judgement calls, not gate-blocking violations.
+- Spec axis: the non-atomic bridge was fixed in `ff90b75`; hierarchical
+  `includeChildren` audience visibility was implemented and covered by real
+  PostgreSQL e2e in `2df8a63`; draft applications cannot be selected as the
+  primary solution and existing links can be promoted after publication in
+  `5e4fe9e`. No scope-creep finding remained.
