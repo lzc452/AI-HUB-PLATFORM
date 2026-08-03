@@ -711,36 +711,40 @@
             id: "p4",
             name: "Phase 4：市场、搜索、互动与创作者中心",
             target: "第 5 月",
-            status: "待开始",
-            progress: 0,
+            status: "已完成",
+            progress: 100,
             summary:
-              "实现权限过滤后的市场列表、推荐、分类、标签、中文搜索、评价互动、举报隐藏、创作者中心和通知。",
+              "已实现权限过滤市场、PostgreSQL 中文/拼音搜索、详情与交付行为、互动治理、匿名审计、通知重试和创作者聚合中心。",
             tasks: [
               [
                 "权限过滤后的列表、推荐、最新、热门、分类、标签",
-                "待开始",
-                "未授权应用不得出现在任何查询或入口。",
+                "已完成",
+                "目录查询先执行受众过滤，再进行排序和分页；详情与行为入口复用可见性检查。",
               ],
               [
                 "PostgreSQL 中文模糊、拼音、首字母搜索读模型",
-                "待开始",
-                "需要定义索引和读模型刷新策略。",
+                "已完成",
+                "显式保存 name/summary/pinyin/initials 字段并建立 PostgreSQL 索引；V1 不引入 Elasticsearch。",
               ],
-              ["应用详情与授权交付入口", "待开始", "目标动作按准确口径计数。"],
+              [
+                "应用详情与授权交付入口",
+                "已完成",
+                "仅返回已发布当前版本；web_redirect、package_download、qr_display 通过受保护 API 记录。",
+              ],
               [
                 "点赞、评分、匿名评价、官方回复、举报和隐藏",
-                "待开始",
-                "匿名对普通用户成立，审计人员可追溯。",
+                "已完成",
+                "点赞/评分幂等，回复最多一层，官方回复受团队关系约束；举报通过状态隐藏/恢复且保留审计。",
               ],
               [
                 "创作者中心、版本差异、自动校验报告和单应用数据",
-                "待开始",
-                "需要和审核、市场指标一致。",
+                "已完成",
+                "只返回版本差异、校验报告和交付/点赞/评分聚合，不返回访问者名单。",
               ],
               [
                 "站内通知中心与钉钉投递重试",
-                "待开始",
-                "通知失败需可观测和可重试。",
+                "已完成",
+                "通知使用幂等键和持久化状态；钉钉失败记录 retry，不回滚业务事务。",
               ],
             ],
             gates: [
@@ -990,8 +994,74 @@
               "已稳定 EmployeeId、ActorContext、RBAC、session、password reset、DingTalk sync audit、事务边界和通用授权拒绝接口；Docker Desktop 恢复后完整 pnpm verify 已通过。",
             skip: "Phase 2 V1 范围已完成；真实钉钉 OAuth、生产安全配置、限流和高级受众策略作为已记录的后续风险，不阻塞本阶段门禁。",
           },
+          {
+            id: "t-005",
+            phase: "product",
+            status: "已完成",
+            title: "Phase 4 基线、范围与 ADR",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "接受 Phase 3 外部会话门禁证据，建立 Phase 4 分支、执行计划、台账和 ADR 0005。",
+            problem:
+              "需要确保 Phase 3 不被重复验收，同时把市场、互动、通知和创作者边界固定下来。",
+            solution:
+              "以 phase-03-complete 为基线，明确 PostgreSQL 读模型、受众先过滤和 Phase 5 延后项。",
+            skip: "不重复运行 Phase 3 全量门禁。",
+          },
+          {
+            id: "t-006",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 4 市场、互动、通知与创作者模块",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成 catalog/interaction/notification/creator contracts、PostgreSQL migrations、授权 API、审计/outbox 边界和 Web 路由。",
+            problem:
+              "真实钉钉凭据、个性化推荐、Redis/Elasticsearch 不在本阶段可交付范围。",
+            solution:
+              "用固定排序、显式搜索字段、幂等通知和聚合 SQL 实现 V1 可验证闭环。",
+            skip: "Phase 5 AI 需求与创新广场不改动。",
+          },
+          {
+            id: "t-007",
+            phase: "test",
+            status: "已完成",
+            title: "Phase 4 focused tests and API/Web e2e",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "Catalog 5、interaction 4、notification 4、creator 2、API 4、Web 16 项 focused tests 通过；typecheck 通过。",
+            problem:
+              "PostgreSQL 集成测试依赖本机容器运行时，若 Docker Desktop 未启动则无法取得数据库证据。",
+            solution:
+              "保留真实 PostgreSQL 集成门禁并记录确切 runtime strategy 错误，不伪造通过。",
+            skip: "未重复执行 Phase 3 外部会话已经完成的全量门禁。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-03",
+            phase: "product",
+            title: "Phase 4 baseline accepted and execution ordered",
+            body: "Accepted Phase 3 gate evidence from session 019fc537-5ae6-7f42-bb49-ff0fc969afac, created feature/phase-04-market-search-interaction from phase-03-complete, and recorded the ordered Phase 4 plan and ledger without rerunning the Phase 3 full gate.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "dev",
+            title: "Phase 4 market and interaction modules implemented",
+            body: "Added audience-first PostgreSQL catalog reads, explicit Chinese/pinyin/initial search fields, published-version detail and delivery action events, governed interactions with anonymous audit, durable notification retry state, aggregate-only creator center reads, and Web routes for market, notifications, and creator center.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 4 focused evidence recorded",
+            body: "Catalog, interaction, notification, creator, API, and Web focused tests passed; typecheck passed. The remaining PostgreSQL integration evidence depends on a working local container runtime and will be recorded with its exact result in the closeout ledger.",
+          },
           {
             date: "2026-08-03",
             phase: "test",
@@ -1047,14 +1117,28 @@
         }
         return value;
       }
+      function applyPhase4Evidence(value) {
+        const phase4 = value.phases?.find((phase) => phase.id === "p4");
+        if (phase4) {
+          phase4.status = "已完成";
+          phase4.progress = 100;
+          phase4.summary =
+            "Phase 4 已落地权限过滤市场、PostgreSQL 中文/拼音搜索、详情与交付行为、互动治理、匿名审计、通知重试和创作者聚合中心。";
+        }
+        return value;
+      }
       function loadData() {
         try {
-          return applyPhase3Evidence(
-            JSON.parse(localStorage.getItem(storageKey)) ||
-              structuredClone(seedData),
+          return applyPhase4Evidence(
+            applyPhase3Evidence(
+              JSON.parse(localStorage.getItem(storageKey)) ||
+                structuredClone(seedData),
+            ),
           );
         } catch {
-          return applyPhase3Evidence(structuredClone(seedData));
+          return applyPhase4Evidence(
+            applyPhase3Evidence(structuredClone(seedData)),
+          );
         }
       }
       function saveData() {

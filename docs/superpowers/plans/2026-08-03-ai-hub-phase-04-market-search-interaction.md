@@ -23,7 +23,7 @@
 
 ## Phase 4 Baseline
 
-- Base commit/tag: `phase-03-complete` / `978612d5ae8f125f4e328186d59257ff6dd7011e`.
+- Base commit/tag: annotated tag `phase-03-complete` (tag object `978612d5ae8f125f4e328186d59257ff6dd7011e`, commit `d3b99e9bfdb0e6d2447054608ee9a3c6584984e2`).
 - Branch: `feature/phase-04-market-search-interaction`.
 - Phase 3 gate result: accepted from the referenced Codex session; this plan intentionally does not repeat that gate.
 - Existing untracked `.codex/` is user-owned workspace state and is excluded from staging.
@@ -194,4 +194,3 @@ export interface NotificationRecord {
 ## Phase 4 Gate
 
 Phase 4 may be called complete only when the accepted Phase 3 baseline is recorded, the Phase 4 focused PostgreSQL/API/Web tests pass, permission filtering is proven for list/search/recommendation/detail/download, interaction and anonymous-audit tests pass, notification idempotency/retry tests pass, creator metrics are aggregate-only, all listed quality gates exit 0, the two-axis review has no unresolved actionable findings, and the branch is committed and pushed.
-

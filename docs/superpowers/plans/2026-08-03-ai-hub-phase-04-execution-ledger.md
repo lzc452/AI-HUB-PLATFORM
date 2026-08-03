@@ -4,7 +4,7 @@ Date: 2026-08-03
 
 ## Baseline decision
 
-Phase 3 is accepted as open-to-Phase-4 based on the completed gate evidence in Codex session `019fc537-5ae6-7f42-bb49-ff0fc969afac`. This phase does not rerun the Phase 3 full gate before implementation. The Phase 4 branch starts from tag `phase-03-complete` at commit `978612d5ae8f125f4e328186d59257ff6dd7011e`.
+Phase 3 is accepted as open-to-Phase-4 based on the completed gate evidence in Codex session `019fc537-5ae6-7f42-bb49-ff0fc969afac`. This phase does not rerun the Phase 3 full gate before implementation. The Phase 4 branch starts from annotated tag `phase-03-complete`, which points to commit `d3b99e9bfdb0e6d2447054608ee9a3c6584984e2` (tag object `978612d5ae8f125f4e328186d59257ff6dd7011e`).
 
 ## Scope
 
@@ -25,14 +25,41 @@ Phase 4 covers the permission-filtered application market, PostgreSQL Chinese se
 | Gate | Evidence | Status |
 |---|---|---|
 | Phase 3 baseline | Referenced Codex session above | accepted as input |
-| Phase 4 focused tests | to be recorded after implementation | pending |
-| Phase 4 repository gates | `corepack pnpm verify` components listed in plan | pending |
-| Two-axis review | `phase-03-complete...HEAD` | pending |
-| GitHub publication | branch push/PR | pending |
+| Phase 4 focused tests | Catalog 5, interaction 4, notification 4, creator 2, API 4, Web 16 tests passed | passed |
+| Phase 4 repository gates | `format:check`, `lint`, `typecheck`, `boundaries`, `test`, `build`, doc links, Compose config; PostgreSQL integration 15/15 with Docker Desktop desktop-linux | passed |
+| Two-axis review | `phase-03-complete...HEAD`; standards and spec review found no unresolved actionable findings | passed |
+| GitHub publication | `feature/phase-04-market-search-interaction` | pending |
+
+## Implementation evidence
+
+- Baseline commit: `2ca2942` (`docs(phase-04): establish market and interaction plan`).
+- Catalog contracts/schema and permission-filtered PostgreSQL query path: commit `b68ce75`.
+- Delivery action recording was added after review so web redirect, package download,
+  and QR display counters have a protected write path tied to the visible published
+  version.
+- Interaction module covers idempotent likes, one rating per employee/application,
+  official one-level replies, non-destructive reports, moderation state, and
+  anonymous-author audit lookup.
+- Notification module covers idempotent in-app records, recipient-only reads,
+  read state, and deterministic DingTalk retry state.
+- Creator module returns version diff, validation report, and aggregate metrics;
+  visitor/access lists are intentionally absent.
+- Web routes cover market search/detail, notifications, and creator center with
+  accessible fixed states. Phase 5 innovation routes remain unchanged.
+
+## Verification notes
+
+- Focused server/API/Web tests passed during implementation.
+- `corepack pnpm typecheck` passed after the delivery-action and catalog-label changes.
+- `corepack pnpm test` passed with 15/15 PostgreSQL integration tests after Docker
+  Desktop `desktop-linux` was selected through `DOCKER_HOST=npipe:////./pipe/dockerDesktopLinuxEngine`.
+- `corepack pnpm format:check`, `corepack pnpm lint`, `corepack pnpm boundaries`,
+  `corepack pnpm build`, `node scripts/verify-doc-links.mjs`, and Compose config
+  all passed. The first sandbox test attempt failed only because the Docker engine
+  was not reachable; that result was resolved by starting/using the local engine.
 
 ## Explicit deferrals
 
 - Real DingTalk credentials and external delivery are adapter/deployment concerns; deterministic retry behavior is tested locally.
 - Phase 5 innovation demand and innovation-square workflows are out of scope.
 - Personalized recommendations, favorites, Elasticsearch, Redis, and individual access-list analytics are not implemented in V1.
-
