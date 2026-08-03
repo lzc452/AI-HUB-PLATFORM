@@ -47,7 +47,7 @@ are prohibited.
 | Phase 5 baseline | Remote branch at `4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5` | accepted input |
 | Phase 3–5 reuse | Existing plans, ledgers, ADRs, roadmap, and remote branch | accepted input |
 | Phase 6 branch | Created from exact Phase 5 latest commit | passed |
-| Baseline docs/visualization | Plan, ledger, ADR 0007, dashboard update | in progress |
+| Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
 | Behavior events/schema | Not executed yet | pending |
 | Daily aggregation/metric dictionary | Not executed yet | pending |
 | Fixed dashboards | Not executed yet | pending |
@@ -67,5 +67,7 @@ result.
 ### Step 1: Baseline and planning
 
 - Branch: created from Phase 5 commit `4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5`.
-- Docs: Phase 6 plan, execution ledger, ADR 0007, and visualization update are being established.
-- Verification and commit: pending until the baseline document diff is checked.
+- Remote evidence: local and `origin/feature/phase-05-ai-demand-innovation` both resolved to `4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5`; the remote ledger records Phase 5 full gates and two-axis review passed, with Draft PR blocked by HTTP 403/network reset.
+- Docs: Phase 6 plan, execution ledger, ADR 0007, and visualization update established; Phase 6 progress is 5% in the dashboard.
+- Verification: `git diff --check` exited 0; `corepack pnpm format:check` exited 0.
+- Commit: `53a0985 docs(phase-06): establish analytics dashboard assistant plan`.
