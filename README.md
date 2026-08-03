@@ -14,6 +14,16 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-t
 
 The development application is available at `http://127.0.0.1:8080`.
 
+## GitHub Delivery Workflow
+
+Development work is integrated through `development` and released through `main`.
+Use a phase-level `feature/phase-XX-*` branch, keep each task in its own
+Conventional Commit, and update one Draft PR as the phase progresses. Feature
+PRs are squash-merged into `development`; release branches enter `main` through
+a release PR. See the [branching and delivery guide](docs/development/git-branching.md)
+and the [pull request template](.github/pull_request_template.md) for the
+required gates, review evidence, rollback procedure, and naming rules.
+
 ## Project Documents
 
 - [Approved design specification](docs/superpowers/specs/2026-07-31-ai-application-sharing-platform-design.md)

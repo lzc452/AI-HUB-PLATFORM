@@ -1,0 +1,6 @@
+# Default reviewer for all repository changes.
+* @lzc452
+
+# Require repository-owner review for delivery policy changes.
+/.github/ @lzc452
+/docs/development/ @lzc452
