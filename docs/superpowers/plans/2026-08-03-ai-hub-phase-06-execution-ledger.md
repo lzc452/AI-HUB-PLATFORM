@@ -107,12 +107,12 @@ result.
 - RED: `export.service.test.ts` failed because the export service was absent; the new PostgreSQL export-job assertion then failed because `analytics_export_jobs` was absent.
 - GREEN: server export command passed 19 files/79 tests; `@ai-hub/server` and `@ai-hub/database` typechecks/lint passed; Docker-backed database command passed 3 files/22 tests, including analytics schema 4/4; API contract plus inherited real PostgreSQL regression passed 9 files/18 tests with Docker Desktop Linux engine.
 - Implementation: migration `0009_analytics_exports` stores a bounded export-job lifecycle; repository queries only daily aggregates within actor scope; service rejects unauthorized/overlong ranges before reading, projects anonymous/redacted identity, and audits requested/completed/failed/downloaded actions. Routes remain under `/internal/analytics` with identity headers and authorization.
-- Commit: `2da4a89 feat(phase-06): add audited analytics exports`.
+- Commit: `2da4a89 feat(phase-06): add audited analytics exports`; follow-up test coverage commit `5608f41 test(phase-06): cover audited export service`.
 
 ### Step 7: Dify minimum context, redaction, authorization review, and degradation
 
 - RED: `assistant.service.test.ts` failed because the assistant service and Dify boundary were absent.
 - GREEN: server focused command passed 20 files/82 tests; server/API typechecks and server lint passed; the fake provider tests prove employee number, internal URL, file, QR code, and anonymous identity are excluded from the outbound payload, denied requests do not call Dify, and provider failure returns the safe local fallback with audit.
 - Implementation: `AnalyticsAssistantService` uses an explicit authorization-review repository, an allow-listed minimum context, dependency-injected `DifyAssistantPort`, and no public Open API. Production uses an unavailable-provider fallback until external credentials are separately authorized.
-- API route wiring is covered in the Phase 6 API contract and will be included in the Step 9 Docker-backed run.
-- Commit: pending until the Step 7 diff is staged and committed.
+- API route wiring is covered in the Phase 6 API contract; the Docker-backed API command passed 9 files/18 tests, including the guarded assistant route.
+- Commit: `0a8d288 feat(phase-06): add guarded external assistant boundary`.
