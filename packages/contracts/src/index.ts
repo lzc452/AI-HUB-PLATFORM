@@ -5,3 +5,12 @@ export type {
   OutboxEventInput,
   OutboxStorePort,
 } from "./outbox.js";
+export type {
+  ActorContext,
+  AuthorizationDecision,
+  AuthorizationRequest,
+  DepartmentSummary,
+  EmployeeId,
+  EmployeeSummary,
+  ResourceId,
+} from "./identity.js";
