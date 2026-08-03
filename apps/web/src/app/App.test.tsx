@@ -62,14 +62,16 @@ describe("App", () => {
     expect(mainContent).toHaveAttribute("tabindex", "-1");
   });
 
-  it("shows the marketplace status page by default", () => {
+  it("shows the permission-filtered marketplace by default", () => {
     render(<App />);
 
     expect(
       screen.getByRole("heading", { name: "应用市场" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("该模块正在建设中，当前仅提供应用壳体与静态状态页。"),
+      screen.getByText(
+        "只展示当前员工有权访问的已发布应用，排序采用固定运营规则。",
+      ),
     ).toBeInTheDocument();
   });
 

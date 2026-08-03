@@ -7,7 +7,7 @@ import {
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import type { HealthSnapshot } from "@ai-hub/contracts";
-import { Alert, Descriptions, Layout, Tag, Typography } from "antd";
+import { Alert, Descriptions, Input, Layout, Tag, Typography } from "antd";
 import {
   Link,
   NavLink,
@@ -66,6 +66,12 @@ const navigationItemsWithAdmin = [
     icon: <SafetyCertificateOutlined aria-hidden="true" />,
     path: "/security",
     title: "Security",
+  },
+  {
+    description: "通知中心",
+    icon: <CheckCircleOutlined aria-hidden="true" />,
+    path: "/notifications",
+    title: "站内通知",
   },
 ] as const;
 
@@ -475,6 +481,172 @@ function ApplicationDeliveryPage() {
   );
 }
 
+function MarketplacePage() {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="marketplace-heading" className="space-y-3">
+        <Text type="secondary">Phase 4 / Permission-filtered catalog</Text>
+        <Title id="marketplace-heading" level={1} className="!mb-0">
+          应用市场
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          只展示当前员工有权访问的已发布应用，排序采用固定运营规则。
+        </Paragraph>
+      </section>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(260px,1fr)]">
+        <section className="space-y-4" aria-labelledby="market-results-heading">
+          <Input.Search
+            aria-label="搜索应用"
+            placeholder="搜索应用名称、简介、拼音或首字母"
+            enterButton="搜索"
+          />
+          <div className="flex flex-wrap gap-2" aria-label="应用市场排序">
+            <Tag color="blue">管理员推荐</Tag>
+            <Tag>最新上架</Tag>
+            <Tag>热门应用</Tag>
+            <Tag>主分类</Tag>
+            <Tag>多标签</Tag>
+          </div>
+          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <Title id="market-results-heading" level={2} className="!mb-1">
+                  平台助手
+                </Title>
+                <Text type="secondary">
+                  平台流程自动化 · 10 次点赞 · 4.5 分
+                </Text>
+              </div>
+              <Tag color="success">已验证</Tag>
+            </div>
+            <Paragraph className="!mb-3 !mt-3">
+              面向平台团队的内部 AI 流程助手。
+            </Paragraph>
+            <Link to="/marketplace/app-platform">查看应用详情与交付入口</Link>
+          </div>
+        </section>
+        <aside
+          className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+          aria-label="应用市场状态"
+        >
+          <Title level={3} className="!mb-3">
+            市场状态
+          </Title>
+          <div className="space-y-3 text-sm">
+            <p className="m-0">
+              <Tag color="success">已验证</Tag> 已通过自动校验和人工审核
+            </p>
+            <p className="m-0">
+              <Tag color="warning">即将废弃</Tag> 显示替代应用和说明
+            </p>
+            <p className="m-0 text-[#595959]">
+              无权限的应用不会出现在列表、搜索或详情中。
+            </p>
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function MarketplaceDetailPage() {
+  return (
+    <div className="space-y-6">
+      <section
+        aria-labelledby="marketplace-detail-heading"
+        className="space-y-3"
+      >
+        <Text type="secondary">已发布应用 / 受众权限过滤</Text>
+        <Title id="marketplace-detail-heading" level={1} className="!mb-0">
+          平台助手
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          平台流程自动化应用详情、风险说明、版本和四类交付入口。
+        </Paragraph>
+      </section>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {[
+          ["Web", "打开内网应用"],
+          ["Desktop", "下载已签名安装包"],
+          ["Mobile", "查看移动端交付"],
+          ["Mini-program", "展示可解析二维码"],
+        ].map(([channel, action]) => (
+          <div
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            key={channel}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <Title level={3} className="!mb-0">
+                {channel}
+              </Title>
+              <Tag color="success">已启用</Tag>
+            </div>
+            <Text type="secondary">{action}</Text>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsPage() {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="notifications-heading" className="space-y-3">
+        <Text type="secondary">Phase 4 / In-app notification center</Text>
+        <Title id="notifications-heading" level={1} className="!mb-0">
+          站内通知
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          业务通知保留在站内；钉钉投递失败会进入可重试状态。
+        </Paragraph>
+      </section>
+      <Alert
+        showIcon
+        type="info"
+        title="暂无未读通知"
+        description="通知中心会显示审核、下架、举报处理和安全告警等事件。"
+      />
+    </div>
+  );
+}
+
+function CreatorCenterPage() {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="creator-heading" className="space-y-3">
+        <Text type="secondary">Phase 4 / Creator center</Text>
+        <Title id="creator-heading" level={1} className="!mb-0">
+          创作者中心
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          查看版本差异、自动校验报告和单应用聚合数据，不展示个人访问名单。
+        </Paragraph>
+      </section>
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <Text type="secondary">交付动作</Text>
+          <Title level={2} className="!mb-0 !mt-2">
+            10
+          </Title>
+        </div>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <Text type="secondary">点赞</Text>
+          <Title level={2} className="!mb-0 !mt-2">
+            4
+          </Title>
+        </div>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <Text type="secondary">评分</Text>
+          <Title level={2} className="!mb-0 !mt-2">
+            4.5
+          </Title>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AppShell() {
   return (
     <Layout className="min-h-screen bg-[#f5f5f5] text-[#1f1f1f]">
@@ -550,20 +722,20 @@ function createAppRouter() {
           path: "/",
         },
         {
-          element: (
-            <FeatureStatusPage
-              description="该模块正在建设中，当前仅提供应用壳体与静态状态页。"
-              details={[
-                "目录列表、分类筛选与详情页骨架将在后续任务中接入。",
-                "交付入口、权限过滤和运营排序保持关闭状态。",
-                "加载态、空态和错误态将在真实数据接入时完善。",
-              ]}
-              healthSnapshot={shellHealthSnapshot}
-              statusLabel="基础模块 / 静态页面"
-              title="应用市场"
-            />
-          ),
+          element: <MarketplacePage />,
           path: "/marketplace",
+        },
+        {
+          element: <MarketplaceDetailPage />,
+          path: "/marketplace/:applicationId",
+        },
+        {
+          element: <NotificationsPage />,
+          path: "/notifications",
+        },
+        {
+          element: <CreatorCenterPage />,
+          path: "/creator/:applicationId",
         },
         {
           element: <ApplicationsPage />,
