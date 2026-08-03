@@ -4,6 +4,7 @@ import * as identityOrganizationAuthorization from "./migrations/0002_identity_o
 import * as applicationDeliveryReview from "./migrations/0003_application_delivery_review.js";
 import * as catalogInteraction from "./migrations/0004_catalog_interaction.js";
 import * as notificationCreator from "./migrations/0005_notification_creator.js";
+import * as aiDemandInnovation from "./migrations/0006_ai_demand_innovation.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -12,6 +13,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0003_application_delivery_review": applicationDeliveryReview,
   "0004_catalog_interaction": catalogInteraction,
   "0005_notification_creator": notificationCreator,
+  "0006_ai_demand_innovation": aiDemandInnovation,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

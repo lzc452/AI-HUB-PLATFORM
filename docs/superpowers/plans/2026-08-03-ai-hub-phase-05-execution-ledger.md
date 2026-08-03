@@ -46,7 +46,7 @@ physical deletes, and a new tenant model are prohibited.
 | Phase 4 baseline | Remote branch at `f60def66699bfbb0192b60fa1d256d98159d198b` | accepted input |
 | Phase 5 branch | `feature/phase-05-ai-demand-innovation` created from Phase 4 HEAD | recorded |
 | Plan/ADR/ledger/visualization | Phase 5 baseline documents and dashboard entry; branch created from exact Phase 4 HEAD | passed |
-| Contracts/schema | Not run yet | pending |
+| Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
 | Demand lifecycle | Not run yet | pending |
 | Innovation interactions | Not run yet | pending |
 | Ownership/priority/progress | Not run yet | pending |
@@ -81,3 +81,18 @@ or inferred result.
 - Documents: plan, ledger, ADR 0006, and `processing_visualization.html` updated.
 - Verification: `git diff --check` and `corepack pnpm format:check` both exited 0.
 - Commit: pending until the documentation files are staged and committed independently of `.codex/`.
+
+### Step 2: Contracts, migration, and boundaries
+
+- RED: with `DOCKER_HOST=npipe:////./pipe/dockerDesktopLinuxEngine`, the new
+  migration test failed because all Phase 5 tables/constraints were absent;
+  the initial no-engine attempt is recorded as an environment blocker.
+- GREEN: `corepack pnpm --filter @ai-hub/contracts typecheck` exited 0;
+  `corepack pnpm --filter @ai-hub/database typecheck` exited 0; and the focused
+  PostgreSQL command exited 0 with 3 demand-schema tests and 15 existing outbox
+  integration tests passed.
+- Schema: added migration `0006_ai_demand_innovation`, normalized lifecycle,
+  audience, collaboration, comments, reports, progress, pilots, application
+  links, audit, optimistic version, partial primary-solution index, and
+  non-destructive delete triggers. No `tenant_id` was added.
+- Commit: `634a253 feat(phase-05): add demand contracts and schema`.

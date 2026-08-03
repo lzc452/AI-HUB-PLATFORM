@@ -37,3 +37,14 @@ export type {
   NotificationDeliveryStatus,
   NotificationInput,
 } from "./notification.js";
+export type {
+  CreateDemandInput,
+  DemandApplicationRole,
+  DemandAudienceType,
+  DemandCollaboratorRole,
+  DemandEntry,
+  DemandListQuery,
+  DemandPriorityInput,
+  DemandReportStatus,
+  DemandStatus,
+} from "./demand.js";

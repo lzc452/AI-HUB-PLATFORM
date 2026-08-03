@@ -287,6 +287,117 @@ export interface NotificationsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface AiDemandsTable {
+  demand_id: Generated<string>;
+  requester_employee_id: string;
+  title: string;
+  problem_statement: string;
+  desired_outcome: string;
+  status:
+    | "draft"
+    | "pending_review"
+    | "rejected"
+    | "published"
+    | "in_progress"
+    | "pilot"
+    | "completed"
+    | "closed"
+    | "merged";
+  audience_type: "all" | "department" | "employee";
+  audience_department_id: string | null;
+  audience_employee_id: string | null;
+  include_children: boolean;
+  display_anonymously: boolean;
+  review_reason: string | null;
+  business_value: number | null;
+  implementation_cost: number | null;
+  risk_level: number | null;
+  admin_priority: number | null;
+  priority_score: number | null;
+  priority_explanation: string | null;
+  owner_employee_id: string | null;
+  version: number;
+  merged_into_demand_id: string | null;
+  primary_solution_application_id: string | null;
+  published_at: Date | null;
+  closed_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface AiDemandCollaboratorsTable {
+  demand_id: string;
+  employee_id: string;
+  role: "owner" | "collaborator" | "operator";
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AiDemandCommentsTable {
+  comment_id: Generated<string>;
+  demand_id: string;
+  parent_comment_id: string | null;
+  author_employee_id: string;
+  body: string;
+  display_anonymously: boolean;
+  hidden_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface AiDemandReportsTable {
+  report_id: Generated<string>;
+  demand_id: string;
+  comment_id: string | null;
+  reporter_employee_id: string;
+  reason: string;
+  status: "open" | "dismissed" | "hidden" | "restored";
+  resolved_by_employee_id: string | null;
+  resolved_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AiDemandProgressUpdatesTable {
+  progress_id: Generated<string>;
+  demand_id: string;
+  author_employee_id: string;
+  status: AiDemandsTable["status"];
+  title: string;
+  body: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AiDemandPilotsTable {
+  pilot_id: Generated<string>;
+  demand_id: string;
+  application_id: string | null;
+  name: string;
+  starts_at: Date;
+  ends_at: Date | null;
+  outcome: string | null;
+  status: "planned" | "running" | "completed" | "cancelled";
+  created_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface AiDemandApplicationsTable {
+  demand_id: string;
+  application_id: string;
+  role: "candidate" | "pilot" | "solution";
+  is_primary: boolean;
+  linked_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AiDemandAuditEventsTable {
+  audit_event_id: Generated<string>;
+  demand_id: string;
+  actor_employee_id: string | null;
+  event_type: string;
+  details: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -317,4 +428,12 @@ export interface DatabaseSchema {
   application_comments: ApplicationCommentsTable;
   application_reports: ApplicationReportsTable;
   notifications: NotificationsTable;
+  ai_demands: AiDemandsTable;
+  ai_demand_collaborators: AiDemandCollaboratorsTable;
+  ai_demand_comments: AiDemandCommentsTable;
+  ai_demand_reports: AiDemandReportsTable;
+  ai_demand_progress_updates: AiDemandProgressUpdatesTable;
+  ai_demand_pilots: AiDemandPilotsTable;
+  ai_demand_applications: AiDemandApplicationsTable;
+  ai_demand_audit_events: AiDemandAuditEventsTable;
 }

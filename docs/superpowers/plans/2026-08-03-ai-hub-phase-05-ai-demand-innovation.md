@@ -134,11 +134,11 @@ export interface DemandRepository {
 
 **Files:** `packages/contracts/src/demand.ts`, contracts index, database schema/migrator, migration `0006`, demand types/repository scaffolding, migration test.
 
-- [ ] Write a failing migration test for normalized demands, audience checks, append-only discussion/report/link tables, unique likes/collaborators, optimistic version, partial unique primary solution, audit, outbox, and absence of `tenant_id`.
-- [ ] Run the focused test and observe failure because `0006` is absent.
-- [ ] Implement the migration with check constraints, foreign keys, indexes, optimistic version column, and a trigger preventing physical deletes from demand content tables.
-- [ ] Add contracts and Kysely schema types; register `0006`.
-- [ ] Run the focused PostgreSQL migration test and commit `feat(phase-05): add demand contracts and schema`.
+- [x] Write a failing migration test for normalized demands, audience checks, append-only discussion/report/link tables, unique likes/collaborators, optimistic version, partial unique primary solution, audit, outbox, and absence of `tenant_id`.
+- [x] Run the focused test and observe failure because `0006` is absent (after enabling the recorded Docker Desktop engine, assertions failed on missing tables/constraints/triggers).
+- [x] Implement the migration with check constraints, foreign keys, indexes, optimistic version column, and a trigger preventing physical deletes from demand content tables.
+- [x] Add contracts and Kysely schema types; register `0006`.
+- [x] Run the focused PostgreSQL migration test and commit `feat(phase-05): add demand contracts and schema`.
 
 ### Task 3: Demand creation, drafts, lightweight review and rejection
 
