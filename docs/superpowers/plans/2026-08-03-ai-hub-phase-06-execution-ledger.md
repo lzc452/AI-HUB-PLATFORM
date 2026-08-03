@@ -123,4 +123,4 @@ result.
 - GREEN: `@ai-hub/server` passed 22 files/87 tests, typecheck, lint, and format check; `@ai-hub/worker` passed 3 files/5 tests, typecheck, and lint; Docker-backed database tests passed 3 files/22 tests. The focused handler tests prove provider calls happen only from a claimed Outbox handler, delivery failures record `retry` and throw a safe retry code, and matrix metadata carries scenario, recipient role, and actor context.
 - Implementation: fixed 14-scenario Phase 3-6 matrix is exposed through `NotificationModule`; matrix queueing reuses `NotificationService` authorization/idempotency/transaction boundary, enriches Outbox payload metadata, rejects sensitive template variables, and never calls DingTalk inside the business transaction. The handler is the post-Outbox DingTalk port boundary and preserves retry state.
 - Visualization: `processing_visualization.html` records Phase 6 at 65% with implemented work and pending cross-layer/final gates.
-- Commit: pending until the Step 8 diff is staged and committed.
+- Commit: `de9e1ab feat(phase-06): complete DingTalk work notification matrix`.
