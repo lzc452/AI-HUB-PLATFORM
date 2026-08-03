@@ -50,7 +50,7 @@ physical deletes, and a new tenant model are prohibited.
 | Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
 | Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
 | Ownership/priority/progress | Ownership, priority, and progress: server 66/66; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
-| Merge/application loop | Not run yet | pending |
+| Merge/application loop | Server 68/68; focused mock API demand suite 1/1; Docker-backed Phase 5 real API 3/3 and existing application lifecycle 3/3 | passed |
 | PostgreSQL/API/Web evidence | Not run yet | pending |
 | Final gates/two-axis review | Not run yet | pending |
 | GitHub push/Draft PR | Not run yet | pending; external permission must be reported if blocked |
@@ -198,3 +198,25 @@ or inferred result.
   transaction. Closing requires a reason.
 - Commit: pending until staged as
   `feat(phase-05): add demand progress and pilot lifecycle`.
+
+### Step 8: Merge, application links, primary solution, and formal application bridge
+
+- RED: the new service test initially failed because
+  `createApplicationFromDemand` was absent. The API contract then required
+  the merge, many-to-many link, application-list, and bridge routes.
+- GREEN: `corepack pnpm --filter @ai-hub/server typecheck` and
+  `corepack pnpm --filter @ai-hub/api typecheck` passed; the focused server
+  command passed 68/68 tests; the focused mock API demand suite passed 1/1;
+  Docker-backed `phase5.real.e2e-spec.ts` passed 3/3 tests; and the existing
+  Docker-backed `application.real.e2e-spec.ts` passed 3/3 tests.
+- Implementation: merge uses conditional source and target version updates;
+  application links are many-to-many with a database-enforced primary
+  solution invariant and deterministic listing; every merge/link mutation
+  records Audit and Outbox in the demand transaction. The new bridge calls
+  the existing `ApplicationService.createApplication` to create a draft and
+  then links it to the demand. The real e2e completes version creation,
+  artifact verification, all four delivery channels, review, and publication
+  through the existing Phase 3 application routes; the demand service never
+  writes application publication state directly.
+- Commit: pending until staged as
+  `feat(phase-05): close demand to application loop`.

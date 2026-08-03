@@ -758,38 +758,38 @@
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
             status: "进行中",
-            progress: 60,
+            progress: 75,
             summary:
-              "已完成 Phase 5 基线、需求提交审核、互动治理、认领/负责人/协作者并发保护、可解释优先级，以及状态推进/官方进展/试点/关闭；合并和上架闭环待继续实现。",
+              "已完成 Phase 5 基线、需求提交审核、互动治理、认领/负责人/协作者并发保护、可解释优先级、状态推进/官方进展/试点/关闭、需求合并、应用关联及需求到正式上架桥接；最终门禁、两轴审查和 GitHub 交付待完成。",
             tasks: [
               [
                 "结构化需求表单与轻量审核",
-                "待开始",
+                "已完成",
                 "需要定义需求字段、审核规则和失败反馈。",
               ],
               [
                 "受众、匿名展示、点赞、补充讨论和举报",
-                "待开始",
+                "已完成",
                 "匿名和受众规则需与应用侧一致。",
               ],
               [
                 "认领方案、负责人、协作者与运营选择",
-                "待开始",
+                "已完成",
                 "认领冲突需要并发保护。",
               ],
               [
                 "业务价值、成本、风险和管理员优先级",
-                "待开始",
+                "已完成",
                 "需要可解释的排序与审计。",
               ],
               [
                 "状态推进、官方进展、试点和关闭",
-                "待开始",
+                "已完成",
                 "状态流转必须可追溯。",
               ],
               [
                 "需求合并、多对多应用关联和主解决方案",
-                "待开始",
+                "已完成",
                 "从需求到应用上架形成闭环。",
               ],
             ],
@@ -1122,6 +1122,22 @@
               "以状态图约束推进，复用 version 条件更新；进展追加写入，试点保存状态/结果，所有变更同事务写 Audit/Outbox。",
             skip: "需求合并、多对多应用关联、主方案和正式应用上架仍按计划顺序执行。",
           },
+          {
+            id: "t-013",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 5 需求合并与应用正式上架闭环",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成乐观版本保护的需求合并、多对多应用关联、唯一主解决方案，以及只创建应用草稿的受控桥接；真实 PostgreSQL e2e 继续通过既有应用版本、制品校验、四通道交付、审核和发布门禁完成正式上架。",
+            problem:
+              "需求模块不能直接写入应用 published 状态，且合并、主方案和关联写入必须避免并发覆盖。",
+            solution:
+              "使用源/目标双版本条件更新、主方案数据库约束、事务 Audit/Outbox，并委托既有 ApplicationService 维护应用生命周期。",
+            skip: "最终全仓门禁、两轴审查、分支推送和 Draft PR 尚待执行。",
+          },
         ],
         events: [
           {
@@ -1154,6 +1170,12 @@
             phase: "test",
             title: "Phase 5 progress and pilot evidence recorded",
             body: "Lifecycle tests passed for the explicit state graph, invalid transition rejection, official progress, pilot date and outcome paths, close reason, optimistic versioning, Audit and Outbox. Real API e2e passed the progression through in_progress and closed.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 5 demand-to-application loop evidence recorded",
+            body: "Merge and many-to-many application link tests passed with optimistic version protection, primary-solution enforcement, Audit and Outbox. Real PostgreSQL API e2e created an application draft through the demand bridge and completed the existing application artifact, delivery, review, and publish gates; the existing application lifecycle e2e also passed.",
           },
           {
             date: "2026-08-03",

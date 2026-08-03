@@ -5,6 +5,7 @@ import { sql, type Kysely, type Selectable } from "kysely";
 import type {
   DemandCommentRecord,
   DemandCollaboratorRecord,
+  DemandApplicationLinkRecord,
   DemandEntry,
   DemandPilotRecord,
   DemandProgressRecord,
@@ -318,6 +319,124 @@ export class KyselyDemandRepository implements DemandRepository {
       .executeTakeFirst();
     if (row === undefined) throw new Error("DEMAND_PILOT_NOT_FOUND");
     return this.mapPilot(row);
+  }
+
+  async mergeDemands(
+    sourceDemandId: string,
+    targetDemandId: string,
+    sourceExpectedVersion: number,
+    targetExpectedVersion: number,
+  ): Promise<{ source: DemandEntry; target: DemandEntry }> {
+    const sourceRow = await this.db
+      .updateTable("ai_demands")
+      .set({
+        status: "merged",
+        merged_into_demand_id: targetDemandId,
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", sourceDemandId)
+      .where("version", "=", sourceExpectedVersion)
+      .where("status", "!=", "merged")
+      .returningAll()
+      .executeTakeFirst();
+    if (sourceRow === undefined) throw new Error("DEMAND_CONFLICT");
+    const targetRow = await this.db
+      .updateTable("ai_demands")
+      .set({ version: sql`version + 1`, updated_at: new Date() })
+      .where("demand_id", "=", targetDemandId)
+      .where("version", "=", targetExpectedVersion)
+      .where("status", "!=", "merged")
+      .returningAll()
+      .executeTakeFirst();
+    if (targetRow === undefined) throw new Error("DEMAND_CONFLICT");
+    return {
+      source: this.mapRow({ ...sourceRow, like_count: 0, comment_count: 0 }),
+      target: this.mapRow({ ...targetRow, like_count: 0, comment_count: 0 }),
+    };
+  }
+
+  async linkApplication(
+    demandId: string,
+    applicationId: string,
+    role: "candidate" | "pilot" | "solution",
+    isPrimary: boolean,
+    expectedVersion: number,
+    linkedByEmployeeId: string,
+  ): Promise<DemandApplicationLinkRecord> {
+    const demandRow = await this.db
+      .updateTable("ai_demands")
+      .set({
+        ...(isPrimary
+          ? { primary_solution_application_id: applicationId }
+          : {}),
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returning("demand_id")
+      .executeTakeFirst();
+    if (demandRow === undefined) throw new Error("DEMAND_CONFLICT");
+    if (isPrimary) {
+      await this.db
+        .updateTable("ai_demand_applications")
+        .set({ is_primary: false })
+        .where("demand_id", "=", demandId)
+        .where("is_primary", "=", true)
+        .execute();
+    }
+    try {
+      const row = await this.db
+        .insertInto("ai_demand_applications")
+        .values({
+          demand_id: demandId,
+          application_id: applicationId,
+          role,
+          is_primary: isPrimary,
+          linked_by_employee_id: linkedByEmployeeId,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return {
+        demandId: row.demand_id,
+        applicationId: row.application_id,
+        role: row.role,
+        isPrimary: row.is_primary,
+        linkedByEmployeeId: row.linked_by_employee_id,
+        createdAt: row.created_at,
+      };
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        throw new Error("DEMAND_APPLICATION_LINK_DUPLICATE");
+      }
+      throw error;
+    }
+  }
+
+  async listApplicationLinks(
+    demandId: string,
+  ): Promise<readonly DemandApplicationLinkRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_applications")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("is_primary", "desc")
+      .orderBy("application_id", "asc")
+      .execute();
+    return rows.map((row) => ({
+      demandId: row.demand_id,
+      applicationId: row.application_id,
+      role: row.role,
+      isPrimary: row.is_primary,
+      linkedByEmployeeId: row.linked_by_employee_id,
+      createdAt: row.created_at,
+    }));
   }
 
   async claimOwner(

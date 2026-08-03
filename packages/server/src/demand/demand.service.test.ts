@@ -638,3 +638,178 @@ describe("DemandService progress and pilot lifecycle", () => {
     ).resolves.toMatchObject({ status: "planned" });
   });
 });
+
+describe("DemandService merge and application links", () => {
+  it("merges with optimistic protection and allows one primary solution link", async () => {
+    const source: DemandEntry = {
+      demandId: "demand-source",
+      requesterEmployeeId: "E100",
+      title: "Duplicate demand",
+      problemStatement: "A team needs a governed assistant.",
+      desiredOutcome: "A reviewed assistant is delivered.",
+      status: "published",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: "E100",
+      primarySolutionApplicationId: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const target: DemandEntry = {
+      ...source,
+      demandId: "demand-target",
+      title: "Canonical demand",
+      version: 2,
+    };
+    const operator: ActorContext = {
+      ...reviewer,
+      roleCodes: ["demand_operator"],
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findById: async (demandId: string) =>
+        demandId === source.demandId ? source : target,
+      mergeDemands: async (
+        sourceDemandId: string,
+        targetDemandId: string,
+        sourceVersion: number,
+        targetVersion: number,
+      ) => {
+        if (
+          sourceVersion !== source.version ||
+          targetVersion !== target.version
+        ) {
+          throw new Error("DEMAND_CONFLICT");
+        }
+        source.status = "merged";
+        source.version += 1;
+        target.version += 1;
+        return { source, target };
+      },
+      linkApplication: async (
+        demandId: string,
+        applicationId: string,
+        role: "candidate" | "pilot" | "solution",
+        isPrimary: boolean,
+        expectedVersion: number,
+        linkedByEmployeeId: string,
+      ) => {
+        if (expectedVersion !== target.version)
+          throw new Error("DEMAND_CONFLICT");
+        target.version += 1;
+        return {
+          demandId,
+          applicationId,
+          role,
+          isPrimary,
+          linkedByEmployeeId,
+          createdAt: new Date(),
+        };
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.merge(operator, source.demandId, target.demandId, 1, 2),
+    ).resolves.toMatchObject({ source: { status: "merged" } });
+    await expect(
+      service.linkApplication(
+        operator,
+        target.demandId,
+        "application-1",
+        "solution",
+        true,
+        3,
+      ),
+    ).resolves.toMatchObject({ isPrimary: true, role: "solution" });
+  });
+
+  it("creates a draft application through the application lifecycle bridge", async () => {
+    const operator: ActorContext = {
+      ...reviewer,
+      roleCodes: ["demand_operator"],
+    };
+    const demand: DemandEntry = {
+      demandId: "demand-bridge",
+      requesterEmployeeId: "E100",
+      title: "Governed assistant",
+      problemStatement: "Teams need an approved assistant.",
+      desiredOutcome: "A formally published application.",
+      status: "in_progress",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: "E100",
+      primarySolutionApplicationId: null,
+      version: 4,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const repository = {
+      findById: async () => demand,
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      linkApplication: async (
+        demandId: string,
+        applicationId: string,
+        role: "candidate" | "pilot" | "solution",
+        isPrimary: boolean,
+        expectedVersion: number,
+        linkedByEmployeeId: string,
+      ) => {
+        expect(expectedVersion).toBe(4);
+        demand.version += 1;
+        return {
+          demandId,
+          applicationId,
+          role,
+          isPrimary,
+          linkedByEmployeeId,
+          createdAt: new Date(),
+        };
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const applicationBridge = {
+      createApplication: async () => ({
+        applicationId: "application-from-demand",
+      }),
+    };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      applicationBridge,
+    );
+
+    await expect(
+      service.createApplicationFromDemand(operator, demand.demandId, {
+        name: "Governed assistant",
+        summary: "A formally reviewed assistant.",
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: 4,
+      }),
+    ).resolves.toMatchObject({
+      applicationId: "application-from-demand",
+      isPrimary: true,
+    });
+  });
+});

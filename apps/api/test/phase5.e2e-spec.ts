@@ -94,6 +94,38 @@ describe("Phase 5 demand endpoints", () => {
           status: "planned",
         };
       },
+      async merge() {
+        return {
+          source: { demandId: "demand-1", status: "merged" },
+          target: { demandId: "demand-2", status: "published" },
+        };
+      },
+      async linkApplication() {
+        return {
+          demandId: "demand-1",
+          applicationId: "application-1",
+          role: "solution",
+          isPrimary: true,
+        };
+      },
+      async listApplicationLinks() {
+        return [
+          {
+            demandId: "demand-1",
+            applicationId: "application-1",
+            role: "solution",
+            isPrimary: true,
+          },
+        ];
+      },
+      async createApplicationFromDemand() {
+        return {
+          demandId: "demand-1",
+          applicationId: "application-from-demand",
+          role: "solution",
+          isPrimary: true,
+        };
+      },
     } as unknown as DemandService;
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -174,6 +206,40 @@ describe("Phase 5 demand endpoints", () => {
         name: "R&D pilot",
         startsAt: "2026-08-10T00:00:00.000Z",
         endsAt: "2026-08-20T00:00:00.000Z",
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/merge")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        targetDemandId: "demand-2",
+        sourceExpectedVersion: 4,
+        targetExpectedVersion: 1,
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/applications")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        applicationId: "application-1",
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: 5,
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .get("/internal/demands/demand-1/applications")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/applications/from-demand")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        name: "Governed assistant",
+        summary: "Created through the demand bridge.",
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: 6,
       })
       .expect(201);
 

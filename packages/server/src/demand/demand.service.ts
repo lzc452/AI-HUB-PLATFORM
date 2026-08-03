@@ -1,6 +1,7 @@
 import type {
   ActorContext,
   CreateDemandInput,
+  DemandApplicationRole,
   DemandPriorityInput,
   DemandStatus,
 } from "@ai-hub/contracts";
@@ -11,6 +12,8 @@ import type {
   DemandDraftInput,
   DemandEntry,
   DemandListResult,
+  DemandApplicationLinkRecord,
+  DemandApplicationBridge,
   DemandPilotRecord,
   DemandProgressRecord,
   DemandReportRecord,
@@ -36,6 +39,7 @@ export class DemandService {
   constructor(
     private readonly repository: DemandRepository,
     private readonly authorization: DemandAuthorizationPort,
+    private readonly applicationBridge?: DemandApplicationBridge,
   ) {}
 
   async createDraft(
@@ -445,6 +449,145 @@ export class DemandService {
       });
       return pilot;
     });
+  }
+
+  async merge(
+    actor: ActorContext,
+    sourceDemandId: string,
+    targetDemandId: string,
+    sourceExpectedVersion: number,
+    targetExpectedVersion: number,
+  ): Promise<{ source: DemandEntry; target: DemandEntry }> {
+    await this.assertAllowed(actor, "merge", sourceDemandId);
+    if (sourceDemandId === targetDemandId) {
+      throw new Error("DEMAND_MERGE_INVALID_TARGET");
+    }
+    const source = await this.requireDemand(sourceDemandId);
+    const target = await this.requireDemand(targetDemandId);
+    this.assertProgressActor(actor, source);
+    if (source.status === "merged" || target.status === "merged") {
+      throw new Error("DEMAND_MERGE_INVALID_STATE");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const merged = await repository.mergeDemands(
+        sourceDemandId,
+        targetDemandId,
+        sourceExpectedVersion,
+        targetExpectedVersion,
+      );
+      await repository.recordAudit({
+        demandId: sourceDemandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.merged",
+        details: { targetDemandId },
+      });
+      await repository.recordAudit({
+        demandId: targetDemandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.merge.received",
+        details: { sourceDemandId },
+      });
+      await repository.emitOutbox({
+        demandId: sourceDemandId,
+        eventType: "demand.merged",
+      });
+      await repository.emitOutbox({
+        demandId: targetDemandId,
+        eventType: "demand.merge.received",
+      });
+      return merged;
+    });
+  }
+
+  async linkApplication(
+    actor: ActorContext,
+    demandId: string,
+    applicationId: string,
+    role: DemandApplicationRole,
+    isPrimary: boolean,
+    expectedVersion: number,
+  ): Promise<DemandApplicationLinkRecord> {
+    await this.assertAllowed(actor, "associate_application", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    if (isPrimary && role !== "solution") {
+      throw new Error("DEMAND_PRIMARY_SOLUTION_ROLE_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const link = await repository.linkApplication(
+        demandId,
+        applicationId,
+        role,
+        isPrimary,
+        expectedVersion,
+        actor.employeeId,
+      );
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.application.linked",
+        details: { applicationId, role, isPrimary },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.application.linked",
+      });
+      return link;
+    });
+  }
+
+  async listApplicationLinks(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandApplicationLinkRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listApplicationLinks(demandId);
+  }
+
+  async createApplicationFromDemand(
+    actor: ActorContext,
+    demandId: string,
+    input: {
+      name: string;
+      summary: string;
+      maintainerEmployeeId?: string;
+      departmentId?: string;
+      role: DemandApplicationRole;
+      isPrimary: boolean;
+      expectedVersion: number;
+    },
+  ): Promise<DemandApplicationLinkRecord> {
+    await this.assertAllowed(actor, "associate_application", demandId);
+    const demand = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, demand);
+    if (
+      !new Set<DemandStatus>(["in_progress", "pilot", "completed"]).has(
+        demand.status,
+      )
+    ) {
+      throw new Error("DEMAND_APPLICATION_BRIDGE_INVALID_STATE");
+    }
+    if (this.applicationBridge === undefined) {
+      throw new Error("DEMAND_APPLICATION_BRIDGE_UNAVAILABLE");
+    }
+    const application = await this.applicationBridge.createApplication(actor, {
+      name: input.name,
+      summary: input.summary,
+      ...(input.maintainerEmployeeId === undefined
+        ? {}
+        : { maintainerEmployeeId: input.maintainerEmployeeId }),
+      ...(input.departmentId === undefined
+        ? {}
+        : { departmentId: input.departmentId }),
+    });
+    return this.linkApplication(
+      actor,
+      demandId,
+      application.applicationId,
+      input.role,
+      input.isPrimary,
+      input.expectedVersion,
+    );
   }
 
   async list(

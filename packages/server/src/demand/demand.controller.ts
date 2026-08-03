@@ -276,6 +276,93 @@ export class DemandController {
     );
   }
 
+  @Post(":demandId/merge")
+  merge(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      targetDemandId: string;
+      sourceExpectedVersion: number;
+      targetExpectedVersion: number;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.merge(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.targetDemandId,
+        body.sourceExpectedVersion,
+        body.targetExpectedVersion,
+      ),
+    );
+  }
+
+  @Post(":demandId/applications")
+  linkApplication(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      applicationId: string;
+      role: "candidate" | "pilot" | "solution";
+      isPrimary?: boolean;
+      expectedVersion: number;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.linkApplication(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.applicationId,
+        body.role,
+        body.isPrimary ?? false,
+        body.expectedVersion,
+      ),
+    );
+  }
+
+  @Post(":demandId/applications/from-demand")
+  createApplicationFromDemand(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      name: string;
+      summary: string;
+      maintainerEmployeeId?: string;
+      departmentId?: string;
+      role: "candidate" | "pilot" | "solution";
+      isPrimary?: boolean;
+      expectedVersion: number;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.createApplicationFromDemand(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        { ...body, isPrimary: body.isPrimary ?? false },
+      ),
+    );
+  }
+
+  @Get(":demandId/applications")
+  listApplicationLinks(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listApplicationLinks(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
   @Get()
   list(
     @Headers("x-employee-id") employeeId: string | undefined,

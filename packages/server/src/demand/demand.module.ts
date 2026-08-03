@@ -1,5 +1,8 @@
 import { createDatabase } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import { APPLICATION_SERVICE } from "../application/application.tokens.js";
+import { ApplicationModule } from "../application/application.module.js";
+import type { ApplicationService } from "../application/application.service.js";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { DemandController } from "./demand.controller.js";
@@ -12,17 +15,24 @@ export class DemandModule {
   static register(databaseUrl: string): DynamicModule {
     return {
       module: DemandModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [
+        IdentityModule.register(databaseUrl),
+        ApplicationModule.registerService(databaseUrl),
+      ],
       controllers: [DemandController],
       providers: [
         {
           provide: DEMAND_SERVICE,
-          useFactory: (identity: IdentityService) =>
+          useFactory: (
+            identity: IdentityService,
+            applications: ApplicationService,
+          ) =>
             new DemandService(
               new KyselyDemandRepository(createDatabase(databaseUrl)),
               identity,
+              applications,
             ),
-          inject: [IdentityService],
+          inject: [IdentityService, APPLICATION_SERVICE],
         },
       ],
       exports: [DEMAND_SERVICE],
@@ -32,6 +42,7 @@ export class DemandModule {
   static forTest(
     demands: DemandService,
     identity: IdentityService,
+    applications?: ApplicationService,
   ): DynamicModule {
     return {
       module: DemandModule,
@@ -39,6 +50,9 @@ export class DemandModule {
       providers: [
         { provide: DEMAND_SERVICE, useValue: demands },
         { provide: IdentityService, useValue: identity },
+        ...(applications === undefined
+          ? []
+          : [{ provide: APPLICATION_SERVICE, useValue: applications }]),
       ],
       exports: [DEMAND_SERVICE],
     };

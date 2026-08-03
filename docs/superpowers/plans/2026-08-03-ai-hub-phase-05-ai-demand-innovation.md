@@ -188,10 +188,10 @@ export interface DemandRepository {
 
 **Files:** application bridge contracts/service, demand repository/service/controller, migration extensions only if required, tests, API e2e.
 
-- [ ] Write failing tests for merge conflict protection, merged-demand visibility, many-to-many links, one primary solution, link role authorization, and link audit.
-- [ ] Write a failing integration test that creates a formal application from a demand and proves publication still requires artifact verification, review, and the Phase 3 publish guard.
-- [ ] Implement `createApplicationFromDemand` as a transactionally audited bridge that calls existing application creation/version/delivery/review APIs; never directly updates `applications.status` to `published`.
-- [ ] Run focused service and PostgreSQL e2e tests and commit `feat(phase-05): close demand to application loop`.
+- [x] Write failing tests for merge conflict protection, merged-demand visibility, many-to-many links, one primary solution, link role authorization, and link audit.
+- [x] Write a failing integration test that creates a formal application from a demand and proves publication still requires artifact verification, review, and the Phase 3 publish guard.
+- [x] Implement `createApplicationFromDemand` as a transactionally audited bridge that creates an application draft through the existing application service and never directly updates `applications.status` to `published`.
+- [x] Run focused service/API and PostgreSQL e2e tests and commit `feat(phase-05): close demand to application loop`.
 
 ### Task 9: API/Web e2e, PostgreSQL verification, full gates and two-axis review
 

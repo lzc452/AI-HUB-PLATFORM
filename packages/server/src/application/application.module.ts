@@ -16,7 +16,7 @@ const unavailableArtifactVerifier: ArtifactVerificationPort = {
 
 @Module({})
 export class ApplicationModule {
-  static register(
+  static registerService(
     databaseUrl: string,
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
   ): DynamicModule {
@@ -24,7 +24,6 @@ export class ApplicationModule {
     return {
       module: ApplicationModule,
       imports: [IdentityModule.register(databaseUrl)],
-      controllers: [ApplicationController],
       providers: [
         {
           provide: APPLICATION_SERVICE,
@@ -37,6 +36,21 @@ export class ApplicationModule {
           inject: [IdentityService],
         },
       ],
+      exports: [APPLICATION_SERVICE],
+    };
+  }
+
+  static register(
+    databaseUrl: string,
+    artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
+  ): DynamicModule {
+    return {
+      module: ApplicationModule,
+      imports: [
+        ApplicationModule.registerService(databaseUrl, artifactVerifier),
+      ],
+      controllers: [ApplicationController],
+      providers: [],
       exports: [APPLICATION_SERVICE],
     };
   }

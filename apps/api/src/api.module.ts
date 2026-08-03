@@ -125,7 +125,13 @@ export class ApiModule {
           : [CreatorModule.forTest(options.creator, options.identity)]),
         ...(options.demand === undefined || options.identity === undefined
           ? []
-          : [DemandModule.forTest(options.demand, options.identity)]),
+          : [
+              DemandModule.forTest(
+                options.demand,
+                options.identity,
+                options.application,
+              ),
+            ]),
         HealthModule.register(databaseCheck),
       ],
     };

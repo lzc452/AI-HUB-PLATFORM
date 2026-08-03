@@ -3,6 +3,7 @@ import type {
   AuthorizationDecision,
   CreateDemandInput,
   DemandCollaboratorRole,
+  DemandApplicationRole,
   DemandStatus,
 } from "@ai-hub/contracts";
 
@@ -32,6 +33,18 @@ export interface DemandEntry {
   version: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface DemandApplicationBridge {
+  createApplication(
+    actor: ActorContext,
+    input: {
+      name: string;
+      summary: string;
+      maintainerEmployeeId?: string;
+      departmentId?: string;
+    },
+  ): Promise<{ applicationId: string }>;
 }
 
 export interface DemandRepository {
@@ -134,6 +147,23 @@ export interface DemandRepository {
       status: DemandPilotRecord["status"];
     }>,
   ): Promise<DemandPilotRecord>;
+  mergeDemands(
+    sourceDemandId: string,
+    targetDemandId: string,
+    sourceExpectedVersion: number,
+    targetExpectedVersion: number,
+  ): Promise<{ source: DemandEntry; target: DemandEntry }>;
+  linkApplication(
+    demandId: string,
+    applicationId: string,
+    role: DemandApplicationRole,
+    isPrimary: boolean,
+    expectedVersion: number,
+    linkedByEmployeeId: string,
+  ): Promise<DemandApplicationLinkRecord>;
+  listApplicationLinks(
+    demandId: string,
+  ): Promise<readonly DemandApplicationLinkRecord[]>;
   hasLike(demandId: string, employeeId: string): Promise<boolean>;
   addLike(demandId: string, employeeId: string): Promise<void>;
   removeLike(demandId: string, employeeId: string): Promise<void>;
@@ -189,6 +219,15 @@ export interface DemandPilotRecord {
   createdByEmployeeId: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface DemandApplicationLinkRecord {
+  demandId: string;
+  applicationId: string;
+  role: DemandApplicationRole;
+  isPrimary: boolean;
+  linkedByEmployeeId: string;
+  createdAt: Date;
 }
 
 export interface DemandListResult {

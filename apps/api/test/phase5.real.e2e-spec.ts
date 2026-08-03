@@ -4,8 +4,10 @@ import request from "supertest";
 import { sql } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
+  ApplicationService,
   DemandService,
   IdentityService,
+  KyselyApplicationRepository,
   KyselyDemandRepository,
   type IdentityRepository,
 } from "@ai-hub/server";
@@ -55,6 +57,12 @@ const identityRepository = {
                 "demand.interact",
                 "demand.prioritize",
                 "demand.progress",
+                "demand.merge",
+                "demand.associate_application",
+                "application.create",
+                "application.read",
+                "application.update",
+                "application.publish",
               ]
             : [
                 "demand.create",
@@ -63,6 +71,8 @@ const identityRepository = {
                 "demand.interact",
                 "demand.claim",
                 "demand.collaborate",
+                "application.read",
+                "application.review",
               ],
       },
     ];
@@ -92,15 +102,39 @@ describe("real Phase 5 demand API", () => {
     `.execute(db);
 
     const identity = new IdentityService(identityRepository);
-    const service = new DemandService(new KyselyDemandRepository(db), {
-      authorize: (input) => identity.authorize(input),
-    });
+    const artifactVerification = {
+      async verifyArtifact(input: {
+        artifactKey: string;
+        expectedSha256: string;
+        signature: string;
+      }) {
+        return {
+          accepted: true,
+          scanStatus: "passed" as const,
+          sha256: input.expectedSha256,
+        };
+      },
+    };
+    const application = new ApplicationService(
+      new KyselyApplicationRepository(db),
+      { authorize: (input) => identity.authorize(input) },
+      artifactVerification,
+    );
+    const service = new DemandService(
+      new KyselyDemandRepository(db),
+      {
+        authorize: (input) => identity.authorize(input),
+      },
+      application,
+    );
     const moduleRef = await Test.createTestingModule({
       imports: [
         ApiModule.forTest({
           databaseCheck: async () => true,
           identity,
           demand: service,
+          application,
+          artifactVerification,
         }),
       ],
     }).compile();
@@ -344,5 +378,103 @@ describe("real Phase 5 demand API", () => {
       .where("role", "=", "operator")
       .execute();
     expect(operators).toHaveLength(1);
+  });
+
+  it("bridges a demand into the governed application lifecycle without bypassing publication gates", async () => {
+    const requester = actorHeaders("E100");
+    const operator = actorHeaders("E900");
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/demands")
+      .set(requester)
+      .send({
+        title: "Demand-backed assistant",
+        problemStatement: "The accepted demand needs a formal application.",
+        desiredOutcome: "The application must pass the standard review gates.",
+        audienceType: "all",
+      })
+      .expect(201);
+    const demandId = createResponse.body.demandId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/submit-review`)
+      .set(requester)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/review`)
+      .set(operator)
+      .send({ decision: "publish" })
+      .expect(201);
+    const progress = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/status`)
+      .set(operator)
+      .send({ expectedVersion: 3, nextStatus: "in_progress" })
+      .expect(201);
+
+    const bridge = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/applications/from-demand`)
+      .set(operator)
+      .send({
+        name: "Demand-backed assistant",
+        summary: "Application created from a structured demand.",
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: progress.body.version,
+      })
+      .expect(201);
+    const applicationId = bridge.body.applicationId as string;
+
+    const version = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/versions`)
+      .set(operator)
+      .send({
+        version: "1.0.0",
+        changelog: "Initial demand-backed release",
+        artifactKey: "applications/phase-5/demand-backed.zip",
+        artifactSha256: "phase-5-sha256",
+        artifactSignature: "phase-5-signature",
+        scanStatus: "passed",
+      })
+      .expect(201);
+    const versionId = version.body.applicationVersionId as string;
+    for (const channel of ["web", "desktop", "mobile", "mini_program"]) {
+      await request(app.getHttpServer())
+        .put(`/internal/applications/${applicationId}/deliveries/${channel}`)
+        .set(operator)
+        .send({
+          entryUrl: `https://${channel}.internal/apps/${applicationId}`,
+          enabled: true,
+        })
+        .expect(200);
+    }
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/submit-review`)
+      .set(operator)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/claim-review`)
+      .set(requester)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/review`)
+      .set(requester)
+      .send({ decision: "approve", comment: "Demand-backed review approved." })
+      .expect(200);
+    const published = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/publish`)
+      .set(operator)
+      .send({ applicationVersionId: versionId })
+      .expect(200);
+    expect(published.body.status).toBe("published");
+
+    const links = await request(app.getHttpServer())
+      .get(`/internal/demands/${demandId}/applications`)
+      .set(operator)
+      .expect(200);
+    expect(links.body).toEqual([
+      expect.objectContaining({
+        applicationId,
+        role: "solution",
+        isPrimary: true,
+      }),
+    ]);
   });
 });
