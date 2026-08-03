@@ -26,7 +26,12 @@ const identityRepository = {
       employeeId,
       displayName: employeeId === "E100" ? "Requester" : "Reviewer",
       status: "active" as const,
-      primaryDepartmentId: employeeId === "E200" ? "dept-ops" : "dept-rnd",
+      primaryDepartmentId:
+        employeeId === "E200"
+          ? "dept-ops"
+          : employeeId === "E300"
+            ? "dept-rnd-child"
+            : "dept-rnd",
       passwordHash: null,
       passwordResetRequired: false,
     };
@@ -41,7 +46,13 @@ const identityRepository = {
     };
   },
   async listEmployeeDepartmentIds(employeeId: string) {
-    return [employeeId === "E200" ? "dept-ops" : "dept-rnd"];
+    return [
+      employeeId === "E200"
+        ? "dept-ops"
+        : employeeId === "E300"
+          ? "dept-rnd-child"
+          : "dept-rnd",
+    ];
   },
   async listEmployeeRoles(employeeId: string) {
     return [
@@ -90,14 +101,18 @@ describe("real Phase 5 demand API", () => {
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
     await sql`
-      insert into departments (department_id, name, source)
-      values ('dept-rnd', 'R&D', 'local'), ('dept-ops', 'Operations', 'local')
+      insert into departments (department_id, name, parent_department_id, source)
+      values
+        ('dept-rnd', 'R&D', null, 'local'),
+        ('dept-rnd-child', 'R&D Child', 'dept-rnd', 'local'),
+        ('dept-ops', 'Operations', null, 'local')
     `.execute(db);
     await sql`
       insert into employees (employee_id, display_name, status, primary_department_id)
       values
         ('E100', 'Requester', 'active', 'dept-rnd'),
         ('E200', 'Other department', 'active', 'dept-ops'),
+        ('E300', 'Child department', 'active', 'dept-rnd-child'),
         ('E900', 'Reviewer', 'active', 'dept-rnd')
     `.execute(db);
 
@@ -151,6 +166,7 @@ describe("real Phase 5 demand API", () => {
   it("enforces audience, anonymity, interactions, audit and outbox through PostgreSQL", async () => {
     const requester = actorHeaders("E100");
     const otherDepartment = actorHeaders("E200");
+    const childDepartment = actorHeaders("E300");
     const reviewer = actorHeaders("E900");
     const createResponse = await request(app.getHttpServer())
       .post("/internal/demands")
@@ -161,6 +177,7 @@ describe("real Phase 5 demand API", () => {
         desiredOutcome: "Return cited guidance in under one minute.",
         audienceType: "department",
         departmentId: "dept-rnd",
+        includeChildren: true,
         displayAnonymously: true,
       })
       .expect(201);
@@ -249,6 +266,11 @@ describe("real Phase 5 demand API", () => {
       .set(otherDepartment)
       .expect(200)
       .then((response) => expect(response.body.items).toHaveLength(0));
+    await request(app.getHttpServer())
+      .get("/internal/demands")
+      .set(childDepartment)
+      .expect(200)
+      .then((response) => expect(response.body.items).toHaveLength(1));
 
     await request(app.getHttpServer())
       .get(`/internal/demands/${demandId}`)
