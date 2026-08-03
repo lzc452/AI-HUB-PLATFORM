@@ -994,6 +994,12 @@
         events: [
           {
             date: "2026-08-03",
+            phase: "test",
+            title: "Phase 3 implementation and gate evidence",
+            body: "Phase 2 gate re-check passed. Phase 3 closeout now covers owner/maintainer/department fields, accepted artifact-pipeline verification, four-channel publication as a hard gate, review-pool claim/release, 24-hour SLA, notification outbox events, and real PostgreSQL API lifecycle e2e for approve, reject, publish, rollback, withdraw, and archive. External notification delivery and the full operations UI remain deferred by scope decision.",
+          },
+          {
+            date: "2026-08-03",
             phase: "dev",
             title: "GitHub development branch policy established",
             body: "Local baseline 9fc43a0 was frozen into development, and the Phase 2 feature branch plus task-level commit policy were created. Remote push, Draft PR creation, and branch protection remain pending GitHub write access and network availability.",
@@ -1031,14 +1037,24 @@
         ],
       };
       let data = loadData();
+      function applyPhase3Evidence(value) {
+        const phase3 = value.phases?.find((phase) => phase.id === "p3");
+        if (phase3) {
+          phase3.status = "已完成";
+          phase3.progress = 100;
+          phase3.summary =
+            "Phase 3 已落地应用生命周期、不可变版本、四通道交付、制品校验、审核、发布、回滚、审计与 outbox；全量测试和门禁证据已记录。";
+        }
+        return value;
+      }
       function loadData() {
         try {
-          return (
+          return applyPhase3Evidence(
             JSON.parse(localStorage.getItem(storageKey)) ||
-            structuredClone(seedData)
+              structuredClone(seedData),
           );
         } catch {
-          return structuredClone(seedData);
+          return applyPhase3Evidence(structuredClone(seedData));
         }
       }
       function saveData() {

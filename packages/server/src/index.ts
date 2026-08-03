@@ -59,3 +59,24 @@ export {
   PasswordPolicyError,
   PasswordService,
 } from "./identity/password.service.js";
+export { ApplicationController } from "./application/application.controller.js";
+export { ApplicationModule } from "./application/application.module.js";
+export { KyselyApplicationRepository } from "./application/application.repository.js";
+export { ApplicationService } from "./application/application.service.js";
+export { APPLICATION_SERVICE } from "./application/application.tokens.js";
+export type { ArtifactVerificationPort } from "./application/storage.port.js";
+export { ArtifactPipeline } from "./application/storage.pipeline.js";
+export { MemoryObjectStorage } from "./application/storage.memory.js";
+export type {
+  ApplicationAuthorizationPort,
+  ApplicationRepository,
+  ApplicationRecord,
+  ApplicationVersionRecord,
+  DeliveryChannel,
+  DeliveryRecord,
+  ReviewDecision,
+  ReviewQueueRecord,
+  ReviewQueueView,
+  ReviewSlaStatus,
+  ReviewRecord,
+} from "./application/application.types.js";

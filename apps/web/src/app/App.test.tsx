@@ -86,6 +86,86 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("exposes organization and security administration routes", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("link", { name: /Organization/ }));
+    expect(
+      screen.getByRole("heading", { name: "Organization" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /Security/ }));
+    expect(
+      screen.getByRole("heading", { name: "Security" }),
+    ).toBeInTheDocument();
+  });
+
+  it("exposes the application administration navigation", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("link", { name: /Applications/ }));
+
+    expect(
+      screen.getByRole("heading", { name: "Applications" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Application details" }),
+    ).toHaveAttribute("href", "/applications/app-001");
+    expect(screen.getByRole("link", { name: "Versions" })).toHaveAttribute(
+      "href",
+      "/applications/app-001/versions",
+    );
+    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute(
+      "href",
+      "/applications/app-001/review",
+    );
+    expect(screen.getByRole("link", { name: "Delivery" })).toHaveAttribute(
+      "href",
+      "/applications/app-001/delivery",
+    );
+  });
+
+  it.each([
+    ["/applications/app-001", "Application details"],
+    ["/applications/app-001/versions", "Versions"],
+    ["/applications/app-001/review", "Review"],
+    ["/applications/app-001/delivery", "Delivery"],
+  ])("renders the application route %s", (route, heading) => {
+    globalThis.window.history.pushState({}, "", route);
+
+    render(<App />);
+
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+  });
+
+  it("shows application lifecycle and delivery state labels", () => {
+    globalThis.window.history.pushState({}, "", "/applications/app-001");
+
+    render(<App />);
+
+    for (const label of [
+      "Draft",
+      "In review",
+      "Approved",
+      "Published",
+      "Rejected",
+      "Withdrawn",
+      "Archived",
+      "Published version",
+      "Loading",
+      "Empty",
+    ]) {
+      expect(
+        screen.getAllByText(label, { exact: true }).length,
+      ).toBeGreaterThan(0);
+    }
+    expect(
+      screen.getByText(
+        "This is a static administration shell; no business writes are enabled.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("keeps a reduced-motion baseline in the global stylesheet", () => {
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
     expect(styles).toContain("animation-duration: 0.01ms !important;");

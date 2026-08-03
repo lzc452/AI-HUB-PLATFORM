@@ -98,6 +98,81 @@ export interface IdentityAuditEventsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface ApplicationsTable {
+  application_id: Generated<string>;
+  owner_employee_id: string;
+  maintainer_employee_id: string;
+  department_id: string;
+  name: string;
+  summary: string;
+  status:
+    | "draft"
+    | "in_review"
+    | "approved"
+    | "published"
+    | "withdrawn"
+    | "archived";
+  current_version_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationVersionsTable {
+  application_version_id: Generated<string>;
+  application_id: string;
+  version: string;
+  changelog: string;
+  artifact_key: string;
+  artifact_sha256: string;
+  artifact_signature: string;
+  scan_status: "pending" | "passed" | "failed";
+  created_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationDeliveriesTable {
+  delivery_id: Generated<string>;
+  application_id: string;
+  channel: "web" | "desktop" | "mobile" | "mini_program";
+  entry_url: string;
+  min_client_version: string | null;
+  enabled: boolean;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationReviewsTable {
+  review_id: Generated<string>;
+  application_id: string;
+  application_version_id: string;
+  reviewer_employee_id: string;
+  application_owner_employee_id: string;
+  decision: "approve" | "reject" | "request_changes";
+  comment: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationReviewQueueTable {
+  review_queue_id: Generated<string>;
+  application_id: string;
+  application_version_id: string;
+  status: "available" | "claimed";
+  claimed_by_employee_id: string | null;
+  claimed_at: Date | null;
+  sla_due_at: Date;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationAuditEventsTable {
+  audit_event_id: Generated<string>;
+  application_id: string;
+  application_version_id: string | null;
+  actor_employee_id: string | null;
+  event_type: string;
+  details: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -110,4 +185,10 @@ export interface DatabaseSchema {
   dingtalk_bindings: DingTalkBindingsTable;
   dingtalk_sync_runs: DingTalkSyncRunsTable;
   identity_audit_events: IdentityAuditEventsTable;
+  applications: ApplicationsTable;
+  application_versions: ApplicationVersionsTable;
+  application_deliveries: ApplicationDeliveriesTable;
+  application_reviews: ApplicationReviewsTable;
+  application_review_queue: ApplicationReviewQueueTable;
+  application_audit_events: ApplicationAuditEventsTable;
 }

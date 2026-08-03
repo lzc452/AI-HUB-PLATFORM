@@ -1,0 +1,1 @@
+export const APPLICATION_SERVICE = Symbol("APPLICATION_SERVICE");

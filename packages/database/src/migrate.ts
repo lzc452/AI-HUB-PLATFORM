@@ -1,11 +1,13 @@
 import { Migrator, type Kysely, type Migration } from "kysely";
 import * as systemFoundation from "./migrations/0001_system_foundation.js";
 import * as identityOrganizationAuthorization from "./migrations/0002_identity_organization_authorization.js";
+import * as applicationDeliveryReview from "./migrations/0003_application_delivery_review.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
   "0001_system_foundation": systemFoundation,
   "0002_identity_organization_authorization": identityOrganizationAuthorization,
+  "0003_application_delivery_review": applicationDeliveryReview,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

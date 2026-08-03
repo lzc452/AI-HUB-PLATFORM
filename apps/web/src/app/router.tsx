@@ -256,8 +256,8 @@ function ApplicationAdminPage({
       <ApplicationNavigation />
       <Alert
         description="This is a static administration shell; no business writes are enabled."
-        message="Read-only preview"
         showIcon
+        title="Read-only preview"
         type="info"
       />
       {children}
@@ -291,7 +291,7 @@ function ApplicationsPage() {
             <Tag color="blue">Published version 1.2.0</Tag>
           </div>
           <div className="mt-4">
-            <Link to="/applications/app-001">Application details</Link>
+            <Link to="/applications/app-001">Open application details</Link>
           </div>
         </div>
         <div
@@ -362,6 +362,25 @@ function ApplicationDetailsPage() {
             The published version is displayed for review only. Rollback and
             other state changes are intentionally unavailable in this shell.
           </Paragraph>
+        </div>
+        <div
+          className="grid gap-4 md:grid-cols-2"
+          aria-label="Application data states"
+        >
+          <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white p-5">
+            <Text strong>Loading</Text>
+            <Paragraph className="!mb-0 mt-2">
+              Loading state is reserved for the future application data
+              connection.
+            </Paragraph>
+          </div>
+          <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white p-5">
+            <Text strong>Empty</Text>
+            <Paragraph className="!mb-0 mt-2">
+              Empty state is available when no version or review record is
+              returned.
+            </Paragraph>
+          </div>
         </div>
       </section>
     </ApplicationAdminPage>

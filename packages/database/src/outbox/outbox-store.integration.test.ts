@@ -373,4 +373,160 @@ describe("OutboxStore", () => {
       `.execute(db!),
     ).rejects.toThrow(/outbox_events_status_check/u);
   });
+
+  it("creates the Phase 2 identity tables including reset challenges", async () => {
+    const result = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in (
+          'departments',
+          'employees',
+          'department_memberships',
+          'roles',
+          'employee_roles',
+          'user_sessions',
+          'password_reset_challenges',
+          'dingtalk_bindings',
+          'dingtalk_sync_runs',
+          'identity_audit_events'
+        )
+    `.execute(db!);
+
+    expect(result.rows.map((row) => row.table_name).sort()).toEqual([
+      "department_memberships",
+      "departments",
+      "dingtalk_bindings",
+      "dingtalk_sync_runs",
+      "employee_roles",
+      "employees",
+      "identity_audit_events",
+      "password_reset_challenges",
+      "roles",
+      "user_sessions",
+    ]);
+  });
+
+  it("creates the Phase 3 application delivery and review schema", async () => {
+    const tables = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in (
+          'applications',
+          'application_versions',
+          'application_deliveries',
+          'application_reviews',
+          'application_review_queue',
+          'application_audit_events'
+        )
+    `.execute(db!);
+
+    expect(tables.rows.map((row) => row.table_name).sort()).toEqual([
+      "application_audit_events",
+      "application_deliveries",
+      "application_review_queue",
+      "application_reviews",
+      "application_versions",
+      "applications",
+    ]);
+
+    const columns = await sql<{
+      table_name: string;
+      column_name: string;
+      is_nullable: string;
+    }>`
+      select table_name, column_name, is_nullable
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name in (
+          'applications',
+          'application_versions',
+          'application_deliveries',
+          'application_reviews',
+          'application_review_queue',
+          'application_audit_events'
+        )
+        and column_name in (
+          'tenant_id',
+          'maintainer_employee_id',
+          'department_id',
+          'artifact_sha256',
+          'artifact_signature',
+          'reviewer_employee_id',
+          'application_owner_employee_id'
+        )
+      order by table_name, column_name
+    `.execute(db!);
+
+    expect(columns.rows.some((row) => row.column_name === "tenant_id")).toBe(
+      false,
+    );
+    expect(columns.rows).toEqual([
+      {
+        table_name: "application_reviews",
+        column_name: "application_owner_employee_id",
+        is_nullable: "NO",
+      },
+      {
+        table_name: "application_reviews",
+        column_name: "reviewer_employee_id",
+        is_nullable: "NO",
+      },
+      {
+        table_name: "application_versions",
+        column_name: "artifact_sha256",
+        is_nullable: "NO",
+      },
+      {
+        table_name: "application_versions",
+        column_name: "artifact_signature",
+        is_nullable: "NO",
+      },
+      {
+        table_name: "applications",
+        column_name: "department_id",
+        is_nullable: "NO",
+      },
+      {
+        table_name: "applications",
+        column_name: "maintainer_employee_id",
+        is_nullable: "NO",
+      },
+    ]);
+
+    const constraints = await sql<{ constraint_name: string }>`
+      select constraint_name
+      from information_schema.table_constraints
+      where table_schema = 'public'
+        and table_name in (
+          'applications',
+          'application_versions',
+          'application_deliveries',
+          'application_reviews',
+          'application_review_queue',
+          'application_audit_events'
+        )
+        and constraint_name in (
+          'application_versions_application_id_version_unique',
+          'applications_status_check',
+          'application_versions_scan_status_check',
+          'application_deliveries_channel_check',
+          'application_reviews_decision_check',
+          'application_reviews_reviewer_not_owner_check',
+          'application_review_queue_status_check'
+        )
+      order by constraint_name
+    `.execute(db!);
+
+    expect(constraints.rows.map((row) => row.constraint_name)).toEqual([
+      "application_deliveries_channel_check",
+      "application_review_queue_status_check",
+      "application_reviews_decision_check",
+      "application_reviews_reviewer_not_owner_check",
+      "application_versions_application_id_version_unique",
+      "application_versions_scan_status_check",
+      "applications_status_check",
+    ]);
+  });
 });
