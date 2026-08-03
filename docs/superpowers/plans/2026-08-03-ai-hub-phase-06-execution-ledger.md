@@ -48,7 +48,7 @@ are prohibited.
 | Phase 3–5 reuse | Existing plans, ledgers, ADRs, roadmap, and remote branch | accepted input |
 | Phase 6 branch | Created from exact Phase 5 latest commit | passed |
 | Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
-| Behavior events/schema | Not executed yet | pending |
+| Behavior events/schema | Contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
 | Daily aggregation/metric dictionary | Not executed yet | pending |
 | Fixed dashboards | Not executed yet | pending |
 | Permissioned audited export | Not executed yet | pending |
@@ -71,3 +71,11 @@ result.
 - Docs: Phase 6 plan, execution ledger, ADR 0007, and visualization update established; Phase 6 progress is 5% in the dashboard.
 - Verification: `git diff --check` exited 0; `corepack pnpm format:check` exited 0.
 - Commit: `53a0985 docs(phase-06): establish analytics dashboard assistant plan`.
+
+### Step 2: Behavior events, migration, retention, and audit boundary
+
+- RED: `packages/contracts/src/analytics.test.ts` failed because `analytics.ts` was absent; the first Docker-backed database attempt failed with `Could not find a working container runtime strategy` until the authorized Docker Desktop Linux engine was used.
+- GREEN: contract tests passed 2/2; the Docker-backed command `corepack pnpm --filter @ai-hub/database test -- src/analytics-schema.integration.test.ts` passed 3 files/21 tests, including the new 3/3 analytics schema tests, existing demand 3/3, and outbox 15/15. `@ai-hub/contracts` typecheck, `@ai-hub/database` typecheck, `@ai-hub/server` typecheck, `@ai-hub/server` lint, and the server focused command passed 15 files/70 tests.
+- Schema: migration `0008_analytics_events` adds allow-listed raw events with 180-day expiry, idempotency, audience context, daily aggregate keys, metric definition metadata, append-only analytics audit, delete protection with an explicit retention-job escape, and indexes. No `tenant_id` was added.
+- Boundary: `AnalyticsEventService` validates events, records the raw event, audit row, and Outbox event in one repository transaction; idempotent replays do not create duplicate audit/outbox rows.
+- Commit: pending until the Step 2 diff is staged and committed.

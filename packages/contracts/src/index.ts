@@ -37,6 +37,16 @@ export type {
   NotificationDeliveryStatus,
   NotificationInput,
 } from "./notification.js";
+export {
+  behaviorEventNames,
+  validateBehaviorEventInput,
+} from "./analytics.js";
+export type {
+  AnalyticsAggregateType,
+  BehaviorEventInput,
+  BehaviorEventName,
+  BehaviorEventValidation,
+} from "./analytics.js";
 export type {
   CreateDemandInput,
   DemandApplicationRole,

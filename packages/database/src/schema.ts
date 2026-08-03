@@ -404,6 +404,54 @@ export interface AiDemandAuditEventsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface AnalyticsBehaviorEventsTable {
+  event_id: Generated<string>;
+  event_name: string;
+  aggregate_type: string;
+  aggregate_id: string;
+  actor_employee_id: string | null;
+  audience_department_id: string | null;
+  audience_employee_id: string | null;
+  metadata: unknown;
+  idempotency_key: string;
+  occurred_at: Date;
+  expires_at: Date;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AnalyticsDailyAggregatesTable {
+  metric_key: string;
+  day: string;
+  audience_scope_key: string;
+  value: number;
+  source_event_count: number;
+  computed_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+export interface AnalyticsMetricDefinitionsTable {
+  metric_key: string;
+  version: number;
+  label: string;
+  source_event_names: readonly string[];
+  formula: string;
+  time_range: string;
+  required_permission: string;
+  audience_rule: string;
+  recompute_method: string;
+  is_active: boolean;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AnalyticsAuditEventsTable {
+  audit_event_id: Generated<string>;
+  actor_employee_id: string | null;
+  action: string;
+  aggregate_type: string;
+  aggregate_id: string;
+  details: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -443,4 +491,8 @@ export interface DatabaseSchema {
   ai_demand_pilots: AiDemandPilotsTable;
   ai_demand_applications: AiDemandApplicationsTable;
   ai_demand_audit_events: AiDemandAuditEventsTable;
+  analytics_behavior_events: AnalyticsBehaviorEventsTable;
+  analytics_daily_aggregates: AnalyticsDailyAggregatesTable;
+  analytics_metric_definitions: AnalyticsMetricDefinitionsTable;
+  analytics_audit_events: AnalyticsAuditEventsTable;
 }

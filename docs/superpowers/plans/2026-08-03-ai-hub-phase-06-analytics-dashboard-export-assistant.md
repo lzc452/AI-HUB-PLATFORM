@@ -78,10 +78,10 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/contracts/src/analytics.ts`, contracts index, `packages/database/src/schema.ts`, `migrate.ts`, migration `0008`, `packages/database/src/analytics-schema.integration.test.ts`, new `packages/server/src/analytics/*` tests/scaffolding.
 
-- [ ] Write failing PostgreSQL tests for allowed event names, metadata limits, 180-day retention fields, unique idempotency, daily aggregate keys, metric definitions, export/assistant audit records, outbox linkage, and no `tenant_id`.
-- [ ] Observe RED because migration `0008` and the analytics repository are absent.
-- [ ] Implement the normalized schema, event validation, idempotent insert, retention boundary, and transactionally paired Audit/Outbox records.
-- [ ] Run focused contracts/database/server tests; commit `feat(phase-06): add behavior event and retention schema`.
+- [x] Write failing PostgreSQL tests for allowed event names, metadata limits, 180-day retention fields, unique idempotency, daily aggregate keys, metric definitions, export/assistant audit records, outbox linkage, and no `tenant_id`.
+- [x] Observe RED because migration `0008` and the analytics repository are absent; the first PostgreSQL attempt also recorded the unavailable Docker runtime.
+- [x] Implement the normalized schema, event validation, idempotent insert, retention boundary, and transactionally paired Audit/Outbox records.
+- [x] Run focused contracts/database/server tests; commit `feat(phase-06): add behavior event and retention schema`.
 
 ### Task 3: Daily aggregation, rebuild, and metric dictionary
 

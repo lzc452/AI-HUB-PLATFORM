@@ -133,3 +133,10 @@ export type {
   DemandEntry,
   DemandRepository,
 } from "./demand/demand.types.js";
+export { AnalyticsEventService } from "./analytics/analytics.service.js";
+export { KyselyAnalyticsEventRepository } from "./analytics/analytics.repository.js";
+export type {
+  AnalyticsAuditRecord,
+  AnalyticsEventRepository,
+  PersistedBehaviorEvent,
+} from "./analytics/analytics.types.js";

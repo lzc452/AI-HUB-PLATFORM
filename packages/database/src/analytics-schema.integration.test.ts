@@ -1,0 +1,105 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { sql } from "kysely";
+import { startPostgresTestContainer } from "@ai-hub/testing";
+import { createDatabase, runMigrations } from "./index.js";
+
+describe("Phase 6 analytics schema", () => {
+  let db: ReturnType<typeof createDatabase>;
+  let stop: (() => Promise<void>) | undefined;
+
+  beforeAll(async () => {
+    const container = await startPostgresTestContainer();
+    stop = container.stop;
+    db = createDatabase(container.databaseUrl);
+    await runMigrations(db);
+  }, 60_000);
+
+  afterAll(async () => {
+    await db?.destroy();
+    await stop?.();
+  }, 60_000);
+
+  it("stores bounded raw events and rebuildable daily aggregates without tenant state", async () => {
+    const tables = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in (
+          'analytics_behavior_events',
+          'analytics_daily_aggregates',
+          'analytics_metric_definitions',
+          'analytics_audit_events'
+        )
+    `.execute(db);
+
+    expect(tables.rows.map((row) => row.table_name).sort()).toEqual([
+      "analytics_audit_events",
+      "analytics_behavior_events",
+      "analytics_daily_aggregates",
+      "analytics_metric_definitions",
+    ]);
+
+    const tenantColumns = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and column_name = 'tenant_id'
+        and table_name like 'analytics_%'
+    `.execute(db);
+    expect(tenantColumns.rows).toHaveLength(0);
+  });
+
+  it("declares event allow-list, 180-day expiry, idempotency and aggregate keys", async () => {
+    const constraints = await sql<{ constraint_name: string }>`
+      select constraint_name
+      from information_schema.table_constraints
+      where table_schema = 'public'
+        and constraint_name in (
+          'analytics_behavior_events_name_check',
+          'analytics_behavior_events_metadata_object_check',
+          'analytics_daily_aggregates_pk',
+          'analytics_metric_definitions_pk'
+        )
+      order by constraint_name
+    `.execute(db);
+
+    expect(constraints.rows.map((row) => row.constraint_name)).toEqual([
+      "analytics_behavior_events_metadata_object_check",
+      "analytics_behavior_events_name_check",
+      "analytics_daily_aggregates_pk",
+      "analytics_metric_definitions_pk",
+    ]);
+
+    const indexes = await sql<{ indexname: string }>`
+      select indexname
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'analytics_behavior_events'
+        and indexname in (
+          'analytics_behavior_events_idempotency_key_key',
+          'analytics_behavior_events_expiry_idx'
+        )
+      order by indexname
+    `.execute(db);
+    expect(indexes.rows.map((row) => row.indexname)).toEqual([
+      "analytics_behavior_events_expiry_idx",
+      "analytics_behavior_events_idempotency_key_key",
+    ]);
+  });
+
+  it("prevents physical deletion of raw events and analytics audit records", async () => {
+    const triggers = await sql<{ trigger_name: string }>`
+      select tg.tgname as trigger_name
+      from pg_trigger tg
+      join pg_class c on c.oid = tg.tgrelid
+      where not tg.tgisinternal
+        and c.relname in ('analytics_behavior_events', 'analytics_audit_events')
+        and tg.tgname like '%_no_delete'
+    `.execute(db);
+
+    expect(triggers.rows.map((row) => row.trigger_name).sort()).toEqual([
+      "analytics_audit_events_no_delete",
+      "analytics_behavior_events_no_delete",
+    ]);
+  });
+});
