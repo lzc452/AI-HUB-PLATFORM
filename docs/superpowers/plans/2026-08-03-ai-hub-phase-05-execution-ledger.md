@@ -47,7 +47,7 @@ physical deletes, and a new tenant model are prohibited.
 | Phase 5 branch | `feature/phase-05-ai-demand-innovation` created from Phase 4 HEAD | recorded |
 | Plan/ADR/ledger/visualization | Phase 5 baseline documents and dashboard entry; branch created from exact Phase 4 HEAD | passed |
 | Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
-| Demand lifecycle | Not run yet | pending |
+| Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
 | Innovation interactions | Not run yet | pending |
 | Ownership/priority/progress | Not run yet | pending |
 | Merge/application loop | Not run yet | pending |
@@ -98,3 +98,19 @@ or inferred result.
 - Commit: `dba35ec feat(phase-05): add demand contracts and schema`; the omitted
   demand-like table was detected before Task 3 and is corrected in the next
   focused fix commit.
+
+### Step 3: Demand creation, drafts, lightweight review, and rejection
+
+- RED: service test initially failed because `demand.service.js` did not exist.
+  The first implementation run also exposed an invalid `allowAll` reviewer
+  fixture and exact-optional TypeScript errors; both were corrected.
+- GREEN: `corepack pnpm --filter @ai-hub/server test --
+  src/demand/demand.service.test.ts` passed 59/59 workspace server tests;
+  `corepack pnpm --filter @ai-hub/server typecheck` exited 0;
+  `corepack pnpm --filter @ai-hub/api typecheck` exited 0; and the Docker
+  Desktop-backed API command passed 7 files/14 tests, including the new
+  protected demand endpoint test and existing real application lifecycle.
+- Implementation: added demand service/repository/controller/module, draft
+  validation, requester/reviewer RBAC, optimistic status calls, transactionally
+  paired audit/outbox calls, and API routes for create/save/submit/review.
+- Commit: `7015c9c feat(phase-05): add governed demand submission`.

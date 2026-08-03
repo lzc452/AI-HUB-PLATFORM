@@ -41,6 +41,7 @@ export interface DemandEntry {
   problemStatement: string;
   desiredOutcome: string;
   status: DemandStatus;
+  reviewReason: string | null;
   audienceType: DemandAudienceType;
   audienceDepartmentId: string | null;
   displayAnonymously: boolean;

@@ -122,3 +122,14 @@ export type {
   CreatorAuthorizationPort,
   CreatorRepository,
 } from "./creator/creator.types.js";
+export { DemandController } from "./demand/demand.controller.js";
+export { DemandModule } from "./demand/demand.module.js";
+export { KyselyDemandRepository } from "./demand/demand.repository.js";
+export { DemandService } from "./demand/demand.service.js";
+export { DEMAND_SERVICE } from "./demand/demand.tokens.js";
+export type {
+  DemandAuthorizationPort,
+  DemandDraftInput,
+  DemandEntry,
+  DemandRepository,
+} from "./demand/demand.types.js";

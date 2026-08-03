@@ -144,10 +144,10 @@ export interface DemandRepository {
 
 **Files:** demand service/repository/controller/module, service tests, API test, server export.
 
-- [ ] Write failing tests for required-field validation, draft save/resume, submit-for-review, reviewer-only decision, rejection reason, immutable requester identity, and transactional audit/outbox.
-- [ ] Run the service test red.
-- [ ] Implement minimal validation and state transitions: `draft -> pending_review -> published|rejected`, with reviewer authorization and no physical delete.
-- [ ] Run focused service/API tests, update the ledger, and commit `feat(phase-05): add governed demand submission`.
+- [x] Write failing tests for required-field validation, draft save/resume, submit-for-review, reviewer-only decision, rejection reason, immutable requester identity, and transactional audit/outbox.
+- [x] Run the service test red.
+- [x] Implement minimal validation and state transitions: `draft -> pending_review -> published|rejected`, with reviewer authorization and no physical delete.
+- [x] Run focused service/API tests, update the ledger, and commit `feat(phase-05): add governed demand submission`.
 
 ### Task 4: Demand list/detail, audience filtering, anonymous display, likes, discussion and reports
 

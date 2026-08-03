@@ -11,6 +11,8 @@ import {
   NotificationService,
   CreatorModule,
   CreatorService,
+  DemandModule,
+  DemandService,
   IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
@@ -29,6 +31,7 @@ export interface ApiModuleTestOptions {
   interaction?: InteractionService;
   notification?: NotificationService;
   creator?: CreatorService;
+  demand?: DemandService;
   artifactVerification?: ArtifactVerificationPort;
   observability?: ObservabilityModuleOptions;
 }
@@ -71,6 +74,7 @@ export class ApiModule {
         InteractionModule.register(databaseUrl),
         NotificationModule.register(databaseUrl),
         CreatorModule.register(databaseUrl),
+        DemandModule.register(databaseUrl),
         HealthModule.register(
           createProductionDatabaseCheck(databaseUrl, metrics),
         ),
@@ -119,6 +123,9 @@ export class ApiModule {
         ...(options.creator === undefined || options.identity === undefined
           ? []
           : [CreatorModule.forTest(options.creator, options.identity)]),
+        ...(options.demand === undefined || options.identity === undefined
+          ? []
+          : [DemandModule.forTest(options.demand, options.identity)]),
         HealthModule.register(databaseCheck),
       ],
     };
