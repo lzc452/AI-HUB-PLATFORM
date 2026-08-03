@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createOutboxHandlers,
   outboxHandlers,
   systemProbeRequestedHandler,
 } from "./worker.module.js";
@@ -22,6 +23,11 @@ describe("worker outbox handlers", () => {
         attempts: 1,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it("registers the post-Outbox DingTalk notification handler", () => {
+    const handlers = createOutboxHandlers({} as never);
+    expect(handlers["notification.created"]).toBeTypeOf("function");
   });
 
   it("exposes a retention runner for the worker schedule", async () => {

@@ -20,6 +20,83 @@ const unavailableDingTalk: DingTalkNotificationPort = {
   },
 };
 
+async function authorizeDingTalkResource(
+  databaseUrl: string,
+  role: string,
+  aggregateId: string,
+  recipientEmployeeId: string,
+  actor: { employeeId: string; sessionId: string },
+): Promise<boolean> {
+  const database = createDatabase(databaseUrl);
+  try {
+    switch (role) {
+      case "application_reviewer":
+        return (
+          (await database
+            .selectFrom("application_review_queue")
+            .select("review_queue_id")
+            .where("application_id", "=", aggregateId)
+            .executeTakeFirst()) !== undefined
+        );
+      case "application_owner":
+        return (
+          (await database
+            .selectFrom("applications")
+            .select("application_id")
+            .where("application_id", "=", aggregateId)
+            .where("owner_employee_id", "=", recipientEmployeeId)
+            .executeTakeFirst()) !== undefined
+        );
+      case "demand_submitter":
+        return (
+          (await database
+            .selectFrom("ai_demands")
+            .select("demand_id")
+            .where("demand_id", "=", aggregateId)
+            .where("requester_employee_id", "=", recipientEmployeeId)
+            .executeTakeFirst()) !== undefined
+        );
+      case "demand_owner":
+        return (
+          (await database
+            .selectFrom("ai_demands")
+            .select("demand_id")
+            .where("demand_id", "=", aggregateId)
+            .where("owner_employee_id", "=", recipientEmployeeId)
+            .executeTakeFirst()) !== undefined
+        );
+      case "demand_collaborator":
+        return (
+          (await database
+            .selectFrom("ai_demand_collaborators")
+            .select("demand_id")
+            .where("demand_id", "=", aggregateId)
+            .where("employee_id", "=", recipientEmployeeId)
+            .where("role", "=", "collaborator")
+            .executeTakeFirst()) !== undefined
+        );
+      case "export_requester":
+        return (
+          (await database
+            .selectFrom("analytics_export_jobs")
+            .select("export_id")
+            .where("export_id", "=", aggregateId)
+            .where("requested_by_employee_id", "=", recipientEmployeeId)
+            .executeTakeFirst()) !== undefined
+        );
+      case "assistant_requester":
+        return (
+          recipientEmployeeId === actor.employeeId &&
+          aggregateId === actor.sessionId
+        );
+      default:
+        return false;
+    }
+  } finally {
+    await database.destroy();
+  }
+}
+
 @Module({})
 export class NotificationModule {
   static register(
@@ -52,7 +129,7 @@ export class NotificationModule {
           ) =>
             new DingTalkNotificationMatrixService(
               notifications,
-              async (employeeId, role) => {
+              async (employeeId, role, aggregateId, actor) => {
                 const records = await identity.listEmployeeRoles(employeeId);
                 const aliases: Record<string, readonly string[]> = {
                   application_reviewer: ["application_reviewer"],
@@ -74,8 +151,18 @@ export class NotificationModule {
                     "super_admin",
                   ],
                 };
-                return records.some((record) =>
+                const hasRole = records.some((record) =>
                   (aliases[role] ?? [role]).includes(record.roleCode),
+                );
+                return (
+                  hasRole &&
+                  (await authorizeDingTalkResource(
+                    databaseUrl,
+                    role,
+                    aggregateId,
+                    employeeId,
+                    actor,
+                  ))
                 );
               },
             ),
@@ -98,7 +185,10 @@ export class NotificationModule {
         {
           provide: DINGTALK_NOTIFICATION_MATRIX_SERVICE,
           useFactory: () =>
-            new DingTalkNotificationMatrixService(notifications),
+            new DingTalkNotificationMatrixService(
+              notifications,
+              async () => true,
+            ),
         },
         { provide: IdentityService, useValue: identity },
       ],

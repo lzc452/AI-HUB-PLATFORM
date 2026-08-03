@@ -29,9 +29,12 @@ export class KyselyAnalyticsDashboardRepository
       .selectFrom("analytics_daily_aggregates")
       .selectAll()
       .where("metric_key", "in", input.metricKeys)
+      .where("metric_version", "=", 1)
       .where("day", ">=", input.from)
       .where("day", "<", input.to);
-    if (input.audienceScopeKey !== null) {
+    if (input.audienceScopeKeys !== undefined) {
+      query = query.where("audience_scope_key", "in", input.audienceScopeKeys);
+    } else if (input.audienceScopeKey !== null) {
       query = query.where("audience_scope_key", "=", input.audienceScopeKey);
     }
     const rows = await query

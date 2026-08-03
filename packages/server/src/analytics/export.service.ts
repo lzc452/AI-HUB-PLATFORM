@@ -28,6 +28,22 @@ export class AnalyticsExportService {
     actor: ActorContext,
     request: AnalyticsExportRequest,
   ): Promise<AnalyticsExportResult> {
+    if (!canExport(actor)) {
+      await this.recordLifecycle(actor, "", "denied", {
+        reason: "ANALYTICS_EXPORT_FORBIDDEN",
+        target: request.target,
+      });
+      throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
+    }
+    try {
+      assertAnalyticsRange(request.from, request.to);
+    } catch {
+      await this.recordLifecycle(actor, "", "denied", {
+        reason: "ANALYTICS_EXPORT_RANGE_INVALID",
+        target: request.target,
+      });
+      throw new Error("ANALYTICS_EXPORT_RANGE_INVALID");
+    }
     const result = await this.repository.withTransaction((repository) =>
       new AnalyticsExportService(repository).runInTransaction(actor, request),
     );
@@ -46,22 +62,6 @@ export class AnalyticsExportService {
     actor: ActorContext,
     request: AnalyticsExportRequest,
   ): Promise<AnalyticsExportResult> {
-    if (!canExport(actor)) {
-      await this.recordLifecycle(actor, "", "denied", {
-        reason: "ANALYTICS_EXPORT_FORBIDDEN",
-        target: request.target,
-      });
-      throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
-    }
-    try {
-      assertAnalyticsRange(request.from, request.to);
-    } catch {
-      await this.recordLifecycle(actor, "", "denied", {
-        reason: "ANALYTICS_EXPORT_RANGE_INVALID",
-        target: request.target,
-      });
-      throw new Error("ANALYTICS_EXPORT_RANGE_INVALID");
-    }
     const exportId = randomUUID();
     await this.repository.recordAudit({
       actorEmployeeId: actor.employeeId,
@@ -77,7 +77,14 @@ export class AnalyticsExportService {
       idempotencyKey: `analytics.export.requested:${exportId}`,
     });
     try {
-      const rows = await this.repository.readVisibleRows({ actor, request });
+      const rows = await this.repository.readVisibleRows({
+        actor,
+        request,
+        audienceScopeKeys: [
+          `department:${actor.primaryDepartmentId}`,
+          `employee:${actor.employeeId}`,
+        ],
+      });
       const result: AnalyticsExportResult = {
         exportId,
         target: request.target,
@@ -144,18 +151,6 @@ export class AnalyticsExportService {
   }
 
   async markDownloaded(actor: ActorContext, exportId: string): Promise<void> {
-    await this.repository.withTransaction((repository) =>
-      new AnalyticsExportService(repository).markDownloadedInTransaction(
-        actor,
-        exportId,
-      ),
-    );
-  }
-
-  private async markDownloadedInTransaction(
-    actor: ActorContext,
-    exportId: string,
-  ): Promise<void> {
     if (!canExport(actor)) {
       await this.recordLifecycle(actor, exportId, "denied", {
         reason: "ANALYTICS_EXPORT_FORBIDDEN",
@@ -175,6 +170,18 @@ export class AnalyticsExportService {
       });
       throw new Error("ANALYTICS_EXPORT_NOT_FOUND");
     }
+    await this.repository.withTransaction((repository) =>
+      new AnalyticsExportService(repository).markDownloadedInTransaction(
+        actor,
+        exportId,
+      ),
+    );
+  }
+
+  private async markDownloadedInTransaction(
+    actor: ActorContext,
+    exportId: string,
+  ): Promise<void> {
     await this.repository.recordAudit({
       actorEmployeeId: actor.employeeId,
       action: "analytics.export.downloaded",

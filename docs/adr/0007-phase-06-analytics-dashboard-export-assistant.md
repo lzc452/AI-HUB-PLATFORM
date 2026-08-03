@@ -17,7 +17,12 @@ employee identity and internal resources to an external system.
 
 The analytics base schema is migration `0008`; the separately sequenced `0009`
 migration is the focused export-job schema extension. Both migrations are
-owned by Phase 6 and are covered by PostgreSQL integration tests.
+owned by Phase 6 and are covered by PostgreSQL integration tests. Sequenced
+migrations `0010` and `0011` provision the analytics RBAC roles and carry the
+metric version into daily aggregate rows. The existing worker runs retention
+and overdue-review scans at startup and daily thereafter; retention deletion
+uses a `SECURITY DEFINER` database function, and dashboard/export ranges are
+bounded by the retained 180-day window.
 
 1. Record normalized raw behavior events as the analytics source of truth.
    Events retain only the approved event payload, actor reference, aggregate
@@ -31,18 +36,22 @@ owned by Phase 6 and are covered by PostgreSQL integration tests.
    permission, and re-computation procedure. Dashboard queries apply
    `ActorContext`, RBAC, and audience predicates before aggregation output.
 4. Background export is an authenticated, permission-checked application
-   capability. Every request, row policy decision, completion/failure, and
-   download is audited. Export payloads use the same anonymous projection as
-   ordinary reads and never include an employee access list to an application
-   owner.
+   capability. Every request, denial, row policy decision, completion/failure,
+   and download is audited and emits an Outbox lifecycle event. Export
+   payloads use the same anonymous projection as ordinary reads and never
+   include an employee access list to an application owner.
 5. The Dify adapter is an outbound boundary, not a public Open API. It sends
    only the minimum authorized, redacted context after an explicit assistant
    authorization review. It never sends employee IDs, employee numbers,
    internal URLs, files, QR codes, or anonymous identities. Failures return a
-   safe local fallback and remain auditable.
+   safe local fallback and remain auditable. Its context accepts only canonical
+   metric/day/unit/value fields and redacts identifiers, URLs, files, QR data,
+   and Chinese or English equivalents before the provider call.
 6. DingTalk work notifications are represented by a fixed scenario matrix and
-   delivered through the existing transactional Outbox. External credentials
-   and production deployment remain Phase 7 concerns.
+   delivered through the existing transactional Outbox. Production queueing
+   requires both the recipient role and the aggregate resource relationship;
+   the Worker owns the post-commit `notification.created` handler. External
+   credentials and production deployment remain Phase 7 concerns.
 7. No Redis, Elasticsearch, message queue, Kubernetes, microservice,
    tenant model, or Phase 7 production/security/operations implementation is
    introduced.

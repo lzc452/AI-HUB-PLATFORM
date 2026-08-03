@@ -33,13 +33,16 @@ export class KyselyAnalyticsExportRepository
       .selectFrom("analytics_daily_aggregates")
       .select(["metric_key", "day", "audience_scope_key", "value"])
       .where("metric_key", "=", exportMetricKeys[input.request.target])
+      .where("metric_version", "=", 1)
       .where("day", ">=", input.request.from)
       .where("day", "<", input.request.to);
     if (!unrestricted) {
       query = query.where(
         "audience_scope_key",
-        "=",
-        `department:${input.actor.primaryDepartmentId}`,
+        "in",
+        input.audienceScopeKeys ?? [
+          `department:${input.actor.primaryDepartmentId}`,
+        ],
       );
     }
     const rows = await query.orderBy("day").execute();

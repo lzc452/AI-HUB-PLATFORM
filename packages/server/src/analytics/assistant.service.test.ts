@@ -139,7 +139,7 @@ describe("AnalyticsAssistantService", () => {
     ]);
   });
 
-  it("redacts adversarial identifiers and keeps fallback when telemetry fails", async () => {
+  it("redacts adversarial identifiers and keeps the authorized request when telemetry fails", async () => {
     let received:
       | { question: string; context: Record<string, unknown> }
       | undefined;
@@ -154,8 +154,9 @@ describe("AnalyticsAssistantService", () => {
       },
     };
 
-    await expect(
-      new AnalyticsAssistantService(audit, provider).ask(actor, {
+    const result = await new AnalyticsAssistantService(audit, provider).ask(
+      actor,
+      {
         question:
           "工号 employee-1，内网地址 data:image/png;base64,secret，文件 C:\\secret\\qr.png",
         context: {
@@ -163,8 +164,28 @@ describe("AnalyticsAssistantService", () => {
           value: 1,
           unit: "count",
         },
-      }),
-    ).rejects.toThrow("OUTBOX_UNAVAILABLE");
-    expect(received).toBeUndefined();
+      },
+    );
+    expect(result.status).toBe("ok");
+    expect(received?.question).not.toContain("employee-1");
+    expect(received?.question).toContain("[REDACTED]");
+  });
+
+  it("redacts internal hostnames and UNC paths before external delivery", async () => {
+    let receivedQuestion = "";
+    const provider: DifyAssistantPort = {
+      ask: async (input) => {
+        receivedQuestion = input.question;
+        return { answer: "safe" };
+      },
+    };
+    await new AnalyticsAssistantService(repository(), provider).ask(actor, {
+      question:
+        "employee number E001 at intranet.example, use \\\\server\\share\\id.csv",
+      context: { metricKey: "platform.application_views", value: 1 },
+    });
+    expect(receivedQuestion).not.toContain("E001");
+    expect(receivedQuestion).not.toContain("intranet.example");
+    expect(receivedQuestion).not.toContain("server");
   });
 });

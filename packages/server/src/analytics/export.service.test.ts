@@ -167,4 +167,36 @@ describe("AnalyticsExportService", () => {
     ).rejects.toThrow("ANALYTICS_EXPORT_FORBIDDEN");
     expect(actions).toEqual(["analytics.export.denied"]);
   });
+
+  it("keeps denied export audit durable when a transaction would roll back", async () => {
+    const actions: string[] = [];
+    let transactionStarted = false;
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => {
+        transactionStarted = true;
+        return operation({
+          ...repository,
+          recordAudit: async () => {
+            throw new Error("TRANSACTION_ROLLED_BACK");
+          },
+        });
+      },
+      readVisibleRows: async () => [],
+      findExportJob: async () => null,
+      recordAudit: async (input) => {
+        actions.push(input.action);
+      },
+      appendOutbox: async () => true,
+    };
+
+    await expect(
+      new AnalyticsExportService(repository).run(actor(["employee"]), {
+        target: "platform",
+        from: "2026-08-03",
+        to: "2026-08-04",
+      }),
+    ).rejects.toThrow("ANALYTICS_EXPORT_FORBIDDEN");
+    expect(transactionStarted).toBe(false);
+    expect(actions).toEqual(["analytics.export.denied"]);
+  });
 });

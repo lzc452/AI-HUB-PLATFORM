@@ -177,3 +177,26 @@ result.
   authorizes DingTalk recipients through IdentityService role records.
 - Commit: pending until the real API/database regression and a fresh two-axis
   review pass on this remediation.
+
+### Step 10c: Final boundary hardening
+
+- RED: the review follow-up exposed that denied export audits could be rolled
+  back with the rejected transaction, assistant telemetry failures could block
+  an authorized provider call, the worker did not register the business
+  notification handler, the retention trigger accepted a spoofed session GUC,
+  and the notification matrix defaulted to a non-resource-aware authorizer.
+- GREEN: focused server tests pass 24 files/98 tests; server/database/worker
+  typechecks, lint, format check, and dependency boundaries pass. Docker-backed
+  PostgreSQL passes 3 files/24 tests; real API passes 10 files/19 tests; Worker
+  passes 3 files/7 tests.
+- Implementation: denial lifecycle audit/outbox runs outside export
+  transactions; dashboard/export reads include department and employee
+  audience scopes and current metric version; Dify redaction covers internal
+  hostnames, employee phrases, UNC paths, and Chinese equivalents while audit
+  and Outbox telemetry degrades independently; retention deletion validates
+  the SECURITY DEFINER owner and rejects future cutoffs; the Worker registers
+  `notification.created`; production DingTalk authorization resolves both
+  role and aggregate resource ownership; malformed notification payloads are
+  rejected at the handler boundary.
+- Commit: pending until the final exact gates, local two-axis audit, push, and
+  Draft PR status are recorded.

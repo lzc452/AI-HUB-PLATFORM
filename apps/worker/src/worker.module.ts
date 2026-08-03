@@ -10,13 +10,33 @@ import {
   KyselyAnalyticsRetentionRepository,
   AnalyticsEventService,
   KyselyAnalyticsEventRepository,
+  KyselyNotificationRepository,
+  createDingTalkNotificationOutboxHandler,
 } from "@ai-hub/server";
 
 export const systemProbeRequestedHandler: OutboxHandler = async () => {};
 
+const unavailableDingTalk = {
+  async send() {
+    return { delivered: false, errorCode: "DINGTALK_UNAVAILABLE" };
+  },
+};
+
 export const outboxHandlers: OutboxHandlerMap = {
   "system.probe.requested": systemProbeRequestedHandler,
 };
+
+export function createOutboxHandlers(
+  database: ReturnType<typeof createDatabase>,
+): OutboxHandlerMap {
+  return {
+    ...outboxHandlers,
+    "notification.created": createDingTalkNotificationOutboxHandler(
+      new KyselyNotificationRepository(database),
+      unavailableDingTalk,
+    ),
+  };
+}
 
 const createWorkerDatabaseCheck = (databaseUrl: string) => {
   return async () => {
@@ -67,7 +87,7 @@ export class WorkerModule {
             const database = createDatabase(databaseUrl);
             const outboxWorker = new OutboxWorker(
               new OutboxStore(database),
-              outboxHandlers,
+              createOutboxHandlers(database),
               undefined,
               metrics,
             );

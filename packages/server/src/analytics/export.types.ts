@@ -19,6 +19,7 @@ export interface AnalyticsExportRequest {
 export interface AnalyticsExportReadInput {
   actor: ActorContext;
   request: AnalyticsExportRequest;
+  audienceScopeKeys?: readonly string[];
 }
 
 export interface AnalyticsExportAudit {

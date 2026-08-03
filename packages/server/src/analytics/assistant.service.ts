@@ -47,14 +47,26 @@ function minimumContext(
 
 function sanitizeQuestion(question: string): string {
   return question
-    .replace(/\b(?:E\d{3,}|employee[-_ ]?\d+)\b/giu, "[REDACTED]")
+    .replace(
+      /\b(?:E\d{3,}|employee[-_ ]?(?:number|id)?[-_ ]?\d+|staff[-_ ]?(?:number|id)?[-_ ]?\d+|user[-_ ]?(?:number|id)?[-_ ]?\d+)\b/giu,
+      "[REDACTED]",
+    )
+    .replace(
+      /(?:employee|staff|user)\s*(?:number|id)?\s*[:#-]?\s*[A-Z]?\d{2,}/giu,
+      "[REDACTED]",
+    )
     .replace(/(?:https?|ftp|data):[^\s]+/giu, "[REDACTED]")
-    .replace(/(?:[A-Z]:\\|\/)[^\s]+/gu, "[REDACTED]")
+    .replace(/(?:[A-Z]:\\|\\\\|\/)[^\s]+/gu, "[REDACTED]")
     .replace(/\b[^\s]+\.(?:pdf|docx?|xlsx?|png|jpe?g|zip)\b/giu, "[REDACTED]")
     .replace(
-      /\b(?:qr\s*code|anonymous\s+identity)\b|工号|二维码|匿名身份|内网|文件/giu,
+      /\b(?:[a-z0-9-]+\.)*(?:intranet|internal|corp|localhost|local)(?:\.[a-z]{2,})?\b/giu,
       "[REDACTED]",
-    );
+    )
+    .replace(
+      /\u5de5\u53f7|\u5458\u5de5\u53f7|\u4e8c\u7ef4\u7801|\u533f\u540d\u8eab\u4efd|\u5185\u7f51|\u6587\u4ef6/gu,
+      "[REDACTED]",
+    )
+    .replace(/\b(?:qr\s*code|anonymous\s+identity)\b/giu, "[REDACTED]");
 }
 
 export class AnalyticsAssistantService {
@@ -95,21 +107,25 @@ export class AnalyticsAssistantService {
       question: sanitizeQuestion(request.question).slice(0, 2000),
       context: minimumContext(request.context),
     };
-    await this.audit.recordAudit({
-      actorEmployeeId: actor.employeeId,
-      action: "analytics.assistant.requested",
-      details: {
-        questionLength: providerRequest.question.length,
-        contextKeys: Object.keys(providerRequest.context),
-      },
-    });
-    await this.audit.appendOutbox({
-      eventType: "analytics.assistant.requested",
-      aggregateType: "assistant",
-      aggregateId: actor.sessionId,
-      payload: { metricKey: providerRequest.context.metricKey ?? null },
-      idempotencyKey: `analytics.assistant.requested:${actor.sessionId}:${Date.now()}`,
-    });
+    try {
+      await this.audit.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        action: "analytics.assistant.requested",
+        details: {
+          questionLength: providerRequest.question.length,
+          contextKeys: Object.keys(providerRequest.context),
+        },
+      });
+      await this.audit.appendOutbox({
+        eventType: "analytics.assistant.requested",
+        aggregateType: "assistant",
+        aggregateId: actor.sessionId,
+        payload: { metricKey: providerRequest.context.metricKey ?? null },
+        idempotencyKey: `analytics.assistant.requested:${actor.sessionId}:${Date.now()}`,
+      });
+    } catch {
+      // The provider remains behind the authorization boundary when telemetry is unavailable.
+    }
     try {
       await this.analyticsEvents?.record(actor, {
         eventName: "assistant_requested",
@@ -126,18 +142,22 @@ export class AnalyticsAssistantService {
     }
     try {
       const response = await this.provider.ask(providerRequest);
-      await this.audit.recordAudit({
-        actorEmployeeId: actor.employeeId,
-        action: "analytics.assistant.completed",
-        details: { providerRequestId: response.providerRequestId ?? null },
-      });
-      await this.audit.appendOutbox({
-        eventType: "analytics.assistant.completed",
-        aggregateType: "assistant",
-        aggregateId: actor.sessionId,
-        payload: { providerRequestId: response.providerRequestId ?? null },
-        idempotencyKey: `analytics.assistant.completed:${actor.sessionId}:${Date.now()}`,
-      });
+      try {
+        await this.audit.recordAudit({
+          actorEmployeeId: actor.employeeId,
+          action: "analytics.assistant.completed",
+          details: { providerRequestId: response.providerRequestId ?? null },
+        });
+        await this.audit.appendOutbox({
+          eventType: "analytics.assistant.completed",
+          aggregateType: "assistant",
+          aggregateId: actor.sessionId,
+          payload: { providerRequestId: response.providerRequestId ?? null },
+          idempotencyKey: `analytics.assistant.completed:${actor.sessionId}:${Date.now()}`,
+        });
+      } catch {
+        // Successful provider responses stay successful if local telemetry is unavailable.
+      }
       return { status: "ok", answer: response.answer };
     } catch (error) {
       try {

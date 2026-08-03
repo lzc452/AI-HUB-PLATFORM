@@ -25,10 +25,15 @@ export function createDingTalkNotificationOutboxHandler(
   repository: NotificationDeliveryRepository,
   dingtalk: DingTalkNotificationPort,
 ) {
-  return async (
-    event: ClaimedOutboxEvent<{ notificationId?: string }>,
-  ): Promise<void> => {
-    const notificationId = event.payload.notificationId;
+  return async (event: ClaimedOutboxEvent): Promise<void> => {
+    const payload = event.payload;
+    const notificationId =
+      typeof payload === "object" &&
+      payload !== null &&
+      "notificationId" in payload &&
+      typeof payload.notificationId === "string"
+        ? payload.notificationId
+        : undefined;
     if (notificationId === undefined) {
       throw new Error("NOTIFICATION_PAYLOAD_INVALID");
     }

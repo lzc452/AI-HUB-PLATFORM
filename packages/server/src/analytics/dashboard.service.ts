@@ -80,6 +80,14 @@ export class AnalyticsDashboardService {
         audienceScopeKey: unrestricted
           ? null
           : `department:${actor.primaryDepartmentId}`,
+        ...(unrestricted
+          ? {}
+          : {
+              audienceScopeKeys: [
+                `department:${actor.primaryDepartmentId}`,
+                `employee:${actor.employeeId}`,
+              ],
+            }),
       });
       const allowed = new Set(metrics);
       const dashboardResult = {

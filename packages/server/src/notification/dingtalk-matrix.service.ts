@@ -74,6 +74,7 @@ export interface DingTalkNotificationQueueInput {
 export type DingTalkRecipientAuthorizer = (
   recipientEmployeeId: string,
   recipientRole: string,
+  aggregateId: string,
   actor: ActorContext,
 ) => Promise<boolean>;
 
@@ -88,11 +89,7 @@ const FORBIDDEN_VARIABLES = new Set([
 export class DingTalkNotificationMatrixService {
   public constructor(
     private readonly notifications: Pick<NotificationService, "createForEvent">,
-    private readonly authorizeRecipient: DingTalkRecipientAuthorizer = async (
-      recipientEmployeeId,
-      _recipientRole,
-      actor,
-    ) => recipientEmployeeId === actor.employeeId,
+    private readonly authorizeRecipient: DingTalkRecipientAuthorizer,
   ) {}
 
   public async queue(
@@ -114,6 +111,7 @@ export class DingTalkNotificationMatrixService {
       !(await this.authorizeRecipient(
         input.recipientEmployeeId,
         entry.recipientRole,
+        input.aggregateId,
         actor,
       ))
     ) {

@@ -19,6 +19,7 @@ export interface DashboardReadInput {
   from: string;
   to: string;
   audienceScopeKey: string | null;
+  audienceScopeKeys?: readonly string[];
 }
 
 export interface AnalyticsDashboardRepository {

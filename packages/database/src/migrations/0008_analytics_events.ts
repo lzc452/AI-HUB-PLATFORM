@@ -164,7 +164,14 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     as $function$
     begin
       if TG_TABLE_NAME = 'analytics_behavior_events'
-         and current_setting('app.analytics_retention_job', true) = 'on' then
+         and current_setting('app.analytics_retention_job', true) = 'on'
+         and current_user = (
+           select pg_get_userbyid(proowner)
+           from pg_proc
+           where proname = 'purge_analytics_behavior_events'
+             and pronargs = 1
+           limit 1
+         ) then
         return old;
       end if;
       raise exception 'ANALYTICS_CONTENT_DELETE_FORBIDDEN';
@@ -180,6 +187,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     as $function$
     declare deleted_count integer;
     begin
+      if cutoff > clock_timestamp() then
+        raise exception 'ANALYTICS_RETENTION_CUTOFF_IN_FUTURE';
+      end if;
       perform set_config('app.analytics_retention_job', 'on', true);
       delete from analytics_behavior_events where expires_at <= cutoff;
       get diagnostics deleted_count = row_count;
@@ -213,6 +223,9 @@ export async function down(db: Kysely<unknown>): Promise<void> {
     drop trigger if exists analytics_behavior_events_no_delete on analytics_behavior_events
   `.execute(db);
   await sql`drop function if exists prevent_analytics_delete()`.execute(db);
+  await sql`
+    drop function if exists purge_analytics_behavior_events(timestamptz)
+  `.execute(db);
   await db.schema.dropTable("analytics_audit_events").execute();
   await db.schema.dropTable("analytics_metric_definitions").execute();
   await db.schema.dropTable("analytics_daily_aggregates").execute();
