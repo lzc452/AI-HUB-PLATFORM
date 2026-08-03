@@ -17,6 +17,7 @@ const actor = (roles: readonly string[]): ActorContext => ({
 describe("AnalyticsExportService", () => {
   it("exports only authorized audience rows and projects anonymous identity", async () => {
     const audits: string[] = [];
+    const outbox: string[] = [];
     const rows: AnalyticsExportRow[] = [
       {
         aggregateId: "demand-1",
@@ -35,6 +36,10 @@ describe("AnalyticsExportService", () => {
       findExportJob: async () => null,
       recordAudit: async (input) => {
         audits.push(input.action);
+      },
+      appendOutbox: async (input) => {
+        outbox.push(input.eventType);
+        return true;
       },
     };
 
@@ -56,6 +61,10 @@ describe("AnalyticsExportService", () => {
       "analytics.export.row_projected",
       "analytics.export.completed",
     ]);
+    expect(outbox).toEqual([
+      "analytics.export.requested",
+      "analytics.export.completed",
+    ]);
   });
 
   it("rejects unauthorized or overlong exports before reading rows", async () => {
@@ -68,6 +77,7 @@ describe("AnalyticsExportService", () => {
       },
       findExportJob: async () => null,
       recordAudit: async () => undefined,
+      appendOutbox: async () => true,
     };
     const service = new AnalyticsExportService(repository);
 
@@ -100,6 +110,7 @@ describe("AnalyticsExportService", () => {
       recordAudit: async (input) => {
         actions.push(input.action);
       },
+      appendOutbox: async () => true,
     };
     const service = new AnalyticsExportService(repository);
     const result = await service.run(actor(["analytics_exporter"]), {
@@ -124,6 +135,7 @@ describe("AnalyticsExportService", () => {
       readVisibleRows: async () => [],
       findExportJob: async () => null,
       recordAudit: async () => undefined,
+      appendOutbox: async () => true,
     };
 
     await expect(
@@ -132,5 +144,27 @@ describe("AnalyticsExportService", () => {
         "missing-export",
       ),
     ).rejects.toThrow("ANALYTICS_EXPORT_NOT_FOUND");
+  });
+
+  it("audits denied export behavior without reading rows", async () => {
+    const actions: string[] = [];
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => operation(repository),
+      readVisibleRows: async () => [],
+      findExportJob: async () => null,
+      recordAudit: async (input) => {
+        actions.push(input.action);
+      },
+      appendOutbox: async () => true,
+    };
+
+    await expect(
+      new AnalyticsExportService(repository).run(actor(["employee"]), {
+        target: "platform",
+        from: "2026-08-03",
+        to: "2026-08-04",
+      }),
+    ).rejects.toThrow("ANALYTICS_EXPORT_FORBIDDEN");
+    expect(actions).toEqual(["analytics.export.denied"]);
   });
 });

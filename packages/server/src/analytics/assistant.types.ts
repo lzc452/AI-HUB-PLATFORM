@@ -1,4 +1,5 @@
 import type { ActorContext } from "@ai-hub/contracts";
+import type { OutboxEventInput } from "@ai-hub/contracts";
 
 export interface AssistantAuthorizationReview {
   allowed: boolean;
@@ -36,6 +37,7 @@ export interface AssistantAuditRepository {
     request: AssistantRequest,
   ): Promise<AssistantAuthorizationReview>;
   recordAudit(input: AssistantAuditRecord): Promise<void>;
+  appendOutbox(input: OutboxEventInput): Promise<boolean>;
 }
 
 export interface AssistantResult {

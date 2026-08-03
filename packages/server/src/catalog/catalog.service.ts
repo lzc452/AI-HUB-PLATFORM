@@ -5,9 +5,13 @@ import type {
   CatalogRepository,
   CatalogSearchInput,
 } from "./catalog.types.js";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
 export class CatalogService {
-  constructor(private readonly repository: CatalogRepository) {}
+  constructor(
+    private readonly repository: CatalogRepository,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+  ) {}
 
   async list(input: CatalogSearchInput): Promise<CatalogListResult> {
     return this.query(input);
@@ -58,6 +62,17 @@ export class CatalogService {
       actionType: input.actionType,
       channel: input.channel ?? null,
     });
+    if (input.actionType === "package_download") {
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_downloaded",
+        aggregateType: "application",
+        aggregateId: input.applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-downloaded:${actor.sessionId}:${input.applicationId}:${entry.currentVersionId}:${Date.now()}`,
+        metadata: { channel: input.channel ?? "unknown" },
+        audience: { employeeId: actor.employeeId },
+      });
+    }
   }
 
   private async query(input: CatalogSearchInput): Promise<CatalogListResult> {

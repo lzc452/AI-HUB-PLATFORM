@@ -17,6 +17,7 @@ const actor: ActorContext = {
 
 const repository = (allowed = true) => {
   const audits: string[] = [];
+  const outbox: string[] = [];
   const value: AssistantAuditRepository & { audits: string[] } = {
     audits,
     reviewAuthorization: async (): Promise<AssistantAuthorizationReview> => ({
@@ -25,6 +26,10 @@ const repository = (allowed = true) => {
     }),
     recordAudit: async (input) => {
       audits.push(input.action);
+    },
+    appendOutbox: async (input) => {
+      outbox.push(input.eventType);
+      return true;
     },
   };
   return value;
@@ -132,5 +137,34 @@ describe("AnalyticsAssistantService", () => {
       "analytics.assistant.requested",
       "analytics.assistant.failed",
     ]);
+  });
+
+  it("redacts adversarial identifiers and keeps fallback when telemetry fails", async () => {
+    let received:
+      | { question: string; context: Record<string, unknown> }
+      | undefined;
+    const audit = repository();
+    audit.appendOutbox = async () => {
+      throw new Error("OUTBOX_UNAVAILABLE");
+    };
+    const provider: DifyAssistantPort = {
+      ask: async (input) => {
+        received = input;
+        return { answer: "safe" };
+      },
+    };
+
+    await expect(
+      new AnalyticsAssistantService(audit, provider).ask(actor, {
+        question:
+          "工号 employee-1，内网地址 data:image/png;base64,secret，文件 C:\\secret\\qr.png",
+        context: {
+          metricKey: "platform.application_views",
+          value: 1,
+          unit: "count",
+        },
+      }),
+    ).rejects.toThrow("OUTBOX_UNAVAILABLE");
+    expect(received).toBeUndefined();
   });
 });

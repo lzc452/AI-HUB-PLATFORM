@@ -32,6 +32,10 @@ export interface BehaviorEventInput {
   occurredAt: string;
   idempotencyKey: string;
   metadata: Readonly<Record<string, string | number | boolean>>;
+  audience?: Readonly<{
+    departmentId?: string | null;
+    employeeId?: string | null;
+  }>;
 }
 
 export type BehaviorEventValidation =

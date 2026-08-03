@@ -43,9 +43,12 @@ describe("DingTalk notification matrix", () => {
     const createForEvent = vi.fn().mockResolvedValue({
       notificationId: "notification-1",
     });
-    const service = new DingTalkNotificationMatrixService({
-      createForEvent,
-    });
+    const service = new DingTalkNotificationMatrixService(
+      {
+        createForEvent,
+      },
+      async () => true,
+    );
 
     for (const scenario of Object.keys(DINGTALK_NOTIFICATION_MATRIX)) {
       await service.queue(
@@ -81,7 +84,10 @@ describe("DingTalk notification matrix", () => {
 
   it("rejects missing recipients and sensitive template variables before queueing", async () => {
     const createForEvent = vi.fn();
-    const service = new DingTalkNotificationMatrixService({ createForEvent });
+    const service = new DingTalkNotificationMatrixService(
+      { createForEvent },
+      async () => true,
+    );
 
     await expect(
       service.queue(actor, "analytics.export.completed", {

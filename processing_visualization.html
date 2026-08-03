@@ -804,9 +804,9 @@
             name: "Phase 6：分析、看板、导出与外部助手",
             target: "第 7 月",
             status: "进行中",
-            progress: 85,
+            progress: 92,
             summary:
-              "建立原始行为事件、日聚合、固定看板、受控导出、公网 Dify 最小化上下文和指标字典。",
+              "已完成原始行为事件、180 天保留、可重算日聚合、九类固定看板、受控导出、指标字典、Dify 安全边界和钉钉 Outbox 矩阵；正在执行最终门禁、二次两轴审查与外部 Git 交付。",
             tasks: [
               [
                 "原始行为事件、180 天保留与日聚合",
@@ -836,6 +836,9 @@
               "应用负责人不能看个人访问名单",
               "Dify 不获得敏感上下文",
               "导出全部审计",
+              "真实 PostgreSQL/API/Web 测试通过",
+              "两轴审查无 actionable findings",
+              "分支已推送且 Draft PR 存在或记录外部阻塞",
             ],
           },
           {
@@ -1138,6 +1141,22 @@
               "使用源/目标双版本条件更新、主方案数据库约束、事务 Audit/Outbox，并委托既有 ApplicationService 维护应用生命周期。",
             skip: "最终全仓门禁、两轴审查、分支推送和 Draft PR 尚待执行。",
           },
+          {
+            id: "t-014",
+            phase: "dev",
+            status: "进行中",
+            title: "Phase 6 审查修复与最终门禁",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "",
+            progress:
+              "两轴审查发现的问题已修复并提交 6bc4594：补齐 retention job、聚合重算清理、12 项版本化指标种子、事件路径接入、看板 Audit/Outbox、导出逐行策略审计、Dify 问题脱敏/受众复核和钉钉失败状态；最终门禁与 GitHub Draft PR 仍待完成。",
+            problem:
+              "Phase 6 只有在原始事件可重算、权限/匿名、导出审计、Dify 脱敏、真实 PostgreSQL/API/Web、两轴审查和外部交付均有新鲜证据后才能关闭。",
+            solution:
+              "以独立修复提交收口审查发现，随后逐条执行精确门禁和第二轮两轴审查；Git 推送或 Draft PR 权限失败将保留为明确外部阻塞。",
+            skip: "不提前实现 Phase 7 生产部署、安全上线或运维验收。",
+          },
         ],
         events: [
           {
@@ -1158,6 +1177,12 @@
             phase: "test",
             title: "Phase 6 real PostgreSQL/API/Web cross-layer evidence",
             body: "Docker-backed API passed 10 files/19 tests, including raw-event idempotency, rebuildable dashboard value, audited export, redacted Dify context, and real Outbox-to-DingTalk delivery. Web passed 4 files/18 tests; final gates and two-axis review remain pending.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 6 actionable review findings remediated",
+            body: "Commit 6bc4594 closes the first two-axis review findings: retention execution, rebuild replacement semantics, versioned metric seeds, behavior-event wiring, dashboard Audit/Outbox, export row-policy audit, Dify question redaction and audience authorization, and DingTalk delivery error state. Final gates, second review, branch push, and Draft PR remain pending.",
           },
           {
             date: "2026-08-03",

@@ -24,8 +24,9 @@ export class AnalyticsEventService {
       aggregateType: input.aggregateType,
       aggregateId: input.aggregateId,
       actorEmployeeId: actor?.employeeId ?? null,
-      audienceDepartmentId: actor?.primaryDepartmentId ?? null,
-      audienceEmployeeId: null,
+      audienceDepartmentId:
+        input.audience?.departmentId ?? actor?.primaryDepartmentId ?? null,
+      audienceEmployeeId: input.audience?.employeeId ?? null,
       metadata: input.metadata,
       idempotencyKey: input.idempotencyKey,
       occurredAt,

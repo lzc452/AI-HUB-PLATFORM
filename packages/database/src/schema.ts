@@ -421,6 +421,7 @@ export interface AnalyticsBehaviorEventsTable {
 
 export interface AnalyticsDailyAggregatesTable {
   metric_key: string;
+  metric_version: number;
   day: string;
   audience_scope_key: string;
   value: number;

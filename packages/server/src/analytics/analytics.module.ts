@@ -86,6 +86,7 @@ export class AnalyticsModule {
                   reason: "DENY_TEST_DEFAULT",
                 }),
                 recordAudit: async () => undefined,
+                appendOutbox: async () => true,
               },
               new UnavailableDifyAssistantPort(),
             ),

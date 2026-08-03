@@ -46,9 +46,40 @@ export class NotificationModule {
         },
         {
           provide: DINGTALK_NOTIFICATION_MATRIX_SERVICE,
-          useFactory: (notifications: NotificationService) =>
-            new DingTalkNotificationMatrixService(notifications),
-          inject: [NOTIFICATION_SERVICE],
+          useFactory: (
+            notifications: NotificationService,
+            identity: IdentityService,
+          ) =>
+            new DingTalkNotificationMatrixService(
+              notifications,
+              async (employeeId, role) => {
+                const records = await identity.listEmployeeRoles(employeeId);
+                const aliases: Record<string, readonly string[]> = {
+                  application_reviewer: ["application_reviewer"],
+                  application_owner: ["application_owner"],
+                  demand_owner: ["demand_owner", "demand_operator"],
+                  demand_submitter: ["employee", "demand_operator"],
+                  demand_collaborator: [
+                    "demand_collaborator",
+                    "demand_operator",
+                  ],
+                  export_requester: [
+                    "analytics_exporter",
+                    "analytics_operator",
+                    "super_admin",
+                  ],
+                  assistant_requester: [
+                    "analytics_assistant_user",
+                    "analytics_operator",
+                    "super_admin",
+                  ],
+                };
+                return records.some((record) =>
+                  (aliases[role] ?? [role]).includes(record.roleCode),
+                );
+              },
+            ),
+          inject: [NOTIFICATION_SERVICE, IdentityService],
         },
       ],
       exports: [NOTIFICATION_SERVICE, DINGTALK_NOTIFICATION_MATRIX_SERVICE],

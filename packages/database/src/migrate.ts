@@ -8,6 +8,8 @@ import * as aiDemandInnovation from "./migrations/0006_ai_demand_innovation.js";
 import * as demandCollaborationConstraints from "./migrations/0007_demand_collaboration_constraints.js";
 import * as analyticsEvents from "./migrations/0008_analytics_events.js";
 import * as analyticsExports from "./migrations/0009_analytics_exports.js";
+import * as analyticsRoles from "./migrations/0010_analytics_roles.js";
+import * as analyticsAggregateVersions from "./migrations/0011_analytics_aggregate_versions.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -20,6 +22,8 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0007_demand_collaboration_constraints": demandCollaborationConstraints,
   "0008_analytics_events": analyticsEvents,
   "0009_analytics_exports": analyticsExports,
+  "0010_analytics_roles": analyticsRoles,
+  "0011_analytics_aggregate_versions": analyticsAggregateVersions,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

@@ -1,5 +1,5 @@
 import type { ActorContext } from "@ai-hub/contracts";
-import type { DatabaseSchema } from "@ai-hub/database";
+import { OutboxStore, type DatabaseSchema } from "@ai-hub/database";
 import type { Kysely } from "kysely";
 import type {
   AssistantAuditRecord,
@@ -56,5 +56,9 @@ export class KyselyAssistantAuditRepository
         details: input.details,
       })
       .execute();
+  }
+
+  appendOutbox(input: Parameters<OutboxStore["append"]>[0]): Promise<boolean> {
+    return new OutboxStore(this.db).append(input);
   }
 }

@@ -18,15 +18,19 @@ export class KyselyAnalyticsRetentionRepository
   }
 
   async purgeExpiredEvents(now: Date): Promise<number> {
-    await sql`select set_config('app.analytics_retention_job', 'on', true)`.execute(
-      this.db,
-    );
-    const deleted = await this.db
-      .deleteFrom("analytics_behavior_events")
-      .where("expires_at", "<=", now)
-      .returning("event_id")
+    const result = await sql<{ deleted: number }>`
+      select purge_analytics_behavior_events(${now}) as deleted
+    `.execute(this.db);
+    return Number(result.rows[0]?.deleted ?? 0);
+  }
+
+  async listOverdueReviewQueues(now: Date): Promise<readonly string[]> {
+    const rows = await this.db
+      .selectFrom("application_review_queue")
+      .select("application_version_id")
+      .where("sla_due_at", "<=", now)
       .execute();
-    return deleted.length;
+    return rows.map((row) => row.application_version_id);
   }
 
   async recordAudit(input: {

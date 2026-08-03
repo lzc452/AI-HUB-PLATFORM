@@ -477,6 +477,7 @@ export class ApplicationService {
         occurredAt: new Date().toISOString(),
         idempotencyKey: `application-viewed:${actor.sessionId}:${applicationId}:${Date.now()}`,
         metadata: { source: "application.get" },
+        audience: { departmentId: application.departmentId },
       });
     }
     return application;
@@ -536,6 +537,7 @@ export class ApplicationService {
         occurredAt: new Date().toISOString(),
         idempotencyKey: `application-delivered:${actor.sessionId}:${applicationId}:${version.applicationVersionId}:${Date.now()}`,
         metadata: { source: "application.published-version" },
+        audience: { departmentId: application.departmentId },
       });
     }
     return version;

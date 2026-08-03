@@ -23,4 +23,17 @@ describe("worker outbox handlers", () => {
       }),
     ).resolves.toBeUndefined();
   });
+
+  it("exposes a retention runner for the worker schedule", async () => {
+    const { createRetentionRunner } = await import("./worker.module.js");
+    let calls = 0;
+    const runner = createRetentionRunner({
+      run: async () => {
+        calls += 1;
+        return { deleted: 2 };
+      },
+    });
+    await expect(runner()).resolves.toEqual({ deleted: 2 });
+    expect(calls).toBe(1);
+  });
 });

@@ -6,6 +6,10 @@ import {
   OutboxWorker,
   type OutboxHandler,
   type OutboxHandlerMap,
+  AnalyticsRetentionService,
+  KyselyAnalyticsRetentionRepository,
+  AnalyticsEventService,
+  KyselyAnalyticsEventRepository,
 } from "@ai-hub/server";
 
 export const systemProbeRequestedHandler: OutboxHandler = async () => {};
@@ -33,11 +37,18 @@ export class WorkerOutboxRuntime implements OnApplicationShutdown {
   public constructor(
     private readonly database: ReturnType<typeof createDatabase>,
     public readonly outboxWorker: OutboxWorker,
+    public readonly retention: AnalyticsRetentionService,
   ) {}
 
   public async onApplicationShutdown(): Promise<void> {
     await this.database.destroy();
   }
+}
+
+export function createRetentionRunner(retention: {
+  run(): Promise<{ deleted: number }>;
+}): () => Promise<{ deleted: number }> {
+  return () => retention.run();
 }
 
 @Module({})
@@ -60,7 +71,16 @@ export class WorkerModule {
               undefined,
               metrics,
             );
-            return new WorkerOutboxRuntime(database, outboxWorker);
+            return new WorkerOutboxRuntime(
+              database,
+              outboxWorker,
+              new AnalyticsRetentionService(
+                new KyselyAnalyticsRetentionRepository(database),
+                new AnalyticsEventService(
+                  new KyselyAnalyticsEventRepository(database),
+                ),
+              ),
+            );
           },
         },
       ],

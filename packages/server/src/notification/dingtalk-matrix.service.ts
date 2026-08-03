@@ -71,6 +71,12 @@ export interface DingTalkNotificationQueueInput {
   variables?: Readonly<Record<string, TemplateValue>>;
 }
 
+export type DingTalkRecipientAuthorizer = (
+  recipientEmployeeId: string,
+  recipientRole: string,
+  actor: ActorContext,
+) => Promise<boolean>;
+
 const FORBIDDEN_VARIABLES = new Set([
   "employeeNumber",
   "internalUrl",
@@ -82,6 +88,11 @@ const FORBIDDEN_VARIABLES = new Set([
 export class DingTalkNotificationMatrixService {
   public constructor(
     private readonly notifications: Pick<NotificationService, "createForEvent">,
+    private readonly authorizeRecipient: DingTalkRecipientAuthorizer = async (
+      recipientEmployeeId,
+      _recipientRole,
+      actor,
+    ) => recipientEmployeeId === actor.employeeId,
   ) {}
 
   public async queue(
@@ -99,6 +110,15 @@ export class DingTalkNotificationMatrixService {
       }
     }
     const entry = DINGTALK_NOTIFICATION_MATRIX[scenario];
+    if (
+      !(await this.authorizeRecipient(
+        input.recipientEmployeeId,
+        entry.recipientRole,
+        actor,
+      ))
+    ) {
+      throw new Error("NOTIFICATION_RECIPIENT_NOT_AUTHORIZED");
+    }
     const message = entry.messageTemplate.replace(
       /\{([a-zA-Z]+)\}/gu,
       (placeholder, key: string) => {

@@ -172,6 +172,28 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     $function$
   `.execute(db);
   await sql`
+    create or replace function purge_analytics_behavior_events(cutoff timestamptz)
+    returns integer
+    language plpgsql
+    security definer
+    set search_path = public, pg_temp
+    as $function$
+    declare deleted_count integer;
+    begin
+      perform set_config('app.analytics_retention_job', 'on', true);
+      delete from analytics_behavior_events where expires_at <= cutoff;
+      get diagnostics deleted_count = row_count;
+      return deleted_count;
+    end;
+    $function$
+  `.execute(db);
+  await sql`
+    revoke all on function purge_analytics_behavior_events(timestamptz) from public
+  `.execute(db);
+  await sql`
+    grant execute on function purge_analytics_behavior_events(timestamptz) to current_user
+  `.execute(db);
+  await sql`
     create trigger analytics_behavior_events_no_delete
     before delete on analytics_behavior_events
     for each row execute function prevent_analytics_delete()

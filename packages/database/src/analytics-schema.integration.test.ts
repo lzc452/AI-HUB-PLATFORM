@@ -101,6 +101,14 @@ describe("Phase 6 analytics schema", () => {
       "analytics_audit_events_no_delete",
       "analytics_behavior_events_no_delete",
     ]);
+
+    const purgeFunction = await sql<{ security_type: boolean }>`
+      select p.prosecdef as security_type
+      from pg_proc p
+      where p.proname = 'purge_analytics_behavior_events'
+    `.execute(db);
+    expect(purgeFunction.rows).toHaveLength(1);
+    expect(purgeFunction.rows[0]?.security_type).toBe(true);
   });
 
   it("stores permissioned export jobs as an auditable lifecycle", async () => {
@@ -134,5 +142,21 @@ describe("Phase 6 analytics schema", () => {
 
     expect(definitions.rows).toHaveLength(12);
     expect(definitions.rows.every((row) => row.version === 1)).toBe(true);
+  });
+
+  it("provisions the Phase 6 analytics roles through a sequenced migration", async () => {
+    const roles = await sql<{ role_code: string }>`
+      select role_code
+      from roles
+      where role_code like 'analytics_%'
+      order by role_code
+    `.execute(db);
+    expect(roles.rows.length).toBeGreaterThanOrEqual(13);
+    expect(roles.rows.map((row) => row.role_code)).toContain(
+      "analytics_operator",
+    );
+    expect(roles.rows.map((row) => row.role_code)).toContain(
+      "analytics_integration_reader",
+    );
   });
 });

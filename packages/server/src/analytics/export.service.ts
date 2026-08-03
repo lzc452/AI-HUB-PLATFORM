@@ -6,6 +6,7 @@ import type {
   AnalyticsExportResult,
 } from "./export.types.js";
 import type { AnalyticsBehaviorEventRecorder } from "./analytics.types.js";
+import { assertAnalyticsRange } from "./range.js";
 
 const EXPORT_ROLES = [
   "analytics_exporter",
@@ -46,16 +47,19 @@ export class AnalyticsExportService {
     request: AnalyticsExportRequest,
   ): Promise<AnalyticsExportResult> {
     if (!canExport(actor)) {
+      await this.recordLifecycle(actor, "", "denied", {
+        reason: "ANALYTICS_EXPORT_FORBIDDEN",
+        target: request.target,
+      });
       throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
     }
-    const from = new Date(request.from);
-    const to = new Date(request.to);
-    if (
-      Number.isNaN(from.getTime()) ||
-      Number.isNaN(to.getTime()) ||
-      from >= to ||
-      to.getTime() - from.getTime() > 180 * 24 * 60 * 60 * 1000
-    ) {
+    try {
+      assertAnalyticsRange(request.from, request.to);
+    } catch {
+      await this.recordLifecycle(actor, "", "denied", {
+        reason: "ANALYTICS_EXPORT_RANGE_INVALID",
+        target: request.target,
+      });
       throw new Error("ANALYTICS_EXPORT_RANGE_INVALID");
     }
     const exportId = randomUUID();
@@ -64,6 +68,13 @@ export class AnalyticsExportService {
       action: "analytics.export.requested",
       exportId,
       details: { target: request.target, from: request.from, to: request.to },
+    });
+    await this.repository.appendOutbox({
+      eventType: "analytics.export.requested",
+      aggregateType: "export",
+      aggregateId: exportId,
+      payload: { target: request.target, from: request.from, to: request.to },
+      idempotencyKey: `analytics.export.requested:${exportId}`,
     });
     try {
       const rows = await this.repository.readVisibleRows({ actor, request });
@@ -102,6 +113,13 @@ export class AnalyticsExportService {
         exportId,
         details: { rowCount: result.rows.length },
       });
+      await this.repository.appendOutbox({
+        eventType: "analytics.export.completed",
+        aggregateType: "export",
+        aggregateId: exportId,
+        payload: { rowCount: result.rows.length },
+        idempotencyKey: `analytics.export.completed:${exportId}`,
+      });
       return result;
     } catch (error) {
       await this.repository.recordAudit({
@@ -111,6 +129,15 @@ export class AnalyticsExportService {
         details: {
           code: error instanceof Error ? error.message : "EXPORT_FAILED",
         },
+      });
+      await this.repository.appendOutbox({
+        eventType: "analytics.export.failed",
+        aggregateType: "export",
+        aggregateId: exportId,
+        payload: {
+          code: error instanceof Error ? error.message : "EXPORT_FAILED",
+        },
+        idempotencyKey: `analytics.export.failed:${exportId}`,
       });
       throw error;
     }
@@ -130,6 +157,9 @@ export class AnalyticsExportService {
     exportId: string,
   ): Promise<void> {
     if (!canExport(actor)) {
+      await this.recordLifecycle(actor, exportId, "denied", {
+        reason: "ANALYTICS_EXPORT_FORBIDDEN",
+      });
       throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
     }
     const job = await this.repository.findExportJob(exportId);
@@ -140,6 +170,9 @@ export class AnalyticsExportService {
       job === null ||
       (!operator && job.requestedByEmployeeId !== actor.employeeId)
     ) {
+      await this.recordLifecycle(actor, exportId, "denied", {
+        reason: "ANALYTICS_EXPORT_NOT_FOUND",
+      });
       throw new Error("ANALYTICS_EXPORT_NOT_FOUND");
     }
     await this.repository.recordAudit({
@@ -147,6 +180,34 @@ export class AnalyticsExportService {
       action: "analytics.export.downloaded",
       exportId,
       details: {},
+    });
+    await this.repository.appendOutbox({
+      eventType: "analytics.export.downloaded",
+      aggregateType: "export",
+      aggregateId: exportId,
+      payload: {},
+      idempotencyKey: `analytics.export.downloaded:${exportId}:${actor.sessionId}`,
+    });
+  }
+
+  private async recordLifecycle(
+    actor: ActorContext,
+    exportId: string,
+    state: "denied",
+    details: unknown,
+  ): Promise<void> {
+    await this.repository.recordAudit({
+      actorEmployeeId: actor.employeeId,
+      action: `analytics.export.${state}`,
+      exportId: exportId || actor.sessionId,
+      details,
+    });
+    await this.repository.appendOutbox({
+      eventType: `analytics.export.${state}`,
+      aggregateType: "export",
+      aggregateId: exportId || actor.sessionId,
+      payload: details,
+      idempotencyKey: `analytics.export.${state}:${actor.sessionId}:${exportId || "request"}:${Date.now()}`,
     });
   }
 }

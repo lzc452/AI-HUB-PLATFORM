@@ -6,6 +6,7 @@ import type {
   DashboardResult,
 } from "./dashboard.types.js";
 import { dashboardMetricKeys } from "./dashboard-metrics.js";
+import { assertAnalyticsRange } from "./range.js";
 
 const dashboardRoles: Readonly<Record<DashboardKey, readonly string[]>> = {
   platform: ["analytics_operator", "analytics_platform_reader", "super_admin"],
@@ -64,16 +65,7 @@ export class AnalyticsDashboardService {
     if (!roles.some((role) => actor.roleCodes.includes(role))) {
       throw new Error("ANALYTICS_DASHBOARD_FORBIDDEN");
     }
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    if (
-      Number.isNaN(fromDate.getTime()) ||
-      Number.isNaN(toDate.getTime()) ||
-      fromDate >= toDate ||
-      toDate.getTime() - fromDate.getTime() > 180 * 24 * 60 * 60 * 1000
-    ) {
-      throw new Error("ANALYTICS_RANGE_INVALID");
-    }
+    assertAnalyticsRange(from, to);
     const unrestricted = ["analytics_operator", "super_admin"].some((role) =>
       actor.roleCodes.includes(role),
     );

@@ -1,4 +1,5 @@
 import type { ActorContext } from "@ai-hub/contracts";
+import type { OutboxEventInput } from "@ai-hub/contracts";
 import type { DashboardKey } from "./dashboard.types.js";
 
 export interface AnalyticsExportRow {
@@ -39,6 +40,7 @@ export interface AnalyticsExportRepository {
     requestedByEmployeeId: string;
   } | null>;
   recordAudit(input: AnalyticsExportAudit): Promise<void>;
+  appendOutbox(input: OutboxEventInput): Promise<boolean>;
 }
 
 export interface AnalyticsExportResult {

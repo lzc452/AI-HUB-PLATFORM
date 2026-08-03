@@ -239,7 +239,10 @@ describe("real Phase 6 analytics API", () => {
       { authorize: async () => ({ allowed: true, reasonCode: "ALLOW_TEST" }) },
       { send: async () => ({ delivered: true }) },
     );
-    await new DingTalkNotificationMatrixService(notifications).queue(
+    await new DingTalkNotificationMatrixService(
+      notifications,
+      async () => true,
+    ).queue(
       {
         employeeId: "E900",
         roleCodes: ["analytics_operator"],

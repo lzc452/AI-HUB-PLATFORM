@@ -10,6 +10,7 @@ export interface RawBehaviorEvent {
 
 export interface DailyAggregate {
   metricKey: string;
+  metricVersion?: number;
   day: string;
   audienceScopeKey: string;
   value: number;

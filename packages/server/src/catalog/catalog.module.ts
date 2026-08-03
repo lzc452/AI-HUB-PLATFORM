@@ -6,6 +6,8 @@ import { CatalogController } from "./catalog.controller.js";
 import { KyselyCatalogRepository } from "./catalog.repository.js";
 import { CatalogService } from "./catalog.service.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
+import { AnalyticsEventService } from "../analytics/analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 @Module({})
 export class CatalogModule {
@@ -17,10 +19,15 @@ export class CatalogModule {
       providers: [
         {
           provide: CATALOG_SERVICE,
-          useFactory: () =>
-            new CatalogService(
-              new KyselyCatalogRepository(createDatabase(databaseUrl)),
-            ),
+          useFactory: () => {
+            const database = createDatabase(databaseUrl);
+            return new CatalogService(
+              new KyselyCatalogRepository(database),
+              new AnalyticsEventService(
+                new KyselyAnalyticsEventRepository(database),
+              ),
+            );
+          },
         },
       ],
       exports: [CATALOG_SERVICE],

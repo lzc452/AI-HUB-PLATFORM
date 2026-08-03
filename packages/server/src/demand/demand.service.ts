@@ -662,6 +662,10 @@ export class DemandService {
       occurredAt: new Date().toISOString(),
       idempotencyKey: `demand-viewed:${actor.sessionId}:${demandId}:${Date.now()}`,
       metadata: { source: "demand.detail" },
+      audience: {
+        departmentId: demand.audienceDepartmentId,
+        employeeId: demand.audienceEmployeeId ?? null,
+      },
     });
     return projected;
   }
@@ -671,8 +675,8 @@ export class DemandService {
     demandId: string,
   ): Promise<{ liked: boolean }> {
     await this.assertAllowed(actor, "interact", demandId);
-    await this.getDetail(actor, demandId);
-    return this.repository.withTransaction(async (repository) => {
+    const demand = await this.getDetail(actor, demandId);
+    const result = await this.repository.withTransaction(async (repository) => {
       const currentlyLiked = await repository.hasLike(
         demandId,
         actor.employeeId,
@@ -693,6 +697,21 @@ export class DemandService {
       });
       return { liked: !currentlyLiked };
     });
+    if (result.liked) {
+      await this.analyticsEvents?.record(actor, {
+        eventName: "demand_liked",
+        aggregateType: "demand",
+        aggregateId: demandId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `demand-liked:${actor.sessionId}:${demandId}:${Date.now()}`,
+        metadata: { source: "demand.like" },
+        audience: {
+          departmentId: demand.audienceDepartmentId,
+          employeeId: demand.audienceEmployeeId ?? null,
+        },
+      });
+    }
+    return result;
   }
 
   async addComment(
@@ -705,7 +724,7 @@ export class DemandService {
     },
   ): Promise<DemandCommentRecord> {
     await this.assertAllowed(actor, "interact", input.demandId);
-    await this.getDetail(actor, input.demandId);
+    const demand = await this.getDetail(actor, input.demandId);
     const body = input.body.trim();
     if (body.length < 2 || body.length > 5_000) {
       throw new Error("DEMAND_COMMENT_INVALID");
@@ -719,27 +738,42 @@ export class DemandService {
         throw new Error("DEMAND_COMMENT_DEPTH_EXCEEDED");
       }
     }
-    return this.repository.withTransaction(async (repository) => {
-      const comment = await repository.createComment({
-        demandId: input.demandId,
-        parentCommentId: input.parentCommentId,
-        authorEmployeeId: actor.employeeId,
-        body,
-        displayAnonymously: input.displayAnonymously ?? false,
-        hiddenAt: null,
-      });
-      await repository.recordAudit({
-        demandId: input.demandId,
-        actorEmployeeId: actor.employeeId,
-        eventType: "demand.comment.created",
-        details: { commentId: comment.commentId },
-      });
-      await repository.emitOutbox({
-        demandId: input.demandId,
-        eventType: "demand.comment.created",
-      });
-      return comment;
+    const comment = await this.repository.withTransaction(
+      async (repository) => {
+        const comment = await repository.createComment({
+          demandId: input.demandId,
+          parentCommentId: input.parentCommentId,
+          authorEmployeeId: actor.employeeId,
+          body,
+          displayAnonymously: input.displayAnonymously ?? false,
+          hiddenAt: null,
+        });
+        await repository.recordAudit({
+          demandId: input.demandId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "demand.comment.created",
+          details: { commentId: comment.commentId },
+        });
+        await repository.emitOutbox({
+          demandId: input.demandId,
+          eventType: "demand.comment.created",
+        });
+        return comment;
+      },
+    );
+    await this.analyticsEvents?.record(actor, {
+      eventName: "demand_commented",
+      aggregateType: "demand",
+      aggregateId: input.demandId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `demand-commented:${comment.commentId}`,
+      metadata: { source: "demand.comment" },
+      audience: {
+        departmentId: demand.audienceDepartmentId,
+        employeeId: demand.audienceEmployeeId ?? null,
+      },
     });
+    return comment;
   }
 
   async listComments(

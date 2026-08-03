@@ -57,6 +57,7 @@ export class KyselyAnalyticsAggregationRepository
           .insertInto("analytics_daily_aggregates")
           .values({
             metric_key: row.metricKey,
+            metric_version: row.metricVersion ?? 1,
             day: row.day,
             audience_scope_key: row.audienceScopeKey,
             value: row.value,
@@ -67,6 +68,7 @@ export class KyselyAnalyticsAggregationRepository
             conflict
               .columns(["metric_key", "day", "audience_scope_key"])
               .doUpdateSet({
+                metric_version: row.metricVersion ?? 1,
                 value: row.value,
                 source_event_count: row.sourceEventCount,
                 computed_at: new Date(),

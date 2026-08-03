@@ -50,6 +50,7 @@ export class AnalyticsAggregationService {
         if (current === undefined) {
           rows.set(key, {
             metricKey: definition.metricKey,
+            metricVersion: definition.version,
             day,
             audienceScopeKey: event.audienceScopeKey,
             value: 1,

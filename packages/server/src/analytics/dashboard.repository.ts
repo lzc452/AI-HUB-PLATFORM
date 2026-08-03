@@ -41,6 +41,7 @@ export class KyselyAnalyticsDashboardRepository
       .execute();
     return rows.map((row) => ({
       metricKey: row.metric_key,
+      metricVersion: row.metric_version,
       day: row.day,
       audienceScopeKey: row.audience_scope_key,
       value: Number(row.value),

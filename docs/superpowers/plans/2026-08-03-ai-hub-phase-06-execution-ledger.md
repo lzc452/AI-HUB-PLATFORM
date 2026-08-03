@@ -139,7 +139,7 @@ result.
   as deferred implementation risk.
 - Remediation: added the retention service and audit boundary; made daily
   rebuild delete the target aggregate range before replacement; versioned and
-  persisted all 13 metric definitions; added review SLA, demand report,
+  persisted all 12 metric definitions; added review SLA, demand report,
   assistant failure, and notification retry event sources; wired application,
   demand, review, export, assistant, and notification paths to behavior-event
   recording; added per-row export policy audits and download ownership checks;
@@ -154,3 +154,26 @@ result.
   boundaries.
 - Commit: pending until the remediation diff is independently verified and
   committed.
+
+### Step 10b: Second review remediation
+
+- The second two-axis review found actionable gaps in runtime retention
+  execution, retained-range enforcement, audience fields, analytics RBAC
+  provisioning, missing producers, SLA scan behavior, export/assistant
+  Outbox, denial audits, Dify adversarial redaction/degradation, metric
+  version propagation, and DingTalk recipient authorization.
+- RED: added focused range, export denial/Outbox, assistant boundary,
+  worker-retention, role/metric-version schema, and notification authorization
+  assertions before implementation.
+- GREEN: server passes 24 files/96 tests; worker passes 3 files/6 tests;
+  database passes 3 files/24 tests including the `0010` role seed,
+  `0011` aggregate version column, and retention function security metadata;
+  server/database/worker/API typechecks and dependency boundaries pass.
+- Implementation now schedules retention and overdue-review scans in the
+  existing worker, applies one 180-day range policy, persists resource audience
+  fields, instruments download/like/comment producers, emits export/assistant
+  Outbox lifecycles, audits denials, constrains and redacts Dify strings,
+  carries metric version into aggregates, provisions analytics roles, and
+  authorizes DingTalk recipients through IdentityService role records.
+- Commit: pending until the real API/database regression and a fresh two-axis
+  review pass on this remediation.
