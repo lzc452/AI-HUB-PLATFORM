@@ -271,7 +271,10 @@ function ApplicationsPage() {
       description="Review application records, immutable versions, review history, and delivery configuration from one administration surface."
       title="Applications"
     >
-      <section aria-labelledby="application-directory-heading" className="space-y-4">
+      <section
+        aria-labelledby="application-directory-heading"
+        className="space-y-4"
+      >
         <Title id="application-directory-heading" level={2} className="!mb-0">
           Application directory
         </Title>
@@ -281,7 +284,9 @@ function ApplicationsPage() {
               <Title level={3} className="!mb-0">
                 Internal AI assistant
               </Title>
-              <Text type="secondary">app-001 · owned by Platform Operations</Text>
+              <Text type="secondary">
+                app-001 · owned by Platform Operations
+              </Text>
             </div>
             <Tag color="blue">Published version 1.2.0</Tag>
           </div>
@@ -289,7 +294,10 @@ function ApplicationsPage() {
             <Link to="/applications/app-001">Application details</Link>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2" aria-label="Directory states">
+        <div
+          className="grid gap-4 md:grid-cols-2"
+          aria-label="Directory states"
+        >
           <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white p-5">
             <Text strong>Empty</Text>
             <Paragraph className="!mb-0 mt-2">
@@ -330,7 +338,10 @@ function ApplicationDetailsPage() {
         <Title id="lifecycle-heading" level={2} className="!mb-0">
           Lifecycle states
         </Title>
-        <div className="flex flex-wrap gap-2" aria-label="Application lifecycle states">
+        <div
+          className="flex flex-wrap gap-2"
+          aria-label="Application lifecycle states"
+        >
           {applicationLifecycleStates.map((state) => (
             <Tag color={state.color} key={state.label}>
               {state.label}
@@ -348,7 +359,8 @@ function ApplicationDetailsPage() {
             <Tag color="blue">Published version</Tag>
           </div>
           <Paragraph className="!mb-0 !mt-4">
-            The published version is displayed for review only. Rollback and other state changes are intentionally unavailable in this shell.
+            The published version is displayed for review only. Rollback and
+            other state changes are intentionally unavailable in this shell.
           </Paragraph>
         </div>
       </section>
@@ -372,7 +384,9 @@ function ApplicationVersionsPage() {
               <Title level={3} className="!mb-1">
                 v1.2.0
               </Title>
-              <Text type="secondary">Published version · artifact verified</Text>
+              <Text type="secondary">
+                Published version · artifact verified
+              </Text>
             </div>
             <Tag color="blue">Published</Tag>
           </div>
@@ -398,7 +412,8 @@ function ApplicationReviewPage() {
         <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
           <Tag color="success">Approved</Tag>
           <Paragraph className="!mb-0 !mt-3">
-            Review actions are shown as read-only history until the review API is connected.
+            Review actions are shown as read-only history until the review API
+            is connected.
           </Paragraph>
         </div>
       </section>
@@ -430,7 +445,9 @@ function ApplicationDeliveryPage() {
                 </Title>
                 <Tag color="default">Disabled</Tag>
               </div>
-              <Text type="secondary">Configuration is read-only in this shell.</Text>
+              <Text type="secondary">
+                Configuration is read-only in this shell.
+              </Text>
             </div>
           ))}
         </div>
