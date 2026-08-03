@@ -13,6 +13,9 @@ import {
   CreatorService,
   DemandModule,
   DemandService,
+  AnalyticsModule,
+  AnalyticsDashboardService,
+  AnalyticsExportService,
   IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
@@ -32,6 +35,10 @@ export interface ApiModuleTestOptions {
   notification?: NotificationService;
   creator?: CreatorService;
   demand?: DemandService;
+  analytics?: {
+    dashboard: AnalyticsDashboardService;
+    exportService: AnalyticsExportService;
+  };
   artifactVerification?: ArtifactVerificationPort;
   observability?: ObservabilityModuleOptions;
 }
@@ -75,6 +82,7 @@ export class ApiModule {
         NotificationModule.register(databaseUrl),
         CreatorModule.register(databaseUrl),
         DemandModule.register(databaseUrl),
+        AnalyticsModule.register(databaseUrl),
         HealthModule.register(
           createProductionDatabaseCheck(databaseUrl, metrics),
         ),
@@ -133,6 +141,15 @@ export class ApiModule {
               ),
             ]),
         HealthModule.register(databaseCheck),
+        ...(options.analytics === undefined || options.identity === undefined
+          ? []
+          : [
+              AnalyticsModule.forTest(
+                options.analytics.dashboard,
+                options.analytics.exportService,
+                options.identity,
+              ),
+            ]),
       ],
     };
   }

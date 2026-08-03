@@ -50,7 +50,7 @@ are prohibited.
 | Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
 | Behavior events/schema | Commit `66c3f5`; contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
 | Daily aggregation/metric dictionary | Server focused command 16 files/72 tests; typecheck/lint passed; rebuild service uses 180-day raw-event window and fixed dictionary | passed |
-| Fixed dashboards | Commits `fdc06e3`, `9d9b4a1`; server 18 files/76 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
+| Fixed dashboards | Commits `fdc06e3`, `f86f7d6`; server 18 files/76 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
 | Permissioned audited export | Not executed yet | pending |
 | Dify boundary | Not executed yet | pending |
 | DingTalk/Outbox matrix | Not executed yet | pending |
@@ -100,4 +100,11 @@ result.
 - RED: `dashboard-matrix.test.ts` failed because the fixed dashboard listing API was absent.
 - GREEN: server command passed 18 files/76 tests; server typecheck and lint passed.
 - Implementation: exposed a stable nine-key dashboard matrix and verified every governance/department/risk/runtime/integration metric has source events, formula, permission, audience, and recomputation metadata. No lifecycle or notification semantics changed.
-- Commit: `9d9b4a feat(phase-06): add governance and operations dashboards`.
+- Commit: `f86f7d6 feat(phase-06): add governance and operations dashboards`.
+
+### Step 6: Permission filtering, anonymity, and audited backend export
+
+- RED: `export.service.test.ts` failed because the export service was absent; the new PostgreSQL export-job assertion then failed because `analytics_export_jobs` was absent.
+- GREEN: server export command passed 19 files/79 tests; `@ai-hub/server` and `@ai-hub/database` typechecks/lint passed; Docker-backed database command passed 3 files/22 tests, including analytics schema 4/4; API contract plus inherited real PostgreSQL regression passed 9 files/18 tests with Docker Desktop Linux engine.
+- Implementation: migration `0009_analytics_exports` stores a bounded export-job lifecycle; repository queries only daily aggregates within actor scope; service rejects unauthorized/overlong ranges before reading, projects anonymous/redacted identity, and audits requested/completed/failed/downloaded actions. Routes remain under `/internal/analytics` with identity headers and authorization.
+- Commit: pending until the Step 6 diff is staged and committed.

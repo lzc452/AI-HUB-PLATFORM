@@ -111,9 +111,9 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/server/src/analytics/export.*`, migration extension only if needed, contracts, tests, API/Web export route tests.
 
-- [ ] Write failing tests for permission denial, audience filtering before rows are serialized, anonymous projection, request/completion/failure/download audits, bounded date ranges, and non-public routes.
-- [ ] Implement an authenticated export job through the existing service boundary; do not return unauthorized application access lists or sensitive event metadata.
-- [ ] Verify focused server/API/Web export tests; commit `feat(phase-06): add audited analytics exports`.
+- [x] Write failing tests for permission denial, audience filtering before rows are serialized, anonymous projection, request/completion/failure/download audits, bounded date ranges, and non-public routes.
+- [x] Implement an authenticated export job through the existing service boundary; do not return unauthorized application access lists or sensitive event metadata.
+- [x] Verify focused server/API/Web export tests; commit `feat(phase-06): add audited analytics exports`.
 
 ### Task 7: Dify minimum context, redaction, authorization review, and degradation
 

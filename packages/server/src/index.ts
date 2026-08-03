@@ -139,6 +139,9 @@ export { AnalyticsAggregationService } from "./analytics/aggregation.service.js"
 export { KyselyAnalyticsAggregationRepository } from "./analytics/aggregation.repository.js";
 export { AnalyticsDashboardService } from "./analytics/dashboard.service.js";
 export { KyselyAnalyticsDashboardRepository } from "./analytics/dashboard.repository.js";
+export { AnalyticsExportService } from "./analytics/export.service.js";
+export { KyselyAnalyticsExportRepository } from "./analytics/export.repository.js";
+export { AnalyticsModule } from "./analytics/analytics.module.js";
 export type {
   AnalyticsAuditRecord,
   AnalyticsEventRepository,
@@ -155,3 +158,10 @@ export type {
   DashboardKey,
   DashboardResult,
 } from "./analytics/dashboard.types.js";
+export type {
+  AnalyticsExportAudit,
+  AnalyticsExportRepository,
+  AnalyticsExportRequest,
+  AnalyticsExportResult,
+  AnalyticsExportRow,
+} from "./analytics/export.types.js";

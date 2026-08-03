@@ -452,6 +452,18 @@ export interface AnalyticsAuditEventsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface AnalyticsExportJobsTable {
+  export_id: string;
+  requested_by_employee_id: string;
+  target: string;
+  from_date: string;
+  to_date: string;
+  status: "queued" | "running" | "completed" | "failed";
+  failure_code: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  completed_at: Date | null;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -495,4 +507,5 @@ export interface DatabaseSchema {
   analytics_daily_aggregates: AnalyticsDailyAggregatesTable;
   analytics_metric_definitions: AnalyticsMetricDefinitionsTable;
   analytics_audit_events: AnalyticsAuditEventsTable;
+  analytics_export_jobs: AnalyticsExportJobsTable;
 }
