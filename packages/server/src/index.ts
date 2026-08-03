@@ -142,6 +142,9 @@ export { KyselyAnalyticsDashboardRepository } from "./analytics/dashboard.reposi
 export { AnalyticsExportService } from "./analytics/export.service.js";
 export { KyselyAnalyticsExportRepository } from "./analytics/export.repository.js";
 export { AnalyticsModule } from "./analytics/analytics.module.js";
+export { AnalyticsAssistantService } from "./analytics/assistant.service.js";
+export { KyselyAssistantAuditRepository } from "./analytics/assistant.repository.js";
+export { UnavailableDifyAssistantPort } from "./analytics/dify.port.js";
 export type {
   AnalyticsAuditRecord,
   AnalyticsEventRepository,
@@ -165,3 +168,13 @@ export type {
   AnalyticsExportResult,
   AnalyticsExportRow,
 } from "./analytics/export.types.js";
+export type {
+  AssistantAuditRecord,
+  AssistantAuditRepository,
+  AssistantAuthorizationReview,
+  AssistantRequest,
+  AssistantResult,
+  DifyAssistantPort,
+  DifyRequest,
+  DifyResponse,
+} from "./analytics/assistant.types.js";

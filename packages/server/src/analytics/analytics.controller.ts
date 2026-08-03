@@ -15,10 +15,13 @@ import { IdentityService } from "../identity/identity.service.js";
 import { AnalyticsDashboardService } from "./dashboard.service.js";
 import type { DashboardKey } from "./dashboard.types.js";
 import { AnalyticsExportService } from "./export.service.js";
+import { AnalyticsAssistantService } from "./assistant.service.js";
+import type { AssistantRequest } from "./assistant.types.js";
 import type { AnalyticsExportRequest } from "./export.types.js";
 import {
   ANALYTICS_DASHBOARD_SERVICE,
   ANALYTICS_EXPORT_SERVICE,
+  ANALYTICS_ASSISTANT_SERVICE,
 } from "./analytics.tokens.js";
 
 @Controller("/internal/analytics")
@@ -29,6 +32,8 @@ export class AnalyticsController {
     @Inject(ANALYTICS_EXPORT_SERVICE)
     private readonly exports: AnalyticsExportService,
     @Inject(IdentityService) private readonly identity: IdentityService,
+    @Inject(ANALYTICS_ASSISTANT_SERVICE)
+    private readonly assistant: AnalyticsAssistantService,
   ) {}
 
   @Get("dashboards/:dashboardKey")
@@ -72,6 +77,17 @@ export class AnalyticsController {
       );
       return { downloaded: true, exportId };
     });
+  }
+
+  @Post("assistant")
+  async assistantRequest(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() request: AssistantRequest,
+  ) {
+    return this.call(async () =>
+      this.assistant.ask(await this.requireActor(employeeId, sessionId), request),
+    );
   }
 
   private async requireActor(

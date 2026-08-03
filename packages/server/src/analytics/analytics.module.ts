@@ -11,6 +11,10 @@ import { KyselyAnalyticsDashboardRepository } from "./dashboard.repository.js";
 import { AnalyticsDashboardService } from "./dashboard.service.js";
 import { KyselyAnalyticsExportRepository } from "./export.repository.js";
 import { AnalyticsExportService } from "./export.service.js";
+import { AnalyticsAssistantService } from "./assistant.service.js";
+import { KyselyAssistantAuditRepository } from "./assistant.repository.js";
+import { UnavailableDifyAssistantPort } from "./dify.port.js";
+import { ANALYTICS_ASSISTANT_SERVICE } from "./analytics.tokens.js";
 
 @Module({})
 export class AnalyticsModule {
@@ -34,8 +38,16 @@ export class AnalyticsModule {
               new KyselyAnalyticsExportRepository(createDatabase(databaseUrl)),
             ),
         },
+        {
+          provide: ANALYTICS_ASSISTANT_SERVICE,
+          useFactory: () =>
+            new AnalyticsAssistantService(
+              new KyselyAssistantAuditRepository(createDatabase(databaseUrl)),
+              new UnavailableDifyAssistantPort(),
+            ),
+        },
       ],
-      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE],
+      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE, ANALYTICS_ASSISTANT_SERVICE],
     };
   }
 
@@ -43,6 +55,7 @@ export class AnalyticsModule {
     dashboard: AnalyticsDashboardService,
     exportService: AnalyticsExportService,
     identity: IdentityService,
+    assistant?: AnalyticsAssistantService,
   ): DynamicModule {
     return {
       module: AnalyticsModule,
@@ -50,9 +63,24 @@ export class AnalyticsModule {
       providers: [
         { provide: ANALYTICS_DASHBOARD_SERVICE, useValue: dashboard },
         { provide: ANALYTICS_EXPORT_SERVICE, useValue: exportService },
+        {
+          provide: ANALYTICS_ASSISTANT_SERVICE,
+          useValue:
+            assistant ??
+            new AnalyticsAssistantService(
+              {
+                reviewAuthorization: async () => ({
+                  allowed: false,
+                  reason: "DENY_TEST_DEFAULT",
+                }),
+                recordAudit: async () => undefined,
+              },
+              new UnavailableDifyAssistantPort(),
+            ),
+        },
         { provide: IdentityService, useValue: identity },
       ],
-      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE],
+      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE, ANALYTICS_ASSISTANT_SERVICE],
     };
   }
 }

@@ -16,6 +16,7 @@ import {
   AnalyticsModule,
   AnalyticsDashboardService,
   AnalyticsExportService,
+  AnalyticsAssistantService,
   IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
@@ -38,6 +39,7 @@ export interface ApiModuleTestOptions {
   analytics?: {
     dashboard: AnalyticsDashboardService;
     exportService: AnalyticsExportService;
+    assistant?: AnalyticsAssistantService;
   };
   artifactVerification?: ArtifactVerificationPort;
   observability?: ObservabilityModuleOptions;
@@ -148,6 +150,7 @@ export class ApiModule {
                 options.analytics.dashboard,
                 options.analytics.exportService,
                 options.identity,
+                options.analytics.assistant,
               ),
             ]),
       ],

@@ -3,6 +3,7 @@ import request from "supertest";
 import {
   AnalyticsDashboardService,
   AnalyticsExportService,
+  AnalyticsAssistantService,
   IdentityService,
   type IdentityRepository,
 } from "@ai-hub/server";
@@ -65,12 +66,17 @@ describe("Phase 6 analytics endpoints", () => {
         return undefined;
       },
     } as unknown as AnalyticsExportService;
+    const assistant = {
+      async ask() {
+        return { status: "degraded", answer: "Use dashboard" };
+      },
+    } as unknown as AnalyticsAssistantService;
     const moduleRef = await Test.createTestingModule({
       imports: [
         ApiModule.forTest({
           databaseCheck: async () => true,
           identity: new IdentityService(identityRepository),
-          analytics: { dashboard, exportService },
+          analytics: { dashboard, exportService, assistant },
         }),
       ],
     }).compile();
@@ -89,6 +95,16 @@ describe("Phase 6 analytics endpoints", () => {
       .set({ "x-employee-id": "E100", "x-session-id": "session-E100" })
       .send({ target: "platform", from: "2026-08-03", to: "2026-08-04" })
       .expect(201);
+
+    const assistantResponse = await request(app.getHttpServer())
+      .post("/internal/analytics/assistant")
+      .set({ "x-employee-id": "E100", "x-session-id": "session-E100" })
+      .send({
+        question: "Explain the metric",
+        context: { metricKey: "platform.application_views", value: 2 },
+      })
+      .expect(201);
+    expect(assistantResponse.body.status).toBe("degraded");
 
     await app.close();
   });

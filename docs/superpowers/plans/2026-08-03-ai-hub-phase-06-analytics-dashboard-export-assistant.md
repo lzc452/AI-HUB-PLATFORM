@@ -119,9 +119,9 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/server/src/analytics/assistant.*`, `dify.port.ts`, redaction tests, API e2e, contracts, ADR/ledger updates.
 
-- [ ] Write failing tests proving redaction of employee number, internal URL, file, QR code, and anonymous identity; explicit authorization review; safe fallback on timeout/5xx; audit of allow/deny/success/failure.
-- [ ] Implement a dependency-injected Dify port with minimum context assembled only after dashboard/demand audience checks; do not add a public Open API.
-- [ ] Verify fake-provider unit tests and real API boundary tests; commit `feat(phase-06): add guarded external assistant boundary`.
+- [x] Write failing tests proving redaction of employee number, internal URL, file, QR code, and anonymous identity; explicit authorization review; safe fallback on timeout/5xx; audit of allow/deny/success/failure.
+- [x] Implement a dependency-injected Dify port with minimum context assembled only after dashboard/demand audience checks; do not add a public Open API.
+- [x] Verify fake-provider unit tests and real API boundary tests; commit `feat(phase-06): add guarded external assistant boundary`.
 
 ### Task 8: DingTalk notification matrix and Outbox delivery verification
 
