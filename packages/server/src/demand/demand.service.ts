@@ -1,6 +1,5 @@
 import type {
   ActorContext,
-  CreateDemandInput,
   DemandApplicationRole,
   DemandPriorityInput,
   DemandStatus,
