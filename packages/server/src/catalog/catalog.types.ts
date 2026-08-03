@@ -1,0 +1,50 @@
+import type { ActorContext } from "@ai-hub/contracts";
+import type { DeliveryChannel } from "../application/application.types.js";
+
+export type CatalogSort = "recommended" | "latest" | "popular";
+export type TrustLabel =
+  | "experimental"
+  | "verified"
+  | "recommended"
+  | "deprecated";
+
+export interface CatalogEntry {
+  applicationId: string;
+  name: string;
+  summary: string;
+  departmentId: string;
+  categoryId: string;
+  tagIds: readonly string[];
+  trustLabels: readonly TrustLabel[];
+  currentVersionId: string;
+  publishedAt: Date;
+  deliveryChannels: readonly DeliveryChannel[];
+  likeCount: number;
+  ratingAverage: number | null;
+}
+
+export interface CatalogSearchInput {
+  actor: ActorContext;
+  query?: string;
+  categoryId?: string;
+  tagIds?: readonly string[];
+  applicationType?: string;
+  sort: CatalogSort;
+  page: number;
+  pageSize: number;
+}
+
+export interface CatalogListResult {
+  items: readonly CatalogEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CatalogRepository {
+  listVisible(input: CatalogSearchInput): Promise<readonly CatalogEntry[]>;
+  findVisible(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<CatalogEntry | null>;
+}

@@ -26,3 +26,9 @@ export type {
   ReviewDecision,
   ReviewQueueStatus,
 } from "./application.js";
+export type {
+  CatalogEntry,
+  CatalogQuery,
+  CatalogSort,
+  TrustLabel,
+} from "./catalog.js";

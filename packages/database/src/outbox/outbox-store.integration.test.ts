@@ -529,4 +529,57 @@ describe("OutboxStore", () => {
       "applications_status_check",
     ]);
   });
+
+  it("creates the Phase 4 catalog and interaction schema without tenant state", async () => {
+    const tables = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in (
+          'catalog_categories',
+          'catalog_tags',
+          'application_audiences',
+          'application_tag_links',
+          'application_catalog_metadata',
+          'catalog_delivery_actions',
+          'application_likes',
+          'application_ratings',
+          'application_comments',
+          'application_reports'
+        )
+    `.execute(db!);
+
+    expect(tables.rows.map((row) => row.table_name).sort()).toEqual([
+      "application_audiences",
+      "application_catalog_metadata",
+      "application_comments",
+      "application_likes",
+      "application_ratings",
+      "application_reports",
+      "application_tag_links",
+      "catalog_categories",
+      "catalog_delivery_actions",
+      "catalog_tags",
+    ]);
+
+    const columns = await sql<{ table_name: string; column_name: string }>`
+      select table_name, column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and column_name = 'tenant_id'
+        and table_name in (
+          'catalog_categories',
+          'catalog_tags',
+          'application_audiences',
+          'application_tag_links',
+          'application_catalog_metadata',
+          'catalog_delivery_actions',
+          'application_likes',
+          'application_ratings',
+          'application_comments',
+          'application_reports'
+        )
+    `.execute(db!);
+    expect(columns.rows).toHaveLength(0);
+  });
 });

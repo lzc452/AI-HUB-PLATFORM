@@ -173,6 +173,105 @@ export interface ApplicationAuditEventsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface CatalogCategoriesTable {
+  category_id: string;
+  name: string;
+  sort_order: number;
+  enabled: boolean;
+}
+
+export interface CatalogTagsTable {
+  tag_id: string;
+  name: string;
+  enabled: boolean;
+}
+
+export interface ApplicationAudiencesTable {
+  audience_id: Generated<string>;
+  application_id: string;
+  audience_type: "all" | "department" | "employee";
+  department_id: string | null;
+  employee_id: string | null;
+  include_children: boolean;
+}
+
+export interface ApplicationTagLinksTable {
+  application_id: string;
+  tag_id: string;
+}
+
+export interface ApplicationCatalogMetadataTable {
+  application_id: string;
+  category_id: string;
+  application_type: string;
+  search_name: string;
+  search_summary: string;
+  search_pinyin: string;
+  search_initials: string;
+  recommendation_rank: number;
+  health_status: "unknown" | "healthy" | "degraded" | "failed";
+  deprecated_reason: string | null;
+  replacement_application_id: string | null;
+}
+
+export interface ApplicationCatalogLabelsTable {
+  application_id: string;
+  label: string;
+}
+
+export interface CatalogDeliveryActionsTable {
+  action_id: Generated<string>;
+  application_id: string;
+  application_version_id: string | null;
+  actor_employee_id: string;
+  action_type: "web_redirect" | "package_download" | "qr_display";
+  channel: string | null;
+  occurred_at: ColumnType<Date, Date | undefined, Date>;
+}
+
+export interface ApplicationLikesTable {
+  application_id: string;
+  employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationRatingsTable {
+  rating_id: Generated<string>;
+  application_id: string;
+  application_version_id: string;
+  employee_id: string;
+  stars: number;
+  body: string | null;
+  display_anonymously: boolean;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationCommentsTable {
+  comment_id: Generated<string>;
+  application_id: string;
+  application_version_id: string;
+  parent_comment_id: string | null;
+  author_employee_id: string;
+  body: string;
+  display_anonymously: boolean;
+  hidden_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationReportsTable {
+  report_id: Generated<string>;
+  application_id: string;
+  comment_id: string;
+  reporter_employee_id: string;
+  reason: string;
+  status: "open" | "dismissed" | "hidden" | "restored";
+  resolved_by_employee_id: string | null;
+  resolved_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -191,4 +290,15 @@ export interface DatabaseSchema {
   application_reviews: ApplicationReviewsTable;
   application_review_queue: ApplicationReviewQueueTable;
   application_audit_events: ApplicationAuditEventsTable;
+  catalog_categories: CatalogCategoriesTable;
+  catalog_tags: CatalogTagsTable;
+  application_audiences: ApplicationAudiencesTable;
+  application_tag_links: ApplicationTagLinksTable;
+  application_catalog_metadata: ApplicationCatalogMetadataTable;
+  application_catalog_labels: ApplicationCatalogLabelsTable;
+  catalog_delivery_actions: CatalogDeliveryActionsTable;
+  application_likes: ApplicationLikesTable;
+  application_ratings: ApplicationRatingsTable;
+  application_comments: ApplicationCommentsTable;
+  application_reports: ApplicationReportsTable;
 }
