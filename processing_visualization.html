@@ -757,10 +757,10 @@
             id: "p5",
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
-            status: "待开始",
-            progress: 0,
+            status: "进行中",
+            progress: 5,
             summary:
-              "实现结构化 AI 需求、轻量审核、受众、匿名展示、认领方案、状态推进、合并和应用关联闭环。",
+              "已建立 Phase 5 基线、详细计划、执行台账、ADR 0006 和处理可视化记录，待继续实现需求与创新广场闭环。",
             tasks: [
               [
                 "结构化需求表单与轻量审核",
@@ -1042,8 +1042,30 @@
               "保留真实 PostgreSQL 集成门禁并记录确切 runtime strategy 错误，不伪造通过。",
             skip: "未重复执行 Phase 3 外部会话已经完成的全量门禁。",
           },
+          {
+            id: "t-008",
+            phase: "product",
+            status: "进行中",
+            title: "Phase 5 AI 需求与创新广场基线",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "",
+            progress:
+              "已创建 feature/phase-05-ai-demand-innovation，以 Phase 4 提交 f60def66699bfbb0192b60fa1d256d98159d198b 为基线，并写入实施计划、执行台账和 ADR 0006。",
+            problem:
+              "Git 元数据写入首次被沙箱拒绝，需使用已授权 Git 操作创建分支；Phase 4/3 门禁证据消费现有文档而非重复执行。",
+            solution:
+              "保留 .codex 用户工作区状态不纳入提交，明确复用 ActorContext、RBAC、受众授权、事务 Audit/Outbox 和 Phase 3 应用生命周期门禁。",
+            skip: "尚未实现需求业务、未执行 Phase 5 测试和全门禁；Phase 6 分析/导出/Dify 继续延期。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-03",
+            phase: "product",
+            title: "Phase 5 baseline and execution plan established",
+            body: "Created feature/phase-05-ai-demand-innovation from the accepted Phase 4 commit f60def66699bfbb0192b60fa1d256d98159d198b, recorded the ordered AI demand and innovation-square plan, execution ledger, ADR 0006, and explicit Phase 3/4 gate reuse and Phase 6 deferrals.",
+          },
           {
             date: "2026-08-03",
             phase: "product",
