@@ -49,7 +49,7 @@ physical deletes, and a new tenant model are prohibited.
 | Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
 | Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
 | Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
-| Ownership/priority/progress | Ownership only: server 64/64; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | ownership passed; priority/progress pending |
+| Ownership/priority/progress | Ownership and priority: server 65/65; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | ownership/priority passed; progress pending |
 | Merge/application loop | Not run yet | pending |
 | PostgreSQL/API/Web evidence | Not run yet | pending |
 | Final gates/two-axis review | Not run yet | pending |
@@ -161,3 +161,22 @@ or inferred result.
   demand version conditionally, so stale writers fail with `DEMAND_CONFLICT`.
 - Commit: pending until the step implementation and evidence are staged as
   `feat(phase-05): protect demand ownership concurrency`.
+
+### Step 6: Explainable value/cost/risk/admin priority and ordering
+
+- RED: the new priority service test failed because `setPriority` was absent.
+  The contract test then required an explicit API route and list sort path.
+- GREEN: `corepack pnpm --filter @ai-hub/server typecheck` passed and the
+  focused server command passed 65/65 workspace tests; `corepack pnpm
+  --filter @ai-hub/api typecheck` passed; Docker-backed API tests passed 8
+  files/16 tests, including admin priority persistence and `sort=priority`;
+  and the real PostgreSQL path passed with the existing schema/outbox evidence.
+- Implementation: inputs are integer bounded 1..5; the fixed explainable
+  score is `3*businessValue + 2*adminPriority - 2*implementationCost -
+  2*riskLevel`; the explanation is persisted and audited, optimistic version
+  protects updates, and only `demand_operator`/`super_admin` can write or
+  request priority ordering. PostgreSQL ordering uses score descending,
+  created time descending, and demand ID ascending as the deterministic tie
+  breaker.
+- Commit: pending until staged as `feat(phase-05): add explainable demand
+  prioritization`.

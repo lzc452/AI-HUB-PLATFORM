@@ -758,7 +758,7 @@
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
             status: "进行中",
-            progress: 35,
+            progress: 45,
             summary:
               "已完成 Phase 5 基线、Contracts/迁移、结构化需求提交审核、互动治理，以及认领/负责人/协作者/运营选择并发保护；排序、状态、合并和上架闭环待继续实现。",
             tasks: [
@@ -1090,6 +1090,22 @@
               "使用 version = expectedVersion 的原子更新、0007 部分唯一索引、owner-only 协作者变更，以及同事务 Audit/Outbox。",
             skip: "业务价值、成本、风险、管理员优先级和后续生命周期仍按计划顺序执行。",
           },
+          {
+            id: "t-011",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 5 可解释优先级与管理员排序",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成业务价值、实施成本、风险、管理员优先级的 1-5 校验、可解释分数、审计和稳定排序。",
+            problem:
+              "优先级写入必须受管理员权限和并发版本保护，排序还需要明确的并列决策规则。",
+            solution:
+              "使用固定公式 3×价值 + 2×管理员优先级 - 2×成本 - 2×风险，持久化解释文本，并用分数/时间/需求 ID 三级排序。",
+            skip: "状态推进、官方进展、试点、合并、应用关联和正式上架仍按计划顺序执行。",
+          },
         ],
         events: [
           {
@@ -1110,6 +1126,12 @@
             phase: "test",
             title: "Phase 5 ownership concurrency evidence recorded",
             body: "Ownership tests passed for first-writer-wins claim, owner-only collaborator changes, duplicate conflicts, stale-version rejection, collaborator listing, and transactionally paired Audit/Outbox. Docker-backed API tests passed 8 files/16 tests, and migration 0007 adds a partial unique operator index.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 5 explainable priority evidence recorded",
+            body: "Priority tests passed for 1-5 bounds, deterministic score and explanation, admin-only writes, optimistic conflict handling, audit/outbox, and stable priority ordering. The real API e2e verifies PostgreSQL persistence and the priority sort route.",
           },
           {
             date: "2026-08-03",

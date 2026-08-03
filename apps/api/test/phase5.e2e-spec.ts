@@ -69,6 +69,14 @@ describe("Phase 5 demand endpoints", () => {
           role: "collaborator",
         };
       },
+      async setPriority() {
+        return {
+          demandId: "demand-1",
+          priorityScore: 17,
+          priorityExplanation: "businessValue=5*3 + adminPriority=4*2",
+          version: 3,
+        };
+      },
     } as unknown as DemandService;
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -116,6 +124,17 @@ describe("Phase 5 demand endpoints", () => {
         employeeId: "E200",
         role: "collaborator",
         expectedVersion: 2,
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/priority")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        expectedVersion: 2,
+        businessValue: 5,
+        implementationCost: 2,
+        riskLevel: 1,
+        adminPriority: 4,
       })
       .expect(201);
 

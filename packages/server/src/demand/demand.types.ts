@@ -21,6 +21,10 @@ export interface DemandEntry {
   reviewReason: string | null;
   likeCount: number;
   commentCount: number;
+  businessValue?: number | null;
+  implementationCost?: number | null;
+  riskLevel?: number | null;
+  adminPriority?: number | null;
   priorityScore: number | null;
   priorityExplanation: string | null;
   ownerEmployeeId: string | null;
@@ -50,6 +54,7 @@ export interface DemandRepository {
     actor: ActorContext;
     status?: DemandStatus;
     query?: string;
+    sortByPriority?: boolean;
   }): Promise<readonly DemandEntry[]>;
   findVisible(
     actor: ActorContext,
@@ -89,6 +94,18 @@ export interface DemandRepository {
   listCollaborators(
     demandId: string,
   ): Promise<readonly DemandCollaboratorRecord[]>;
+  setPriority(
+    demandId: string,
+    input: {
+      businessValue: number;
+      implementationCost: number;
+      riskLevel: number;
+      adminPriority: number;
+    },
+    expectedVersion: number,
+    score: number,
+    explanation: string,
+  ): Promise<DemandEntry>;
   hasLike(demandId: string, employeeId: string): Promise<boolean>;
   addLike(demandId: string, employeeId: string): Promise<void>;
   removeLike(demandId: string, employeeId: string): Promise<void>;

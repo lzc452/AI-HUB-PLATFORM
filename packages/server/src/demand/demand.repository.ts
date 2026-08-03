@@ -88,6 +88,7 @@ export class KyselyDemandRepository implements DemandRepository {
     actor: Parameters<DemandRepository["listVisible"]>[0]["actor"];
     status?: DemandEntry["status"];
     query?: string;
+    sortByPriority?: boolean;
   }): Promise<readonly DemandEntry[]> {
     let query = this.selectDemand().where(this.audiencePredicate(input.actor));
     if (input.status !== undefined) {
@@ -103,7 +104,10 @@ export class KyselyDemandRepository implements DemandRepository {
         )`,
       );
     }
-    const rows = await query
+    const ordered = input.sortByPriority
+      ? query.orderBy(sql`ai_demands.priority_score desc nulls last`)
+      : query.orderBy("ai_demands.created_at", "desc");
+    const rows = await ordered
       .orderBy("ai_demands.created_at", "desc")
       .orderBy("ai_demands.demand_id", "asc")
       .execute();
@@ -185,6 +189,38 @@ export class KyselyDemandRepository implements DemandRepository {
         status,
         review_reason: reviewReason,
         published_at: status === "published" ? new Date() : null,
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async setPriority(
+    demandId: string,
+    input: {
+      businessValue: number;
+      implementationCost: number;
+      riskLevel: number;
+      adminPriority: number;
+    },
+    expectedVersion: number,
+    score: number,
+    explanation: string,
+  ): Promise<DemandEntry> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({
+        business_value: input.businessValue,
+        implementation_cost: input.implementationCost,
+        risk_level: input.riskLevel,
+        admin_priority: input.adminPriority,
+        priority_score: score,
+        priority_explanation: explanation,
         version: sql`version + 1`,
         updated_at: new Date(),
       })
@@ -490,6 +526,10 @@ export class KyselyDemandRepository implements DemandRepository {
       reviewReason: row.review_reason,
       likeCount: Number(row.like_count),
       commentCount: Number(row.comment_count),
+      businessValue: row.business_value,
+      implementationCost: row.implementation_cost,
+      riskLevel: row.risk_level,
+      adminPriority: row.admin_priority,
       priorityScore:
         row.priority_score === null ? null : Number(row.priority_score),
       priorityExplanation: row.priority_explanation,

@@ -47,6 +47,10 @@ export interface DemandEntry {
   displayAnonymously: boolean;
   likeCount: number;
   commentCount: number;
+  businessValue?: number | null;
+  implementationCost?: number | null;
+  riskLevel?: number | null;
+  adminPriority?: number | null;
   priorityScore: number | null;
   priorityExplanation: string | null;
   ownerEmployeeId: string | null;

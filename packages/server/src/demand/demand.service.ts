@@ -1,6 +1,7 @@
 import type {
   ActorContext,
   CreateDemandInput,
+  DemandPriorityInput,
   DemandStatus,
 } from "@ai-hub/contracts";
 import type {
@@ -214,6 +215,58 @@ export class DemandService {
     return this.repository.listCollaborators(demandId);
   }
 
+  async setPriority(
+    actor: ActorContext,
+    demandId: string,
+    expectedVersion: number,
+    input: DemandPriorityInput,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "prioritize", demandId);
+    if (
+      !actor.roleCodes.some((role) =>
+        ["demand_operator", "super_admin"].includes(role),
+      )
+    ) {
+      throw new Error("DEMAND_PRIORITY_FORBIDDEN");
+    }
+    for (const value of Object.values(input)) {
+      if (!Number.isInteger(value) || value < 1 || value > 5) {
+        throw new Error("DEMAND_PRIORITY_INVALID");
+      }
+    }
+    const score =
+      input.businessValue * 3 +
+      input.adminPriority * 2 -
+      input.implementationCost * 2 -
+      input.riskLevel * 2;
+    const explanation =
+      `businessValue=${input.businessValue}*3 + ` +
+      `adminPriority=${input.adminPriority}*2 - ` +
+      `implementationCost=${input.implementationCost}*2 - ` +
+      `riskLevel=${input.riskLevel}*2 = ${score}`;
+    return this.repository.withTransaction(async (repository) => {
+      const prioritized = await repository.setPriority(
+        demandId,
+        input,
+        expectedVersion,
+        score,
+        explanation,
+      );
+      await this.recordMutation(
+        repository,
+        prioritized,
+        actor,
+        "demand.priority.updated",
+        {
+          ...input,
+          score,
+          explanation,
+        },
+      );
+      return prioritized;
+    });
+  }
+
   async list(
     actor: ActorContext,
     input: {
@@ -221,16 +274,26 @@ export class DemandService {
       query?: string;
       page: number;
       pageSize: number;
+      sort?: "recent" | "priority";
     },
   ): Promise<DemandListResult> {
     if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
       throw new Error("DEMAND_PAGINATION_INVALID");
     }
     await this.assertAllowed(actor, "read");
+    if (
+      input.sort === "priority" &&
+      !actor.roleCodes.some((role) =>
+        ["demand_operator", "super_admin"].includes(role),
+      )
+    ) {
+      throw new Error("DEMAND_PRIORITY_FORBIDDEN");
+    }
     const visible = await this.repository.listVisible({
       actor,
       ...(input.status === undefined ? {} : { status: input.status }),
       ...(input.query === undefined ? {} : { query: input.query }),
+      ...(input.sort === "priority" ? { sortByPriority: true } : {}),
     });
     const start = (input.page - 1) * input.pageSize;
     return {

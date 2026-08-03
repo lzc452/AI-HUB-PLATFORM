@@ -53,6 +53,7 @@ const identityRepository = {
                 "demand.moderate",
                 "demand.anonymous_audit",
                 "demand.interact",
+                "demand.prioritize",
               ]
             : [
                 "demand.create",
@@ -134,11 +135,34 @@ describe("real Phase 5 demand API", () => {
       .post(`/internal/demands/${demandId}/submit-review`)
       .set(requester)
       .expect(201);
-    await request(app.getHttpServer())
+    const published = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/review`)
       .set(reviewer)
       .send({ decision: "publish" })
       .expect(201);
+
+    const priority = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/priority`)
+      .set(reviewer)
+      .send({
+        expectedVersion: published.body.version,
+        businessValue: 5,
+        implementationCost: 2,
+        riskLevel: 1,
+        adminPriority: 4,
+      })
+      .expect(201);
+    expect(priority.body).toMatchObject({ priorityScore: 17 });
+    await request(app.getHttpServer())
+      .get("/internal/demands?sort=priority")
+      .set(reviewer)
+      .expect(200)
+      .then((response) =>
+        expect(response.body.items[0]).toMatchObject({
+          demandId,
+          priorityScore: 17,
+        }),
+      );
 
     await request(app.getHttpServer())
       .get("/internal/demands")

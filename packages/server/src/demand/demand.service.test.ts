@@ -463,3 +463,83 @@ describe("DemandService ownership and collaboration", () => {
     ).resolves.toMatchObject([{ employeeId: "E200", role: "collaborator" }]);
   });
 });
+
+describe("DemandService explainable priority", () => {
+  it("bounds priority inputs, persists a deterministic explanation, and restricts admin changes", async () => {
+    const demand: DemandEntry = {
+      demandId: "demand-priority",
+      requesterEmployeeId: "E100",
+      title: "Prioritizable demand",
+      problemStatement: "A team needs a governed assistant.",
+      desiredOutcome: "A reviewed assistant is delivered.",
+      status: "published",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: null,
+      primarySolutionApplicationId: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const operator: ActorContext = {
+      ...reviewer,
+      roleCodes: ["demand_operator"],
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findById: async () => demand,
+      setPriority: async (
+        _demandId: string,
+        input: {
+          businessValue: number;
+          implementationCost: number;
+          riskLevel: number;
+          adminPriority: number;
+        },
+        expectedVersion: number,
+        score: number,
+        explanation: string,
+      ) => {
+        if (expectedVersion !== demand.version)
+          throw new Error("DEMAND_CONFLICT");
+        demand.businessValue = input.businessValue;
+        demand.implementationCost = input.implementationCost;
+        demand.riskLevel = input.riskLevel;
+        demand.adminPriority = input.adminPriority;
+        demand.priorityScore = score;
+        demand.priorityExplanation = explanation;
+        demand.version += 1;
+        return demand;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.setPriority(operator, demand.demandId, 1, {
+        businessValue: 5,
+        implementationCost: 2,
+        riskLevel: 1,
+        adminPriority: 4,
+      }),
+    ).resolves.toMatchObject({ priorityScore: 17 });
+    expect(demand.priorityExplanation).toContain("businessValue=5");
+    await expect(
+      service.setPriority(requester, demand.demandId, 2, {
+        businessValue: 6,
+        implementationCost: 2,
+        riskLevel: 1,
+        adminPriority: 4,
+      }),
+    ).rejects.toThrow("DEMAND_PRIORITY_FORBIDDEN");
+  });
+});

@@ -138,6 +138,31 @@ export class DemandController {
     );
   }
 
+  @Post(":demandId/priority")
+  setPriority(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      expectedVersion: number;
+      businessValue: number;
+      implementationCost: number;
+      riskLevel: number;
+      adminPriority: number;
+    },
+  ) {
+    const { expectedVersion, ...input } = body;
+    return this.call(async () =>
+      this.demands.setPriority(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        expectedVersion,
+        input,
+      ),
+    );
+  }
+
   @Get()
   list(
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -146,6 +171,7 @@ export class DemandController {
     @Query("query") query?: string,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
+    @Query("sort") sort?: "recent" | "priority",
   ) {
     const parsedPage = this.parsePositive(page, 1);
     const parsedPageSize = this.parsePositive(pageSize, 20);
@@ -153,6 +179,7 @@ export class DemandController {
       this.demands.list(await this.actor(employeeId, sessionId), {
         ...(status === undefined ? {} : { status }),
         ...(query === undefined ? {} : { query }),
+        ...(sort === undefined ? {} : { sort }),
         page: parsedPage,
         pageSize: parsedPageSize,
       }),
@@ -284,6 +311,7 @@ export class DemandController {
         code === "DEMAND_REVIEW_FORBIDDEN" ||
         code === "DEMAND_MODERATION_FORBIDDEN" ||
         code === "DEMAND_OWNER_REQUIRED" ||
+        code === "DEMAND_PRIORITY_FORBIDDEN" ||
         code === "DEMAND_NOT_AUTHORIZED"
       ) {
         throw new ForbiddenException(code);

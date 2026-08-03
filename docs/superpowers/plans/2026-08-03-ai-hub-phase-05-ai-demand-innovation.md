@@ -172,9 +172,9 @@ export interface DemandRepository {
 
 **Files:** contracts, schema/repository/service/controller/tests, Web priority view.
 
-- [ ] Write failing tests for 1-5 bounded inputs, deterministic explainable score, admin-only changes, audit details, and stable ordering with ID tie-breaker.
-- [ ] Implement a documented score formula, persist the inputs and explanation, and expose only authorized priority data.
-- [ ] Run focused tests and commit `feat(phase-05): add explainable demand prioritization`.
+- [x] Write failing tests for 1-5 bounded inputs, deterministic explainable score, admin-only changes, audit details, and stable ordering with ID tie-breaker.
+- [x] Implement a documented score formula, persist the inputs and explanation, and expose only authorized priority data.
+- [x] Run focused tests and commit `feat(phase-05): add explainable demand prioritization`.
 
 ### Task 7: Status progression, official progress, pilot and close
 
