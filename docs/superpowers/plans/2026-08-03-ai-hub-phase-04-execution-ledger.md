@@ -28,7 +28,7 @@ Phase 4 covers the permission-filtered application market, PostgreSQL Chinese se
 | Phase 4 focused tests | Catalog 5, interaction 4, notification 4, creator 2, API 4, Web 16 tests passed | passed |
 | Phase 4 repository gates | `format:check`, `lint`, `typecheck`, `boundaries`, `test`, `build`, doc links, Compose config; PostgreSQL integration 15/15 with Docker Desktop desktop-linux | passed |
 | Two-axis review | `phase-03-complete...HEAD`; standards and spec review found no unresolved actionable findings | passed |
-| GitHub publication | `feature/phase-04-market-search-interaction` | pending |
+| GitHub publication | Local branch is complete, but GitHub repository metadata reports `push: false`; remote has no Phase 4 branch and Draft PR cannot be created with this account | blocked by external permission |
 
 ## Implementation evidence
 
@@ -57,6 +57,9 @@ Phase 4 covers the permission-filtered application market, PostgreSQL Chinese se
   `corepack pnpm build`, `node scripts/verify-doc-links.mjs`, and Compose config
   all passed. The first sandbox test attempt failed only because the Docker engine
   was not reachable; that result was resolved by starting/using the local engine.
+- GitHub handoff remains externally blocked: `github_get_repo` reports `push: false`,
+  the repository exposes only `main` and `codex/phase-01-continuation`, and local
+  `git push`/remote verification cannot publish `feature/phase-04-market-search-interaction`.
 
 ## Explicit deferrals
 
