@@ -1,5 +1,6 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type {
+  CatalogDeliveryAction,
   CatalogListResult,
   CatalogRepository,
   CatalogSearchInput,
@@ -20,6 +21,34 @@ export class CatalogService {
     const entry = await this.repository.findVisible(actor, applicationId);
     if (entry === null) throw new Error("CATALOG_APPLICATION_NOT_FOUND");
     return entry;
+  }
+
+  async recordDeliveryAction(
+    actor: ActorContext,
+    input: {
+      applicationId: string;
+      actionType: CatalogDeliveryAction;
+      channel?: string | null;
+    },
+  ): Promise<void> {
+    if (
+      !["web_redirect", "package_download", "qr_display"].includes(
+        input.actionType,
+      )
+    ) {
+      throw new Error("CATALOG_DELIVERY_ACTION_INVALID");
+    }
+    const entry = await this.getDetail(actor, input.applicationId);
+    if (entry.currentVersionId.length === 0) {
+      throw new Error("CATALOG_PUBLISHED_VERSION_REQUIRED");
+    }
+    await this.repository.recordDeliveryAction({
+      applicationId: input.applicationId,
+      applicationVersionId: entry.currentVersionId,
+      actorEmployeeId: actor.employeeId,
+      actionType: input.actionType,
+      channel: input.channel ?? null,
+    });
   }
 
   private async query(input: CatalogSearchInput): Promise<CatalogListResult> {

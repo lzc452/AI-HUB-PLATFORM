@@ -32,3 +32,8 @@ export type {
   CatalogSort,
   TrustLabel,
 } from "./catalog.js";
+export type { CommentInput, RatingInput, ReportStatus } from "./interaction.js";
+export type {
+  NotificationDeliveryStatus,
+  NotificationInput,
+} from "./notification.js";

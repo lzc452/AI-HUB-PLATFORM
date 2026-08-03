@@ -272,6 +272,21 @@ export interface ApplicationReportsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface NotificationsTable {
+  notification_id: Generated<string>;
+  recipient_employee_id: string;
+  event_type: string;
+  aggregate_id: string;
+  idempotency_key: string;
+  message: string;
+  read_at: Date | null;
+  delivery_status: "pending" | "sent" | "retry" | "failed";
+  delivery_attempts: number;
+  last_delivery_error: string | null;
+  next_attempt_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -301,4 +316,5 @@ export interface DatabaseSchema {
   application_ratings: ApplicationRatingsTable;
   application_comments: ApplicationCommentsTable;
   application_reports: ApplicationReportsTable;
+  notifications: NotificationsTable;
 }

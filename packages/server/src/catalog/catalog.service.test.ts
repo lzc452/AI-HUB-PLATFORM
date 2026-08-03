@@ -37,6 +37,9 @@ const entries: CatalogEntry[] = [
     deliveryChannels: ["web"],
     likeCount: 10,
     ratingAverage: 4.5,
+    healthStatus: "healthy",
+    deprecatedReason: null,
+    replacementApplicationId: null,
   },
   {
     applicationId: "app-finance",
@@ -51,17 +54,24 @@ const entries: CatalogEntry[] = [
     deliveryChannels: ["web"],
     likeCount: 100,
     ratingAverage: 4.9,
+    healthStatus: "unknown",
+    deprecatedReason: null,
+    replacementApplicationId: null,
   },
 ];
 
 class MemoryCatalogRepository implements CatalogRepository {
+  recordedActions: string[] = [];
   constructor(private readonly visibleEntries = entries) {}
 
-  async listVisible(input: CatalogSearchInput): Promise<readonly CatalogEntry[]> {
+  async listVisible(
+    input: CatalogSearchInput,
+  ): Promise<readonly CatalogEntry[]> {
     return this.visibleEntries
-      .filter((entry) =>
-        input.actor.departmentIds.includes(entry.departmentId) ||
-        entry.applicationId === "app-public",
+      .filter(
+        (entry) =>
+          input.actor.departmentIds.includes(entry.departmentId) ||
+          entry.applicationId === "app-public",
       )
       .filter((entry) => {
         const query = input.query?.toLocaleLowerCase();
@@ -69,7 +79,7 @@ class MemoryCatalogRepository implements CatalogRepository {
         return (
           entry.name.toLocaleLowerCase().includes(query) ||
           entry.summary.toLocaleLowerCase().includes(query) ||
-          query === "ptzs" && entry.applicationId === "app-platform"
+          (query === "ptzs" && entry.applicationId === "app-platform")
         );
       })
       .sort((left, right) => {
@@ -83,9 +93,14 @@ class MemoryCatalogRepository implements CatalogRepository {
     applicationId: string,
   ): Promise<CatalogEntry | null> {
     return (
-      (await this.listVisible({ actor, sort: "latest", page: 1, pageSize: 20 }))
-        .find((entry) => entry.applicationId === applicationId) ?? null
+      (
+        await this.listVisible({ actor, sort: "latest", page: 1, pageSize: 20 })
+      ).find((entry) => entry.applicationId === applicationId) ?? null
     );
+  }
+
+  async recordDeliveryAction(input: { actionType: string }) {
+    this.recordedActions.push(input.actionType);
   }
 }
 
@@ -123,6 +138,27 @@ describe("CatalogService", () => {
 
     await expect(
       service.getDetail(outsideEmployee, "app-platform"),
+    ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
+  });
+
+  it("records delivery actions against the published version after visibility checks", async () => {
+    const repository = new MemoryCatalogRepository();
+    const service = new CatalogService(repository);
+
+    await expect(
+      service.recordDeliveryAction(employee, {
+        applicationId: "app-platform",
+        actionType: "web_redirect",
+        channel: "web",
+      }),
+    ).resolves.toBeUndefined();
+    expect(repository.recordedActions).toEqual(["web_redirect"]);
+
+    await expect(
+      service.recordDeliveryAction(outsideEmployee, {
+        applicationId: "app-platform",
+        actionType: "web_redirect",
+      }),
     ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
   });
 });

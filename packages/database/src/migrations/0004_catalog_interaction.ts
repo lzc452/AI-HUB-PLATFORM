@@ -79,9 +79,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("category_id", "varchar(64)", (column) =>
       column.notNull().references("catalog_categories.category_id"),
     )
-    .addColumn("application_type", "varchar(32)", (column) =>
-      column.notNull(),
-    )
+    .addColumn("application_type", "varchar(32)", (column) => column.notNull())
     .addColumn("search_name", "text", (column) => column.notNull())
     .addColumn("search_summary", "text", (column) => column.notNull())
     .addColumn("search_pinyin", "text", (column) => column.notNull())
@@ -169,7 +167,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       column.notNull().references("applications.application_id"),
     )
     .addColumn("application_version_id", "uuid", (column) =>
-      column.notNull().references("application_versions.application_version_id"),
+      column
+        .notNull()
+        .references("application_versions.application_version_id"),
     )
     .addColumn("employee_id", "varchar(64)", (column) =>
       column.notNull().references("employees.employee_id"),
@@ -204,7 +204,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       column.notNull().references("applications.application_id"),
     )
     .addColumn("application_version_id", "uuid", (column) =>
-      column.notNull().references("application_versions.application_version_id"),
+      column
+        .notNull()
+        .references("application_versions.application_version_id"),
     )
     .addColumn("parent_comment_id", "uuid")
     .addColumn("author_employee_id", "varchar(64)", (column) =>
@@ -284,7 +286,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await db.schema.dropIndex("catalog_delivery_actions_application_idx").execute();
+  await db.schema
+    .dropIndex("catalog_delivery_actions_application_idx")
+    .execute();
   await db.schema
     .dropIndex("application_catalog_metadata_search_initials_idx")
     .execute();

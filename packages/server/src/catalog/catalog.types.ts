@@ -7,6 +7,11 @@ export type TrustLabel =
   | "verified"
   | "recommended"
   | "deprecated";
+export type CatalogHealthStatus = "unknown" | "healthy" | "degraded" | "failed";
+export type CatalogDeliveryAction =
+  | "web_redirect"
+  | "package_download"
+  | "qr_display";
 
 export interface CatalogEntry {
   applicationId: string;
@@ -21,6 +26,9 @@ export interface CatalogEntry {
   deliveryChannels: readonly DeliveryChannel[];
   likeCount: number;
   ratingAverage: number | null;
+  healthStatus: CatalogHealthStatus;
+  deprecatedReason: string | null;
+  replacementApplicationId: string | null;
 }
 
 export interface CatalogSearchInput {
@@ -47,4 +55,11 @@ export interface CatalogRepository {
     actor: ActorContext,
     applicationId: string,
   ): Promise<CatalogEntry | null>;
+  recordDeliveryAction(input: {
+    applicationId: string;
+    applicationVersionId: string;
+    actorEmployeeId: string;
+    actionType: CatalogDeliveryAction;
+    channel?: string | null;
+  }): Promise<void>;
 }

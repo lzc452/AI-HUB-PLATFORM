@@ -3,6 +3,14 @@ import { Module, type DynamicModule } from "@nestjs/common";
 import {
   HealthModule,
   ApplicationModule,
+  CatalogModule,
+  CatalogService,
+  InteractionModule,
+  InteractionService,
+  NotificationModule,
+  NotificationService,
+  CreatorModule,
+  CreatorService,
   IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
@@ -17,6 +25,10 @@ export interface ApiModuleTestOptions {
   databaseCheck: DatabaseHealthCheck;
   identity?: IdentityService;
   application?: ApplicationService;
+  catalog?: CatalogService;
+  interaction?: InteractionService;
+  notification?: NotificationService;
+  creator?: CreatorService;
   artifactVerification?: ArtifactVerificationPort;
   observability?: ObservabilityModuleOptions;
 }
@@ -55,6 +67,10 @@ export class ApiModule {
         ObservabilityModule.register({ ...observability, metrics }),
         IdentityModule.register(databaseUrl),
         ApplicationModule.register(databaseUrl, artifactVerification),
+        CatalogModule.register(databaseUrl),
+        InteractionModule.register(databaseUrl),
+        NotificationModule.register(databaseUrl),
+        CreatorModule.register(databaseUrl),
         HealthModule.register(
           createProductionDatabaseCheck(databaseUrl, metrics),
         ),
@@ -86,6 +102,23 @@ export class ApiModule {
                 options.artifactVerification,
               ),
             ]),
+        ...(options.catalog === undefined || options.identity === undefined
+          ? []
+          : [CatalogModule.forTest(options.catalog, options.identity)]),
+        ...(options.interaction === undefined || options.identity === undefined
+          ? []
+          : [InteractionModule.forTest(options.interaction, options.identity)]),
+        ...(options.notification === undefined || options.identity === undefined
+          ? []
+          : [
+              NotificationModule.forTest(
+                options.notification,
+                options.identity,
+              ),
+            ]),
+        ...(options.creator === undefined || options.identity === undefined
+          ? []
+          : [CreatorModule.forTest(options.creator, options.identity)]),
         HealthModule.register(databaseCheck),
       ],
     };

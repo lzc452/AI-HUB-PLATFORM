@@ -80,3 +80,45 @@ export type {
   ReviewSlaStatus,
   ReviewRecord,
 } from "./application/application.types.js";
+export { CatalogController } from "./catalog/catalog.controller.js";
+export { CatalogModule } from "./catalog/catalog.module.js";
+export { KyselyCatalogRepository } from "./catalog/catalog.repository.js";
+export { CatalogService } from "./catalog/catalog.service.js";
+export type {
+  CatalogEntry,
+  CatalogListResult,
+  CatalogRepository,
+  CatalogSearchInput,
+  CatalogSort,
+  TrustLabel,
+} from "./catalog/catalog.types.js";
+export { InteractionService } from "./interaction/interaction.service.js";
+export { KyselyInteractionRepository } from "./interaction/interaction.repository.js";
+export { InteractionModule } from "./interaction/interaction.module.js";
+export { InteractionController } from "./interaction/interaction.controller.js";
+export type {
+  ApplicationTeamRecord,
+  CommentRecord,
+  InteractionAuthorizationPort,
+  InteractionRepository,
+  RatingRecord,
+  ReportRecord,
+} from "./interaction/interaction.types.js";
+export { NotificationModule } from "./notification/notification.module.js";
+export { NotificationController } from "./notification/notification.controller.js";
+export { NotificationService } from "./notification/notification.service.js";
+export { KyselyNotificationRepository } from "./notification/notification.repository.js";
+export type { DingTalkNotificationPort } from "./notification/dingtalk.port.js";
+export type {
+  NotificationAuthorizationPort,
+  NotificationRecord,
+  NotificationRepository,
+} from "./notification/notification.types.js";
+export { CreatorModule } from "./creator/creator.module.js";
+export { CreatorController } from "./creator/creator.controller.js";
+export { CreatorService } from "./creator/creator.service.js";
+export { KyselyCreatorRepository } from "./creator/creator.repository.js";
+export type {
+  CreatorAuthorizationPort,
+  CreatorRepository,
+} from "./creator/creator.types.js";

@@ -1,0 +1,1 @@
+export const CATALOG_SERVICE = "CATALOG_SERVICE";

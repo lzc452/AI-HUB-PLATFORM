@@ -18,16 +18,25 @@ type CatalogRow = {
   recommendationRank: number;
   likeCount: number;
   ratingAverage: number | null;
+  healthStatus: "unknown" | "healthy" | "degraded" | "failed";
+  deprecatedReason: string | null;
+  replacementApplicationId: string | null;
 };
 
 export class KyselyCatalogRepository implements CatalogRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
 
-  async listVisible(input: CatalogSearchInput): Promise<readonly CatalogEntry[]> {
+  async listVisible(
+    input: CatalogSearchInput,
+  ): Promise<readonly CatalogEntry[]> {
     const departmentIds = input.actor.departmentIds;
     let query = this.db
       .selectFrom("application_catalog_metadata as metadata")
-      .innerJoin("applications as application", "application.application_id", "metadata.application_id")
+      .innerJoin(
+        "applications as application",
+        "application.application_id",
+        "metadata.application_id",
+      )
       .select([
         "application.application_id as applicationId",
         "application.name as name",
@@ -37,6 +46,9 @@ export class KyselyCatalogRepository implements CatalogRepository {
         "application.current_version_id as currentVersionId",
         "application.updated_at as publishedAt",
         "metadata.recommendation_rank as recommendationRank",
+        "metadata.health_status as healthStatus",
+        "metadata.deprecated_reason as deprecatedReason",
+        "metadata.replacement_application_id as replacementApplicationId",
         sql<number>`(
           select count(*)::int
           from application_likes like_row
@@ -54,15 +66,15 @@ export class KyselyCatalogRepository implements CatalogRepository {
           eb
             .selectFrom("application_audiences as audience")
             .select("audience.audience_id")
-            .whereRef("audience.application_id", "=", "application.application_id")
+            .whereRef(
+              "audience.application_id",
+              "=",
+              "application.application_id",
+            )
             .where((audienceEb) =>
               audienceEb.or([
                 audienceEb("audience.audience_type", "=", "all"),
-                audienceEb(
-                  "audience.employee_id",
-                  "=",
-                  input.actor.employeeId,
-                ),
+                audienceEb("audience.employee_id", "=", input.actor.employeeId),
                 audienceEb("audience.department_id", "in", departmentIds),
               ]),
             ),
@@ -161,12 +173,36 @@ export class KyselyCatalogRepository implements CatalogRepository {
       departmentId: row.departmentId,
       categoryId: row.categoryId,
       tagIds: tags.map((tag) => tag.tag_id),
-      trustLabels: labels.map((label) => label.label as CatalogEntry["trustLabels"][number]),
+      trustLabels: labels.map(
+        (label) => label.label as CatalogEntry["trustLabels"][number],
+      ),
       currentVersionId: row.currentVersionId ?? "",
       publishedAt: row.publishedAt,
       deliveryChannels: deliveries.map((delivery) => delivery.channel),
       likeCount: row.likeCount,
       ratingAverage: row.ratingAverage,
+      healthStatus: row.healthStatus,
+      deprecatedReason: row.deprecatedReason,
+      replacementApplicationId: row.replacementApplicationId,
     };
+  }
+
+  async recordDeliveryAction(input: {
+    applicationId: string;
+    applicationVersionId: string;
+    actorEmployeeId: string;
+    actionType: "web_redirect" | "package_download" | "qr_display";
+    channel?: string | null;
+  }): Promise<void> {
+    await this.db
+      .insertInto("catalog_delivery_actions")
+      .values({
+        application_id: input.applicationId,
+        application_version_id: input.applicationVersionId,
+        actor_employee_id: input.actorEmployeeId,
+        action_type: input.actionType,
+        channel: input.channel ?? null,
+      })
+      .execute();
   }
 }

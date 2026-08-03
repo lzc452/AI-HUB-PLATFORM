@@ -6,6 +6,7 @@ export type TrustLabel =
   | "verified"
   | "recommended"
   | "deprecated";
+export type CatalogHealthStatus = "unknown" | "healthy" | "degraded" | "failed";
 
 export interface CatalogQuery {
   query?: string;
@@ -30,4 +31,7 @@ export interface CatalogEntry {
   deliveryChannels: readonly DeliveryChannel[];
   likeCount: number;
   ratingAverage: number | null;
+  healthStatus: CatalogHealthStatus;
+  deprecatedReason: string | null;
+  replacementApplicationId: string | null;
 }
