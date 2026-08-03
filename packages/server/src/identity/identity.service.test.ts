@@ -321,6 +321,28 @@ describe("IdentityService", () => {
     });
   });
 
+  it("allows super admins without consulting resource existence", async () => {
+    const service = new IdentityService(new MemoryIdentityRepository());
+
+    await expect(
+      service.authorize({
+        actor: {
+          employeeId: "E010",
+          roleCodes: ["super_admin"],
+          departmentIds: [],
+          primaryDepartmentId: "dept-a",
+          sessionId: "session-10",
+        },
+        action: "delete",
+        resourceType: "missing-resource",
+        resourceId: "does-not-exist",
+      }),
+    ).resolves.toEqual({
+      allowed: true,
+      reasonCode: "ALLOW_SUPER_ADMIN",
+    });
+  });
+
   it("rejects an expired session before building actor context", async () => {
     const repository = new MemoryIdentityRepository();
     await repository.createEmployee({
