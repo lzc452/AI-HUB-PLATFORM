@@ -42,5 +42,6 @@ export interface NotificationRepository {
     notificationId: string;
     eventType: string;
     idempotencyKey: string;
+    metadata?: Readonly<Record<string, string>>;
   }): Promise<void>;
 }

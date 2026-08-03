@@ -1,4 +1,8 @@
-import type { DifyAssistantPort, DifyRequest, DifyResponse } from "./assistant.types.js";
+import type {
+  DifyAssistantPort,
+  DifyRequest,
+  DifyResponse,
+} from "./assistant.types.js";
 
 export class UnavailableDifyAssistantPort implements DifyAssistantPort {
   async ask(input: DifyRequest): Promise<DifyResponse> {

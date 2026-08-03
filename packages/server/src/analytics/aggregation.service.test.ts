@@ -74,8 +74,8 @@ describe("AnalyticsAggregationService", () => {
       "2026-08-04T00:00:00.000Z",
     );
     expect(saved.every((row) => row.day === "2026-08-03")).toBe(true);
-    expect(metricDefinitions.every((definition) => definition.formula.length > 0)).toBe(
-      true,
-    );
+    expect(
+      metricDefinitions.every((definition) => definition.formula.length > 0),
+    ).toBe(true);
   });
 });

@@ -127,9 +127,9 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/server/src/notification/*`, contracts, matrix tests, worker tests, API/Outbox integration tests, ledger/ADR.
 
-- [ ] Write failing tests for every fixed notification scenario, recipient authorization, idempotency key, audit metadata, retry/failure state, and no direct provider call inside business transactions.
-- [ ] Implement the complete Phase 6 matrix through the existing Outbox and DingTalk port; retain failures for retry and safe operator review.
-- [ ] Verify focused server/worker/PostgreSQL tests; commit `feat(phase-06): complete DingTalk work notification matrix`.
+- [x] Write failing tests for every fixed notification scenario, recipient authorization, idempotency key, audit metadata, retry/failure state, and no direct provider call inside business transactions.
+- [x] Implement the complete Phase 6 matrix through the existing Outbox and DingTalk port; retain failures for retry and safe operator review.
+- [x] Verify focused server/worker/PostgreSQL tests; commit `feat(phase-06): complete DingTalk work notification matrix`.
 
 ### Task 9: API, PostgreSQL e2e, Web routes, permissions, audits, exports, and assistant
 

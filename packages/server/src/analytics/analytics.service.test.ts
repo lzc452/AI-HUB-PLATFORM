@@ -52,9 +52,7 @@ describe("AnalyticsEventService", () => {
     expect(recordedEvent?.actorEmployeeId).toBe("employee-1");
     expect(
       recordedEvent!.expiresAt.getTime() - recordedEvent!.occurredAt.getTime(),
-    ).toBe(
-      180 * 24 * 60 * 60 * 1000,
-    );
+    ).toBe(180 * 24 * 60 * 60 * 1000);
   });
 
   it("does not create duplicate audit or outbox records for an idempotent replay", async () => {

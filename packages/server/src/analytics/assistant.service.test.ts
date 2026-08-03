@@ -36,7 +36,10 @@ describe("AnalyticsAssistantService", () => {
     const provider: DifyAssistantPort = {
       ask: async (input) => {
         received = input;
-        return { answer: "Use the approved platform workflow.", providerRequestId: "dify-1" };
+        return {
+          answer: "Use the approved platform workflow.",
+          providerRequestId: "dify-1",
+        };
       },
     };
     const audits = repository();
@@ -95,11 +98,15 @@ describe("AnalyticsAssistantService", () => {
     const audits = repository();
     const result = await new AnalyticsAssistantService(audits, provider).ask(
       actor,
-      { question: "Explain the metric", context: { metricKey: "platform.application_views", value: 2 } },
+      {
+        question: "Explain the metric",
+        context: { metricKey: "platform.application_views", value: 2 },
+      },
     );
     expect(result).toEqual({
       status: "degraded",
-      answer: "External assistant unavailable. Use the platform dashboard or contact an operator.",
+      answer:
+        "External assistant unavailable. Use the platform dashboard or contact an operator.",
     });
     expect(audits.audits).toEqual([
       "analytics.assistant.requested",

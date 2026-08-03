@@ -69,9 +69,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       column.notNull(),
     )
     .addColumn("value", "numeric(18, 3)", (column) => column.notNull())
-    .addColumn("source_event_count", "integer", (column) =>
-      column.notNull(),
-    )
+    .addColumn("source_event_count", "integer", (column) => column.notNull())
     .addColumn("computed_at", "timestamptz", (column) =>
       column.notNull().defaultTo(sql`now()`),
     )

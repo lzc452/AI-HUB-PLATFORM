@@ -19,6 +19,7 @@ export class NotificationService {
       eventType: string;
       aggregateId: string;
       message: string;
+      metadata?: Readonly<Record<string, string>>;
     },
   ) {
     await this.assertAllowed(actor, "create");
@@ -40,6 +41,7 @@ export class NotificationService {
         notificationId: notification.notificationId,
         eventType: "notification.created",
         idempotencyKey,
+        ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
       });
       return notification;
     });

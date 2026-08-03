@@ -46,10 +46,19 @@ export class AnalyticsController {
   ) {
     return this.call(async () => {
       const actor = await this.requireActor(employeeId, sessionId);
-      if (!this.dashboards.listFixedDashboards().includes(dashboardKey as DashboardKey)) {
+      if (
+        !this.dashboards
+          .listFixedDashboards()
+          .includes(dashboardKey as DashboardKey)
+      ) {
         throw new Error("ANALYTICS_DASHBOARD_INVALID");
       }
-      return this.dashboards.read(actor, dashboardKey as DashboardKey, from, to);
+      return this.dashboards.read(
+        actor,
+        dashboardKey as DashboardKey,
+        from,
+        to,
+      );
     });
   }
 
@@ -86,7 +95,10 @@ export class AnalyticsController {
     @Body() request: AssistantRequest,
   ) {
     return this.call(async () =>
-      this.assistant.ask(await this.requireActor(employeeId, sessionId), request),
+      this.assistant.ask(
+        await this.requireActor(employeeId, sessionId),
+        request,
+      ),
     );
   }
 
@@ -111,11 +123,18 @@ export class AnalyticsController {
     try {
       return await operation();
     } catch (error) {
-      if (error instanceof BadRequestException || error instanceof ForbiddenException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
-      const code = error instanceof Error ? error.message : "ANALYTICS_REQUEST_FAILED";
-      if (code === "ANALYTICS_DASHBOARD_FORBIDDEN" || code === "ANALYTICS_EXPORT_FORBIDDEN") {
+      const code =
+        error instanceof Error ? error.message : "ANALYTICS_REQUEST_FAILED";
+      if (
+        code === "ANALYTICS_DASHBOARD_FORBIDDEN" ||
+        code === "ANALYTICS_EXPORT_FORBIDDEN"
+      ) {
         throw new ForbiddenException(code);
       }
       throw new BadRequestException(code);

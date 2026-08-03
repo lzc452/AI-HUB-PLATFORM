@@ -116,3 +116,11 @@ result.
 - Implementation: `AnalyticsAssistantService` uses an explicit authorization-review repository, an allow-listed minimum context, dependency-injected `DifyAssistantPort`, and no public Open API. Production uses an unavailable-provider fallback until external credentials are separately authorized.
 - API route wiring is covered in the Phase 6 API contract; the Docker-backed API command passed 9 files/18 tests, including the guarded assistant route.
 - Commit: `0a8d288 feat(phase-06): add guarded external assistant boundary`.
+
+### Step 8: DingTalk notification matrix and Outbox delivery verification
+
+- RED: the fixed DingTalk scenario matrix and post-transaction Outbox handler were absent; the first server run failed because the new handler module did not exist.
+- GREEN: `@ai-hub/server` passed 22 files/87 tests, typecheck, lint, and format check; `@ai-hub/worker` passed 3 files/5 tests, typecheck, and lint; Docker-backed database tests passed 3 files/22 tests. The focused handler tests prove provider calls happen only from a claimed Outbox handler, delivery failures record `retry` and throw a safe retry code, and matrix metadata carries scenario, recipient role, and actor context.
+- Implementation: fixed 14-scenario Phase 3-6 matrix is exposed through `NotificationModule`; matrix queueing reuses `NotificationService` authorization/idempotency/transaction boundary, enriches Outbox payload metadata, rejects sensitive template variables, and never calls DingTalk inside the business transaction. The handler is the post-Outbox DingTalk port boundary and preserves retry state.
+- Visualization: `processing_visualization.html` records Phase 6 at 65% with implemented work and pending cross-layer/final gates.
+- Commit: pending until the Step 8 diff is staged and committed.

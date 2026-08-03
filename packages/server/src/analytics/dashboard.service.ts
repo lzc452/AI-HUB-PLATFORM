@@ -21,13 +21,41 @@ const dashboardMetrics: Readonly<Record<DashboardKey, readonly string[]>> = {
 const dashboardRoles: Readonly<Record<DashboardKey, readonly string[]>> = {
   platform: ["analytics_operator", "analytics_platform_reader", "super_admin"],
   market: ["analytics_operator", "analytics_market_reader", "super_admin"],
-  application: ["analytics_operator", "analytics_application_reader", "super_admin"],
-  innovation: ["analytics_operator", "analytics_innovation_reader", "demand_operator", "super_admin"],
-  review: ["analytics_operator", "analytics_review_reader", "demand_reviewer", "super_admin"],
-  department: ["analytics_operator", "analytics_department_reader", "department_lead", "super_admin"],
-  risk: ["analytics_operator", "analytics_risk_reader", "risk_operator", "super_admin"],
+  application: [
+    "analytics_operator",
+    "analytics_application_reader",
+    "super_admin",
+  ],
+  innovation: [
+    "analytics_operator",
+    "analytics_innovation_reader",
+    "demand_operator",
+    "super_admin",
+  ],
+  review: [
+    "analytics_operator",
+    "analytics_review_reader",
+    "demand_reviewer",
+    "super_admin",
+  ],
+  department: [
+    "analytics_operator",
+    "analytics_department_reader",
+    "department_lead",
+    "super_admin",
+  ],
+  risk: [
+    "analytics_operator",
+    "analytics_risk_reader",
+    "risk_operator",
+    "super_admin",
+  ],
   runtime: ["analytics_operator", "analytics_runtime_reader", "super_admin"],
-  integration: ["analytics_operator", "analytics_integration_reader", "super_admin"],
+  integration: [
+    "analytics_operator",
+    "analytics_integration_reader",
+    "super_admin",
+  ],
 };
 
 export class AnalyticsDashboardService {

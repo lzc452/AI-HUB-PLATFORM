@@ -22,7 +22,9 @@ export interface DashboardReadInput {
 }
 
 export interface AnalyticsDashboardRepository {
-  readDailyAggregates(input: DashboardReadInput): Promise<readonly DailyAggregate[]>;
+  readDailyAggregates(
+    input: DashboardReadInput,
+  ): Promise<readonly DailyAggregate[]>;
 }
 
 export interface DashboardResult {

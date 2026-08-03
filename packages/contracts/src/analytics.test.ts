@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  behaviorEventNames,
-  validateBehaviorEventInput,
-} from "./analytics.js";
+import { behaviorEventNames, validateBehaviorEventInput } from "./analytics.js";
 
 describe("analytics behavior event contract", () => {
   it("accepts only the fixed event vocabulary and bounded metadata", () => {

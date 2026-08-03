@@ -75,7 +75,13 @@ export class KyselyAnalyticsExportRepository
       })
       .execute();
 
-    const details = input.details as { target?: string; from?: string; to?: string; rowCount?: number; code?: string };
+    const details = input.details as {
+      target?: string;
+      from?: string;
+      to?: string;
+      rowCount?: number;
+      code?: string;
+    };
     if (input.action === "analytics.export.requested") {
       await this.db
         .insertInto("analytics_export_jobs")
@@ -99,7 +105,10 @@ export class KyselyAnalyticsExportRepository
     } else if (input.action === "analytics.export.failed") {
       await this.db
         .updateTable("analytics_export_jobs")
-        .set({ status: "failed", failure_code: details.code ?? "EXPORT_FAILED" })
+        .set({
+          status: "failed",
+          failure_code: details.code ?? "EXPORT_FAILED",
+        })
         .where("export_id", "=", input.exportId)
         .execute();
     }

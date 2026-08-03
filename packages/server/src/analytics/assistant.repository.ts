@@ -8,7 +8,9 @@ import type {
   AssistantRequest,
 } from "./assistant.types.js";
 
-export class KyselyAssistantAuditRepository implements AssistantAuditRepository {
+export class KyselyAssistantAuditRepository
+  implements AssistantAuditRepository
+{
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
 
   async reviewAuthorization(

@@ -803,33 +803,33 @@
             id: "p6",
             name: "Phase 6：分析、看板、导出与外部助手",
             target: "第 7 月",
-            status: "待开始",
-            progress: 5,
+            status: "进行中",
+            progress: 65,
             summary:
               "建立原始行为事件、日聚合、固定看板、受控导出、公网 Dify 最小化上下文和指标字典。",
             tasks: [
               [
                 "原始行为事件、180 天保留与日聚合",
-                "待开始",
+                "已完成",
                 "看板数字必须能从原始事件重算。",
               ],
               [
                 "平台/市场/应用/创新/审核/部门/风险/运行/集成看板",
-                "待开始",
+                "已完成",
                 "需要权限过滤和固定口径。",
               ],
-              ["受权限控制的后台导出", "待开始", "导出行为全部审计。"],
+              ["受权限控制的后台导出", "已完成", "导出行为全部审计。"],
               [
                 "公网 Dify 最小化上下文、脱敏、授权复核和降级",
-                "待开始",
+                "已完成",
                 "Dify 不得获得员工号、内部 URL、文件、二维码和匿名身份。",
               ],
               [
                 "钉钉工作通知完整矩阵",
-                "待开始",
+                "已完成",
                 "覆盖审核、需求、运营、风险等场景。",
               ],
-              ["指标口径字典", "待开始", "所有指标需有定义、来源和重算方式。"],
+              ["指标口径字典", "已完成", "所有指标需有定义、来源和重算方式。"],
             ],
             gates: [
               "看板可由原始事件重算且一致",
@@ -1145,6 +1145,12 @@
             phase: "product",
             title: "Phase 6 baseline and execution plan established",
             body: "Created feature/phase-06-analytics-dashboard-export-assistant from Phase 5 commit 4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5. Recorded the raw-event source of truth, 180-day retention, rebuildable daily aggregation, fixed dashboards, audited exports, guarded Dify boundary, DingTalk matrix, and explicit Phase 7 deferrals.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 6 analytics, exports, assistant, and notification evidence",
+            body: "Behavior events, rebuildable aggregates, metric dictionary, nine fixed dashboards, audited exports, guarded Dify context, and the 14-scenario DingTalk matrix are implemented. Focused server/worker tests and Docker-backed PostgreSQL schema/Outbox tests pass; cross-layer and final gates remain pending.",
           },
           {
             date: "2026-08-03",

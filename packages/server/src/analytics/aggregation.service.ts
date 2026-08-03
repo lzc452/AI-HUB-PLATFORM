@@ -31,7 +31,9 @@ export class AnalyticsAggregationService {
     const to = new Date(toIso);
     const oldestAllowed = new Date(Date.now() - RETENTION_MS);
     const lowerBound = from > oldestAllowed ? from : oldestAllowed;
-    const events = uniqueEvents(await this.repository.listRawEvents(lowerBound, to)).filter(
+    const events = uniqueEvents(
+      await this.repository.listRawEvents(lowerBound, to),
+    ).filter(
       (event) => event.occurredAt >= lowerBound && event.occurredAt < to,
     );
     const rows = new Map<string, DailyAggregate>();

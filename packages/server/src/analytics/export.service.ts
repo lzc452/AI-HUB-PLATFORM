@@ -6,7 +6,11 @@ import type {
   AnalyticsExportResult,
 } from "./export.types.js";
 
-const EXPORT_ROLES = ["analytics_exporter", "analytics_operator", "super_admin"];
+const EXPORT_ROLES = [
+  "analytics_exporter",
+  "analytics_operator",
+  "super_admin",
+];
 
 function canExport(actor: ActorContext): boolean {
   return EXPORT_ROLES.some((role) => actor.roleCodes.includes(role));

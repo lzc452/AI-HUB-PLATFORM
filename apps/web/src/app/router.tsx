@@ -821,8 +821,8 @@ function AnalyticsDashboardPage() {
           Analytics dashboards
         </Title>
         <Paragraph className="!mb-0 max-w-3xl text-base">
-          Numbers are rebuildable from retained raw events. Dashboard output
-          is permission-filtered and never exposes individual access lists.
+          Numbers are rebuildable from retained raw events. Dashboard output is
+          permission-filtered and never exposes individual access lists.
         </Paragraph>
       </section>
       <Alert

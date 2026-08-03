@@ -97,6 +97,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
     notificationId: string;
     eventType: string;
     idempotencyKey: string;
+    metadata?: Readonly<Record<string, string>>;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -104,7 +105,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
         event_type: input.eventType,
         aggregate_type: "notification",
         aggregate_id: input.notificationId,
-        payload: { notificationId: input.notificationId },
+        payload: { notificationId: input.notificationId, ...input.metadata },
         idempotency_key: input.idempotencyKey,
         status: "pending",
         attempts: 0,

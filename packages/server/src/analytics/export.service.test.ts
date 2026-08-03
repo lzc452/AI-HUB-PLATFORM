@@ -100,7 +100,10 @@ describe("AnalyticsExportService", () => {
       from: "2026-08-03",
       to: "2026-08-04",
     });
-    await service.markDownloaded(actor(["analytics_exporter"]), result.exportId);
+    await service.markDownloaded(
+      actor(["analytics_exporter"]),
+      result.exportId,
+    );
     expect(actions).toEqual([
       "analytics.export.requested",
       "analytics.export.completed",

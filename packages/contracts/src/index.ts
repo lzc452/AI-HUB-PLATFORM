@@ -37,10 +37,7 @@ export type {
   NotificationDeliveryStatus,
   NotificationInput,
 } from "./notification.js";
-export {
-  behaviorEventNames,
-  validateBehaviorEventInput,
-} from "./analytics.js";
+export { behaviorEventNames, validateBehaviorEventInput } from "./analytics.js";
 export type {
   AnalyticsAggregateType,
   BehaviorEventInput,

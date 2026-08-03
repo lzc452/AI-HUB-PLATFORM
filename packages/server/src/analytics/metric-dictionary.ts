@@ -11,11 +11,13 @@ const count = (
   metricKey,
   label,
   sourceEventNames,
-  formula: "count(distinct idempotency_key) grouped by UTC day and audience scope",
+  formula:
+    "count(distinct idempotency_key) grouped by UTC day and audience scope",
   timeRange: "180d",
   requiredPermission,
   audienceRule,
-  recompute: "Read retained raw events for the requested range and replace matching daily rows.",
+  recompute:
+    "Read retained raw events for the requested range and replace matching daily rows.",
 });
 
 export const metricDefinitions: readonly AnalyticsMetricDefinition[] = [

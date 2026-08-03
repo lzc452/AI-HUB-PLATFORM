@@ -56,7 +56,9 @@ export class KyselyAnalyticsEventRepository
       .execute();
   }
 
-  appendOutboxEvent(input: Parameters<OutboxStore["append"]>[0]): Promise<boolean> {
+  appendOutboxEvent(
+    input: Parameters<OutboxStore["append"]>[0],
+  ): Promise<boolean> {
     return new OutboxStore(this.db).append(input);
   }
 }

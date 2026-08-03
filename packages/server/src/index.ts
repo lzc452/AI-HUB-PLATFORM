@@ -108,6 +108,15 @@ export { NotificationModule } from "./notification/notification.module.js";
 export { NotificationController } from "./notification/notification.controller.js";
 export { NotificationService } from "./notification/notification.service.js";
 export { KyselyNotificationRepository } from "./notification/notification.repository.js";
+export {
+  DINGTALK_NOTIFICATION_MATRIX_SERVICE,
+  NOTIFICATION_SERVICE,
+} from "./notification/notification.tokens.js";
+export {
+  DINGTALK_NOTIFICATION_MATRIX,
+  DingTalkNotificationMatrixService,
+} from "./notification/dingtalk-matrix.service.js";
+export { createDingTalkNotificationOutboxHandler } from "./notification/dingtalk-outbox-handler.js";
 export type { DingTalkNotificationPort } from "./notification/dingtalk.port.js";
 export type {
   NotificationAuthorizationPort,

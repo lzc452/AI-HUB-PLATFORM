@@ -28,7 +28,9 @@ export class AnalyticsModule {
           provide: ANALYTICS_DASHBOARD_SERVICE,
           useFactory: () =>
             new AnalyticsDashboardService(
-              new KyselyAnalyticsDashboardRepository(createDatabase(databaseUrl)),
+              new KyselyAnalyticsDashboardRepository(
+                createDatabase(databaseUrl),
+              ),
             ),
         },
         {
@@ -47,7 +49,11 @@ export class AnalyticsModule {
             ),
         },
       ],
-      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE, ANALYTICS_ASSISTANT_SERVICE],
+      exports: [
+        ANALYTICS_DASHBOARD_SERVICE,
+        ANALYTICS_EXPORT_SERVICE,
+        ANALYTICS_ASSISTANT_SERVICE,
+      ],
     };
   }
 
@@ -80,7 +86,11 @@ export class AnalyticsModule {
         },
         { provide: IdentityService, useValue: identity },
       ],
-      exports: [ANALYTICS_DASHBOARD_SERVICE, ANALYTICS_EXPORT_SERVICE, ANALYTICS_ASSISTANT_SERVICE],
+      exports: [
+        ANALYTICS_DASHBOARD_SERVICE,
+        ANALYTICS_EXPORT_SERVICE,
+        ANALYTICS_ASSISTANT_SERVICE,
+      ],
     };
   }
 }
