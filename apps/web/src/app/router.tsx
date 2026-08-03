@@ -9,11 +9,13 @@ import {
 import type { HealthSnapshot } from "@ai-hub/contracts";
 import { Alert, Descriptions, Layout, Tag, Typography } from "antd";
 import {
+  Link,
   NavLink,
   Navigate,
   Outlet,
   RouterProvider,
   createBrowserRouter,
+  useParams,
 } from "react-router-dom";
 import { useMemo } from "react";
 
@@ -42,6 +44,28 @@ const navigationItems = [
     icon: <ExperimentOutlined aria-hidden="true" />,
     path: "/innovation",
     title: "创新广场",
+  },
+] as const;
+
+const navigationItemsWithAdmin = [
+  ...navigationItems,
+  {
+    description: "static administration",
+    icon: <DeploymentUnitOutlined aria-hidden="true" />,
+    path: "/applications",
+    title: "Applications",
+  },
+  {
+    description: "admin placeholder",
+    icon: <DeploymentUnitOutlined aria-hidden="true" />,
+    path: "/organization",
+    title: "Organization",
+  },
+  {
+    description: "security placeholder",
+    icon: <SafetyCertificateOutlined aria-hidden="true" />,
+    path: "/security",
+    title: "Security",
   },
 ] as const;
 
@@ -175,6 +199,246 @@ function FeatureStatusPage({
   );
 }
 
+const applicationNavigationItems = [
+  { label: "Application details", path: "/applications/app-001" },
+  { label: "Versions", path: "/applications/app-001/versions" },
+  { label: "Review", path: "/applications/app-001/review" },
+  { label: "Delivery", path: "/applications/app-001/delivery" },
+] as const;
+
+function ApplicationNavigation() {
+  return (
+    <nav aria-label="Application administration">
+      <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+        {applicationNavigationItems.map((item) => (
+          <li key={item.path}>
+            <NavLink
+              className={({ isActive }) =>
+                `inline-flex min-h-10 items-center rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-[#1677ff] bg-[#e6f4ff] text-[#0958d9]"
+                    : "border-[#d9d9d9] bg-white text-[#1f1f1f] hover:border-[#91caff] hover:text-[#0958d9]"
+                }`
+              }
+              to={item.path}
+            >
+              {item.label}
+            </NavLink>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+type ApplicationAdminPageProps = {
+  children: React.ReactNode;
+  description: string;
+  title: string;
+};
+
+function ApplicationAdminPage({
+  children,
+  description,
+  title,
+}: ApplicationAdminPageProps) {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby={`${title}-heading`} className="space-y-3">
+        <Text type="secondary">Phase 3 / Application administration</Text>
+        <Title id={`${title}-heading`} level={1} className="!mb-0">
+          {title}
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          {description}
+        </Paragraph>
+      </section>
+      <ApplicationNavigation />
+      <Alert
+        description="This is a static administration shell; no business writes are enabled."
+        message="Read-only preview"
+        showIcon
+        type="info"
+      />
+      {children}
+    </div>
+  );
+}
+
+function ApplicationsPage() {
+  return (
+    <ApplicationAdminPage
+      description="Review application records, immutable versions, review history, and delivery configuration from one administration surface."
+      title="Applications"
+    >
+      <section aria-labelledby="application-directory-heading" className="space-y-4">
+        <Title id="application-directory-heading" level={2} className="!mb-0">
+          Application directory
+        </Title>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <Title level={3} className="!mb-0">
+                Internal AI assistant
+              </Title>
+              <Text type="secondary">app-001 · owned by Platform Operations</Text>
+            </div>
+            <Tag color="blue">Published version 1.2.0</Tag>
+          </div>
+          <div className="mt-4">
+            <Link to="/applications/app-001">Application details</Link>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2" aria-label="Directory states">
+          <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white p-5">
+            <Text strong>Empty</Text>
+            <Paragraph className="!mb-0 mt-2">
+              No additional applications are waiting for administration.
+            </Paragraph>
+          </div>
+          <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white p-5">
+            <Text strong>Loading</Text>
+            <Paragraph className="!mb-0 mt-2">
+              Loading state is reserved for the future data connection.
+            </Paragraph>
+          </div>
+        </div>
+      </section>
+    </ApplicationAdminPage>
+  );
+}
+
+const applicationLifecycleStates = [
+  { color: "default", label: "Draft" },
+  { color: "processing", label: "In review" },
+  { color: "success", label: "Approved" },
+  { color: "blue", label: "Published" },
+  { color: "error", label: "Rejected" },
+  { color: "warning", label: "Withdrawn" },
+  { color: "default", label: "Archived" },
+] as const;
+
+function ApplicationDetailsPage() {
+  const { applicationId } = useParams();
+
+  return (
+    <ApplicationAdminPage
+      description={`Static lifecycle overview for ${applicationId ?? "app-001"}.`}
+      title="Application details"
+    >
+      <section aria-labelledby="lifecycle-heading" className="space-y-4">
+        <Title id="lifecycle-heading" level={2} className="!mb-0">
+          Lifecycle states
+        </Title>
+        <div className="flex flex-wrap gap-2" aria-label="Application lifecycle states">
+          {applicationLifecycleStates.map((state) => (
+            <Tag color={state.color} key={state.label}>
+              {state.label}
+            </Tag>
+          ))}
+        </div>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <Text type="secondary">Current state</Text>
+              <Title level={3} className="!mb-0 !mt-1">
+                Published
+              </Title>
+            </div>
+            <Tag color="blue">Published version</Tag>
+          </div>
+          <Paragraph className="!mb-0 !mt-4">
+            The published version is displayed for review only. Rollback and other state changes are intentionally unavailable in this shell.
+          </Paragraph>
+        </div>
+      </section>
+    </ApplicationAdminPage>
+  );
+}
+
+function ApplicationVersionsPage() {
+  return (
+    <ApplicationAdminPage
+      description="Compare immutable application versions and their artifact metadata."
+      title="Versions"
+    >
+      <section aria-labelledby="versions-heading" className="space-y-4">
+        <Title id="versions-heading" level={2} className="!mb-0">
+          Version history
+        </Title>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <Title level={3} className="!mb-1">
+                v1.2.0
+              </Title>
+              <Text type="secondary">Published version · artifact verified</Text>
+            </div>
+            <Tag color="blue">Published</Tag>
+          </div>
+          <Paragraph className="!mb-0 !mt-4">
+            Version records are append-only; editing creates a new version.
+          </Paragraph>
+        </div>
+      </section>
+    </ApplicationAdminPage>
+  );
+}
+
+function ApplicationReviewPage() {
+  return (
+    <ApplicationAdminPage
+      description="Inspect review readiness and the audit-safe review history."
+      title="Review"
+    >
+      <section aria-labelledby="review-heading" className="space-y-4">
+        <Title id="review-heading" level={2} className="!mb-0">
+          Review history
+        </Title>
+        <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <Tag color="success">Approved</Tag>
+          <Paragraph className="!mb-0 !mt-3">
+            Review actions are shown as read-only history until the review API is connected.
+          </Paragraph>
+        </div>
+      </section>
+    </ApplicationAdminPage>
+  );
+}
+
+function ApplicationDeliveryPage() {
+  const deliveryChannels = ["Web", "Desktop", "Mobile", "Mini-program"];
+
+  return (
+    <ApplicationAdminPage
+      description="Inspect separate delivery configurations for each supported client channel."
+      title="Delivery"
+    >
+      <section aria-labelledby="delivery-heading" className="space-y-4">
+        <Title id="delivery-heading" level={2} className="!mb-0">
+          Delivery channels
+        </Title>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {deliveryChannels.map((channel) => (
+            <div
+              className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+              key={channel}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <Title level={3} className="!mb-0">
+                  {channel}
+                </Title>
+                <Tag color="default">Disabled</Tag>
+              </div>
+              <Text type="secondary">Configuration is read-only in this shell.</Text>
+            </div>
+          ))}
+        </div>
+      </section>
+    </ApplicationAdminPage>
+  );
+}
+
 function AppShell() {
   return (
     <Layout className="min-h-screen bg-[#f5f5f5] text-[#1f1f1f]">
@@ -204,7 +468,7 @@ function AppShell() {
           </div>
           <nav aria-label="主导航">
             <ul className="m-0 flex list-none flex-wrap gap-3 p-0">
-              {navigationItems.map((item) => (
+              {navigationItemsWithAdmin.map((item) => (
                 <li key={item.path}>
                   <NavLink to={item.path}>
                     {({ isActive }) => (
@@ -266,6 +530,26 @@ function createAppRouter() {
           path: "/marketplace",
         },
         {
+          element: <ApplicationsPage />,
+          path: "/applications",
+        },
+        {
+          element: <ApplicationDetailsPage />,
+          path: "/applications/:applicationId",
+        },
+        {
+          element: <ApplicationVersionsPage />,
+          path: "/applications/:applicationId/versions",
+        },
+        {
+          element: <ApplicationReviewPage />,
+          path: "/applications/:applicationId/review",
+        },
+        {
+          element: <ApplicationDeliveryPage />,
+          path: "/applications/:applicationId/delivery",
+        },
+        {
           element: (
             <FeatureStatusPage
               description="需求提交、认领与试点流程将在后续任务中逐步接入。"
@@ -280,6 +564,38 @@ function createAppRouter() {
             />
           ),
           path: "/innovation",
+        },
+        {
+          element: (
+            <FeatureStatusPage
+              description="Identity and organization administration is connected to the Phase 2 API baseline."
+              details={[
+                "Employee and department records are available through the protected internal API.",
+                "DingTalk directory synchronization remains an operator-triggered integration.",
+                "Role assignment and organization workflows will be expanded with the next administration slice.",
+              ]}
+              healthSnapshot={shellHealthSnapshot}
+              statusLabel="Phase 2 / Identity and organization"
+              title="Organization"
+            />
+          ),
+          path: "/organization",
+        },
+        {
+          element: (
+            <FeatureStatusPage
+              description="Local password login, sessions, password reset challenges, and authorization are available through the Phase 2 API baseline."
+              details={[
+                "Sessions are checked for employee ownership, expiry, and revocation before actor context creation.",
+                "Password reset completion revokes the employee sessions and records an audit event.",
+                "DingTalk OAuth credentials and production security policy remain external deployment inputs.",
+              ]}
+              healthSnapshot={shellHealthSnapshot}
+              statusLabel="Phase 2 / Security"
+              title="Security"
+            />
+          ),
+          path: "/security",
         },
       ],
     },

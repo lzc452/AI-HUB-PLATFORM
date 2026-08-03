@@ -2,14 +2,17 @@ import { createDatabase } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
 import {
   HealthModule,
+  IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
   type DatabaseHealthCheck,
   type ObservabilityModuleOptions,
+  type IdentityService,
 } from "@ai-hub/server";
 
 export interface ApiModuleTestOptions {
   databaseCheck: DatabaseHealthCheck;
+  identity?: IdentityService;
   observability?: ObservabilityModuleOptions;
 }
 
@@ -44,6 +47,7 @@ export class ApiModule {
       module: ApiModule,
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
+        IdentityModule.register(databaseUrl),
         HealthModule.register(
           createProductionDatabaseCheck(databaseUrl, metrics),
         ),
@@ -63,6 +67,9 @@ export class ApiModule {
       module: ApiModule,
       imports: [
         ObservabilityModule.register({ ...options.observability, metrics }),
+        ...(options.identity === undefined
+          ? []
+          : [IdentityModule.forTest(options.identity)]),
         HealthModule.register(databaseCheck),
       ],
     };

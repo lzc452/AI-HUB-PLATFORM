@@ -37,3 +37,25 @@ export {
   ProblemDetailsFilter,
   toProblemDetails,
 } from "./system/http/problem-details.filter.js";
+export { IdentityController } from "./identity/identity.controller.js";
+export { IdentityModule } from "./identity/identity.module.js";
+export { KyselyIdentityRepository } from "./identity/identity.repository.js";
+export { IdentityService } from "./identity/identity.service.js";
+export type {
+  CreateEmployeeInput,
+  DingTalkDirectoryPort,
+  DingTalkDirectorySnapshot,
+  DingTalkEmployeeSnapshot,
+  DingTalkSyncMode,
+  EmployeeRecord,
+  IdentityRepository,
+  LoginResult,
+  PasswordResetChallengeRecord,
+  RoleRecord,
+  SessionRecord,
+  AudienceEvaluator,
+} from "./identity/identity.types.js";
+export {
+  PasswordPolicyError,
+  PasswordService,
+} from "./identity/password.service.js";
