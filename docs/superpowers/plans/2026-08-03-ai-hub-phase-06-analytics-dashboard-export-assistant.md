@@ -135,9 +135,9 @@ export interface AnalyticsRepository {
 
 **Files:** `apps/api/test/phase6.real.e2e-spec.ts`, `apps/api/test/phase6.e2e-spec.ts`, Web analytics tests/routes, ledger, visualization.
 
-- [ ] Write failing cross-layer tests for event ingestion, rebuild equality, all dashboard keys, permission/audience/anonymity rules, export audit, Dify redaction/degradation, and Outbox notification delivery.
-- [ ] Implement only the missing wiring and route coverage exposed by RED tests.
-- [ ] Run focused API/Web/PostgreSQL tests; update exact counts in the ledger and visualization; commit `test(phase-06): verify analytics dashboard export assistant flows`.
+- [x] Write failing cross-layer tests for event ingestion, rebuild equality, all dashboard keys, permission/audience/anonymity rules, export audit, Dify redaction/degradation, and Outbox notification delivery.
+- [x] Implement only the missing wiring and route coverage exposed by RED tests.
+- [x] Run focused API/Web/PostgreSQL tests; update exact counts in the ledger and visualization; commit `test(phase-06): verify analytics dashboard export assistant flows`.
 
 ### Task 10: Phase 6 final gates, two-axis review, commit, push, and Draft PR
 

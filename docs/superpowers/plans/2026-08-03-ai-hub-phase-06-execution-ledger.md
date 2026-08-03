@@ -124,3 +124,10 @@ result.
 - Implementation: fixed 14-scenario Phase 3-6 matrix is exposed through `NotificationModule`; matrix queueing reuses `NotificationService` authorization/idempotency/transaction boundary, enriches Outbox payload metadata, rejects sensitive template variables, and never calls DingTalk inside the business transaction. The handler is the post-Outbox DingTalk port boundary and preserves retry state.
 - Visualization: `processing_visualization.html` records Phase 6 at 65% with implemented work and pending cross-layer/final gates.
 - Commit: `de9e1ab feat(phase-06): complete DingTalk work notification matrix`.
+
+### Step 9: API, PostgreSQL e2e, Web routes, permissions, audits, exports, and assistant
+
+- RED: no real Phase 6 cross-layer evidence existed; the first test addition established the real PostgreSQL/API fixture and exposed the need to assert provider payloads and notification Outbox delivery.
+- GREEN: Docker-backed `@ai-hub/api` run passed 10 files/19 tests, including the new real Phase 6 e2e; it proves raw event idempotency, daily rebuild value 2, protected dashboard/export/assistant routes, export and assistant audit rows, Dify allow-list redaction, and real Outbox-to-DingTalk delivery with `sent` notification status and audit metadata. Web passed 4 files/18 tests with typecheck/lint; API typecheck/lint and format check passed.
+- Implementation: no public Open API was added; the real e2e composes the existing authenticated internal route boundary with PostgreSQL-backed analytics repositories and the existing worker/Outbox handler. The Web route remains a read-only fixed dashboard shell.
+- Commit: pending until the Step 9 test and evidence diff is staged and committed.

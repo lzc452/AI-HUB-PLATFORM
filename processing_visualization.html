@@ -804,7 +804,7 @@
             name: "Phase 6：分析、看板、导出与外部助手",
             target: "第 7 月",
             status: "进行中",
-            progress: 65,
+            progress: 85,
             summary:
               "建立原始行为事件、日聚合、固定看板、受控导出、公网 Dify 最小化上下文和指标字典。",
             tasks: [
@@ -1149,8 +1149,15 @@
           {
             date: "2026-08-03",
             phase: "test",
-            title: "Phase 6 analytics, exports, assistant, and notification evidence",
+            title:
+              "Phase 6 analytics, exports, assistant, and notification evidence",
             body: "Behavior events, rebuildable aggregates, metric dictionary, nine fixed dashboards, audited exports, guarded Dify context, and the 14-scenario DingTalk matrix are implemented. Focused server/worker tests and Docker-backed PostgreSQL schema/Outbox tests pass; cross-layer and final gates remain pending.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 6 real PostgreSQL/API/Web cross-layer evidence",
+            body: "Docker-backed API passed 10 files/19 tests, including raw-event idempotency, rebuildable dashboard value, audited export, redacted Dify context, and real Outbox-to-DingTalk delivery. Web passed 4 files/18 tests; final gates and two-axis review remain pending.",
           },
           {
             date: "2026-08-03",
