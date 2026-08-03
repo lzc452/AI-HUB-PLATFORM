@@ -5,6 +5,7 @@ import type {
   AnalyticsExportRequest,
   AnalyticsExportResult,
 } from "./export.types.js";
+import type { AnalyticsBehaviorEventRecorder } from "./analytics.types.js";
 
 const EXPORT_ROLES = [
   "analytics_exporter",
@@ -17,9 +18,30 @@ function canExport(actor: ActorContext): boolean {
 }
 
 export class AnalyticsExportService {
-  constructor(private readonly repository: AnalyticsExportRepository) {}
+  constructor(
+    private readonly repository: AnalyticsExportRepository,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+  ) {}
 
   async run(
+    actor: ActorContext,
+    request: AnalyticsExportRequest,
+  ): Promise<AnalyticsExportResult> {
+    const result = await this.repository.withTransaction((repository) =>
+      new AnalyticsExportService(repository).runInTransaction(actor, request),
+    );
+    await this.analyticsEvents?.record(actor, {
+      eventName: "export_requested",
+      aggregateType: "export",
+      aggregateId: result.exportId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `export-requested:${result.exportId}`,
+      metadata: { target: request.target },
+    });
+    return result;
+  }
+
+  private async runInTransaction(
     actor: ActorContext,
     request: AnalyticsExportRequest,
   ): Promise<AnalyticsExportResult> {
@@ -62,6 +84,18 @@ export class AnalyticsExportService {
                 : "Redacted",
         })),
       };
+      for (const row of result.rows) {
+        await this.repository.recordAudit({
+          actorEmployeeId: actor.employeeId,
+          action: "analytics.export.row_projected",
+          exportId,
+          details: {
+            aggregateId: row.aggregateId,
+            requester: row.requester,
+            policy: row.requester === "Anonymous" ? "anonymous" : "redacted",
+          },
+        });
+      }
       await this.repository.recordAudit({
         actorEmployeeId: actor.employeeId,
         action: "analytics.export.completed",
@@ -83,8 +117,30 @@ export class AnalyticsExportService {
   }
 
   async markDownloaded(actor: ActorContext, exportId: string): Promise<void> {
+    await this.repository.withTransaction((repository) =>
+      new AnalyticsExportService(repository).markDownloadedInTransaction(
+        actor,
+        exportId,
+      ),
+    );
+  }
+
+  private async markDownloadedInTransaction(
+    actor: ActorContext,
+    exportId: string,
+  ): Promise<void> {
     if (!canExport(actor)) {
       throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
+    }
+    const job = await this.repository.findExportJob(exportId);
+    const operator = ["analytics_operator", "super_admin"].some((role) =>
+      actor.roleCodes.includes(role),
+    );
+    if (
+      job === null ||
+      (!operator && job.requestedByEmployeeId !== actor.employeeId)
+    ) {
+      throw new Error("ANALYTICS_EXPORT_NOT_FOUND");
     }
     await this.repository.recordAudit({
       actorEmployeeId: actor.employeeId,

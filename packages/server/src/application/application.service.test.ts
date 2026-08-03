@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  AuthorizationDecision,
+  BehaviorEventInput,
+} from "@ai-hub/contracts";
 import { ApplicationService } from "./application.service.js";
 import type {
   ApplicationRecord,
@@ -183,6 +187,7 @@ const versionInput = {
 
 function makeService() {
   const repository = new MemoryApplicationRepository();
+  const analyticsEvents: string[] = [];
   const artifactVerifier = {
     async verifyArtifact(input: { signature: string; expectedSha256: string }) {
       if (input.signature === "reject") {
@@ -206,7 +211,17 @@ function makeService() {
       repository,
       { authorize: allowAll },
       artifactVerifier,
+      {
+        record: async (
+          _actor: ActorContext | null,
+          input: BehaviorEventInput,
+        ) => {
+          analyticsEvents.push(input.eventName);
+          return { inserted: true };
+        },
+      },
     ),
+    analyticsEvents,
   };
 }
 
@@ -303,7 +318,7 @@ describe("ApplicationService", () => {
   });
 
   it("moves a scanned version through review, approval, publication, withdrawal, and archive", async () => {
-    const { service, repository } = makeService();
+    const { service, repository, analyticsEvents } = makeService();
     const application = await service.createApplication(owner, {
       name: "Copilot",
       summary: "Internal assistant",
@@ -321,6 +336,7 @@ describe("ApplicationService", () => {
       "approve",
       "Looks good",
     );
+    expect(analyticsEvents).toContain("review_decided");
     await configureAllDeliveryChannels(service, application.applicationId);
     await service.publish(owner, version.applicationVersionId);
     await service.withdraw(owner, application.applicationId, "superseded");

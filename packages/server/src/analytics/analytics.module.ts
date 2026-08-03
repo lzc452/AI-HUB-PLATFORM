@@ -15,10 +15,16 @@ import { AnalyticsAssistantService } from "./assistant.service.js";
 import { KyselyAssistantAuditRepository } from "./assistant.repository.js";
 import { UnavailableDifyAssistantPort } from "./dify.port.js";
 import { ANALYTICS_ASSISTANT_SERVICE } from "./analytics.tokens.js";
+import { AnalyticsEventService } from "./analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "./analytics.repository.js";
 
 @Module({})
 export class AnalyticsModule {
   static register(databaseUrl: string): DynamicModule {
+    const database = createDatabase(databaseUrl);
+    const analyticsEvents = new AnalyticsEventService(
+      new KyselyAnalyticsEventRepository(database),
+    );
     return {
       module: AnalyticsModule,
       imports: [IdentityModule.register(databaseUrl)],
@@ -28,24 +34,24 @@ export class AnalyticsModule {
           provide: ANALYTICS_DASHBOARD_SERVICE,
           useFactory: () =>
             new AnalyticsDashboardService(
-              new KyselyAnalyticsDashboardRepository(
-                createDatabase(databaseUrl),
-              ),
+              new KyselyAnalyticsDashboardRepository(database),
             ),
         },
         {
           provide: ANALYTICS_EXPORT_SERVICE,
           useFactory: () =>
             new AnalyticsExportService(
-              new KyselyAnalyticsExportRepository(createDatabase(databaseUrl)),
+              new KyselyAnalyticsExportRepository(database),
+              analyticsEvents,
             ),
         },
         {
           provide: ANALYTICS_ASSISTANT_SERVICE,
           useFactory: () =>
             new AnalyticsAssistantService(
-              new KyselyAssistantAuditRepository(createDatabase(databaseUrl)),
+              new KyselyAssistantAuditRepository(database),
               new UnavailableDifyAssistantPort(),
+              analyticsEvents,
             ),
         },
       ],

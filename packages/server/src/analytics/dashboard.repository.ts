@@ -1,4 +1,5 @@
 import type { DatabaseSchema } from "@ai-hub/database";
+import { OutboxStore } from "@ai-hub/database";
 import { type Kysely } from "kysely";
 import type { DailyAggregate } from "./aggregation.types.js";
 import type {
@@ -10,6 +11,16 @@ export class KyselyAnalyticsDashboardRepository
   implements AnalyticsDashboardRepository
 {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
+
+  withTransaction<T>(
+    operation: (repository: AnalyticsDashboardRepository) => Promise<T>,
+  ): Promise<T> {
+    return this.db
+      .transaction()
+      .execute(async (transaction) =>
+        operation(new KyselyAnalyticsDashboardRepository(transaction)),
+      );
+  }
 
   async readDailyAggregates(
     input: DashboardReadInput,
@@ -35,5 +46,33 @@ export class KyselyAnalyticsDashboardRepository
       value: Number(row.value),
       sourceEventCount: row.source_event_count,
     }));
+  }
+
+  async recordAudit(input: {
+    actorEmployeeId: string;
+    action: string;
+    aggregateId: string;
+    details: unknown;
+  }): Promise<void> {
+    await this.db
+      .insertInto("analytics_audit_events")
+      .values({
+        actor_employee_id: input.actorEmployeeId,
+        action: input.action,
+        aggregate_type: "dashboard",
+        aggregate_id: input.aggregateId,
+        details: input.details,
+      })
+      .execute();
+  }
+
+  appendOutbox(input: {
+    eventType: string;
+    aggregateType: string;
+    aggregateId: string;
+    payload: unknown;
+    idempotencyKey: string;
+  }): Promise<boolean> {
+    return new OutboxStore(this.db).append(input);
   }
 }

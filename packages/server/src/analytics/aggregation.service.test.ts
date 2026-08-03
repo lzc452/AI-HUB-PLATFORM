@@ -28,8 +28,10 @@ describe("AnalyticsAggregationService", () => {
         event("two", "2026-08-04T00:01:00.000Z"),
         event("one", "2026-08-03T23:59:00.000Z"),
       ],
-      replaceDailyAggregates: async (rows) => {
+      replaceDailyAggregates: async (rows, from, to) => {
         saved.push([...rows]);
+        expect(from).toEqual(new Date("2026-08-03T00:00:00.000Z"));
+        expect(to).toEqual(new Date("2026-08-05T00:00:00.000Z"));
       },
     };
 

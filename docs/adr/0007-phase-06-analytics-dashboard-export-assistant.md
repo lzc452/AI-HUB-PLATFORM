@@ -15,6 +15,10 @@ employee identity and internal resources to an external system.
 
 ## Decisions
 
+The analytics base schema is migration `0008`; the separately sequenced `0009`
+migration is the focused export-job schema extension. Both migrations are
+owned by Phase 6 and are covered by PostgreSQL integration tests.
+
 1. Record normalized raw behavior events as the analytics source of truth.
    Events retain only the approved event payload, actor reference, aggregate
    reference, audience context, and occurred-at time; no `tenant_id` is added.

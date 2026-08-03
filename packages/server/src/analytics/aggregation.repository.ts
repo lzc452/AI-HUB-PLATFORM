@@ -39,28 +39,41 @@ export class KyselyAnalyticsAggregationRepository
     }));
   }
 
-  async replaceDailyAggregates(rows: readonly DailyAggregate[]): Promise<void> {
-    for (const row of rows) {
-      await this.db
-        .insertInto("analytics_daily_aggregates")
-        .values({
-          metric_key: row.metricKey,
-          day: row.day,
-          audience_scope_key: row.audienceScopeKey,
-          value: row.value,
-          source_event_count: row.sourceEventCount,
-          computed_at: new Date(),
-        })
-        .onConflict((conflict) =>
-          conflict
-            .columns(["metric_key", "day", "audience_scope_key"])
-            .doUpdateSet({
-              value: row.value,
-              source_event_count: row.sourceEventCount,
-              computed_at: new Date(),
-            }),
-        )
-        .execute();
-    }
+  async replaceDailyAggregates(
+    rows: readonly DailyAggregate[],
+    from?: Date,
+    to?: Date,
+  ): Promise<void> {
+    await this.db.transaction().execute(async (transaction) => {
+      if (from !== undefined && to !== undefined) {
+        await transaction
+          .deleteFrom("analytics_daily_aggregates")
+          .where("day", ">=", from.toISOString().slice(0, 10))
+          .where("day", "<", to.toISOString().slice(0, 10))
+          .execute();
+      }
+      for (const row of rows) {
+        await transaction
+          .insertInto("analytics_daily_aggregates")
+          .values({
+            metric_key: row.metricKey,
+            day: row.day,
+            audience_scope_key: row.audienceScopeKey,
+            value: row.value,
+            source_event_count: row.sourceEventCount,
+            computed_at: new Date(),
+          })
+          .onConflict((conflict) =>
+            conflict
+              .columns(["metric_key", "day", "audience_scope_key"])
+              .doUpdateSet({
+                value: row.value,
+                source_event_count: row.sourceEventCount,
+                computed_at: new Date(),
+              }),
+          )
+          .execute();
+      }
+    });
   }
 }

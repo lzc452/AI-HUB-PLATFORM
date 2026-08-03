@@ -12,6 +12,7 @@ import type {
 } from "./application.types.js";
 import type { ArtifactVerificationPort } from "./storage.port.js";
 import { randomUUID } from "node:crypto";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -55,6 +56,7 @@ export class ApplicationService {
     private readonly repository: ApplicationRepository,
     private readonly authorization: ApplicationAuthorizationPort,
     private readonly artifactVerifier: ArtifactVerificationPort,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
   async createApplication(
@@ -216,20 +218,23 @@ export class ApplicationService {
     if (queue.status !== "available") {
       throw new Error("REVIEW_QUEUE_NOT_AVAILABLE");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const claimed = await repository.claimReviewQueue(
-        applicationVersionId,
-        actor.employeeId,
-      );
-      await this.recordChange(
-        repository,
-        "application.review.claimed",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      return claimed;
-    });
+    const updated = await this.repository.withTransaction(
+      async (repository) => {
+        const claimed = await repository.claimReviewQueue(
+          applicationVersionId,
+          actor.employeeId,
+        );
+        await this.recordChange(
+          repository,
+          "application.review.claimed",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        return claimed;
+      },
+    );
+    return updated;
   }
 
   async releaseReview(
@@ -277,28 +282,39 @@ export class ApplicationService {
       throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
     }
     const nextStatus = decision === "approve" ? "approved" : "draft";
-    return this.repository.withTransaction(async (repository) => {
-      await repository.createReview({
-        applicationId: application.applicationId,
-        applicationVersionId,
-        reviewerEmployeeId: actor.employeeId,
-        applicationOwnerEmployeeId: application.ownerEmployeeId,
-        decision,
-        comment,
-      });
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
-        nextStatus,
-      );
-      await this.recordChange(
-        repository,
-        "application.reviewed",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      return updated;
+    const updated = await this.repository.withTransaction(
+      async (repository) => {
+        await repository.createReview({
+          applicationId: application.applicationId,
+          applicationVersionId,
+          reviewerEmployeeId: actor.employeeId,
+          applicationOwnerEmployeeId: application.ownerEmployeeId,
+          decision,
+          comment,
+        });
+        const updated = await repository.setApplicationStatus(
+          application.applicationId,
+          nextStatus,
+        );
+        await this.recordChange(
+          repository,
+          "application.reviewed",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        return updated;
+      },
+    );
+    await this.analyticsEvents?.record(actor, {
+      eventName: "review_decided",
+      aggregateType: "review",
+      aggregateId: applicationVersionId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `review-decided:${applicationVersionId}:${decision}`,
+      metadata: { decision },
     });
+    return updated;
   }
 
   async publish(
@@ -448,8 +464,22 @@ export class ApplicationService {
     });
   }
 
-  async getApplication(applicationId: string): Promise<ApplicationRecord> {
-    return this.requireApplication(applicationId);
+  async getApplication(
+    applicationId: string,
+    actor?: ActorContext,
+  ): Promise<ApplicationRecord> {
+    const application = await this.requireApplication(applicationId);
+    if (actor !== undefined) {
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_viewed",
+        aggregateType: "application",
+        aggregateId: applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-viewed:${actor.sessionId}:${applicationId}:${Date.now()}`,
+        metadata: { source: "application.get" },
+      });
+    }
+    return application;
   }
 
   listVersions(applicationId: string) {
@@ -464,16 +494,31 @@ export class ApplicationService {
     return this.repository.listReviews(applicationId);
   }
 
-  async getReviewQueue(applicationVersionId: string): Promise<ReviewQueueView> {
+  async getReviewQueue(
+    applicationVersionId: string,
+    actor?: ActorContext,
+  ): Promise<ReviewQueueView> {
     const queue = await this.requireReviewQueue(applicationVersionId);
-    return {
+    const result: ReviewQueueView = {
       ...queue,
       slaStatus: queue.slaDueAt.getTime() < Date.now() ? "overdue" : "on_time",
     };
+    if (result.slaStatus === "overdue") {
+      await this.analyticsEvents?.record(actor ?? null, {
+        eventName: "review_sla_breached",
+        aggregateType: "review",
+        aggregateId: applicationVersionId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `review-sla-breached:${applicationVersionId}:${queue.slaDueAt.toISOString()}`,
+        metadata: { source: "review.queue" },
+      });
+    }
+    return result;
   }
 
   async getPublishedVersion(
     applicationId: string,
+    actor?: ActorContext,
   ): Promise<ApplicationVersionRecord> {
     const application = await this.requireApplication(applicationId);
     if (application.currentVersionId === null) {
@@ -483,6 +528,16 @@ export class ApplicationService {
       application.currentVersionId,
     );
     if (version === null) throw new Error("PUBLISHED_VERSION_NOT_FOUND");
+    if (actor !== undefined) {
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_delivered",
+        aggregateType: "application",
+        aggregateId: applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-delivered:${actor.sessionId}:${applicationId}:${version.applicationVersionId}:${Date.now()}`,
+        metadata: { source: "application.published-version" },
+      });
+    }
     return version;
   }
 

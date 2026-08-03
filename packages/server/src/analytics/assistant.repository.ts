@@ -7,6 +7,7 @@ import type {
   AssistantAuditRepository,
   AssistantRequest,
 } from "./assistant.types.js";
+import { metricDefinitions } from "./metric-dictionary.js";
 
 export class KyselyAssistantAuditRepository
   implements AssistantAuditRepository
@@ -18,14 +19,29 @@ export class KyselyAssistantAuditRepository
     _request: AssistantRequest,
   ): Promise<AssistantAuthorizationReview> {
     void _request;
-    const allowed = [
-      "analytics_assistant_user",
-      "analytics_operator",
-      "super_admin",
-    ].some((role) => actor.roleCodes.includes(role));
+    const metricKey = _request.context.metricKey;
+    const metric = metricDefinitions.find(
+      (definition) => definition.metricKey === metricKey,
+    );
+    const segment =
+      typeof metricKey === "string" ? metricKey.split(".")[0] : "";
+    const segmentRole = `analytics_${segment}_reader`;
+    const allowed =
+      metric !== undefined &&
+      [
+        "analytics_assistant_user",
+        "analytics_operator",
+        "super_admin",
+        segmentRole,
+        ...(segment === "innovation" ? ["demand_operator"] : []),
+      ].some((role) => actor.roleCodes.includes(role));
     return {
       allowed,
-      reason: allowed ? "ALLOW_EXPLICIT_REVIEW" : "DENY_REVIEW_REQUIRED",
+      reason: allowed
+        ? "ALLOW_EXPLICIT_REVIEW"
+        : metric === undefined
+          ? "DENY_METRIC_AUDIENCE"
+          : "DENY_REVIEW_REQUIRED",
     };
   }
 

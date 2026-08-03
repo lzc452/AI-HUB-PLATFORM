@@ -68,7 +68,7 @@ export class AnalyticsAggregationService {
         left.day.localeCompare(right.day) ||
         left.audienceScopeKey.localeCompare(right.audienceScopeKey),
     );
-    await this.repository.replaceDailyAggregates(aggregates);
+    await this.repository.replaceDailyAggregates(aggregates, from, to);
     return {
       eventCount: events.length,
       dayCount: new Set(events.map((event) => utcDay(event.occurredAt))).size,

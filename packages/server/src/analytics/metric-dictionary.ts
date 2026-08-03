@@ -9,6 +9,7 @@ const count = (
   audienceRule: string,
 ): AnalyticsMetricDefinition => ({
   metricKey,
+  version: 1,
   label,
   sourceEventNames,
   formula:
@@ -57,6 +58,13 @@ export const metricDefinitions: readonly AnalyticsMetricDefinition[] = [
     "review operator scope",
   ),
   count(
+    "review.sla_breaches",
+    "Review SLA breaches",
+    ["review_sla_breached"],
+    "analytics:review:read",
+    "review operator scope",
+  ),
+  count(
     "department.demand_views",
     "Department demand views",
     ["demand_viewed"],
@@ -66,9 +74,16 @@ export const metricDefinitions: readonly AnalyticsMetricDefinition[] = [
   count(
     "risk.reported_interactions",
     "Reported interactions",
-    ["demand_commented"],
+    ["demand_reported"],
     "analytics:risk:read",
     "risk operator scope without identity projection",
+  ),
+  count(
+    "runtime.notification_retries",
+    "Notification delivery retries",
+    ["notification_delivery_retried"],
+    "analytics:runtime:read",
+    "aggregate delivery status only",
   ),
   count(
     "runtime.notification_queued",
@@ -81,6 +96,13 @@ export const metricDefinitions: readonly AnalyticsMetricDefinition[] = [
     "integration.assistant_requests",
     "Assistant requests",
     ["assistant_requested"],
+    "analytics:integration:read",
+    "authorized assistant aggregate scope",
+  ),
+  count(
+    "integration.assistant_failures",
+    "Assistant failures",
+    ["assistant_failed"],
     "analytics:integration:read",
     "authorized assistant aggregate scope",
   ),

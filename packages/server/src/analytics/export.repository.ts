@@ -6,18 +6,7 @@ import type {
   AnalyticsExportRepository,
   AnalyticsExportRow,
 } from "./export.types.js";
-
-const metricByTarget = {
-  platform: "platform.application_views",
-  market: "market.application_deliveries",
-  application: "application.downloads",
-  innovation: "innovation.demand_views",
-  review: "review.decisions",
-  department: "department.demand_views",
-  risk: "risk.reported_interactions",
-  runtime: "runtime.notification_queued",
-  integration: "integration.assistant_requests",
-} as const;
+import { exportMetricKeys } from "./dashboard-metrics.js";
 
 export class KyselyAnalyticsExportRepository
   implements AnalyticsExportRepository
@@ -43,7 +32,7 @@ export class KyselyAnalyticsExportRepository
     let query = this.db
       .selectFrom("analytics_daily_aggregates")
       .select(["metric_key", "day", "audience_scope_key", "value"])
-      .where("metric_key", "=", metricByTarget[input.request.target])
+      .where("metric_key", "=", exportMetricKeys[input.request.target])
       .where("day", ">=", input.request.from)
       .where("day", "<", input.request.to);
     if (!unrestricted) {
@@ -61,6 +50,20 @@ export class KyselyAnalyticsExportRepository
       requesterEmployeeId: null,
       displayAnonymously: true,
     }));
+  }
+
+  async findExportJob(exportId: string) {
+    const row = await this.db
+      .selectFrom("analytics_export_jobs")
+      .select(["export_id", "requested_by_employee_id"])
+      .where("export_id", "=", exportId)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : {
+          exportId: row.export_id,
+          requestedByEmployeeId: row.requested_by_employee_id,
+        };
   }
 
   async recordAudit(input: AnalyticsExportAudit): Promise<void> {

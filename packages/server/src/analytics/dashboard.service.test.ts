@@ -17,6 +17,7 @@ const actor = (roleCodes: readonly string[]): ActorContext => ({
 describe("AnalyticsDashboardService", () => {
   it("returns only fixed dashboard metrics from daily aggregates", async () => {
     const calls: { key: DashboardKey; scope: string | null }[] = [];
+    const audits: string[] = [];
     const repository: AnalyticsDashboardRepository = {
       readDailyAggregates: async (input) => {
         calls.push({ key: input.dashboardKey, scope: input.audienceScopeKey });
@@ -30,6 +31,11 @@ describe("AnalyticsDashboardService", () => {
           },
         ];
       },
+      withTransaction: async (operation) => operation(repository),
+      recordAudit: async (input) => {
+        audits.push(input.action);
+      },
+      appendOutbox: async () => true,
     };
 
     const result = await new AnalyticsDashboardService(repository).read(
@@ -43,6 +49,7 @@ describe("AnalyticsDashboardService", () => {
     expect(result.metrics).toHaveLength(1);
     expect(result.metrics[0]?.sourceEventCount).toBe(4);
     expect(calls).toEqual([{ key: "platform", scope: null }]);
+    expect(audits).toEqual(["analytics.dashboard.read"]);
   });
 
   it("rejects unauthorized dashboards before querying aggregates", async () => {
@@ -52,6 +59,9 @@ describe("AnalyticsDashboardService", () => {
         queried = true;
         return [];
       },
+      withTransaction: async (operation) => operation(repository),
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
     };
 
     await expect(
@@ -72,6 +82,9 @@ describe("AnalyticsDashboardService", () => {
         scope = input.audienceScopeKey;
         return [];
       },
+      withTransaction: async (operation) => operation(repository),
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
     };
 
     await new AnalyticsDashboardService(repository).read(

@@ -11,6 +11,8 @@ import {
   DINGTALK_NOTIFICATION_MATRIX_SERVICE,
   NOTIFICATION_SERVICE,
 } from "./notification.tokens.js";
+import { AnalyticsEventService } from "../analytics/analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 const unavailableDingTalk: DingTalkNotificationPort = {
   async send() {
@@ -36,6 +38,9 @@ export class NotificationModule {
               new KyselyNotificationRepository(createDatabase(databaseUrl)),
               identity,
               dingtalk,
+              new AnalyticsEventService(
+                new KyselyAnalyticsEventRepository(createDatabase(databaseUrl)),
+              ),
             ),
           inject: [IdentityService],
         },

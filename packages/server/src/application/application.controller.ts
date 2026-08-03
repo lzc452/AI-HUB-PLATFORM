@@ -161,8 +161,8 @@ export class ApplicationController {
     @Headers("x-session-id") sessionId: string | undefined,
     @Param("applicationVersionId") versionId: string,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
-    return this.call(() => this.applications.getReviewQueue(versionId));
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() => this.applications.getReviewQueue(versionId, actor));
   }
 
   @Post(":applicationId/publish")
@@ -237,8 +237,10 @@ export class ApplicationController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
-    return this.call(() => this.applications.getApplication(applicationId));
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() =>
+      this.applications.getApplication(applicationId, actor),
+    );
   }
 
   @Get(":applicationId/versions")
@@ -277,9 +279,9 @@ export class ApplicationController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
+    const actor = await this.requireActor(employeeId, sessionId, "read");
     return this.call(() =>
-      this.applications.getPublishedVersion(applicationId),
+      this.applications.getPublishedVersion(applicationId, actor),
     );
   }
 

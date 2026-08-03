@@ -89,6 +89,26 @@ describe("AnalyticsAssistantService", () => {
     expect(audits.audits).toEqual(["analytics.assistant.denied"]);
   });
 
+  it("redacts prohibited tokens from the user question before calling Dify", async () => {
+    let receivedQuestion = "";
+    const provider: DifyAssistantPort = {
+      ask: async (input) => {
+        receivedQuestion = input.question;
+        return { answer: "safe" };
+      },
+    };
+
+    await new AnalyticsAssistantService(repository(), provider).ask(actor, {
+      question:
+        "Use employee number E001, https://intranet.example/file.pdf, QR code and anonymous identity.",
+      context: { metricKey: "platform.application_views", value: 1 },
+    });
+
+    expect(receivedQuestion).not.toContain("E001");
+    expect(receivedQuestion).not.toContain("intranet.example");
+    expect(receivedQuestion).toContain("[REDACTED]");
+  });
+
   it("returns a safe local fallback and audits provider failure", async () => {
     const provider: DifyAssistantPort = {
       ask: async () => {

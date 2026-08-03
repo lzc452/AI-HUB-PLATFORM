@@ -60,6 +60,30 @@ describe("DingTalk notification Outbox handler", () => {
     expect(repository.markDeliveryAttempt).toHaveBeenCalledWith(
       event.idempotencyKey,
       "retry",
+      "DINGTALK_UNAVAILABLE",
+    );
+  });
+
+  it("records retry when the provider throws instead of leaving pending state", async () => {
+    const repository = {
+      findByIdempotencyKey: vi.fn().mockResolvedValue({
+        notificationId: "notification-1",
+        recipientEmployeeId: "employee-2",
+        message: "Analytics export is ready.",
+      }),
+      markDeliveryAttempt: vi.fn().mockResolvedValue(undefined),
+    };
+    const dingtalk = {
+      send: vi.fn().mockRejectedValue(new Error("network reset")),
+    };
+
+    await expect(
+      createDingTalkNotificationOutboxHandler(repository, dingtalk)(event),
+    ).rejects.toThrow("DINGTALK_PROVIDER_FAILED");
+    expect(repository.markDeliveryAttempt).toHaveBeenCalledWith(
+      event.idempotencyKey,
+      "retry",
+      "DINGTALK_PROVIDER_FAILED",
     );
   });
 });

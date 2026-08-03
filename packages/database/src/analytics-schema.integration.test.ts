@@ -120,4 +120,19 @@ describe("Phase 6 analytics schema", () => {
     `.execute(db);
     expect(constraint.rows).toHaveLength(1);
   });
+
+  it("seeds one active version for every fixed metric definition", async () => {
+    const definitions = await sql<{
+      metric_key: string;
+      version: number;
+    }>`
+      select metric_key, version
+      from analytics_metric_definitions
+      where is_active = true
+      order by metric_key
+    `.execute(db);
+
+    expect(definitions.rows).toHaveLength(13);
+    expect(definitions.rows.every((row) => row.version === 1)).toBe(true);
+  });
 });

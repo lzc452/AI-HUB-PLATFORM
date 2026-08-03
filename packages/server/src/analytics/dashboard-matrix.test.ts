@@ -6,6 +6,9 @@ describe("fixed analytics dashboard matrix", () => {
   it("exposes governance, department, risk, runtime, and integration keys with metric rules", () => {
     const repository: AnalyticsDashboardRepository = {
       readDailyAggregates: async () => [],
+      withTransaction: async (operation) => operation(repository),
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
     };
     const service = new AnalyticsDashboardService(repository);
     expect(service.listFixedDashboards()).toEqual([

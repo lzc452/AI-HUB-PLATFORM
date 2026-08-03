@@ -4,7 +4,7 @@
 
 **Goal:** Deliver reproducible analytics, fixed dashboards, audited exports, a constrained Dify assistant boundary, and the complete DingTalk work-notification matrix on the accepted Phase 5 platform.
 
-**Architecture:** Add a bounded `analytics` module to the existing NestJS modular monolith. PostgreSQL migration `0008` stores validated raw behavior events, daily aggregates, metric definitions, export jobs, assistant authorization/audit records, and retention metadata. Raw events are the source of truth; aggregates are rebuildable. Dashboard, export, and assistant services reuse `ActorContext`, RBAC, audience predicates, Audit, and Outbox.
+**Architecture:** Add a bounded `analytics` module to the existing NestJS modular monolith. PostgreSQL migration `0008` stores validated raw behavior events, daily aggregates, metric definitions, assistant authorization/audit records, and retention metadata; the sequenced `0009` migration adds the export-job lifecycle extension. Raw events are the source of truth; aggregates are rebuildable. Dashboard, export, and assistant services reuse `ActorContext`, RBAC, audience predicates, Audit, and Outbox.
 
 **Tech Stack:** Node.js >=18.18, TypeScript strict mode, NestJS, Kysely, PostgreSQL, Vitest, Supertest, React/Vite/Ant Design, existing authorization, audit, outbox, and notification ports.
 
@@ -17,7 +17,7 @@
 - Anonymous output is a projection; employee identity is retained only where the existing authorized audit path permits it.
 - Dify receives no employee number, internal URL, file, QR code, or anonymous identity and is not exposed through an unrestricted public Open API.
 - Do not introduce Redis, Elasticsearch, message queues, Kubernetes, microservices, or a second tenant model.
-- Do not change Phase 3, 4, or 5 business semantics; schema extensions require migration `0008` and focused tests.
+- Do not change Phase 3, 4, or 5 business semantics; schema extensions require a sequenced Phase 6 migration (`0008` base or `0009` export extension) and focused tests.
 - Do not implement Phase 7 production deployment, security launch, or operations acceptance.
 
 ## Phase 6 baseline
@@ -34,8 +34,9 @@
 export type BehaviorEventName =
   | "application_viewed" | "application_delivered" | "application_downloaded"
   | "demand_viewed" | "demand_liked" | "demand_commented"
-  | "review_created" | "review_decided" | "export_requested"
-  | "assistant_requested" | "notification_queued";
+  | "review_created" | "review_decided" | "review_sla_breached"
+  | "demand_reported" | "export_requested" | "assistant_requested"
+  | "assistant_failed" | "notification_queued" | "notification_delivery_retried";
 
 export interface RecordBehaviorEventInput {
   eventName: BehaviorEventName;
@@ -47,6 +48,7 @@ export interface RecordBehaviorEventInput {
 
 export interface MetricDefinition {
   metricKey: string;
+  version: number;
   label: string;
   sourceEvents: readonly BehaviorEventName[];
   formula: string;
@@ -137,7 +139,7 @@ export interface AnalyticsRepository {
 
 - [x] Write failing cross-layer tests for event ingestion, rebuild equality, all dashboard keys, permission/audience/anonymity rules, export audit, Dify redaction/degradation, and Outbox notification delivery.
 - [x] Implement only the missing wiring and route coverage exposed by RED tests.
-- [x] Run focused API/Web/PostgreSQL tests; update exact counts in the ledger and visualization; commit `test(phase-06): verify analytics dashboard export assistant flows`.
+- [x] Run focused API/Web/PostgreSQL tests; update exact counts in the ledger and visualization; commit `test(phase-06): verify analytics dashboard export assistant flows` (`da8ac75`).
 
 ### Task 10: Phase 6 final gates, two-axis review, commit, push, and Draft PR
 

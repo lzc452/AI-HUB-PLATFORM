@@ -182,4 +182,30 @@ describe("NotificationService", () => {
       `${notification.idempotencyKey}:retry`,
     );
   });
+
+  it("records a retry when the DingTalk provider throws", async () => {
+    const repository = new MemoryNotificationRepository();
+    const service = new NotificationService(
+      repository,
+      { authorize: allowAll },
+      {
+        async send() {
+          throw new Error("DINGTALK_TIMEOUT");
+        },
+      },
+    );
+    const notification = await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "analytics.export.failed",
+      aggregateId: "export-thrown",
+      message: "Export failed safely.",
+    });
+
+    await expect(
+      service.retryDelivery(employee, notification.idempotencyKey),
+    ).rejects.toThrow("DINGTALK_TIMEOUT");
+    expect(repository.attempts).toContain(
+      `${notification.idempotencyKey}:retry`,
+    );
+  });
 });

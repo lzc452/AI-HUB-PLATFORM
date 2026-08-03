@@ -7,6 +7,8 @@ import { KyselyApplicationRepository } from "./application.repository.js";
 import { ApplicationService } from "./application.service.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
 import type { ArtifactVerificationPort } from "./storage.port.js";
+import { AnalyticsEventService } from "../analytics/analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 const unavailableArtifactVerifier: ArtifactVerificationPort = {
   async verifyArtifact() {
@@ -21,6 +23,9 @@ export class ApplicationModule {
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
   ): DynamicModule {
     const database = createDatabase(databaseUrl);
+    const analyticsEvents = new AnalyticsEventService(
+      new KyselyAnalyticsEventRepository(database),
+    );
     return {
       module: ApplicationModule,
       imports: [IdentityModule.register(databaseUrl)],
@@ -32,6 +37,7 @@ export class ApplicationModule {
               new KyselyApplicationRepository(database),
               identity,
               artifactVerifier,
+              analyticsEvents,
             ),
           inject: [IdentityService],
         },

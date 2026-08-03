@@ -1,4 +1,15 @@
-import type { BehaviorEventInput, OutboxEventInput } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  BehaviorEventInput,
+  OutboxEventInput,
+} from "@ai-hub/contracts";
+
+export interface AnalyticsBehaviorEventRecorder {
+  record(
+    actor: ActorContext | null,
+    input: BehaviorEventInput,
+  ): Promise<{ inserted: boolean }>;
+}
 
 export interface PersistedBehaviorEvent {
   eventName: BehaviorEventInput["eventName"];

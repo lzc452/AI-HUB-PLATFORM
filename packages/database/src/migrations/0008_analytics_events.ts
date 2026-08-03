@@ -9,9 +9,13 @@ const behaviorEventNames = [
   "demand_commented",
   "review_created",
   "review_decided",
+  "review_sla_breached",
+  "demand_reported",
   "export_requested",
   "assistant_requested",
+  "assistant_failed",
   "notification_queued",
+  "notification_delivery_retried",
 ] as const;
 
 export async function up(db: Kysely<unknown>): Promise<void> {
@@ -121,6 +125,26 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       column.notNull().defaultTo(sql`now()`),
     )
     .execute();
+
+  await sql`
+    insert into analytics_metric_definitions (
+      metric_key, version, label, source_event_names, formula, time_range,
+      required_permission, audience_rule, recompute_method
+    ) values
+      ('platform.application_views', 1, 'Application views', ARRAY['application_viewed']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:platform:read', 'all authorized employees', 'Read retained raw events and replace the requested daily rows.'),
+      ('market.application_deliveries', 1, 'Application deliveries', ARRAY['application_delivered']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:market:read', 'published application audience', 'Read retained raw events and replace the requested daily rows.'),
+      ('application.downloads', 1, 'Application downloads', ARRAY['application_downloaded']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:application:read', 'application audience without access-list detail', 'Read retained raw events and replace the requested daily rows.'),
+      ('innovation.demand_views', 1, 'Demand views', ARRAY['demand_viewed']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:innovation:read', 'demand audience predicates', 'Read retained raw events and replace the requested daily rows.'),
+      ('review.decisions', 1, 'Review decisions', ARRAY['review_decided']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:review:read', 'review operator scope', 'Read retained raw events and replace the requested daily rows.'),
+      ('review.sla_breaches', 1, 'Review SLA breaches', ARRAY['review_sla_breached']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:review:read', 'review operator scope', 'Read retained raw events and replace the requested daily rows.'),
+      ('department.demand_views', 1, 'Department demand views', ARRAY['demand_viewed']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:department:read', 'actor department scope only', 'Read retained raw events and replace the requested daily rows.'),
+      ('risk.reported_interactions', 1, 'Reported interactions', ARRAY['demand_reported']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:risk:read', 'risk operator scope without identity projection', 'Read retained raw events and replace the requested daily rows.'),
+      ('runtime.notification_queued', 1, 'Queued notifications', ARRAY['notification_queued']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:runtime:read', 'aggregate delivery status only', 'Read retained raw events and replace the requested daily rows.'),
+      ('runtime.notification_retries', 1, 'Notification delivery retries', ARRAY['notification_delivery_retried']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:runtime:read', 'aggregate delivery status only', 'Read retained raw events and replace the requested daily rows.'),
+      ('integration.assistant_requests', 1, 'Assistant requests', ARRAY['assistant_requested']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:integration:read', 'authorized assistant aggregate scope', 'Read retained raw events and replace the requested daily rows.'),
+      ('integration.assistant_failures', 1, 'Assistant failures', ARRAY['assistant_failed']::text[], 'count(distinct idempotency_key) grouped by UTC day and audience scope', '180d', 'analytics:integration:read', 'authorized assistant aggregate scope', 'Read retained raw events and replace the requested daily rows.')
+    on conflict (metric_key, version) do nothing
+  `.execute(db);
 
   await db.schema
     .createIndex("analytics_behavior_events_expiry_idx")

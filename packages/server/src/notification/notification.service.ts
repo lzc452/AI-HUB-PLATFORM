@@ -1,5 +1,6 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type { DingTalkNotificationPort } from "./dingtalk.port.js";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 import type {
   NotificationAuthorizationPort,
   NotificationRepository,
@@ -10,6 +11,7 @@ export class NotificationService {
     private readonly repository: NotificationRepository,
     private readonly authorization: NotificationAuthorizationPort,
     private readonly dingtalk: DingTalkNotificationPort,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
   async createForEvent(
@@ -26,25 +28,36 @@ export class NotificationService {
     const idempotencyKey = `${input.eventType}:${input.aggregateId}:${input.recipientEmployeeId}`;
     const existing = await this.repository.findByIdempotencyKey(idempotencyKey);
     if (existing !== null) return existing;
-    return this.repository.withTransaction(async (repository) => {
-      const current = await repository.findByIdempotencyKey(idempotencyKey);
-      if (current !== null) return current;
-      const notification = await repository.create({
-        recipientEmployeeId: input.recipientEmployeeId,
-        eventType: input.eventType,
-        aggregateId: input.aggregateId,
-        idempotencyKey,
-        message: input.message,
-        readAt: null,
-      });
-      await repository.emitOutbox?.({
-        notificationId: notification.notificationId,
-        eventType: "notification.created",
-        idempotencyKey,
-        ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
-      });
-      return notification;
+    const notification = await this.repository.withTransaction(
+      async (repository) => {
+        const current = await repository.findByIdempotencyKey(idempotencyKey);
+        if (current !== null) return current;
+        const notification = await repository.create({
+          recipientEmployeeId: input.recipientEmployeeId,
+          eventType: input.eventType,
+          aggregateId: input.aggregateId,
+          idempotencyKey,
+          message: input.message,
+          readAt: null,
+        });
+        await repository.emitOutbox?.({
+          notificationId: notification.notificationId,
+          eventType: "notification.created",
+          idempotencyKey,
+          ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+        });
+        return notification;
+      },
+    );
+    await this.analyticsEvents?.record(actor, {
+      eventName: "notification_queued",
+      aggregateType: "notification",
+      aggregateId: notification.notificationId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `notification-queued:${idempotencyKey}`,
+      metadata: { source: "notification.create" },
     });
+    return notification;
   }
 
   async markRead(actor: ActorContext, notificationId: string) {
@@ -65,15 +78,43 @@ export class NotificationService {
     const notification =
       await this.repository.findByIdempotencyKey(idempotencyKey);
     if (notification === null) throw new Error("NOTIFICATION_NOT_FOUND");
-    const result = await this.dingtalk.send({
-      idempotencyKey,
-      recipientEmployeeId: notification.recipientEmployeeId,
-      message: notification.message,
-    });
-    await this.repository.markDeliveryAttempt(
-      idempotencyKey,
-      result.delivered ? "sent" : "retry",
-    );
+    try {
+      const result = await this.dingtalk.send({
+        idempotencyKey,
+        recipientEmployeeId: notification.recipientEmployeeId,
+        message: notification.message,
+      });
+      if (result.delivered) {
+        await this.repository.markDeliveryAttempt(idempotencyKey, "sent");
+      } else {
+        if (result.errorCode === undefined) {
+          await this.repository.markDeliveryAttempt(idempotencyKey, "retry");
+        } else {
+          await this.repository.markDeliveryAttempt(
+            idempotencyKey,
+            "retry",
+            result.errorCode,
+          );
+        }
+        await this.analyticsEvents?.record(actor, {
+          eventName: "notification_delivery_retried",
+          aggregateType: "notification",
+          aggregateId: notification.notificationId,
+          occurredAt: new Date().toISOString(),
+          idempotencyKey: `notification-retried:${idempotencyKey}:${Date.now()}`,
+          metadata: { source: "notification.retry" },
+        });
+      }
+    } catch (error) {
+      const errorCode =
+        error instanceof Error ? error.message : "DINGTALK_PROVIDER_FAILED";
+      await this.repository.markDeliveryAttempt(
+        idempotencyKey,
+        "retry",
+        errorCode,
+      );
+      throw error;
+    }
   }
 
   private async assertAllowed(actor: ActorContext, action: string) {

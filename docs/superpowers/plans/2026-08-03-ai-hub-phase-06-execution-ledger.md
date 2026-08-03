@@ -51,11 +51,11 @@ are prohibited.
 | Behavior events/schema | Commit `66c3f5`; contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
 | Daily aggregation/metric dictionary | Server focused command 16 files/72 tests; typecheck/lint passed; rebuild service uses 180-day raw-event window and fixed dictionary | passed |
 | Fixed dashboards | Commits `fdc06e3`, `f86f7d6`; server 18 files/76 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
-| Permissioned audited export | Not executed yet | pending |
+| Permissioned audited export | Commits `2da4a89`, `5608f41`; server export tests and Docker-backed schema tests passed | passed |
 | Dify boundary | Server 20 files/82 tests; server/API typecheck and server lint passed; fake provider redaction/auth/degradation tests passed | passed |
-| DingTalk/Outbox matrix | Not executed yet | pending |
-| API/PostgreSQL/Web e2e | Not executed yet | pending |
-| Final gates/two-axis review | Not executed yet | pending |
+| DingTalk/Outbox matrix | Commit `de9e1ab`; server/worker/Docker-backed tests passed | passed |
+| API/PostgreSQL/Web e2e | Commit `da8ac75`; API 10 files/19 tests and Web 4 files/18 tests passed | passed |
+| Final gates/two-axis review | Initial review actionable findings remediated; fresh final gates and second review pending | in progress |
 | GitHub push/Draft PR | Not attempted for Phase 6 | pending/external |
 
 ## Per-step evidence
@@ -130,4 +130,27 @@ result.
 - RED: no real Phase 6 cross-layer evidence existed; the first test addition established the real PostgreSQL/API fixture and exposed the need to assert provider payloads and notification Outbox delivery.
 - GREEN: Docker-backed `@ai-hub/api` run passed 10 files/19 tests, including the new real Phase 6 e2e; it proves raw event idempotency, daily rebuild value 2, protected dashboard/export/assistant routes, export and assistant audit rows, Dify allow-list redaction, and real Outbox-to-DingTalk delivery with `sent` notification status and audit metadata. Web passed 4 files/18 tests with typecheck/lint; API typecheck/lint and format check passed.
 - Implementation: no public Open API was added; the real e2e composes the existing authenticated internal route boundary with PostgreSQL-backed analytics repositories and the existing worker/Outbox handler. The Web route remains a read-only fixed dashboard shell.
-- Commit: pending until the Step 9 test and evidence diff is staged and committed.
+- Commit: `da8ac75 test(phase-06): verify analytics dashboard export assistant flows`.
+
+### Step 10: Review remediation before final gates
+
+- Two-axis review was run against Phase 5 fixed point `4a6e9e4` using the
+  complete Phase 6 diff. Both axes found actionable items; none are accepted
+  as deferred implementation risk.
+- Remediation: added the retention service and audit boundary; made daily
+  rebuild delete the target aggregate range before replacement; versioned and
+  persisted all 13 metric definitions; added review SLA, demand report,
+  assistant failure, and notification retry event sources; wired application,
+  demand, review, export, assistant, and notification paths to behavior-event
+  recording; added per-row export policy audits and download ownership checks;
+  added dashboard read Audit/Outbox records; sanitized assistant questions and
+  enforced metric audience roles; persisted DingTalk delivery error state;
+  deduplicated dashboard metric mappings; and documented migration `0008` plus
+  sequenced export extension `0009`.
+- TDD evidence: server tests now pass 23 files/92 tests; contracts tests pass
+  2/2; server typecheck and dependency boundaries pass. The application review
+  event has a focused service assertion; retention, assistant, export,
+  dashboard, notification, and handler tests cover the remaining remediation
+  boundaries.
+- Commit: pending until the remediation diff is independently verified and
+  committed.

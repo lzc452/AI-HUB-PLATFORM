@@ -80,6 +80,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
   async markDeliveryAttempt(
     idempotencyKey: string,
     status: "sent" | "retry" | "failed",
+    errorCode?: string,
   ): Promise<void> {
     await this.db
       .updateTable("notifications")
@@ -88,6 +89,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
         delivery_attempts: sql<number>`delivery_attempts + 1`,
         next_attempt_at:
           status === "sent" ? null : sql<Date>`now() + interval '5 minutes'`,
+        last_delivery_error: errorCode ?? null,
       })
       .where("idempotency_key", "=", idempotencyKey)
       .execute();

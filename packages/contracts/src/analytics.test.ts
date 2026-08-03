@@ -4,6 +4,8 @@ import { behaviorEventNames, validateBehaviorEventInput } from "./analytics.js";
 describe("analytics behavior event contract", () => {
   it("accepts only the fixed event vocabulary and bounded metadata", () => {
     expect(behaviorEventNames).toContain("application_viewed");
+    expect(behaviorEventNames).toContain("assistant_failed");
+    expect(behaviorEventNames).toContain("notification_delivery_retried");
     expect(
       validateBehaviorEventInput({
         eventName: "demand_viewed",

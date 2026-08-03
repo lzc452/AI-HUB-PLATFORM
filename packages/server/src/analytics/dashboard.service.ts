@@ -5,18 +5,7 @@ import type {
   DashboardKey,
   DashboardResult,
 } from "./dashboard.types.js";
-
-const dashboardMetrics: Readonly<Record<DashboardKey, readonly string[]>> = {
-  platform: ["platform.application_views"],
-  market: ["market.application_deliveries"],
-  application: ["application.downloads"],
-  innovation: ["innovation.demand_views"],
-  review: ["review.decisions"],
-  department: ["department.demand_views"],
-  risk: ["risk.reported_interactions"],
-  runtime: ["runtime.notification_queued"],
-  integration: ["integration.assistant_requests"],
-};
+import { dashboardMetricKeys } from "./dashboard-metrics.js";
 
 const dashboardRoles: Readonly<Record<DashboardKey, readonly string[]>> = {
   platform: ["analytics_operator", "analytics_platform_reader", "super_admin"],
@@ -62,7 +51,7 @@ export class AnalyticsDashboardService {
   constructor(private readonly repository: AnalyticsDashboardRepository) {}
 
   listFixedDashboards(): readonly DashboardKey[] {
-    return Object.keys(dashboardMetrics) as DashboardKey[];
+    return Object.keys(dashboardMetricKeys) as DashboardKey[];
   }
 
   async read(
@@ -88,24 +77,47 @@ export class AnalyticsDashboardService {
     const unrestricted = ["analytics_operator", "super_admin"].some((role) =>
       actor.roleCodes.includes(role),
     );
-    const metrics = dashboardMetrics[dashboardKey];
-    const result = await this.repository.readDailyAggregates({
-      actor,
-      dashboardKey,
-      metricKeys: metrics,
-      from,
-      to,
-      audienceScopeKey: unrestricted
-        ? null
-        : `department:${actor.primaryDepartmentId}`,
+    return this.repository.withTransaction(async (repository) => {
+      const metrics = dashboardMetricKeys[dashboardKey];
+      const result = await repository.readDailyAggregates({
+        actor,
+        dashboardKey,
+        metricKeys: metrics,
+        from,
+        to,
+        audienceScopeKey: unrestricted
+          ? null
+          : `department:${actor.primaryDepartmentId}`,
+      });
+      const allowed = new Set(metrics);
+      const dashboardResult = {
+        dashboardKey,
+        from,
+        to,
+        metrics: result.filter((row) => allowed.has(row.metricKey)),
+      };
+      const aggregateId = `${dashboardKey}:${from}:${to}`;
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        action: "analytics.dashboard.read",
+        aggregateId,
+        details: {
+          dashboardKey,
+          from,
+          to,
+          metricKeys: metrics,
+          rowCount: dashboardResult.metrics.length,
+        },
+      });
+      await repository.appendOutbox({
+        eventType: "analytics.dashboard.read",
+        aggregateType: "dashboard",
+        aggregateId,
+        payload: { dashboardKey, from, to },
+        idempotencyKey: `analytics.dashboard.read:${actor.sessionId}:${aggregateId}`,
+      });
+      return dashboardResult;
     });
-    const allowed = new Set(metrics);
-    return {
-      dashboardKey,
-      from,
-      to,
-      metrics: result.filter((row) => allowed.has(row.metricKey)),
-    };
   }
 
   getMetricDictionary() {

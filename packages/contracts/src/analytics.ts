@@ -7,9 +7,13 @@ export const behaviorEventNames = [
   "demand_commented",
   "review_created",
   "review_decided",
+  "review_sla_breached",
+  "demand_reported",
   "export_requested",
   "assistant_requested",
+  "assistant_failed",
   "notification_queued",
+  "notification_delivery_retried",
 ] as const;
 
 export type BehaviorEventName = (typeof behaviorEventNames)[number];

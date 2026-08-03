@@ -22,9 +22,25 @@ export interface DashboardReadInput {
 }
 
 export interface AnalyticsDashboardRepository {
+  withTransaction<T>(
+    operation: (repository: AnalyticsDashboardRepository) => Promise<T>,
+  ): Promise<T>;
   readDailyAggregates(
     input: DashboardReadInput,
   ): Promise<readonly DailyAggregate[]>;
+  recordAudit(input: {
+    actorEmployeeId: string;
+    action: string;
+    aggregateId: string;
+    details: unknown;
+  }): Promise<void>;
+  appendOutbox(input: {
+    eventType: string;
+    aggregateType: string;
+    aggregateId: string;
+    payload: unknown;
+    idempotencyKey: string;
+  }): Promise<boolean>;
 }
 
 export interface DashboardResult {

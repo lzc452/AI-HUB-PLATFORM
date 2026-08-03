@@ -18,6 +18,7 @@ export interface DailyAggregate {
 
 export interface AnalyticsMetricDefinition {
   metricKey: string;
+  version: number;
   label: string;
   sourceEventNames: readonly BehaviorEventName[];
   formula: string;
@@ -29,5 +30,9 @@ export interface AnalyticsMetricDefinition {
 
 export interface AnalyticsAggregationRepository {
   listRawEvents(from: Date, to: Date): Promise<readonly RawBehaviorEvent[]>;
-  replaceDailyAggregates(rows: readonly DailyAggregate[]): Promise<void>;
+  replaceDailyAggregates(
+    rows: readonly DailyAggregate[],
+    from?: Date,
+    to?: Date,
+  ): Promise<void>;
 }

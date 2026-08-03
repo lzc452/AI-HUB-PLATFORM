@@ -18,6 +18,7 @@ import type {
   DemandReportRecord,
   DemandRepository,
 } from "./demand.types.js";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
 const reviewableStatuses = new Set<DemandStatus>(["draft", "rejected"]);
 const statusTransitions: Readonly<
@@ -39,6 +40,7 @@ export class DemandService {
     private readonly repository: DemandRepository,
     private readonly authorization: DemandAuthorizationPort,
     private readonly applicationBridge?: DemandApplicationBridge,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
   async createDraft(
@@ -652,7 +654,16 @@ export class DemandService {
     await this.assertAllowed(actor, "read", demandId);
     const demand = await this.repository.findVisible(actor, demandId);
     if (demand === null) throw new Error("DEMAND_NOT_FOUND");
-    return this.projectDemand(actor, demand);
+    const projected = this.projectDemand(actor, demand);
+    await this.analyticsEvents?.record(actor, {
+      eventName: "demand_viewed",
+      aggregateType: "demand",
+      aggregateId: demandId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `demand-viewed:${actor.sessionId}:${demandId}:${Date.now()}`,
+      metadata: { source: "demand.detail" },
+    });
+    return projected;
   }
 
   async toggleLike(
@@ -758,7 +769,7 @@ export class DemandService {
     if (reason.length < 3 || reason.length > 2_000) {
       throw new Error("DEMAND_REPORT_INVALID");
     }
-    return this.repository.withTransaction(async (repository) => {
+    const report = await this.repository.withTransaction(async (repository) => {
       const report = await repository.createReport({
         demandId: input.demandId,
         commentId: input.commentId,
@@ -780,6 +791,15 @@ export class DemandService {
       });
       return report;
     });
+    await this.analyticsEvents?.record(actor, {
+      eventName: "demand_reported",
+      aggregateType: "demand",
+      aggregateId: input.demandId,
+      occurredAt: new Date().toISOString(),
+      idempotencyKey: `demand-reported:${report.reportId}`,
+      metadata: { source: "demand.report" },
+    });
+    return report;
   }
 
   async resolveReport(

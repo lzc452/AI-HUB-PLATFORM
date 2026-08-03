@@ -10,6 +10,7 @@ type NotificationDeliveryRepository = Pick<
     markDeliveryAttempt(
       idempotencyKey: string,
       status: "sent" | "retry" | "failed",
+      errorCode?: string,
     ): Promise<void>;
   },
   "findByIdempotencyKey" | "markDeliveryAttempt"
@@ -37,17 +38,33 @@ export function createDingTalkNotificationOutboxHandler(
     if (notification === null) {
       throw new Error("NOTIFICATION_NOT_FOUND");
     }
-    const result = await dingtalk.send({
-      idempotencyKey: event.idempotencyKey,
-      recipientEmployeeId: notification.recipientEmployeeId,
-      message: notification.message,
-    });
-    await repository.markDeliveryAttempt(
-      event.idempotencyKey,
-      result.delivered ? "sent" : "retry",
-    );
-    if (!result.delivered) {
-      throw new Error(result.errorCode ?? "DINGTALK_DELIVERY_RETRY");
+    try {
+      const result = await dingtalk.send({
+        idempotencyKey: event.idempotencyKey,
+        recipientEmployeeId: notification.recipientEmployeeId,
+        message: notification.message,
+      });
+      if (!result.delivered) {
+        const errorCode = result.errorCode ?? "DINGTALK_DELIVERY_RETRY";
+        await repository.markDeliveryAttempt(
+          event.idempotencyKey,
+          "retry",
+          errorCode,
+        );
+        throw new Error(errorCode);
+      }
+      await repository.markDeliveryAttempt(event.idempotencyKey, "sent");
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("DINGTALK_")) {
+        throw error;
+      }
+      const errorCode = "DINGTALK_PROVIDER_FAILED";
+      await repository.markDeliveryAttempt(
+        event.idempotencyKey,
+        "retry",
+        errorCode,
+      );
+      throw new Error(errorCode);
     }
   };
 }

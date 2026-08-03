@@ -37,6 +37,7 @@ export interface NotificationRepository {
   markDeliveryAttempt(
     idempotencyKey: string,
     status: "sent" | "retry" | "failed",
+    errorCode?: string,
   ): Promise<void>;
   emitOutbox?(input: {
     notificationId: string;

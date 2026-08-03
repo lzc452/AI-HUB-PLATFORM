@@ -9,6 +9,8 @@ import { DemandController } from "./demand.controller.js";
 import { KyselyDemandRepository } from "./demand.repository.js";
 import { DemandService } from "./demand.service.js";
 import { DEMAND_SERVICE } from "./demand.tokens.js";
+import { AnalyticsEventService } from "../analytics/analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 @Module({})
 export class DemandModule {
@@ -31,6 +33,9 @@ export class DemandModule {
               new KyselyDemandRepository(createDatabase(databaseUrl)),
               identity,
               applications,
+              new AnalyticsEventService(
+                new KyselyAnalyticsEventRepository(createDatabase(databaseUrl)),
+              ),
             ),
           inject: [IdentityService, APPLICATION_SERVICE],
         },

@@ -32,6 +32,7 @@ describe("AnalyticsExportService", () => {
         expect(input.actor.employeeId).toBe("employee-1");
         return rows;
       },
+      findExportJob: async () => null,
       recordAudit: async (input) => {
         audits.push(input.action);
       },
@@ -52,6 +53,7 @@ describe("AnalyticsExportService", () => {
     ]);
     expect(audits).toEqual([
       "analytics.export.requested",
+      "analytics.export.row_projected",
       "analytics.export.completed",
     ]);
   });
@@ -64,6 +66,7 @@ describe("AnalyticsExportService", () => {
         readCount += 1;
         return [];
       },
+      findExportJob: async () => null,
       recordAudit: async () => undefined,
     };
     const service = new AnalyticsExportService(repository);
@@ -90,6 +93,10 @@ describe("AnalyticsExportService", () => {
     const repository: AnalyticsExportRepository = {
       withTransaction: async (operation) => operation(repository),
       readVisibleRows: async () => [],
+      findExportJob: async () => ({
+        exportId: "export-1",
+        requestedByEmployeeId: "employee-1",
+      }),
       recordAudit: async (input) => {
         actions.push(input.action);
       },
@@ -109,5 +116,21 @@ describe("AnalyticsExportService", () => {
       "analytics.export.completed",
       "analytics.export.downloaded",
     ]);
+  });
+
+  it("rejects downloading an export that does not exist or belong to the actor", async () => {
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => operation(repository),
+      readVisibleRows: async () => [],
+      findExportJob: async () => null,
+      recordAudit: async () => undefined,
+    };
+
+    await expect(
+      new AnalyticsExportService(repository).markDownloaded(
+        actor(["analytics_exporter"]),
+        "missing-export",
+      ),
+    ).rejects.toThrow("ANALYTICS_EXPORT_NOT_FOUND");
   });
 });

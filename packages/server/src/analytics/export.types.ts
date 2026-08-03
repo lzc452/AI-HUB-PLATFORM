@@ -34,6 +34,10 @@ export interface AnalyticsExportRepository {
   readVisibleRows(
     input: AnalyticsExportReadInput,
   ): Promise<readonly AnalyticsExportRow[]>;
+  findExportJob(exportId: string): Promise<{
+    exportId: string;
+    requestedByEmployeeId: string;
+  } | null>;
   recordAudit(input: AnalyticsExportAudit): Promise<void>;
 }
 
