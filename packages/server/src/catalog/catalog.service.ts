@@ -20,6 +20,9 @@ export class CatalogService {
   async getDetail(actor: ActorContext, applicationId: string) {
     const entry = await this.repository.findVisible(actor, applicationId);
     if (entry === null) throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+    if (entry.currentVersionId.length === 0) {
+      throw new Error("CATALOG_PUBLISHED_VERSION_REQUIRED");
+    }
     return entry;
   }
 
@@ -39,8 +42,14 @@ export class CatalogService {
       throw new Error("CATALOG_DELIVERY_ACTION_INVALID");
     }
     const entry = await this.getDetail(actor, input.applicationId);
-    if (entry.currentVersionId.length === 0) {
-      throw new Error("CATALOG_PUBLISHED_VERSION_REQUIRED");
+    if (
+      input.channel !== undefined &&
+      input.channel !== null &&
+      !entry.deliveryChannels.includes(
+        input.channel as (typeof entry.deliveryChannels)[number],
+      )
+    ) {
+      throw new Error("CATALOG_DELIVERY_CHANNEL_NOT_ENABLED");
     }
     await this.repository.recordDeliveryAction({
       applicationId: input.applicationId,

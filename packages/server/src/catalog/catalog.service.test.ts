@@ -141,6 +141,17 @@ describe("CatalogService", () => {
     ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
   });
 
+  it("rejects a detail record without a published current version", async () => {
+    const unpublished = new MemoryCatalogRepository([
+      { ...entries[0]!, currentVersionId: "" },
+    ]);
+    const service = new CatalogService(unpublished);
+
+    await expect(service.getDetail(employee, "app-platform")).rejects.toThrow(
+      "CATALOG_PUBLISHED_VERSION_REQUIRED",
+    );
+  });
+
   it("records delivery actions against the published version after visibility checks", async () => {
     const repository = new MemoryCatalogRepository();
     const service = new CatalogService(repository);

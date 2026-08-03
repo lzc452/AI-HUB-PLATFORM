@@ -61,6 +61,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
         )`.as("ratingAverage"),
       ])
       .where("application.status", "=", "published")
+      .where("application.current_version_id", "is not", null)
       .where((eb) =>
         eb.exists(
           eb

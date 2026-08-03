@@ -582,4 +582,35 @@ describe("OutboxStore", () => {
     `.execute(db!);
     expect(columns.rows).toHaveLength(0);
   });
+
+  it("creates the Phase 4 notification schema without tenant state", async () => {
+    const tables = await sql<{ table_name: string }>`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name = 'notifications'
+    `.execute(db!);
+
+    expect(tables.rows.map((row) => row.table_name)).toEqual(["notifications"]);
+
+    const columns = await sql<{ column_name: string }>`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'notifications'
+        and column_name = 'tenant_id'
+    `.execute(db!);
+    expect(columns.rows).toHaveLength(0);
+
+    const constraints = await sql<{ constraint_name: string }>`
+      select constraint_name
+      from information_schema.table_constraints
+      where table_schema = 'public'
+        and table_name = 'notifications'
+        and constraint_name = 'notifications_delivery_status_check'
+    `.execute(db!);
+    expect(constraints.rows.map((row) => row.constraint_name)).toEqual([
+      "notifications_delivery_status_check",
+    ]);
+  });
 });
