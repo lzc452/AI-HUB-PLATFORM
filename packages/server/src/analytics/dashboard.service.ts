@@ -33,6 +33,10 @@ const dashboardRoles: Readonly<Record<DashboardKey, readonly string[]>> = {
 export class AnalyticsDashboardService {
   constructor(private readonly repository: AnalyticsDashboardRepository) {}
 
+  listFixedDashboards(): readonly DashboardKey[] {
+    return Object.keys(dashboardMetrics) as DashboardKey[];
+  }
+
   async read(
     actor: ActorContext,
     dashboardKey: DashboardKey,

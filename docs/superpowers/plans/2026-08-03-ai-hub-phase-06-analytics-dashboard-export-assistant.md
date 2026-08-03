@@ -103,9 +103,9 @@ export interface AnalyticsRepository {
 
 **Files:** dashboard additions, metric dictionary, notification/outbox readers if needed, focused tests and API/Web fixtures.
 
-- [ ] Write failing tests for review SLA/decision metrics, department aggregates without individual access lists, risk buckets, runtime health aggregates, and integration delivery/retry metrics.
-- [ ] Implement the remaining fixed dashboards without changing existing lifecycle or notification semantics.
-- [ ] Verify focused tests; commit `feat(phase-06): add governance and operations dashboards`.
+- [x] Write failing tests for review SLA/decision metrics, department aggregates without individual access lists, risk buckets, runtime health aggregates, and integration delivery/retry metrics.
+- [x] Implement the remaining fixed dashboards without changing existing lifecycle or notification semantics.
+- [x] Verify focused tests; commit `feat(phase-06): add governance and operations dashboards`.
 
 ### Task 6: Permission filtering, anonymity, and audited backend export
 

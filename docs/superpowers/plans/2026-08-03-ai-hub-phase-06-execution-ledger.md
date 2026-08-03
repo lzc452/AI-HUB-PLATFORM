@@ -50,7 +50,7 @@ are prohibited.
 | Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
 | Behavior events/schema | Commit `66c3f5`; contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
 | Daily aggregation/metric dictionary | Server focused command 16 files/72 tests; typecheck/lint passed; rebuild service uses 180-day raw-event window and fixed dictionary | passed |
-| Fixed dashboards | Server 17 files/75 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
+| Fixed dashboards | Commits `fdc06e3`, `9d9b4a1`; server 18 files/76 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
 | Permissioned audited export | Not executed yet | pending |
 | Dify boundary | Not executed yet | pending |
 | DingTalk/Outbox matrix | Not executed yet | pending |
@@ -93,4 +93,11 @@ result.
 - RED: `dashboard.service.test.ts` failed because the dashboard service and fixed permission map were absent; the Web route test then failed with no `/analytics` route.
 - GREEN: server dashboard command passed 17 files/75 tests; Web Phase 6 command passed 4 files/18 tests; server and Web typechecks/lints passed.
 - Implementation: fixed dashboard keys read only the permitted metric keys from daily aggregates, reject unauthorized actors before querying, apply department scope for non-operators, bound ranges to 180 days, and filter output to fixed metrics. Web exposes a read-only aggregate shell with the core and governance dashboard labels.
-- Commit: pending until the Step 4 diff is staged and committed.
+- Commit: `fdc06e3 feat(phase-06): add core analytics dashboards`.
+
+### Step 5: Review, department, risk, runtime, and integration dashboards
+
+- RED: `dashboard-matrix.test.ts` failed because the fixed dashboard listing API was absent.
+- GREEN: server command passed 18 files/76 tests; server typecheck and lint passed.
+- Implementation: exposed a stable nine-key dashboard matrix and verified every governance/department/risk/runtime/integration metric has source events, formula, permission, audience, and recomputation metadata. No lifecycle or notification semantics changed.
+- Commit: `9d9b4a feat(phase-06): add governance and operations dashboards`.
