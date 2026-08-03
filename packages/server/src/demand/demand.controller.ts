@@ -12,7 +12,7 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
-import type { ActorContext } from "@ai-hub/contracts";
+import type { ActorContext, DemandStatus } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
 import { DEMAND_SERVICE } from "./demand.tokens.js";
 import { DemandService } from "./demand.service.js";
@@ -159,6 +159,119 @@ export class DemandController {
         demandId,
         expectedVersion,
         input,
+      ),
+    );
+  }
+
+  @Post(":demandId/status")
+  advanceStatus(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      expectedVersion: number;
+      nextStatus: DemandStatus;
+      reason?: string;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.advanceStatus(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.expectedVersion,
+        body.nextStatus,
+        body.reason,
+      ),
+    );
+  }
+
+  @Post(":demandId/progress")
+  addProgress(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: { title: string; body: string },
+  ) {
+    return this.call(async () =>
+      this.demands.addProgressUpdate(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body,
+      ),
+    );
+  }
+
+  @Get(":demandId/progress")
+  listProgress(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listProgressUpdates(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
+  @Post(":demandId/pilots")
+  createPilot(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      applicationId?: string;
+      name: string;
+      startsAt: string;
+      endsAt?: string;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.createPilot(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        {
+          ...(body.applicationId === undefined
+            ? {}
+            : { applicationId: body.applicationId }),
+          name: body.name,
+          startsAt: new Date(body.startsAt),
+          ...(body.endsAt === undefined
+            ? {}
+            : { endsAt: new Date(body.endsAt) }),
+        },
+      ),
+    );
+  }
+
+  @Patch(":demandId/pilots/:pilotId")
+  updatePilot(
+    @Param("demandId") demandId: string,
+    @Param("pilotId") pilotId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      endsAt?: string | null;
+      outcome?: string | null;
+      status?: "planned" | "running" | "completed" | "cancelled";
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.updatePilot(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        pilotId,
+        {
+          ...(body.endsAt === undefined
+            ? {}
+            : { endsAt: body.endsAt === null ? null : new Date(body.endsAt) }),
+          ...(body.outcome === undefined ? {} : { outcome: body.outcome }),
+          ...(body.status === undefined ? {} : { status: body.status }),
+        },
       ),
     );
   }
@@ -312,6 +425,7 @@ export class DemandController {
         code === "DEMAND_MODERATION_FORBIDDEN" ||
         code === "DEMAND_OWNER_REQUIRED" ||
         code === "DEMAND_PRIORITY_FORBIDDEN" ||
+        code === "DEMAND_PROGRESS_FORBIDDEN" ||
         code === "DEMAND_NOT_AUTHORIZED"
       ) {
         throw new ForbiddenException(code);

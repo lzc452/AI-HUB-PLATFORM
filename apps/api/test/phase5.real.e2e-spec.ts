@@ -54,6 +54,7 @@ const identityRepository = {
                 "demand.anonymous_audit",
                 "demand.interact",
                 "demand.prioritize",
+                "demand.progress",
               ]
             : [
                 "demand.create",
@@ -153,6 +154,46 @@ describe("real Phase 5 demand API", () => {
       })
       .expect(201);
     expect(priority.body).toMatchObject({ priorityScore: 17 });
+    const started = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/status`)
+      .set(reviewer)
+      .send({
+        expectedVersion: priority.body.version,
+        nextStatus: "in_progress",
+      })
+      .expect(201);
+    const progress = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/progress`)
+      .set(reviewer)
+      .send({
+        title: "Implementation started",
+        body: "The first governed workflow is being tested.",
+      })
+      .expect(201);
+    expect(progress.body.status).toBe("in_progress");
+    const pilot = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/pilots`)
+      .set(reviewer)
+      .send({
+        name: "R&D pilot",
+        startsAt: "2026-08-10T00:00:00.000Z",
+        endsAt: "2026-08-20T00:00:00.000Z",
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .patch(`/internal/demands/${demandId}/pilots/${pilot.body.pilotId}`)
+      .set(reviewer)
+      .send({ status: "running" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/status`)
+      .set(reviewer)
+      .send({
+        expectedVersion: started.body.version,
+        nextStatus: "closed",
+        reason: "Pilot workflow completed for this demand.",
+      })
+      .expect(201);
     await request(app.getHttpServer())
       .get("/internal/demands?sort=priority")
       .set(reviewer)

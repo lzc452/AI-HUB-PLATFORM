@@ -758,9 +758,9 @@
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
             status: "进行中",
-            progress: 45,
+            progress: 60,
             summary:
-              "已完成 Phase 5 基线、Contracts/迁移、结构化需求提交审核、互动治理，以及认领/负责人/协作者/运营选择并发保护；排序、状态、合并和上架闭环待继续实现。",
+              "已完成 Phase 5 基线、需求提交审核、互动治理、认领/负责人/协作者并发保护、可解释优先级，以及状态推进/官方进展/试点/关闭；合并和上架闭环待继续实现。",
             tasks: [
               [
                 "结构化需求表单与轻量审核",
@@ -1106,6 +1106,22 @@
               "使用固定公式 3×价值 + 2×管理员优先级 - 2×成本 - 2×风险，持久化解释文本，并用分数/时间/需求 ID 三级排序。",
             skip: "状态推进、官方进展、试点、合并、应用关联和正式上架仍按计划顺序执行。",
           },
+          {
+            id: "t-012",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 5 状态推进、官方进展与试点",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成显式状态图、官方进展、试点创建/更新、关闭原因、乐观版本以及 Audit/Outbox。",
+            problem:
+              "需求状态不可任意回退，进展和试点需要保留可追溯记录，并在关闭时要求可解释原因。",
+            solution:
+              "以状态图约束推进，复用 version 条件更新；进展追加写入，试点保存状态/结果，所有变更同事务写 Audit/Outbox。",
+            skip: "需求合并、多对多应用关联、主方案和正式应用上架仍按计划顺序执行。",
+          },
         ],
         events: [
           {
@@ -1132,6 +1148,12 @@
             phase: "test",
             title: "Phase 5 explainable priority evidence recorded",
             body: "Priority tests passed for 1-5 bounds, deterministic score and explanation, admin-only writes, optimistic conflict handling, audit/outbox, and stable priority ordering. The real API e2e verifies PostgreSQL persistence and the priority sort route.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 5 progress and pilot evidence recorded",
+            body: "Lifecycle tests passed for the explicit state graph, invalid transition rejection, official progress, pilot date and outcome paths, close reason, optimistic versioning, Audit and Outbox. Real API e2e passed the progression through in_progress and closed.",
           },
           {
             date: "2026-08-03",

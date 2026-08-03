@@ -49,7 +49,7 @@ physical deletes, and a new tenant model are prohibited.
 | Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
 | Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
 | Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
-| Ownership/priority/progress | Ownership and priority: server 65/65; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | ownership/priority passed; progress pending |
+| Ownership/priority/progress | Ownership, priority, and progress: server 66/66; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
 | Merge/application loop | Not run yet | pending |
 | PostgreSQL/API/Web evidence | Not run yet | pending |
 | Final gates/two-axis review | Not run yet | pending |
@@ -180,3 +180,21 @@ or inferred result.
   breaker.
 - Commit: pending until staged as `feat(phase-05): add explainable demand
   prioritization`.
+
+### Step 7: Status progression, official progress, pilot, and close
+
+- RED: the progress service test initially failed because `advanceStatus`
+  was absent. The API contract then exercised status, progress, pilot create,
+  and pilot update routes.
+- GREEN: `corepack pnpm --filter @ai-hub/server typecheck` passed and the
+  focused server command passed 66/66 workspace tests; `corepack pnpm
+  --filter @ai-hub/api typecheck` passed; Docker-backed API tests passed 8
+  files/16 tests, including real PostgreSQL status progression, official
+  progress, pilot dates/update, and close reason paths.
+- Implementation: explicit status graph prevents backward/terminal rewrites;
+  status changes use the existing optimistic version transition, progress is
+  append-only, pilot records retain outcome/status history fields, and every
+  state/progress/pilot mutation emits Audit and Outbox entries in the same
+  transaction. Closing requires a reason.
+- Commit: pending until staged as
+  `feat(phase-05): add demand progress and pilot lifecycle`.

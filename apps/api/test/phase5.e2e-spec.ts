@@ -77,6 +77,23 @@ describe("Phase 5 demand endpoints", () => {
           version: 3,
         };
       },
+      async advanceStatus() {
+        return { demandId: "demand-1", status: "in_progress", version: 4 };
+      },
+      async addProgressUpdate() {
+        return {
+          progressId: "progress-1",
+          demandId: "demand-1",
+          status: "in_progress",
+        };
+      },
+      async createPilot() {
+        return {
+          pilotId: "pilot-1",
+          demandId: "demand-1",
+          status: "planned",
+        };
+      },
     } as unknown as DemandService;
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -135,6 +152,28 @@ describe("Phase 5 demand endpoints", () => {
         implementationCost: 2,
         riskLevel: 1,
         adminPriority: 4,
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/status")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({ expectedVersion: 3, nextStatus: "in_progress" })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/progress")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        title: "Implementation started",
+        body: "The first governed workflow is being tested.",
+      })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/pilots")
+      .set({ "x-employee-id": "E900", "x-session-id": "session-E900" })
+      .send({
+        name: "R&D pilot",
+        startsAt: "2026-08-10T00:00:00.000Z",
+        endsAt: "2026-08-20T00:00:00.000Z",
       })
       .expect(201);
 

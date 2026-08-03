@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  AuthorizationDecision,
+  DemandStatus,
+} from "@ai-hub/contracts";
 import { DemandService } from "./demand.service.js";
 import type {
   DemandCommentRecord,
@@ -541,5 +545,96 @@ describe("DemandService explainable priority", () => {
         adminPriority: 4,
       }),
     ).rejects.toThrow("DEMAND_PRIORITY_FORBIDDEN");
+  });
+});
+
+describe("DemandService progress and pilot lifecycle", () => {
+  it("enforces the status graph and records official progress and pilot changes", async () => {
+    const demand: DemandEntry = {
+      demandId: "demand-progress",
+      requesterEmployeeId: "E100",
+      title: "Progress demand",
+      problemStatement: "A team needs a governed assistant.",
+      desiredOutcome: "A reviewed assistant is delivered.",
+      status: "published",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: "E100",
+      primarySolutionApplicationId: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const operator: ActorContext = {
+      ...reviewer,
+      roleCodes: ["demand_operator"],
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findById: async () => demand,
+      transitionStatus: async (
+        _demandId: string,
+        status: DemandStatus,
+        expectedVersion: number,
+      ) => {
+        if (expectedVersion !== demand.version)
+          throw new Error("DEMAND_CONFLICT");
+        demand.status = status;
+        demand.version += 1;
+        return demand;
+      },
+      createProgressUpdate: async (input: {
+        demandId: string;
+        authorEmployeeId: string;
+        status: DemandStatus;
+        title: string;
+        body: string;
+      }) => ({ progressId: "progress-1", ...input, createdAt: new Date() }),
+      listProgressUpdates: async () => [],
+      createPilot: async (input: Record<string, unknown>) => ({
+        pilotId: "pilot-1",
+        ...input,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      updatePilot: async (pilotId: string, input: Record<string, unknown>) => ({
+        pilotId,
+        demandId: demand.demandId,
+        ...input,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.advanceStatus(operator, demand.demandId, 1, "in_progress"),
+    ).resolves.toMatchObject({ status: "in_progress", version: 2 });
+    await expect(
+      service.advanceStatus(operator, demand.demandId, 2, "published"),
+    ).rejects.toThrow("DEMAND_STATUS_TRANSITION_INVALID");
+    await expect(
+      service.addProgressUpdate(operator, demand.demandId, {
+        title: "Implementation started",
+        body: "The first governed workflow is being tested.",
+      }),
+    ).resolves.toMatchObject({ status: "in_progress" });
+    await expect(
+      service.createPilot(operator, demand.demandId, {
+        name: "R&D pilot",
+        startsAt: new Date("2026-08-10"),
+        endsAt: new Date("2026-08-20"),
+      }),
+    ).resolves.toMatchObject({ status: "planned" });
   });
 });

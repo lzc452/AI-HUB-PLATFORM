@@ -180,9 +180,9 @@ export interface DemandRepository {
 
 **Files:** demand state service/repository/controller, tests, API/Web routes.
 
-- [ ] Write failing tests for the allowed state graph, invalid transition rejection, official progress authorization, pilot dates/outcomes, close reason, and append-only state/progress audit.
-- [ ] Implement state transitions under optimistic concurrency; every transition emits an outbox event and audit row.
-- [ ] Run focused tests and commit `feat(phase-05): add demand progress and pilot lifecycle`.
+- [x] Write failing tests for the allowed state graph, invalid transition rejection, official progress authorization, pilot dates/outcomes, close reason, and append-only state/progress audit.
+- [x] Implement state transitions under optimistic concurrency; every transition emits an outbox event and audit row.
+- [x] Run focused tests and commit `feat(phase-05): add demand progress and pilot lifecycle`.
 
 ### Task 8: Merge, many-to-many application links, primary solution and formal application listing
 

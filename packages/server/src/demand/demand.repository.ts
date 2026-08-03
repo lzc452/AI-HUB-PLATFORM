@@ -6,6 +6,8 @@ import type {
   DemandCommentRecord,
   DemandCollaboratorRecord,
   DemandEntry,
+  DemandPilotRecord,
+  DemandProgressRecord,
   DemandReportRecord,
   DemandRepository,
 } from "./demand.types.js";
@@ -16,6 +18,8 @@ type DemandRow = Selectable<DatabaseSchema["ai_demands"]> & {
 };
 type CommentRow = Selectable<DatabaseSchema["ai_demand_comments"]>;
 type ReportRow = Selectable<DatabaseSchema["ai_demand_reports"]>;
+type ProgressRow = Selectable<DatabaseSchema["ai_demand_progress_updates"]>;
+type PilotRow = Selectable<DatabaseSchema["ai_demand_pilots"]>;
 
 export class KyselyDemandRepository implements DemandRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -230,6 +234,90 @@ export class KyselyDemandRepository implements DemandRepository {
       .executeTakeFirst();
     if (row === undefined) throw new Error("DEMAND_CONFLICT");
     return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async createProgressUpdate(input: {
+    demandId: string;
+    authorEmployeeId: string;
+    status: DemandEntry["status"];
+    title: string;
+    body: string;
+  }): Promise<DemandProgressRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_progress_updates")
+      .values({
+        demand_id: input.demandId,
+        author_employee_id: input.authorEmployeeId,
+        status: input.status,
+        title: input.title,
+        body: input.body,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapProgress(row);
+  }
+
+  async listProgressUpdates(
+    demandId: string,
+  ): Promise<readonly DemandProgressRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_progress_updates")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "desc")
+      .orderBy("progress_id", "asc")
+      .execute();
+    return rows.map((row) => this.mapProgress(row));
+  }
+
+  async createPilot(input: {
+    demandId: string;
+    applicationId: string | null;
+    name: string;
+    startsAt: Date;
+    endsAt: Date | null;
+    outcome: string | null;
+    status: DemandPilotRecord["status"];
+    createdByEmployeeId: string;
+  }): Promise<DemandPilotRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_pilots")
+      .values({
+        demand_id: input.demandId,
+        application_id: input.applicationId,
+        name: input.name,
+        starts_at: input.startsAt,
+        ends_at: input.endsAt,
+        outcome: input.outcome,
+        status: input.status,
+        created_by_employee_id: input.createdByEmployeeId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapPilot(row);
+  }
+
+  async updatePilot(
+    pilotId: string,
+    input: Partial<{
+      endsAt: Date | null;
+      outcome: string | null;
+      status: DemandPilotRecord["status"];
+    }>,
+  ): Promise<DemandPilotRecord> {
+    const row = await this.db
+      .updateTable("ai_demand_pilots")
+      .set({
+        ...(input.endsAt === undefined ? {} : { ends_at: input.endsAt }),
+        ...(input.outcome === undefined ? {} : { outcome: input.outcome }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        updated_at: new Date(),
+      })
+      .where("pilot_id", "=", pilotId)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_PILOT_NOT_FOUND");
+    return this.mapPilot(row);
   }
 
   async claimOwner(
@@ -550,6 +638,34 @@ export class KyselyDemandRepository implements DemandRepository {
       body: row.body,
       displayAnonymously: row.display_anonymously,
       hiddenAt: row.hidden_at,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private mapProgress(row: ProgressRow): DemandProgressRecord {
+    return {
+      progressId: row.progress_id,
+      demandId: row.demand_id,
+      authorEmployeeId: row.author_employee_id,
+      status: row.status,
+      title: row.title,
+      body: row.body,
+      createdAt: row.created_at,
+    };
+  }
+
+  private mapPilot(row: PilotRow): DemandPilotRecord {
+    return {
+      pilotId: row.pilot_id,
+      demandId: row.demand_id,
+      applicationId: row.application_id,
+      name: row.name,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
+      outcome: row.outcome,
+      status: row.status,
+      createdByEmployeeId: row.created_by_employee_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

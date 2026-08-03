@@ -106,6 +106,34 @@ export interface DemandRepository {
     score: number,
     explanation: string,
   ): Promise<DemandEntry>;
+  createProgressUpdate(input: {
+    demandId: string;
+    authorEmployeeId: string;
+    status: DemandStatus;
+    title: string;
+    body: string;
+  }): Promise<DemandProgressRecord>;
+  listProgressUpdates(
+    demandId: string,
+  ): Promise<readonly DemandProgressRecord[]>;
+  createPilot(input: {
+    demandId: string;
+    applicationId: string | null;
+    name: string;
+    startsAt: Date;
+    endsAt: Date | null;
+    outcome: string | null;
+    status: DemandPilotRecord["status"];
+    createdByEmployeeId: string;
+  }): Promise<DemandPilotRecord>;
+  updatePilot(
+    pilotId: string,
+    input: Partial<{
+      endsAt: Date | null;
+      outcome: string | null;
+      status: DemandPilotRecord["status"];
+    }>,
+  ): Promise<DemandPilotRecord>;
   hasLike(demandId: string, employeeId: string): Promise<boolean>;
   addLike(demandId: string, employeeId: string): Promise<void>;
   removeLike(demandId: string, employeeId: string): Promise<void>;
@@ -137,6 +165,30 @@ export interface DemandCollaboratorRecord {
   employeeId: string;
   role: DemandCollaboratorRole;
   createdAt: Date;
+}
+
+export interface DemandProgressRecord {
+  progressId: string;
+  demandId: string;
+  authorEmployeeId: string;
+  status: DemandStatus;
+  title: string;
+  body: string;
+  createdAt: Date;
+}
+
+export interface DemandPilotRecord {
+  pilotId: string;
+  demandId: string;
+  applicationId: string | null;
+  name: string;
+  startsAt: Date;
+  endsAt: Date | null;
+  outcome: string | null;
+  status: "planned" | "running" | "completed" | "cancelled";
+  createdByEmployeeId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface DemandListResult {

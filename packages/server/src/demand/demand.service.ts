@@ -11,11 +11,26 @@ import type {
   DemandDraftInput,
   DemandEntry,
   DemandListResult,
+  DemandPilotRecord,
+  DemandProgressRecord,
   DemandReportRecord,
   DemandRepository,
 } from "./demand.types.js";
 
 const reviewableStatuses = new Set<DemandStatus>(["draft", "rejected"]);
+const statusTransitions: Readonly<
+  Record<DemandStatus, readonly DemandStatus[]>
+> = {
+  draft: [],
+  pending_review: [],
+  rejected: [],
+  published: ["in_progress", "closed"],
+  in_progress: ["pilot", "completed", "closed"],
+  pilot: ["completed", "closed"],
+  completed: ["closed"],
+  closed: [],
+  merged: [],
+};
 
 export class DemandService {
   constructor(
@@ -264,6 +279,171 @@ export class DemandService {
         },
       );
       return prioritized;
+    });
+  }
+
+  async advanceStatus(
+    actor: ActorContext,
+    demandId: string,
+    expectedVersion: number,
+    nextStatus: DemandStatus,
+    reason?: string,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "progress", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    if (!statusTransitions[current.status].includes(nextStatus)) {
+      throw new Error("DEMAND_STATUS_TRANSITION_INVALID");
+    }
+    if (nextStatus === "closed" && !reason?.trim()) {
+      throw new Error("DEMAND_CLOSE_REASON_REQUIRED");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const updated = await repository.transitionStatus(
+        demandId,
+        nextStatus,
+        expectedVersion,
+        reason?.trim() ?? null,
+      );
+      await this.recordMutation(
+        repository,
+        updated,
+        actor,
+        "demand.status.changed",
+        {
+          from: current.status,
+          to: nextStatus,
+          reason: reason?.trim() ?? null,
+        },
+      );
+      return updated;
+    });
+  }
+
+  async addProgressUpdate(
+    actor: ActorContext,
+    demandId: string,
+    input: { title: string; body: string },
+  ): Promise<DemandProgressRecord> {
+    await this.assertAllowed(actor, "progress", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    const title = input.title.trim();
+    const body = input.body.trim();
+    if (
+      title.length < 2 ||
+      title.length > 200 ||
+      body.length < 2 ||
+      body.length > 5_000
+    ) {
+      throw new Error("DEMAND_PROGRESS_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const progress = await repository.createProgressUpdate({
+        demandId,
+        authorEmployeeId: actor.employeeId,
+        status: current.status,
+        title,
+        body,
+      });
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.progress.created",
+        details: { progressId: progress.progressId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.progress.created",
+      });
+      return progress;
+    });
+  }
+
+  async listProgressUpdates(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandProgressRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listProgressUpdates(demandId);
+  }
+
+  async createPilot(
+    actor: ActorContext,
+    demandId: string,
+    input: {
+      applicationId?: string;
+      name: string;
+      startsAt: Date;
+      endsAt?: Date;
+    },
+  ): Promise<DemandPilotRecord> {
+    await this.assertAllowed(actor, "progress", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    if (current.status !== "in_progress" && current.status !== "pilot") {
+      throw new Error("DEMAND_PILOT_INVALID_STATE");
+    }
+    const name = input.name.trim();
+    if (name.length < 2 || name.length > 200) {
+      throw new Error("DEMAND_PILOT_INVALID");
+    }
+    if (input.endsAt !== undefined && input.endsAt <= input.startsAt) {
+      throw new Error("DEMAND_PILOT_INVALID_DATES");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const pilot = await repository.createPilot({
+        demandId,
+        applicationId: input.applicationId ?? null,
+        name,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt ?? null,
+        outcome: null,
+        status: "planned",
+        createdByEmployeeId: actor.employeeId,
+      });
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.pilot.created",
+        details: { pilotId: pilot.pilotId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.pilot.created",
+      });
+      return pilot;
+    });
+  }
+
+  async updatePilot(
+    actor: ActorContext,
+    demandId: string,
+    pilotId: string,
+    input: Partial<{
+      endsAt: Date | null;
+      outcome: string | null;
+      status: DemandPilotRecord["status"];
+    }>,
+  ): Promise<DemandPilotRecord> {
+    await this.assertAllowed(actor, "progress", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    return this.repository.withTransaction(async (repository) => {
+      const pilot = await repository.updatePilot(pilotId, input);
+      if (pilot.demandId !== demandId)
+        throw new Error("DEMAND_PILOT_NOT_FOUND");
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.pilot.updated",
+        details: { pilotId, ...input },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.pilot.updated",
+      });
+      return pilot;
     });
   }
 
@@ -617,6 +797,17 @@ export class DemandService {
   private assertRequester(actor: ActorContext, demand: DemandEntry): void {
     if (demand.requesterEmployeeId !== actor.employeeId) {
       throw new Error("DEMAND_REQUESTER_REQUIRED");
+    }
+  }
+
+  private assertProgressActor(actor: ActorContext, demand: DemandEntry): void {
+    if (
+      demand.ownerEmployeeId !== actor.employeeId &&
+      !actor.roleCodes.some((role) =>
+        ["demand_operator", "super_admin"].includes(role),
+      )
+    ) {
+      throw new Error("DEMAND_PROGRESS_FORBIDDEN");
     }
   }
 
