@@ -454,4 +454,22 @@ describe("IdentityService", () => {
     expect(repository.employees.get("E008")?.displayName).toBe("New Employee");
     expect(repository.audits).toContain("identity.dingtalk.sync.completed");
   });
+
+  it("records a failed DingTalk sync for later audit", async () => {
+    const repository = new MemoryIdentityRepository();
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.syncDingTalkDirectory(
+        {
+          async fetchDirectory() {
+            throw new Error("DINGTALK_UNAVAILABLE");
+          },
+        },
+        "daily",
+      ),
+    ).rejects.toThrow("DINGTALK_UNAVAILABLE");
+
+    expect(repository.audits).toContain("identity.dingtalk.sync.failed");
+  });
 });
