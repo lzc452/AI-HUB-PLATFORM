@@ -125,6 +125,20 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
 
   await db.schema
+    .createTable("ai_demand_likes")
+    .addColumn("demand_id", "uuid", (column) =>
+      column.notNull().references("ai_demands.demand_id"),
+    )
+    .addColumn("employee_id", "varchar(64)", (column) =>
+      column.notNull().references("employees.employee_id"),
+    )
+    .addColumn("created_at", "timestamptz", (column) =>
+      column.notNull().defaultTo(sql`now()`),
+    )
+    .addPrimaryKeyConstraint("ai_demand_likes_pk", ["demand_id", "employee_id"])
+    .execute();
+
+  await db.schema
     .createTable("ai_demand_comments")
     .addColumn("comment_id", "uuid", (column) =>
       column.primaryKey().defaultTo(sql`gen_random_uuid()`),
@@ -327,6 +341,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   for (const table of [
     "ai_demands",
     "ai_demand_collaborators",
+    "ai_demand_likes",
     "ai_demand_comments",
     "ai_demand_reports",
     "ai_demand_progress_updates",
@@ -351,6 +366,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
     "ai_demand_reports",
     "ai_demand_comments",
     "ai_demand_collaborators",
+    "ai_demand_likes",
   ]) {
     await sql`
       drop trigger if exists ${sql.raw(`${table}_no_delete`)} on ${sql.raw(table)}
@@ -368,6 +384,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
   await db.schema.dropTable("ai_demand_progress_updates").execute();
   await db.schema.dropTable("ai_demand_reports").execute();
   await db.schema.dropTable("ai_demand_comments").execute();
+  await db.schema.dropTable("ai_demand_likes").execute();
   await db.schema.dropTable("ai_demand_collaborators").execute();
   await db.schema
     .alterTable("ai_demands")

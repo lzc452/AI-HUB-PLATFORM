@@ -93,6 +93,8 @@ or inferred result.
   integration tests passed.
 - Schema: added migration `0006_ai_demand_innovation`, normalized lifecycle,
   audience, collaboration, comments, reports, progress, pilots, application
-  links, audit, optimistic version, partial primary-solution index, and
-  non-destructive delete triggers. No `tenant_id` was added.
-- Commit: `634a253 feat(phase-05): add demand contracts and schema`.
+  links, audit, optimistic version, partial primary-solution index, demand
+  likes, and non-destructive delete triggers. No `tenant_id` was added.
+- Commit: `dba35ec feat(phase-05): add demand contracts and schema`; the omitted
+  demand-like table was detected before Task 3 and is corrected in the next
+  focused fix commit.
