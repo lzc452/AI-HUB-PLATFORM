@@ -47,4 +47,3 @@ The catalog mapping currently performs small related-record reads per result;
 that is acceptable for the Phase 4 V1 scale and is a later optimization target.
 Real DingTalk credentials, external delivery, personalized recommendations,
 and Phase 5 innovation-square workflows remain deployment or later-phase work.
-
