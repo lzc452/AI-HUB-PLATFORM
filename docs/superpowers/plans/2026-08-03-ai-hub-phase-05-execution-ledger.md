@@ -49,7 +49,7 @@ physical deletes, and a new tenant model are prohibited.
 | Contracts/schema | `@ai-hub/contracts` and `@ai-hub/database` typecheck passed; PostgreSQL migration test 3/3 and existing outbox 15/15 passed | passed |
 | Demand lifecycle | Service 59/59 and API 14/14 focused package tests passed; protected create/submit/review routes covered | passed |
 | Innovation interactions | Server 62/62; Web 17/17; Docker-backed API 8 files/15 tests; PostgreSQL schema 3/3 plus outbox 15/15 | passed |
-| Ownership/priority/progress | Not run yet | pending |
+| Ownership/priority/progress | Ownership only: server 64/64; Docker-backed API 8 files/16 tests; PostgreSQL schema 3/3 plus outbox 15/15 | ownership passed; priority/progress pending |
 | Merge/application loop | Not run yet | pending |
 | PostgreSQL/API/Web evidence | Not run yet | pending |
 | Final gates/two-axis review | Not run yet | pending |
@@ -139,3 +139,25 @@ or inferred result.
   requirement.
 - Commit: pending until the step changes and this evidence update are staged
   together as `feat(phase-05): add demand square interactions`.
+
+### Step 5: Claim, owner, collaborators, operator selection, and concurrency
+
+- RED: service tests initially failed because `claim` and
+  `addCollaborator` were absent; the API contract test then failed with 404
+  until claim/collaborator routes were added; the schema integration test
+  failed because the one-operator index was absent; the collaborator-list
+  test exposed the missing read path before it was implemented. A no-Docker
+  API attempt is recorded only as a runtime blocker, not as pass evidence.
+- GREEN: `corepack pnpm --filter @ai-hub/server typecheck` passed and the
+  focused server command passed 64/64 workspace tests; `corepack pnpm
+  --filter @ai-hub/api typecheck` passed; Docker-backed API tests passed 8
+  files/16 tests, including two real Phase 5 tests proving one concurrent
+  claim winner and one operator assignment; and the Docker-backed database
+  command passed 3 demand-schema tests plus 15 outbox tests.
+- Implementation: added optimistic owner claim, owner-only collaborator and
+  operator assignment, unique collaborator conflict mapping, collaborator
+  listing, transactionally paired Audit/Outbox events, and migration `0007`
+  with a partial unique operator index. Claim and assignment both update the
+  demand version conditionally, so stale writers fail with `DEMAND_CONFLICT`.
+- Commit: pending until the step implementation and evidence are staged as
+  `feat(phase-05): protect demand ownership concurrency`.

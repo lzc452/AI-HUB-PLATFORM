@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Selectable } from "kysely";
 import type {
   DemandCommentRecord,
+  DemandCollaboratorRecord,
   DemandEntry,
   DemandReportRecord,
   DemandRepository,
@@ -193,6 +194,88 @@ export class KyselyDemandRepository implements DemandRepository {
       .executeTakeFirst();
     if (row === undefined) throw new Error("DEMAND_CONFLICT");
     return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async claimOwner(
+    demandId: string,
+    employeeId: string,
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({
+        owner_employee_id: employeeId,
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("owner_employee_id", "is", null)
+      .where("version", "=", expectedVersion)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    await this.db
+      .insertInto("ai_demand_collaborators")
+      .values({ demand_id: demandId, employee_id: employeeId, role: "owner" })
+      .execute();
+    return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async assignCollaborator(
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRecord["role"],
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({ version: sql`version + 1`, updated_at: new Date() })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returning("demand_id")
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    try {
+      const collaborator = await this.db
+        .insertInto("ai_demand_collaborators")
+        .values({ demand_id: demandId, employee_id: employeeId, role })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return {
+        demandId: collaborator.demand_id,
+        employeeId: collaborator.employee_id,
+        role: collaborator.role,
+        createdAt: collaborator.created_at,
+      };
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "23505"
+      ) {
+        throw new Error("DEMAND_COLLABORATOR_DUPLICATE");
+      }
+      throw error;
+    }
+  }
+
+  async listCollaborators(
+    demandId: string,
+  ): Promise<readonly DemandCollaboratorRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_collaborators")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "asc")
+      .orderBy("employee_id", "asc")
+      .execute();
+    return rows.map((row) => ({
+      demandId: row.demand_id,
+      employeeId: row.employee_id,
+      role: row.role,
+      createdAt: row.created_at,
+    }));
   }
 
   async hasLike(demandId: string, employeeId: string): Promise<boolean> {

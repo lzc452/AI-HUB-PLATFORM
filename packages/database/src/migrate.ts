@@ -5,6 +5,7 @@ import * as applicationDeliveryReview from "./migrations/0003_application_delive
 import * as catalogInteraction from "./migrations/0004_catalog_interaction.js";
 import * as notificationCreator from "./migrations/0005_notification_creator.js";
 import * as aiDemandInnovation from "./migrations/0006_ai_demand_innovation.js";
+import * as demandCollaborationConstraints from "./migrations/0007_demand_collaboration_constraints.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -14,6 +15,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0004_catalog_interaction": catalogInteraction,
   "0005_notification_creator": notificationCreator,
   "0006_ai_demand_innovation": aiDemandInnovation,
+  "0007_demand_collaboration_constraints": demandCollaborationConstraints,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

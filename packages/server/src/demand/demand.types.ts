@@ -2,6 +2,7 @@ import type {
   ActorContext,
   AuthorizationDecision,
   CreateDemandInput,
+  DemandCollaboratorRole,
   DemandStatus,
 } from "@ai-hub/contracts";
 
@@ -74,6 +75,20 @@ export interface DemandRepository {
     expectedVersion: number,
     reviewReason?: string | null,
   ): Promise<DemandEntry>;
+  claimOwner(
+    demandId: string,
+    employeeId: string,
+    expectedVersion: number,
+  ): Promise<DemandEntry>;
+  assignCollaborator(
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRole,
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord>;
+  listCollaborators(
+    demandId: string,
+  ): Promise<readonly DemandCollaboratorRecord[]>;
   hasLike(demandId: string, employeeId: string): Promise<boolean>;
   addLike(demandId: string, employeeId: string): Promise<void>;
   removeLike(demandId: string, employeeId: string): Promise<void>;
@@ -98,6 +113,13 @@ export interface DemandRepository {
     details?: unknown;
   }): Promise<void>;
   emitOutbox(input: { demandId: string; eventType: string }): Promise<void>;
+}
+
+export interface DemandCollaboratorRecord {
+  demandId: string;
+  employeeId: string;
+  role: DemandCollaboratorRole;
+  createdAt: Date;
 }
 
 export interface DemandListResult {

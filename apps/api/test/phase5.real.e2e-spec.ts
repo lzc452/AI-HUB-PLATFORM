@@ -59,6 +59,8 @@ const identityRepository = {
                 "demand.read",
                 "demand.submit",
                 "demand.interact",
+                "demand.claim",
+                "demand.collaborate",
               ],
       },
     ];
@@ -211,5 +213,71 @@ describe("real Phase 5 demand API", () => {
       .executeTakeFirstOrThrow();
     expect(Number(auditCount.count)).toBeGreaterThanOrEqual(7);
     expect(Number(outboxCount.count)).toBeGreaterThanOrEqual(7);
+  });
+
+  it("protects concurrent claim and collaborator assignment with version and uniqueness", async () => {
+    const requester = actorHeaders("E100");
+    const otherEmployee = actorHeaders("E200");
+    const reviewer = actorHeaders("E900");
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/demands")
+      .set(requester)
+      .send({
+        title: "Concurrent ownership demand",
+        problemStatement: "Multiple teams may claim the same governed request.",
+        desiredOutcome: "Exactly one owner coordinates the implementation.",
+        audienceType: "all",
+      })
+      .expect(201);
+    const demandId = createResponse.body.demandId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/submit-review`)
+      .set(requester)
+      .expect(201);
+    const published = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/review`)
+      .set(reviewer)
+      .send({ decision: "publish" })
+      .expect(201);
+
+    const claimResponses = await Promise.all(
+      [requester, otherEmployee].map((headers) =>
+        request(app.getHttpServer())
+          .post(`/internal/demands/${demandId}/claim`)
+          .set(headers)
+          .send({ expectedVersion: published.body.version }),
+      ),
+    );
+    expect(claimResponses.map((response) => response.status).sort()).toEqual([
+      201, 400,
+    ]);
+    const claimed = claimResponses.find((response) => response.status === 201);
+    expect(claimed?.body.ownerEmployeeId).toBeTruthy();
+    const ownerEmployeeId = claimed?.body.ownerEmployeeId as string;
+    const ownerHeaders = actorHeaders(ownerEmployeeId);
+    const collaboratorTargets =
+      ownerEmployeeId === "E100" ? ["E900", "E200"] : ["E900", "E100"];
+    const collaboratorResponses = await Promise.all(
+      collaboratorTargets.map((targetEmployeeId) =>
+        request(app.getHttpServer())
+          .post(`/internal/demands/${demandId}/collaborators`)
+          .set(ownerHeaders)
+          .send({
+            employeeId: targetEmployeeId,
+            role: "operator",
+            expectedVersion: claimed?.body.version,
+          }),
+      ),
+    );
+    expect(
+      collaboratorResponses.map((response) => response.status).sort(),
+    ).toEqual([201, 400]);
+    const operators = await db
+      .selectFrom("ai_demand_collaborators")
+      .select(["employee_id"])
+      .where("demand_id", "=", demandId)
+      .where("role", "=", "operator")
+      .execute();
+    expect(operators).toHaveLength(1);
   });
 });

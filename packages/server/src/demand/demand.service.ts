@@ -6,6 +6,7 @@ import type {
 import type {
   DemandAuthorizationPort,
   DemandCommentRecord,
+  DemandCollaboratorRecord,
   DemandDraftInput,
   DemandEntry,
   DemandListResult,
@@ -137,6 +138,80 @@ export class DemandService {
       );
       return reviewed;
     });
+  }
+
+  async claim(
+    actor: ActorContext,
+    demandId: string,
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "claim", demandId);
+    const current = await this.requireDemand(demandId);
+    if (current.ownerEmployeeId !== null) {
+      throw new Error("DEMAND_CONFLICT");
+    }
+    if (
+      !new Set<DemandStatus>(["published", "in_progress", "pilot"]).has(
+        current.status,
+      )
+    ) {
+      throw new Error("DEMAND_CLAIM_INVALID_STATE");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const claimed = await repository.claimOwner(
+        demandId,
+        actor.employeeId,
+        expectedVersion,
+      );
+      await this.recordMutation(repository, claimed, actor, "demand.claimed", {
+        ownerEmployeeId: actor.employeeId,
+      });
+      return claimed;
+    });
+  }
+
+  async addCollaborator(
+    actor: ActorContext,
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRecord["role"],
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord> {
+    await this.assertAllowed(actor, "collaborate", demandId);
+    const current = await this.requireDemand(demandId);
+    if (current.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("DEMAND_OWNER_REQUIRED");
+    }
+    if (role === "owner") {
+      throw new Error("DEMAND_COLLABORATOR_ROLE_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const collaborator = await repository.assignCollaborator(
+        demandId,
+        employeeId,
+        role,
+        expectedVersion,
+      );
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.collaborator.assigned",
+        details: { employeeId, role },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.collaborator.assigned",
+      });
+      return collaborator;
+    });
+  }
+
+  async listCollaborators(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandCollaboratorRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listCollaborators(demandId);
   }
 
   async list(

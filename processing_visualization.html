@@ -758,9 +758,9 @@
             name: "Phase 5：AI 需求与创新广场",
             target: "第 6 月",
             status: "进行中",
-            progress: 25,
+            progress: 35,
             summary:
-              "已完成 Phase 5 基线、Contracts/迁移、结构化需求提交审核，以及受众过滤、匿名展示、点赞、讨论、举报与治理 API/Web/真实 PostgreSQL e2e；认领、排序、状态、合并和上架闭环待继续实现。",
+              "已完成 Phase 5 基线、Contracts/迁移、结构化需求提交审核、互动治理，以及认领/负责人/协作者/运营选择并发保护；排序、状态、合并和上架闭环待继续实现。",
             tasks: [
               [
                 "结构化需求表单与轻量审核",
@@ -1074,6 +1074,22 @@
               "复用受众谓词和 IdentityService，在事务内写 Audit/Outbox；匿名仅为输出投影，讨论和举报保留真实身份并禁止物理删除。",
             skip: "认领、优先级、进展、合并、应用关联和正式上架仍按计划顺序执行。",
           },
+          {
+            id: "t-010",
+            phase: "dev",
+            status: "已完成",
+            title: "Phase 5 认领与协作者并发保护",
+            owner: "Codex",
+            start: "2026-08-03",
+            end: "2026-08-03",
+            progress:
+              "完成首个认领者、负责人、协作者/运营选择、协作者列表、版本冲突和单需求单运营唯一性保护。",
+            problem:
+              "认领和运营选择存在并发写入风险，必须同时具备数据库条件更新、唯一约束、权限和审计。",
+            solution:
+              "使用 version = expectedVersion 的原子更新、0007 部分唯一索引、owner-only 协作者变更，以及同事务 Audit/Outbox。",
+            skip: "业务价值、成本、风险、管理员优先级和后续生命周期仍按计划顺序执行。",
+          },
         ],
         events: [
           {
@@ -1088,6 +1104,12 @@
             title:
               "Phase 5 demand submission and interaction evidence recorded",
             body: "Demand service tests passed for validation, draft/review/rejection, audience projection, idempotent likes, one-level discussion, moderation hide/restore, and anonymous audit. Web focused tests passed 17/17, and Docker-backed API/PostgreSQL e2e passed 8 files/15 tests with audience filtering, anonymity, interactions, reports, Audit and Outbox evidence.",
+          },
+          {
+            date: "2026-08-03",
+            phase: "test",
+            title: "Phase 5 ownership concurrency evidence recorded",
+            body: "Ownership tests passed for first-writer-wins claim, owner-only collaborator changes, duplicate conflicts, stale-version rejection, collaborator listing, and transactionally paired Audit/Outbox. Docker-backed API tests passed 8 files/16 tests, and migration 0007 adds a partial unique operator index.",
           },
           {
             date: "2026-08-03",

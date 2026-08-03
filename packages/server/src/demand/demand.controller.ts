@@ -85,6 +85,59 @@ export class DemandController {
     );
   }
 
+  @Post(":demandId/claim")
+  claim(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: { expectedVersion: number },
+  ) {
+    return this.call(async () =>
+      this.demands.claim(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.expectedVersion,
+      ),
+    );
+  }
+
+  @Post(":demandId/collaborators")
+  addCollaborator(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body()
+    body: {
+      employeeId: string;
+      role: "collaborator" | "operator";
+      expectedVersion: number;
+    },
+  ) {
+    return this.call(async () =>
+      this.demands.addCollaborator(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.employeeId,
+        body.role,
+        body.expectedVersion,
+      ),
+    );
+  }
+
+  @Get(":demandId/collaborators")
+  collaborators(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listCollaborators(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
   @Get()
   list(
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -230,6 +283,7 @@ export class DemandController {
       if (
         code === "DEMAND_REVIEW_FORBIDDEN" ||
         code === "DEMAND_MODERATION_FORBIDDEN" ||
+        code === "DEMAND_OWNER_REQUIRED" ||
         code === "DEMAND_NOT_AUTHORIZED"
       ) {
         throw new ForbiddenException(code);

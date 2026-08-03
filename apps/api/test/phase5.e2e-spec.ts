@@ -54,6 +54,21 @@ describe("Phase 5 demand endpoints", () => {
       async review() {
         return { demandId: "demand-1", status: "published" };
       },
+      async claim() {
+        return {
+          demandId: "demand-1",
+          status: "published",
+          ownerEmployeeId: "E100",
+          version: 2,
+        };
+      },
+      async addCollaborator() {
+        return {
+          demandId: "demand-1",
+          employeeId: "E200",
+          role: "collaborator",
+        };
+      },
     } as unknown as DemandService;
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -88,6 +103,21 @@ describe("Phase 5 demand endpoints", () => {
       .send({ decision: "publish" })
       .expect(201);
     expect(review.body).toMatchObject({ status: "published" });
+
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/claim")
+      .set({ "x-employee-id": "E100", "x-session-id": "session-E100" })
+      .send({ expectedVersion: 1 })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post("/internal/demands/demand-1/collaborators")
+      .set({ "x-employee-id": "E100", "x-session-id": "session-E100" })
+      .send({
+        employeeId: "E200",
+        role: "collaborator",
+        expectedVersion: 2,
+      })
+      .expect(201);
 
     await app.close();
   });

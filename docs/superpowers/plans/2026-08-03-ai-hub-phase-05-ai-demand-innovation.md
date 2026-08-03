@@ -163,10 +163,10 @@ export interface DemandRepository {
 
 **Files:** demand repository/service/controller/tests, migration constraints if needed, API e2e.
 
-- [ ] Write failing tests for first-writer-wins claim, owner-only collaborator changes, operator assignment, duplicate collaborator rejection, stale-version conflict, and audit/outbox for every assignment.
-- [ ] Run tests red.
-- [ ] Implement atomic `UPDATE ... WHERE version = expectedVersion`/unique constraints and return `DEMAND_CONFLICT` on lost update.
-- [ ] Run focused tests and commit `feat(phase-05): protect demand ownership concurrency`.
+- [x] Write failing tests for first-writer-wins claim, owner-only collaborator changes, operator assignment, duplicate collaborator rejection, stale-version conflict, and audit/outbox for every assignment.
+- [x] Run tests red.
+- [x] Implement atomic `UPDATE ... WHERE version = expectedVersion`/unique constraints and return `DEMAND_CONFLICT` on lost update.
+- [x] Run focused tests and commit `feat(phase-05): protect demand ownership concurrency`.
 
 ### Task 6: Value/cost/risk/priority scoring and administrator audit
 

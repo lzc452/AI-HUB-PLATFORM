@@ -86,10 +86,16 @@ describe("Phase 5 demand schema", () => {
       select indexname
       from pg_indexes
       where schemaname = 'public'
-        and tablename = 'ai_demand_applications'
-        and indexname = 'ai_demand_applications_one_primary_idx'
+        and (
+          (tablename = 'ai_demand_applications' and indexname = 'ai_demand_applications_one_primary_idx')
+          or (tablename = 'ai_demand_collaborators' and indexname = 'ai_demand_collaborators_one_operator_idx')
+        )
+      order by indexname
     `.execute(db);
-    expect(indexes.rows).toHaveLength(1);
+    expect(indexes.rows.map((row) => row.indexname)).toEqual([
+      "ai_demand_applications_one_primary_idx",
+      "ai_demand_collaborators_one_operator_idx",
+    ]);
   });
 
   it("installs physical-delete protection for demand content", async () => {

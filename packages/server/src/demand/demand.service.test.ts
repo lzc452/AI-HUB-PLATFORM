@@ -3,6 +3,7 @@ import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 import { DemandService } from "./demand.service.js";
 import type {
   DemandCommentRecord,
+  DemandCollaboratorRecord,
   DemandEntry,
   DemandRepository,
 } from "./demand.types.js";
@@ -312,5 +313,153 @@ describe("DemandService innovation-square interactions", () => {
     expect(hiddenAt).toBeInstanceOf(Date);
     await service.resolveReport(operator, "report-1", "restored");
     expect(hiddenAt).toBeNull();
+  });
+});
+
+describe("DemandService ownership and collaboration", () => {
+  it("keeps the first claim and rejects a stale concurrent claimant", async () => {
+    const demand: DemandEntry = {
+      demandId: "demand-claim",
+      requesterEmployeeId: "E100",
+      title: "Claimable demand",
+      problemStatement: "A team needs a governed assistant.",
+      desiredOutcome: "A reviewed assistant is delivered.",
+      status: "published",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: null,
+      primarySolutionApplicationId: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findById: async () => demand,
+      claimOwner: async (
+        _demandId: string,
+        employeeId: string,
+        expectedVersion: number,
+      ) => {
+        if (
+          demand.version !== expectedVersion ||
+          demand.ownerEmployeeId !== null
+        ) {
+          throw new Error("DEMAND_CONFLICT");
+        }
+        demand.ownerEmployeeId = employeeId;
+        demand.version += 1;
+        return demand;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.claim(requester, demand.demandId, 1),
+    ).resolves.toMatchObject({
+      ownerEmployeeId: "E100",
+      version: 2,
+    });
+    await expect(service.claim(reviewer, demand.demandId, 1)).rejects.toThrow(
+      "DEMAND_CONFLICT",
+    );
+  });
+
+  it("allows only the owner to add unique collaborators and operators", async () => {
+    const demand: DemandEntry = {
+      demandId: "demand-collaborators",
+      requesterEmployeeId: "E100",
+      title: "Collaborative demand",
+      problemStatement: "A team needs a governed assistant.",
+      desiredOutcome: "A reviewed assistant is delivered.",
+      status: "published",
+      audienceType: "all",
+      audienceDepartmentId: null,
+      displayAnonymously: false,
+      reviewReason: null,
+      likeCount: 0,
+      commentCount: 0,
+      priorityScore: null,
+      priorityExplanation: null,
+      ownerEmployeeId: "E100",
+      primarySolutionApplicationId: null,
+      version: 4,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const collaborators = new Set<string>();
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as unknown as DemandRepository),
+      findById: async () => demand,
+      findVisible: async () => demand,
+      assignCollaborator: async (
+        _demandId: string,
+        employeeId: string,
+        role: DemandCollaboratorRecord["role"],
+        expectedVersion: number,
+      ) => {
+        if (demand.version !== expectedVersion)
+          throw new Error("DEMAND_CONFLICT");
+        if (collaborators.has(employeeId)) {
+          throw new Error("DEMAND_COLLABORATOR_DUPLICATE");
+        }
+        collaborators.add(employeeId);
+        demand.version += 1;
+        return {
+          demandId: demand.demandId,
+          employeeId,
+          role,
+          createdAt: new Date(),
+        };
+      },
+      listCollaborators: async () => [
+        {
+          demandId: demand.demandId,
+          employeeId: "E200",
+          role: "collaborator" as const,
+          createdAt: new Date(),
+        },
+      ],
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.addCollaborator(
+        requester,
+        demand.demandId,
+        "E200",
+        "collaborator",
+        4,
+      ),
+    ).resolves.toMatchObject({ employeeId: "E200", role: "collaborator" });
+    await expect(
+      service.addCollaborator(
+        requester,
+        demand.demandId,
+        "E200",
+        "collaborator",
+        5,
+      ),
+    ).rejects.toThrow("DEMAND_COLLABORATOR_DUPLICATE");
+    await expect(
+      service.addCollaborator(reviewer, demand.demandId, "E300", "operator", 5),
+    ).rejects.toThrow("DEMAND_OWNER_REQUIRED");
+    await expect(
+      service.listCollaborators(requester, demand.demandId),
+    ).resolves.toMatchObject([{ employeeId: "E200", role: "collaborator" }]);
   });
 });
