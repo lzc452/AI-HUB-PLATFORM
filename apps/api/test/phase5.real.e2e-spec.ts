@@ -438,11 +438,21 @@ describe("real Phase 5 demand API", () => {
         name: "Demand-backed assistant",
         summary: "Application created from a structured demand.",
         role: "solution",
-        isPrimary: true,
+        isPrimary: false,
         expectedVersion: progress.body.version,
       })
       .expect(201);
     const applicationId = bridge.body.applicationId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/applications`)
+      .set(operator)
+      .send({
+        applicationId,
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: progress.body.version + 1,
+      })
+      .expect(400);
 
     const version = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
@@ -486,6 +496,17 @@ describe("real Phase 5 demand API", () => {
       .send({ applicationVersionId: versionId })
       .expect(200);
     expect(published.body.status).toBe("published");
+
+    await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/applications`)
+      .set(operator)
+      .send({
+        applicationId,
+        role: "solution",
+        isPrimary: true,
+        expectedVersion: progress.body.version + 1,
+      })
+      .expect(201);
 
     const links = await request(app.getHttpServer())
       .get(`/internal/demands/${demandId}/applications`)

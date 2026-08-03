@@ -381,6 +381,21 @@ export class KyselyDemandRepository implements DemandRepository {
     expectedVersion: number,
     linkedByEmployeeId: string,
   ): Promise<DemandApplicationLinkRecord> {
+    if (isPrimary) {
+      const application = await this.db
+        .selectFrom("applications")
+        .select("status")
+        .where("application_id", "=", applicationId)
+        .executeTakeFirst();
+      if (application === undefined) {
+        throw new Error("DEMAND_APPLICATION_NOT_FOUND");
+      }
+      if (application.status !== "published") {
+        throw new Error(
+          "DEMAND_PRIMARY_SOLUTION_REQUIRES_PUBLISHED_APPLICATION",
+        );
+      }
+    }
     const demandRow = await this.db
       .updateTable("ai_demands")
       .set({
@@ -402,6 +417,33 @@ export class KyselyDemandRepository implements DemandRepository {
         .where("demand_id", "=", demandId)
         .where("is_primary", "=", true)
         .execute();
+    }
+    const existing = await this.db
+      .selectFrom("ai_demand_applications")
+      .select("application_id")
+      .where("demand_id", "=", demandId)
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    if (existing !== undefined) {
+      const row = await this.db
+        .updateTable("ai_demand_applications")
+        .set({
+          role,
+          is_primary: isPrimary,
+          linked_by_employee_id: linkedByEmployeeId,
+        })
+        .where("demand_id", "=", demandId)
+        .where("application_id", "=", applicationId)
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return {
+        demandId: row.demand_id,
+        applicationId: row.application_id,
+        role: row.role,
+        isPrimary: row.is_primary,
+        linkedByEmployeeId: row.linked_by_employee_id,
+        createdAt: row.created_at,
+      };
     }
     try {
       const row = await this.db
