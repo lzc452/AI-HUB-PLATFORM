@@ -50,6 +50,12 @@ const navigationItems = [
 const navigationItemsWithAdmin = [
   ...navigationItems,
   {
+    description: "Phase 6 dashboards",
+    icon: <DeploymentUnitOutlined aria-hidden="true" />,
+    path: "/analytics",
+    title: "Analytics",
+  },
+  {
     description: "static administration",
     icon: <DeploymentUnitOutlined aria-hidden="true" />,
     path: "/applications",
@@ -794,6 +800,61 @@ function InnovationDemandDetailPage() {
   );
 }
 
+const fixedAnalyticsDashboards = [
+  ["Platform", "Application views and adoption aggregates"],
+  ["Market", "Published delivery aggregates"],
+  ["Application", "Download aggregates without access lists"],
+  ["Innovation", "Demand audience-filtered aggregates"],
+  ["Review", "Review decision aggregates"],
+  ["Department", "Department-scoped demand aggregates"],
+  ["Risk", "Reported interaction aggregates"],
+  ["Runtime", "Notification queue aggregates"],
+  ["Integration", "Assistant request aggregates"],
+] as const;
+
+function AnalyticsDashboardPage() {
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="analytics-heading" className="space-y-3">
+        <Text type="secondary">Phase 6 / Fixed analytics</Text>
+        <Title id="analytics-heading" level={1} className="!mb-0">
+          Analytics dashboards
+        </Title>
+        <Paragraph className="!mb-0 max-w-3xl text-base">
+          Numbers are rebuildable from retained raw events. Dashboard output
+          is permission-filtered and never exposes individual access lists.
+        </Paragraph>
+      </section>
+      <Alert
+        showIcon
+        type="info"
+        title="Read-only aggregate boundary"
+        description="Each metric declares its source events, formula, time range, permission, audience rule, and recomputation method."
+      />
+      <section
+        aria-label="Fixed analytics dashboards"
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+      >
+        {fixedAnalyticsDashboards.map(([title, description]) => (
+          <article
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            key={title}
+          >
+            <Title level={3} className="!mb-2">
+              {title}
+            </Title>
+            <Text type="secondary">{description}</Text>
+            <div className="mt-4">
+              <Tag color="blue">Daily aggregate</Tag>
+              <Tag>180-day rebuild</Tag>
+            </div>
+          </article>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function createAppRouter() {
   return createBrowserRouter([
     {
@@ -846,6 +907,10 @@ function createAppRouter() {
         {
           element: <InnovationDemandDetailPage />,
           path: "/innovation/:demandId",
+        },
+        {
+          element: <AnalyticsDashboardPage />,
+          path: "/analytics",
         },
         {
           element: (

@@ -50,7 +50,7 @@ are prohibited.
 | Baseline docs/visualization | Commit `53a0985`; `git diff --check` and `corepack pnpm format:check` exited 0 | passed |
 | Behavior events/schema | Commit `66c3f5`; contracts 2/2; real PostgreSQL database command 3 files/21 tests; contracts/database/server typechecks and server lint passed | passed |
 | Daily aggregation/metric dictionary | Server focused command 16 files/72 tests; typecheck/lint passed; rebuild service uses 180-day raw-event window and fixed dictionary | passed |
-| Fixed dashboards | Not executed yet | pending |
+| Fixed dashboards | Server 17 files/75 tests; Web 4 files/18 tests; server/web typecheck and lint passed | passed |
 | Permissioned audited export | Not executed yet | pending |
 | Dify boundary | Not executed yet | pending |
 | DingTalk/Outbox matrix | Not executed yet | pending |
@@ -86,4 +86,11 @@ result.
 - GREEN: `corepack pnpm --filter @ai-hub/server test -- src/analytics/aggregation.service.test.ts` passed 16 files/72 tests; `@ai-hub/server` typecheck and lint passed; `git diff --check` exited 0.
 - Implementation: raw events are deduplicated by idempotency key, bounded to the retained 180-day window, bucketed by UTC day and audience scope, and deterministically upserted into daily aggregates. The fixed metric dictionary records source events, formula, time range, permission, audience rule, and recomputation method.
 - Real PostgreSQL aggregation e2e: deferred to Step 9 cross-layer verification; no cached result is treated as evidence.
-- Commit: pending until the Step 3 diff is staged and committed.
+- Commit: `eb4a4ee feat(phase-06): add rebuildable daily analytics`.
+
+### Step 4: Platform, market, application, and innovation dashboards
+
+- RED: `dashboard.service.test.ts` failed because the dashboard service and fixed permission map were absent; the Web route test then failed with no `/analytics` route.
+- GREEN: server dashboard command passed 17 files/75 tests; Web Phase 6 command passed 4 files/18 tests; server and Web typechecks/lints passed.
+- Implementation: fixed dashboard keys read only the permitted metric keys from daily aggregates, reject unauthorized actors before querying, apply department scope for non-operators, bound ranges to 180 days, and filter output to fixed metrics. Web exposes a read-only aggregate shell with the core and governance dashboard labels.
+- Commit: pending until the Step 4 diff is staged and committed.

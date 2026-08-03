@@ -95,9 +95,9 @@ export interface AnalyticsRepository {
 
 **Files:** `packages/server/src/analytics/dashboard.*`, dashboard tests, contracts, API e2e, Web route/components/tests.
 
-- [ ] Write failing tests for fixed dashboard keys, metric source/formula consistency, range handling, and audience-filtered application/demand data.
-- [ ] Implement read-only dashboard queries from daily aggregates with permission and audience checks before projection.
-- [ ] Verify focused server/API/Web tests; commit `feat(phase-06): add core analytics dashboards`.
+- [x] Write failing tests for fixed dashboard keys, metric source/formula consistency, range handling, and audience-filtered application/demand data.
+- [x] Implement read-only dashboard queries from daily aggregates with permission and audience checks before projection.
+- [x] Verify focused server/API/Web tests; commit `feat(phase-06): add core analytics dashboards`.
 
 ### Task 5: Review, department, risk, runtime, and integration dashboards
 
