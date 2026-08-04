@@ -44,7 +44,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 | Object-storage recovery | Async replication policy/manifest contract passed; real sites/cutover/restore pending | at risk |
 | Observability | Prometheus/Grafana/Alertmanager/Loki/Promtail config and redaction contracts passed; connected receiver/real health pending | policy passed |
 | Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
-| Release safety | Immutable image, SBOM/provenance, migration, upgrade and rollback gates | pending |
+| Release safety | Release-gate tests, CI SBOM/provenance flags, migration/rollback contract passed; signed scan/digest capture pending | policy passed |
 | Reliability targets | Measured 99.5% availability, RPO <= 15 minutes, RTO <= 2 hours | pending |
 | Delivery | Branch push and Draft PR URL or exact external blocker | pending |
 
@@ -113,10 +113,10 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 7: CI/CD and supply chain
 
-- RED command and failure: pending.
-- GREEN implementation and local/CI gate verification: pending.
-- Registry signing, provenance, and vulnerability-service credentials: pending.
-- Commit: pending.
+- RED: `node --test scripts/production/release-gate.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the release gate did not exist. The source contract also failed once because it expected literal digests instead of the required digest variable contract; that assertion was corrected to require `:?` image variables plus CI SBOM/provenance flags.
+- GREEN: release tests passed 4/4; `node scripts/production/release-gate.mjs --contract` passed; CI config tests pass after requiring release-gate, SBOM, and provenance in GitHub/GitLab; format and whitespace checks passed. CI now requests BuildKit SBOM/provenance and executes the release contract before verification.
+- Registry signing, actual pushed image digests, vulnerability database scan output, migration execution against production-like PostgreSQL, and external credentials: pending; no unsigned/local image is production evidence.
+- Commit: `5cb97b8 ci(phase-07): gate immutable releases and rollback`.
 
 ### Step 8: Drills
 

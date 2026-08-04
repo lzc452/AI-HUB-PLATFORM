@@ -39,6 +39,7 @@ verify:
     - corepack prepare pnpm@10.34.5 --activate
   script:
     - pnpm install --frozen-lockfile
+    - node scripts/production/release-gate.mjs --contract
     - pnpm verify
   artifacts:
     when: always
@@ -55,6 +56,6 @@ container-smoke:
   needs: ["verify"]
   script:
     - docker compose -f compose.yaml -f compose.test.yaml config --quiet
-    - docker build --target production --file infra/docker/api.Dockerfile --tag ai-hub-api:${CI_COMMIT_SHA} .
-    - docker build --target production --file infra/docker/worker.Dockerfile --tag ai-hub-worker:${CI_COMMIT_SHA} .
-    - docker build --target production --file infra/docker/web.Dockerfile --tag ai-hub-web:${CI_COMMIT_SHA} .
+    - docker build --provenance=true --sbom=true --target production --file infra/docker/api.Dockerfile --tag ai-hub-api:${CI_COMMIT_SHA} .
+    - docker build --provenance=true --sbom=true --target production --file infra/docker/worker.Dockerfile --tag ai-hub-worker:${CI_COMMIT_SHA} .
+    - docker build --provenance=true --sbom=true --target production --file infra/docker/web.Dockerfile --tag ai-hub-web:${CI_COMMIT_SHA} .

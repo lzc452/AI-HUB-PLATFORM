@@ -846,9 +846,9 @@
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
             status: "进行中",
-            progress: 25,
+            progress: 65,
             summary:
-              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、内部 DNS 切换、PostgreSQL/WAL、对象存储恢复、监控告警、安全边界、供应链门禁和故障手册按序执行。",
+              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复和监控告警契约已完成，本地不可变发布门禁已通过；真实双机、凭据、扫描、升级回滚和恢复演练仍需外部证据。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
@@ -882,8 +882,8 @@
               ],
               [
                 "不可变镜像、升级、回退、migration 门禁、备份恢复手册",
-                "待开始",
-                "生产 RC 可部署前必须演练。",
+                "有风险",
+                "release-gate 4/4、Compose/CI 契约和 SBOM/provenance 参数已通过；真实签名、镜像扫描、升级回滚和备份恢复演练仍未完成。",
               ],
             ],
             gates: [
@@ -1176,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 immutable release contract recorded",
+            body: "Added release-gate validation for commit SHA, digest-pinned images, forward-compatible migrations, SBOM/provenance evidence, rollback markers, and signed zero-critical/high supply-chain reports. Release-gate tests passed 4/4 and the production contract passed; registry signing, vulnerability scan, real upgrade/rollback, and deployment evidence remain pending.",
+          },
           {
             date: "2026-08-04",
             phase: "ops",

@@ -36,6 +36,8 @@ jobs:
           restore-keys: ${{ runner.os }}-pnpm-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Validate production release contract
+        run: node scripts/production/release-gate.mjs --contract
       - name: Verify
         run: pnpm verify
 
@@ -49,8 +51,8 @@ jobs:
       - name: Validate Compose model
         run: docker compose -f compose.yaml -f compose.test.yaml config --quiet
       - name: Build API image
-        run: docker buildx build --load --target production --file infra/docker/api.Dockerfile --tag ai-hub-api:${{ github.sha }} .
+        run: docker buildx build --load --provenance=mode=max --sbom=true --target production --file infra/docker/api.Dockerfile --tag ai-hub-api:${{ github.sha }} .
       - name: Build worker image
-        run: docker buildx build --load --target production --file infra/docker/worker.Dockerfile --tag ai-hub-worker:${{ github.sha }} .
+        run: docker buildx build --load --provenance=mode=max --sbom=true --target production --file infra/docker/worker.Dockerfile --tag ai-hub-worker:${{ github.sha }} .
       - name: Build Web image
-        run: docker buildx build --load --target production --file infra/docker/web.Dockerfile --tag ai-hub-web:${{ github.sha }} .
+        run: docker buildx build --load --provenance=mode=max --sbom=true --target production --file infra/docker/web.Dockerfile --tag ai-hub-web:${{ github.sha }} .

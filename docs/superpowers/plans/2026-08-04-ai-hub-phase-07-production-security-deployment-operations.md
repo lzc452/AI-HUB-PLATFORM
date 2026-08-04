@@ -88,10 +88,10 @@
 
 **Files:** Create `scripts/production/release-gate.mjs`, `scripts/production/release-gate.test.mjs`, `scripts/production/rollback-gate.mjs`, `docs/runbooks/release-rollback.md`, SBOM/scan configuration; modify `.github/workflows/verify.yml`, `.gitlab-ci.yml`, Dockerfiles, and `scripts/verify.mjs`.
 
-- [ ] Write failing tests for SHA/digest-only deploy references, lockfile/frozen install, SBOM and vulnerability thresholds, migration-before-serving, backward-compatible rollback checks, signed artifact metadata, and no mutable registry tag promotion.
-- [ ] Implement CI gates that build once, record image digest/SBOM/provenance, run migration compatibility checks, require a reversible upgrade marker, and provide a dry-run rollback plan without altering the database automatically.
-- [ ] Verify local release/rollback gates and CI YAML tests; external registry signing and vulnerability-service credentials remain separate evidence.
-- [ ] Commit `ci(phase-07): gate immutable releases and rollback`.
+- [x] Write failing tests for SHA/digest-only deploy references, lockfile/frozen install, SBOM and vulnerability thresholds, migration-before-serving, backward-compatible rollback checks, signed artifact metadata, and no mutable registry tag promotion.
+- [x] Implement CI gates that build once, request image digest/SBOM/provenance, run migration compatibility checks, require a reversible upgrade marker, and provide a dry-run rollback plan without altering the database automatically.
+- [x] Verify local release/rollback gates, CI YAML tests, and the source release contract; external registry signing, actual digest capture, vulnerability-service scan, and deployment credentials remain separate evidence.
+- [x] Commit `ci(phase-07): gate immutable releases and rollback`.
 
 ### Task 8: Failure and recovery drills
 

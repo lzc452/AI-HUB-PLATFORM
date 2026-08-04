@@ -8,6 +8,9 @@ test("GitLab CI verifies before building container images", async () => {
   assert.match(config, /node:24\.15\.0/);
   assert.match(config, /pnpm@10\.34\.5/);
   assert.match(config, /pnpm install --frozen-lockfile/);
+  assert.match(config, /release-gate\.mjs --contract/);
+  assert.match(config, /--provenance=true/);
+  assert.match(config, /--sbom=true/);
   assert.match(config, /pnpm verify/);
   assert.match(config, /\.pnpm-store\//);
   assert.match(config, /auto_cancel:/);
@@ -27,6 +30,9 @@ test("GitHub Actions uses the same verification contract", async () => {
   assert.match(config, /node-version: 24\.15\.0/);
   assert.match(config, /corepack prepare pnpm@10\.34\.5 --activate/);
   assert.match(config, /pnpm install --frozen-lockfile/);
+  assert.match(config, /release-gate\.mjs --contract/);
+  assert.match(config, /--provenance=mode=max/);
+  assert.match(config, /--sbom=true/);
   assert.match(config, /pnpm verify/);
   assert.match(config, /cancel-in-progress: true/);
   assert.match(config, /needs: verify/);
