@@ -508,7 +508,7 @@
           {
             id: "dev",
             name: "开发",
-            progress: 25,
+            progress: 35,
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1 工程骨架大多存在",
@@ -862,8 +862,8 @@
               ],
               [
                 "PostgreSQL 流复制、WAL 归档和人工提升",
-                "待开始",
-                "RPO/RTO 需要可验证证据。",
+                "有风险",
+                "已完成主备/WAL/备份/提升配置契约和 Runbook；Docker runtime、双机、备份介质和真实恢复演练尚不可用。",
               ],
               [
                 "对象存储异步复制和人工切换",
@@ -946,7 +946,7 @@
             start: "2026-08-04",
             end: "",
             progress:
-              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；生产 Compose 配置验证器 5/5、配置包 3/3、Compose 模型、格式和差异检查通过；server 安全边界 27 文件/105 测试、生产代理 1/1 通过；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
+              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；生产 Compose 配置验证器 5/5、配置包 3/3、Compose 模型、格式和差异检查通过；server 安全边界 27 文件/105 测试、生产代理 1/1 通过；PostgreSQL ops 4/4 通过但真实 Docker 双机恢复被 runtime strategy 阻塞；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
             problem:
               "真实 Ubuntu 主机、DNS、TLS 证书、备份介质、生产存储端点、告警接收器、镜像签名凭据和 GitHub 远端读写权限不在仓库内；远端 ls-remote 本次返回空回复。",
             solution:
@@ -1176,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 PostgreSQL recovery contract recorded",
+            body: "Added primary/standby PostgreSQL settings, WAL archive and host-mounted config paths, backup checksum/restore evidence validation, manual promotion preconditions, and a failover runbook. PostgreSQL operations tests passed 4/4 and database typecheck passed. Real disposable PostgreSQL pair/restore remained open because the available Docker-backed test path returned Could not find a working container runtime strategy.",
+          },
           {
             date: "2026-08-04",
             phase: "test",

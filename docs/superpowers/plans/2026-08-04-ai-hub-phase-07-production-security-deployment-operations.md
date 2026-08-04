@@ -61,10 +61,10 @@
 
 **Files:** Create `infra/postgres/production.Dockerfile`, `infra/postgres/*.conf`, `scripts/production/postgres-*.mjs`, `scripts/production/postgres-*.test.mjs`, `docs/runbooks/postgres-failover.md`, `docs/runbooks/backup-restore.md`; modify production Compose and migration gate scripts.
 
-- [ ] Write failing tests for primary/standby configuration, replication-slot/WAL retention settings, encrypted archive destination, backup integrity checks, migration lock/rollback gates, promotion preconditions, and recovery-point timestamps.
-- [ ] Implement streaming replication and WAL archival contracts, `pg_basebackup` restore flow, manual promotion with fencing and DNS cutover prerequisites, and a restore verification that checks migrations, Audit, Outbox, and Phase 6 analytics data.
-- [ ] Verify with a real disposable PostgreSQL pair when the Docker runtime is available; otherwise record the exact missing runtime/credential and keep the drill open.
-- [ ] Commit `feat(phase-07): add postgres replication and recovery operations`.
+- [x] Write failing tests for primary/standby configuration, replication-slot/WAL retention settings, encrypted archive destination, backup integrity checks, migration lock/rollback gates, promotion preconditions, and recovery-point timestamps.
+- [x] Implement streaming replication and WAL archival contracts, `pg_basebackup` restore flow, manual promotion with fencing and DNS cutover prerequisites, and a restore verification that checks migrations, Audit, Outbox, and Phase 6 analytics data.
+- [x] Attempt the disposable PostgreSQL evidence path and record the exact Docker runtime failure; keep the real pair/drill open rather than treating configuration as recovery proof.
+- [x] Commit `feat(phase-07): add postgres replication and recovery operations`.
 
 ### Task 5: Object-storage replication, cutover, and recovery
 

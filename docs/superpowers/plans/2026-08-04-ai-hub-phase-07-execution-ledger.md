@@ -40,7 +40,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 |---|---|---|
 | Two-host production Compose | Validated Compose model, immutable image/secret contract, disposable fixture; real host deployment still external | contract passed |
 | Active-node switching | Internal DNS health check, fencing, cutover and rollback measurements | pending |
-| PostgreSQL recovery | Streaming/WAL config, backup integrity, promotion and restore evidence | pending |
+| PostgreSQL recovery | Streaming/WAL settings and recovery evidence contract passed; real pair/restore pending Docker/host access | at risk |
 | Object-storage recovery | Replication manifest/checksum, cutover and restore evidence | pending |
 | Observability | Scrape/config tests, dashboards, alert route and redacted centralized logs | pending |
 | Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
@@ -92,10 +92,10 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 4: PostgreSQL recovery
 
-- RED command and failure: pending.
-- GREEN implementation and disposable/real pair verification: pending.
-- Backup medium, archive credentials, and two-host drill: pending.
-- Commit: pending.
+- RED: `node --test scripts/production/postgres-ops.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the operations validator did not exist.
+- GREEN: PostgreSQL operations tests passed 4/4; `@ai-hub/database` typecheck passed; the production Compose model still validates with primary settings and explicit host-mounted config/WAL paths. The runbook covers `pg_basebackup`, replication slot, WAL archive, fencing, manual promotion, restore verification for migrations/Audit/Outbox/analytics, DNS cutover, and RPO/RTO measurement.
+- Disposable PostgreSQL/API evidence attempt: existing Docker-backed API tests returned `Could not find a working container runtime strategy`; no two-node pair, backup medium, replication credentials, or real restore was available. This is an external blocker and the drill remains open.
+- Commit: `345133c feat(phase-07): add postgres replication and recovery operations`.
 
 ### Step 5: Object-storage recovery
 
