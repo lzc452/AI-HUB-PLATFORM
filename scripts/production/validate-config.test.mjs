@@ -21,6 +21,12 @@ const validEnvironment = {
   POSTGRES_IMAGE: "postgres@sha256:" + "d".repeat(64),
   GARAGE_IMAGE: "garage@sha256:" + "e".repeat(64),
   PROXY_IMAGE: "nginx@sha256:" + "f".repeat(64),
+  PROMETHEUS_IMAGE: "prometheus@sha256:" + "1".repeat(64),
+  POSTGRES_EXPORTER_IMAGE: "postgres-exporter@sha256:" + "2".repeat(64),
+  ALERTMANAGER_IMAGE: "alertmanager@sha256:" + "3".repeat(64),
+  GRAFANA_IMAGE: "grafana@sha256:" + "4".repeat(64),
+  LOKI_IMAGE: "loki@sha256:" + "5".repeat(64),
+  PROMTAIL_IMAGE: "promtail@sha256:" + "6".repeat(64),
 };
 
 test("accepts a complete production environment with digest-pinned images", () => {

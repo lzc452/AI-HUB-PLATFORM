@@ -42,7 +42,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 | Active-node switching | Internal DNS health check, fencing, cutover and rollback measurements | pending |
 | PostgreSQL recovery | Streaming/WAL settings and recovery evidence contract passed; real pair/restore pending Docker/host access | at risk |
 | Object-storage recovery | Async replication policy/manifest contract passed; real sites/cutover/restore pending | at risk |
-| Observability | Scrape/config tests, dashboards, alert route and redacted centralized logs | pending |
+| Observability | Prometheus/Grafana/Alertmanager/Loki/Promtail config and redaction contracts passed; connected receiver/real health pending | policy passed |
 | Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
 | Release safety | Immutable image, SBOM/provenance, migration, upgrade and rollback gates | pending |
 | Reliability targets | Measured 99.5% availability, RPO <= 15 minutes, RTO <= 2 hours | pending |
@@ -106,10 +106,10 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 6: Observability and logs
 
-- RED command and failure: pending.
-- GREEN implementation and config/redaction verification: pending.
-- Connected alert receiver and central log destination: pending.
-- Commit: pending.
+- RED: `node --test scripts/production/observability-ops.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the observability validator did not exist.
+- GREEN: observability tests passed 4/4; production config validator passed 5/5; Compose model, format, and whitespace checks passed. Added production Prometheus targets/rules for API, Worker, PostgreSQL exporter, Garage, Loki, 99.5% availability, 15-minute RPO, 2-hour RTO, security, backup, and replication alerts; Grafana datasources; Alertmanager routes; Loki/Promtail redacted central logs.
+- Connected alert receiver, real scrape/alert delivery, log retention volume, and host health evidence: pending; no unconnected webhook or local config is treated as delivered evidence.
+- Commit: `665193f feat(phase-07): add production observability and alerting`.
 
 ### Step 7: CI/CD and supply chain
 

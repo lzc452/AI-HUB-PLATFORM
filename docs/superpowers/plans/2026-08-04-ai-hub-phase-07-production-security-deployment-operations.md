@@ -79,10 +79,10 @@
 
 **Files:** Create `infra/monitoring/prometheus.production.yml`, `infra/monitoring/alertmanager.yml`, `infra/monitoring/grafana/provisioning/*`, `infra/monitoring/loki/*`, `infra/monitoring/promtail/*`, focused config tests, and `docs/runbooks/observability.md`; modify monitoring Compose services and application logging only as needed.
 
-- [ ] Write failing tests for scrape authentication, service/worker/database/storage health, latency/error/outbox/replication/WAL/backup lag metrics, alert routing, log redaction, retention, and no employee-number/session-secret leakage.
-- [ ] Implement Prometheus, Grafana, Alertmanager, and centralized log collection with production-separated credentials and dashboards for 99.5% availability, 15-minute RPO, and 2-hour RTO evidence.
-- [ ] Verify config syntax, redaction fixtures, alert rule tests, and disposable service health; do not treat an unconnected notification receiver as delivered alert evidence.
-- [ ] Commit `feat(phase-07): add production observability and alerting`.
+- [x] Write failing tests for scrape authentication, service/worker/database/storage health, latency/error/outbox/replication/WAL/backup lag metrics, alert routing, log redaction, retention, and no employee-number/session-secret leakage.
+- [x] Implement Prometheus, Grafana, Alertmanager, and centralized log collection with production-separated credentials and dashboards for 99.5% availability, 15-minute RPO, and 2-hour RTO evidence.
+- [x] Verify configuration model, redaction fixtures, alert rule contract, and Compose health model; do not treat an unconnected notification receiver as delivered alert evidence.
+- [x] Commit `feat(phase-07): add production observability and alerting`.
 
 ### Task 7: CI/CD, immutable release, upgrade, rollback, migration, and supply-chain gates
 

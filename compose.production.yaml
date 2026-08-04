@@ -138,9 +138,72 @@ services:
   prometheus:
     image: ${PROMETHEUS_IMAGE:?PROMETHEUS_IMAGE must be a digest-pinned image}
     restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
     volumes:
       - prometheus-data:/prometheus
-      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/prometheus.production.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/monitoring/rules/production-alerts.yml:/etc/prometheus/rules/production-alerts.yml:ro
+    networks: [application]
+
+  postgres-exporter:
+    image: ${POSTGRES_EXPORTER_IMAGE:?POSTGRES_EXPORTER_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME_FILE: /run/secrets/postgres_exporter_dsn
+    secrets: [postgres_exporter_dsn]
+    expose: ["9187"]
+    networks: [application]
+
+  alertmanager:
+    image: ${ALERTMANAGER_IMAGE:?ALERTMANAGER_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - alertmanager-data:/alertmanager
+      - ./infra/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    expose: ["9093"]
+    networks: [application]
+
+  grafana:
+    image: ${GRAFANA_IMAGE:?GRAFANA_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER is required}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    secrets: [grafana_admin_password]
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    expose: ["3000"]
+    networks: [application]
+
+  loki:
+    image: ${LOKI_IMAGE:?LOKI_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yml"]
+    volumes:
+      - loki-data:/loki
+      - ./infra/monitoring/loki/local-config.yml:/etc/loki/local-config.yml:ro
+    expose: ["3100"]
+    networks: [application]
+
+  promtail:
+    image: ${PROMTAIL_IMAGE:?PROMTAIL_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-positions:/run/promtail
+      - ./infra/monitoring/promtail/config.yml:/etc/promtail/config.yml:ro
+    depends_on:
+      loki:
+        condition: service_started
     networks: [application]
 
 volumes:
@@ -149,6 +212,10 @@ volumes:
   garage-data:
   clamav-definitions:
   prometheus-data:
+  alertmanager-data:
+  grafana-data:
+  loki-data:
+  promtail-positions:
 
 networks:
   application:
@@ -175,3 +242,7 @@ secrets:
     file: ${TLS_CERT_FILE:?TLS_CERT_FILE is required}
   tls_private_key:
     file: ${TLS_KEY_FILE:?TLS_KEY_FILE is required}
+  postgres_exporter_dsn:
+    file: ${POSTGRES_EXPORTER_DSN_FILE:?POSTGRES_EXPORTER_DSN_FILE is required}
+  grafana_admin_password:
+    file: ${GRAFANA_ADMIN_PASSWORD_FILE:?GRAFANA_ADMIN_PASSWORD_FILE is required}

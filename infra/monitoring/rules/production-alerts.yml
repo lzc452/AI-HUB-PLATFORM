@@ -1,0 +1,35 @@
+groups:
+  - name: ai-hub-production
+    rules:
+      - alert: AiHubAvailabilityBudgetBurn
+        expr: (1 - (sum(rate(ai_hub_http_request_duration_seconds_count{status_code=~"5.."}[5m])) / sum(rate(ai_hub_http_request_duration_seconds_count[5m])))) < 0.995
+        for: 10m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: AI Hub availability is below 99.5%
+      - alert: AiHubReplicationLag
+        expr: ai_hub_postgres_replication_lag_seconds > 900
+        for: 5m
+        labels:
+          severity: critical
+          category: replication
+      - alert: AiHubWalArchiveLag
+        expr: ai_hub_postgres_wal_archive_lag_seconds > 900
+        for: 5m
+        labels:
+          severity: critical
+          category: backup
+      - alert: AiHubBackupStale
+        expr: ai_hub_backup_age_seconds > 900
+        for: 5m
+        labels:
+          severity: critical
+          category: backup
+      - alert: AiHubSecurityBoundaryFailure
+        expr: increase(ai_hub_security_policy_rejections_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: warning
+          category: security

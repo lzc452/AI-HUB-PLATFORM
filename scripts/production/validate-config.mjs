@@ -15,6 +15,12 @@ const requiredImages = Object.freeze([
   "POSTGRES_IMAGE",
   "GARAGE_IMAGE",
   "PROXY_IMAGE",
+  "PROMETHEUS_IMAGE",
+  "POSTGRES_EXPORTER_IMAGE",
+  "ALERTMANAGER_IMAGE",
+  "GRAFANA_IMAGE",
+  "LOKI_IMAGE",
+  "PROMTAIL_IMAGE",
 ]);
 
 const forbiddenFallbacks =
