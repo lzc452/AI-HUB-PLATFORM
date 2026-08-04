@@ -38,6 +38,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Validate production release contract
         run: node scripts/production/release-gate.mjs --contract
+      - name: Validate production rollback contract (dry-run forward-fix; NO_AUTOMATIC_DOWN_MIGRATION)
+        run: node scripts/production/rollback-gate.mjs --contract --dry-run --mode=forward-fix
       - name: Verify
         run: pnpm verify
 

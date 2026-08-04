@@ -20,7 +20,7 @@ const valid = {
 };
 
 test("accepts a release with commit/digest/SBOM/provenance and rollback markers", () => {
-  assert.deepEqual(validateReleaseMetadata(valid), []);
+  assert.equal(validateReleaseMetadata(valid), true);
 });
 
 test("rejects mutable images and missing artifact evidence", () => {
@@ -50,7 +50,7 @@ test("rejects destructive or non-forward-compatible migration plans", () => {
       migrationNames: ["0012_request_replay_nonces"],
       forwardCompatible: true,
     }),
-    [],
+    true,
   );
 });
 

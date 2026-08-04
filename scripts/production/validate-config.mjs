@@ -4,8 +4,13 @@ const requiredSecrets = Object.freeze([
   "DATABASE_URL_FILE",
   "GARAGE_ACCESS_KEY_FILE",
   "GARAGE_SECRET_KEY_FILE",
+  "GARAGE_ADMIN_TOKEN_FILE",
+  "GARAGE_METRICS_TOKEN_FILE",
+  "GARAGE_RPC_SECRET_FILE",
   "TLS_CERT_FILE",
   "TLS_KEY_FILE",
+  "POSTGRES_EXPORTER_DSN_FILE",
+  "GRAFANA_ADMIN_PASSWORD_FILE",
 ]);
 
 const requiredImages = Object.freeze([
@@ -14,6 +19,7 @@ const requiredImages = Object.freeze([
   "WEB_IMAGE",
   "POSTGRES_IMAGE",
   "GARAGE_IMAGE",
+  "CLAMAV_IMAGE",
   "PROXY_IMAGE",
   "PROMETHEUS_IMAGE",
   "POSTGRES_EXPORTER_IMAGE",
@@ -80,7 +86,7 @@ export function validateProductionConfig(environment, composeText) {
     throw new Error(`Invalid production configuration: ${errors.join("; ")}`);
   }
 
-  return [];
+  return true;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

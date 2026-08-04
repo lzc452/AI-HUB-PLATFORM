@@ -13,13 +13,19 @@ const validEnvironment = {
   DB_PASSWORD_FILE: "/run/secrets/db_password",
   GARAGE_ACCESS_KEY_FILE: "/run/secrets/garage_access_key",
   GARAGE_SECRET_KEY_FILE: "/run/secrets/garage_secret_key",
+  GARAGE_ADMIN_TOKEN_FILE: "/run/secrets/garage_admin_token",
+  GARAGE_METRICS_TOKEN_FILE: "/run/secrets/garage_metrics_token",
+  GARAGE_RPC_SECRET_FILE: "/run/secrets/garage_rpc_secret",
   TLS_CERT_FILE: "/run/secrets/tls_certificate",
   TLS_KEY_FILE: "/run/secrets/tls_private_key",
+  POSTGRES_EXPORTER_DSN_FILE: "/run/secrets/postgres_exporter_dsn",
+  GRAFANA_ADMIN_PASSWORD_FILE: "/run/secrets/grafana_admin_password",
   API_IMAGE: "registry.example/ai-hub-api@sha256:" + "a".repeat(64),
   WORKER_IMAGE: "registry.example/ai-hub-worker@sha256:" + "b".repeat(64),
   WEB_IMAGE: "registry.example/ai-hub-web@sha256:" + "c".repeat(64),
   POSTGRES_IMAGE: "postgres@sha256:" + "d".repeat(64),
   GARAGE_IMAGE: "garage@sha256:" + "e".repeat(64),
+  CLAMAV_IMAGE: "clamav@sha256:" + "7".repeat(64),
   PROXY_IMAGE: "nginx@sha256:" + "f".repeat(64),
   PROMETHEUS_IMAGE: "prometheus@sha256:" + "1".repeat(64),
   POSTGRES_EXPORTER_IMAGE: "postgres-exporter@sha256:" + "2".repeat(64),
@@ -32,7 +38,7 @@ const validEnvironment = {
 test("accepts a complete production environment with digest-pinned images", () => {
   assert.deepEqual(
     validateProductionConfig(validEnvironment, "services: {}"),
-    [],
+    true,
   );
 });
 
@@ -44,6 +50,15 @@ test("rejects missing production secrets and node role", () => {
   assert.throws(
     () => validateProductionConfig(environment, "services: {}"),
     /NODE_ROLE.*COOKIE_SECRET_FILE|COOKIE_SECRET_FILE.*NODE_ROLE/,
+  );
+});
+
+test("rejects a production environment missing the ClamAV image digest", () => {
+  const environment = { ...validEnvironment };
+  delete environment.CLAMAV_IMAGE;
+  assert.throws(
+    () => validateProductionConfig(environment, "services: {}"),
+    /CLAMAV_IMAGE/i,
   );
 });
 

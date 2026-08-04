@@ -44,7 +44,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 | Object-storage recovery | Async replication policy/manifest contract passed; real sites/cutover/restore pending | at risk |
 | Observability | Prometheus/Grafana/Alertmanager/Loki/Promtail config and redaction contracts passed; connected receiver/real health pending | policy passed |
 | Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
-| Release safety | Release-gate tests, CI SBOM/provenance flags, migration/rollback contract passed; signed scan/digest capture pending | policy passed |
+| Release safety | Release/rollback gate tests, CI SBOM/provenance flags, migration/forward-fix contract passed; signed scan/digest capture pending | policy passed |
 | Reliability targets | Measured 99.5% availability, RPO <= 15 minutes, RTO <= 2 hours | pending |
 | Delivery | Branch push and Draft PR URL or exact external blocker | pending |
 
@@ -114,7 +114,7 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 ### Step 7: CI/CD and supply chain
 
 - RED: `node --test scripts/production/release-gate.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the release gate did not exist. The source contract also failed once because it expected literal digests instead of the required digest variable contract; that assertion was corrected to require `:?` image variables plus CI SBOM/provenance flags.
-- GREEN: release tests passed 4/4; `node scripts/production/release-gate.mjs --contract` passed; CI config tests pass after requiring release-gate, SBOM, and provenance in GitHub/GitLab; format and whitespace checks passed. CI now requests BuildKit SBOM/provenance and executes the release contract before verification.
+- GREEN: release tests passed 4/4; rollback tests passed 2/2; `node scripts/production/release-gate.mjs --contract` and `node scripts/production/rollback-gate.mjs --contract --dry-run --mode=forward-fix` passed; CI config tests pass after requiring release/rollback gates, SBOM, and provenance in GitHub/GitLab; format and whitespace checks passed. CI now requests BuildKit SBOM/provenance and executes both source contracts before verification.
 - Registry signing, actual pushed image digests, vulnerability database scan output, migration execution against production-like PostgreSQL, and external credentials: pending; no unsigned/local image is production evidence.
 - Commit: `5cb97b8 ci(phase-07): gate immutable releases and rollback`.
 
@@ -134,8 +134,8 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 10: Final gates and delivery
 
-- Exact Phase 7 gates: pending.
-- Two-axis review: pending.
+- Exact Phase 7 gates: format, lint, typecheck, boundaries, build, doc links, development Compose, production Compose, and Phase 7 contract tests passed; full `pnpm verify` stopped at database integration with 3 failed suites / 24 skipped tests because no container runtime strategy was available. Real deployment, backup/restore, failover, observability, and SLO evidence remain pending.
+- Two-axis review: Standards findings were fixed with config parity, meaningful validator returns, and a named promotion-readiness contract; the Spec review found no prohibited infrastructure or Phase 8 scope creep, while real host/storage/registry/SSRF integration/RPO-RTO gaps remain explicit external or partial evidence.
 - Push: pending.
 - Draft PR: pending; no PR will be described without a returned URL/number.
 

@@ -1,5 +1,13 @@
 const MIN_BACKUP_SHA256 = /^[a-f0-9]{64}$/i;
 
+/**
+ * @typedef {object} PromotionReadiness
+ * @property {boolean} fencedPrimary
+ * @property {string} latestBackupAt
+ * @property {string} now
+ * @property {number} replicationLagSeconds
+ */
+
 export function validatePostgresSettings(settings) {
   const errors = [];
   if (!["primary", "standby"].includes(settings.role)) {
@@ -25,7 +33,7 @@ export function validatePostgresSettings(settings) {
   }
   if (errors.length > 0)
     throw new Error(`Invalid PostgreSQL settings: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function validateBackupEvidence(evidence) {
@@ -46,9 +54,10 @@ export function validateBackupEvidence(evidence) {
   }
   if (errors.length > 0)
     throw new Error(`Invalid backup evidence: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
+/** @param {PromotionReadiness} input */
 export function assertManualPromotionReady(input) {
   if (!input.fencedPrimary) throw new Error("PRIMARY_FENCING_REQUIRED");
   const now = new Date(input.now).valueOf();

@@ -846,9 +846,9 @@
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
             status: "进行中",
-            progress: 80,
+            progress: 85,
             summary:
-              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布和演练契约已完成，必要 API/Worker/Web 回归通过；真实双机、凭据、扫描、升级回滚、数据库集成和恢复演练仍需外部证据。",
+              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布、回滚和演练契约已完成，必要 API/Worker/Web 回归通过，两轴审查的仓库内 actionable findings 已修复；真实双机、凭据、扫描、升级回滚、数据库集成、SSRF 外部适配器和恢复演练仍需外部证据。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
@@ -1176,6 +1176,13 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "review",
+            title: "Phase 7 two-axis review findings resolved and bounded",
+            body: "Standards review identified and fixed Compose/validator secret-image parity drift, meaningless validator return arrays, and an untyped promotion readiness input. Spec review found no prohibited infrastructure or Phase 8 scope creep; it also confirmed real two-host deployment, backup/restore, registry scan/signature, measured SLO/RPO/RTO, and outbound SSRF adapter evidence remain partial or external. Added rollback-gate and release-rollback contracts without claiming production completion.",
+          },
+          {
           {
             date: "2026-08-04",
             phase: "test",

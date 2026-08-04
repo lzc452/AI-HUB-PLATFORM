@@ -70,7 +70,7 @@ export function createProductionSecurityMiddleware(
       .assertFresh({
         nonce,
         timestamp,
-        actorEmployeeId: request.headers["x-employee-id"] ?? "anonymous",
+        actorEmployeeId: "authenticated-request",
         route: (request.url ?? "/").split("?", 1)[0]!,
       })
       .then(() => next())

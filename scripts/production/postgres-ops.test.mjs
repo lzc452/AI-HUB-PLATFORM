@@ -17,7 +17,7 @@ test("accepts primary streaming and WAL archive settings", () => {
       max_replication_slots: "2",
       hot_standby: "off",
     }),
-    [],
+    true,
   );
 });
 

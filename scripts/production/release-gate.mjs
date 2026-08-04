@@ -23,7 +23,7 @@ export function validateReleaseMetadata(metadata) {
   if (!metadata.rollbackMarker) errors.push("rollback marker is required");
   if (errors.length > 0)
     throw new Error(`Invalid release metadata: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function validateMigrationPlan(plan) {
@@ -42,7 +42,7 @@ export function validateMigrationPlan(plan) {
   }
   if (errors.length > 0)
     throw new Error(`Invalid migration plan: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function validateSupplyChainReport(report) {
@@ -54,7 +54,7 @@ export function validateSupplyChainReport(report) {
   if (report.high !== 0) errors.push("high vulnerabilities must be zero");
   if (errors.length > 0)
     throw new Error(`Invalid supply-chain report: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function validateSourceContract(files) {
@@ -74,7 +74,7 @@ export function validateSourceContract(files) {
     errors.push("CI must request provenance output");
   if (errors.length > 0)
     throw new Error(`Invalid CI release contract: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 if (process.argv.includes("--contract")) {
