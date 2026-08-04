@@ -1,8 +1,11 @@
 const requiredSecrets = Object.freeze([
   "COOKIE_SECRET_FILE",
   "DB_PASSWORD_FILE",
+  "DATABASE_URL_FILE",
   "GARAGE_ACCESS_KEY_FILE",
   "GARAGE_SECRET_KEY_FILE",
+  "TLS_CERT_FILE",
+  "TLS_KEY_FILE",
 ]);
 
 const requiredImages = Object.freeze([
@@ -28,7 +31,12 @@ export function validateProductionConfig(environment, composeText) {
     errors.push("NODE_ROLE must be active or standby");
   }
 
-  for (const key of ["PUBLIC_HOSTNAME", "DATABASE_URL", ...requiredSecrets]) {
+  for (const key of [
+    "PUBLIC_HOSTNAME",
+    "PUBLIC_ORIGIN",
+    "DATABASE_URL",
+    ...requiredSecrets,
+  ]) {
     if (!environment[key]) {
       errors.push(`${key} is required`);
     }

@@ -43,7 +43,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 | PostgreSQL recovery | Streaming/WAL config, backup integrity, promotion and restore evidence | pending |
 | Object-storage recovery | Replication manifest/checksum, cutover and restore evidence | pending |
 | Observability | Scrape/config tests, dashboards, alert route and redacted centralized logs | pending |
-| Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests and supply-chain scan | pending |
+| Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
 | Release safety | Immutable image, SBOM/provenance, migration, upgrade and rollback gates | pending |
 | Reliability targets | Measured 99.5% availability, RPO <= 15 minutes, RTO <= 2 hours | pending |
 | Delivery | Branch push and Draft PR URL or exact external blocker | pending |
@@ -84,10 +84,11 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 3: Security boundaries
 
-- RED command and failure: pending.
-- GREEN implementation and adversarial verification: pending.
-- Real certificate/DNS/network evidence: pending until supplied.
-- Commit: pending.
+- RED: focused CSRF/SSRF/replay and proxy tests were added before implementation; the modules/config file were absent, producing the expected missing-module/config failure. A later strict typecheck also caught an unavailable Node `LookupAddress` type and was fixed before green.
+- GREEN: server passed 27 files/105 tests, server/database/API typechecks and server/API lint passed, and the production proxy test passed 1/1. The security boundary includes TLS proxy headers/redirect, CSRF double-submit checks, DNS-resolved private-address rejection, and PostgreSQL-backed hashed nonce uniqueness through migration `0012`.
+- Verification: `corepack pnpm --filter @ai-hub/server test`; `corepack pnpm --filter @ai-hub/server typecheck`; `corepack pnpm --filter @ai-hub/server lint`; matching database/API typecheck and API lint; `node ../../node_modules/vitest/vitest.mjs run test/proxy-production-config.test.ts` from `apps/api`.
+- Real certificate/DNS/network/TLS scan and two-host replay evidence: pending until supplied.
+- Commit: `1f59742 feat(phase-07): enforce production request security boundaries`.
 
 ### Step 4: PostgreSQL recovery
 

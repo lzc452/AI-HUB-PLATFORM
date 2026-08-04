@@ -74,6 +74,14 @@ export interface PasswordResetChallengesTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface RequestReplayNoncesTable {
+  nonce_hash: string;
+  actor_employee_id: string;
+  route: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  expires_at: Date;
+}
+
 export interface DingTalkBindingsTable {
   employee_id: string;
   dingtalk_user_id: string;
@@ -474,6 +482,7 @@ export interface DatabaseSchema {
   employee_roles: EmployeeRolesTable;
   user_sessions: UserSessionsTable;
   password_reset_challenges: PasswordResetChallengesTable;
+  request_replay_nonces: RequestReplayNoncesTable;
   dingtalk_bindings: DingTalkBindingsTable;
   dingtalk_sync_runs: DingTalkSyncRunsTable;
   identity_audit_events: IdentityAuditEventsTable;

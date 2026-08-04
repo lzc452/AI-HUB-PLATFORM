@@ -37,6 +37,22 @@ export {
   ProblemDetailsFilter,
   toProblemDetails,
 } from "./system/http/problem-details.filter.js";
+export { assertCsrfRequest, readCookieValue } from "./system/security/csrf.js";
+export {
+  assertPublicHttpTarget,
+  isPrivateAddress,
+} from "./system/security/ssrf-policy.js";
+export {
+  ReplayGuard,
+  type ReplayNonceInput,
+  type ReplayNonceRecord,
+  type ReplayNonceStore,
+} from "./system/security/replay-guard.js";
+export { KyselyReplayNonceRepository } from "./system/security/replay.repository.js";
+export {
+  createProductionSecurityMiddleware,
+  type ProductionSecurityOptions,
+} from "./system/security/production.middleware.js";
 export { IdentityController } from "./identity/identity.controller.js";
 export { IdentityModule } from "./identity/identity.module.js";
 export { KyselyIdentityRepository } from "./identity/identity.repository.js";

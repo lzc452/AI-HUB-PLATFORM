@@ -52,10 +52,10 @@
 
 **Files:** Create `infra/docker/nginx.production.conf`, `packages/server/src/security/csrf.*`, `packages/server/src/security/ssrf-policy.*`, `packages/server/src/security/replay-guard.*` and focused tests; modify API bootstrap/configuration and security documentation.
 
-- [ ] Write failing tests for TLS-only proxy behavior, HSTS/CSP/frame/content/referrer headers, Origin/CSRF-token enforcement on state-changing requests, private/link-local/loopback/metadata SSRF rejection with DNS re-check, and duplicate/expired request-id rejection without bypassing Audit/Outbox.
-- [ ] Implement middleware/ports using existing session and authorization boundaries; keep the controls disabled only in explicitly named test configuration, never through production fallbacks.
-- [ ] Verify focused security tests, API typecheck/lint, proxy config syntax, and adversarial request fixtures.
-- [ ] Commit `feat(phase-07): enforce production request security boundaries`.
+- [x] Write failing tests for TLS-only proxy behavior, HSTS/CSP/frame/content/referrer headers, Origin/CSRF-token enforcement on state-changing requests, private/link-local/loopback/metadata SSRF rejection with DNS re-check, and duplicate/expired request-id rejection without bypassing Audit/Outbox.
+- [x] Implement middleware/ports using existing session and authorization boundaries; keep the controls disabled only in explicitly named test configuration, never through production fallbacks.
+- [x] Verify focused security tests, API/server typecheck and lint, proxy security config test, and adversarial request fixtures. Real certificate/DNS/TLS scan evidence remains external.
+- [x] Commit `feat(phase-07): enforce production request security boundaries`.
 
 ### Task 4: PostgreSQL replication, WAL archive, backup, restore, and manual promotion
 

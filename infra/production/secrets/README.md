@@ -5,7 +5,8 @@ Place one secret per file under a host-only directory such as
 operator, and mode `0600`. The files referenced by the production env examples
 are required: `database_url`, `cookie_secret`, `db_password`,
 `garage_admin_token`, `garage_access_key`, `garage_secret_key`,
-`garage_metrics_token`, and `garage_rpc_secret`.
+`garage_metrics_token`, `garage_rpc_secret`, `tls_certificate`, and
+`tls_private_key`.
 
 Never commit these files, put secret values in Compose YAML, or reuse the
 development defaults from `compose.yaml`. A host is not production-ready until

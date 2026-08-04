@@ -10,6 +10,7 @@ import * as analyticsEvents from "./migrations/0008_analytics_events.js";
 import * as analyticsExports from "./migrations/0009_analytics_exports.js";
 import * as analyticsRoles from "./migrations/0010_analytics_roles.js";
 import * as analyticsAggregateVersions from "./migrations/0011_analytics_aggregate_versions.js";
+import * as requestReplayNonces from "./migrations/0012_request_replay_nonces.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -24,6 +25,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0009_analytics_exports": analyticsExports,
   "0010_analytics_roles": analyticsRoles,
   "0011_analytics_aggregate_versions": analyticsAggregateVersions,
+  "0012_request_replay_nonces": requestReplayNonces,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

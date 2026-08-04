@@ -3,6 +3,7 @@ name: ai-hub-production
 x-production-environment: &production-environment
   NODE_ENV: production
   API_PORT: "3000"
+  PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
   DATABASE_URL_FILE: /run/secrets/database_url
   COOKIE_SECRET_FILE: /run/secrets/cookie_secret
   LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -110,6 +111,9 @@ services:
     read_only: true
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+    environment:
+      NGINX_ENVSUBST_FILTER: PUBLIC_HOSTNAME
+      PUBLIC_HOSTNAME: ${PUBLIC_HOSTNAME:?PUBLIC_HOSTNAME is required}
     depends_on:
       api:
         condition: service_healthy
@@ -118,8 +122,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    secrets: [tls_certificate, tls_private_key]
+    tmpfs:
+      - /etc/nginx/conf.d
+      - /var/cache/nginx
+      - /var/run
     volumes:
-      - ./infra/docker/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./infra/docker/nginx.production.conf:/etc/nginx/templates/default.conf.template:ro
     networks: [application]
 
   prometheus:
@@ -158,3 +167,7 @@ secrets:
     file: ${GARAGE_METRICS_TOKEN_FILE:?GARAGE_METRICS_TOKEN_FILE is required}
   garage_rpc_secret:
     file: ${GARAGE_RPC_SECRET_FILE:?GARAGE_RPC_SECRET_FILE is required}
+  tls_certificate:
+    file: ${TLS_CERT_FILE:?TLS_CERT_FILE is required}
+  tls_private_key:
+    file: ${TLS_KEY_FILE:?TLS_KEY_FILE is required}
