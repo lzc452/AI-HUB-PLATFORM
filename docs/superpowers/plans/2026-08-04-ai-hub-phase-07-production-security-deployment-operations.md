@@ -115,7 +115,7 @@
 **Files:** Phase 7 plan/ledger/ADR, `processing_visualization.html`, review evidence, and no unrelated files.
 
 - [x] Run exact final gates plus production Compose/config/security/supply-chain/backup/recovery evidence; reject cached or simulated output as production proof. Local gates passed, while real production evidence remains blocked and recorded.
-- [x] Review the complete Phase 7 diff against the roadmap, ADR 0008, security/reliability axes, and all user constraints; resolve repository-code actionable findings and record genuine external/partial-evidence blockers.
+- [ ] Review the complete Phase 7 diff against the roadmap, ADR 0008, security/reliability axes, and all user constraints; Standards is clear, but Spec re-review still has repository-scope gaps for SSRF adapter enforcement, role/fencing enforcement, executable recovery, real supply-chain artifacts, and authenticated ActorContext propagation.
 - [ ] Verify branch ancestry/status, commit the documentation closeout, push without force, and attempt Draft PR creation only through available integration; record a real PR URL or the exact HTTP/network blocker.
 - [ ] Declare Phase 7 complete only if all required production, recovery, SLO/RPO/RTO, regression, review, push, and Draft PR/blocker conditions are evidenced; otherwise report Phase 7 as incomplete with a bounded blocker list.
 

@@ -848,7 +848,7 @@
             status: "进行中",
             progress: 85,
             summary:
-              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布、回滚和演练契约已完成，必要 API/Worker/Web 回归通过，两轴审查的仓库内 actionable findings 已修复；真实双机、凭据、扫描、升级回滚、数据库集成、SSRF 外部适配器和恢复演练仍需外部证据。",
+              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布、回滚和演练契约已完成，必要 API/Worker/Web 回归通过，Standards 复审无 remaining actionable findings；Spec 仍有 SSRF 出口适配器、角色/fencing、可执行恢复、真实供应链制品和认证 ActorContext 传递缺口，且真实生产证据未完成。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
@@ -1176,6 +1176,13 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "review",
+            title: "Phase 7 final review bounded as incomplete",
+            body: "Standards re-review found no remaining actionable findings after fixing visualization syntax, validator return contracts/types, and timestamp-derived RPO/RTO. Spec re-review still identified repository-scope gaps in real SSRF adapter enforcement, Active/Standby fencing, executable PostgreSQL/object-storage recovery, real supply-chain artifacts, and authenticated ActorContext propagation; the Phase 7 completion gate therefore remains open and no production-ready claim is made.",
+          },
+          {
           {
             date: "2026-08-04",
             phase: "review",

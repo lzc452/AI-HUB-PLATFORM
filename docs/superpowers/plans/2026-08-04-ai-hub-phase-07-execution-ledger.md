@@ -134,8 +134,8 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 10: Final gates and delivery
 
-- Exact Phase 7 gates: format, lint, typecheck, boundaries, build, doc links, development Compose, production Compose, and Phase 7 contract tests passed; full `pnpm verify` stopped at database integration with 3 failed suites / 24 skipped tests because no container runtime strategy was available. Real deployment, backup/restore, failover, observability, and SLO evidence remain pending.
-- Two-axis review: Standards findings were fixed with config parity, meaningful validator returns, and a named promotion-readiness contract; the Spec review found no prohibited infrastructure or Phase 8 scope creep, while real host/storage/registry/SSRF integration/RPO-RTO gaps remain explicit external or partial evidence.
+- Exact Phase 7 gates: format, lint, typecheck, boundaries, build, doc links, development Compose, production Compose, and the final Phase 7 contract suite passed (`31/31` contract tests); full `pnpm verify` stopped at database integration with 3 failed suites / 24 skipped tests because no container runtime strategy was available. Real deployment, backup/restore, failover, observability, and SLO evidence remain pending.
+- Two-axis review: Standards re-review found no remaining actionable findings. Spec re-review found no prohibited infrastructure or Phase 8 scope creep, but SSRF outbound-adapter enforcement, Active/Standby Compose fencing, executable PostgreSQL/object-storage recovery, real supply-chain artifacts, and authenticated ActorContext propagation remain incomplete; these are not claimed as production-ready.
 - Push: pending.
 - Draft PR: pending; no PR will be described without a returned URL/number.
 
