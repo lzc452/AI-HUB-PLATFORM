@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
 
+/**
+ * @typedef {object} ObjectStorageCutoverReadiness
+ * @property {boolean} sourceFenced
+ * @property {boolean} targetHealthy
+ * @property {boolean} manifestVerified
+ * @property {boolean} noConflicts
+ */
+
 export function validateObjectStorageSettings(settings) {
   const errors = [];
   if (settings.versioning !== true) errors.push("versioning must be enabled");
@@ -19,7 +27,7 @@ export function validateObjectStorageSettings(settings) {
   }
   if (errors.length > 0)
     throw new Error(`Invalid object-storage settings: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function createReplicationManifest(objects) {
@@ -40,6 +48,7 @@ export function createReplicationManifest(objects) {
   return { algorithm: "sha256", digest, objects: canonical };
 }
 
+/** @param {ObjectStorageCutoverReadiness} input */
 export function assertObjectStorageCutoverReady(input) {
   if (!input.sourceFenced) throw new Error("OBJECT_SOURCE_FENCING_REQUIRED");
   if (!input.targetHealthy) throw new Error("OBJECT_TARGET_UNHEALTHY");

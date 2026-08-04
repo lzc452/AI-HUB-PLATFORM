@@ -74,6 +74,39 @@ export function validateRecoveryDrillEvidence(evidence) {
   if (!evidence.events.some((event) => event.type === requiredEvent)) {
     fail(`${evidence.scenario} requires ${requiredEvent} evidence`);
   }
+  const lastReplicated = evidence.events.find(
+    (event) => event.type === "last-replicated",
+  );
+  const failureInjected = evidence.events.find(
+    (event) => event.type === "failure-injected",
+  );
+  const writesRestored = evidence.events.find(
+    (event) => event.type === "writes-restored",
+  );
+  if (!lastReplicated || !failureInjected || !writesRestored) {
+    fail(
+      "measured RPO/RTO requires replication, failure, and restore timestamps",
+    );
+  }
+  const lastReplicatedAt = parseTimestamp(
+    lastReplicated.at,
+    "last-replicated.at",
+  );
+  const failureAt = parseTimestamp(failureInjected.at, "failure-injected.at");
+  const writesRestoredAt = parseTimestamp(
+    writesRestored.at,
+    "writes-restored.at",
+  );
+  const measuredRpoSeconds = (failureAt - lastReplicatedAt) / 1000;
+  const measuredRtoSeconds = (writesRestoredAt - failureAt) / 1000;
+  if (
+    !Number.isInteger(measuredRpoSeconds) ||
+    !Number.isInteger(measuredRtoSeconds) ||
+    evidence.rpoSeconds !== measuredRpoSeconds ||
+    evidence.rtoSeconds !== measuredRtoSeconds
+  ) {
+    fail("RPO/RTO must match measured event timestamps");
+  }
   if (evidence.fencingVerified !== true) {
     fail("fencing must be verified before recovery writes");
   }

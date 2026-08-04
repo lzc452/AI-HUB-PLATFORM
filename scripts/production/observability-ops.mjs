@@ -27,7 +27,7 @@ export function validateObservabilitySettings(settings) {
     errors.push("central log retention must be at least 30 days");
   if (errors.length > 0)
     throw new Error(`Invalid observability settings: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function validateAlertingSettings(settings) {
@@ -44,7 +44,7 @@ export function validateAlertingSettings(settings) {
   }
   if (errors.length > 0)
     throw new Error(`Invalid alerting settings: ${errors.join("; ")}`);
-  return [];
+  return true;
 }
 
 export function redactCentralLog(value) {

@@ -25,9 +25,11 @@ fencing check fails.
 | PostgreSQL failure | Isolate primary database | `standby-promoted`, old primary fenced | migration/schema check, write/read check, backup restore checksum |
 | Object-storage failure | Isolate primary bucket/site | `object-storage-cutover`, old site fenced | manifest checksum, upload/download check, restore checksum |
 
-For every scenario, capture monotonic UTC timestamps for failure injection,
-fencing, cutover/promotion, health recovery, and restore verification. The
-evidence must prove `rpoSeconds <= 900` and `rtoSeconds <= 7200`.
+For every scenario, capture monotonic UTC timestamps for last replication,
+failure injection, fencing, cutover/promotion, health recovery, and restore
+verification. The validator derives RPO from last replication to failure and
+RTO from failure to writes restored; evidence must prove `rpoSeconds <= 900`
+and `rtoSeconds <= 7200`.
 
 ## Abort and rollback
 

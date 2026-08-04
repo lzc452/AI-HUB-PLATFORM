@@ -17,7 +17,7 @@ test("requires versioned encrypted private buckets and asynchronous replication"
       sourceBucket: "ai-hub-primary",
       targetBucket: "ai-hub-secondary",
     }),
-    [],
+    true,
   );
 });
 

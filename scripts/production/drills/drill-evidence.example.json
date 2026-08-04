@@ -1,13 +1,14 @@
 {
   "drillId": "phase-07-example-001",
   "scenario": "postgres-failure",
-  "startedAt": "2026-08-04T12:00:00.000Z",
+  "startedAt": "2026-08-04T11:53:00.000Z",
   "endedAt": "2026-08-04T12:12:00.000Z",
   "rpoSeconds": 420,
   "rtoSeconds": 720,
   "fencingVerified": true,
   "restoreVerified": true,
   "events": [
+    { "type": "last-replicated", "at": "2026-08-04T11:53:00.000Z" },
     { "type": "failure-injected", "at": "2026-08-04T12:00:00.000Z" },
     { "type": "standby-promoted", "at": "2026-08-04T12:05:00.000Z" },
     { "type": "writes-restored", "at": "2026-08-04T12:12:00.000Z" }

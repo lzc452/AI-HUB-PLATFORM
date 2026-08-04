@@ -23,7 +23,7 @@ test("requires production observability coverage and SLO evidence", () => {
       logDestination: "loki",
       logRetentionDays: 30,
     }),
-    [],
+    true,
   );
 });
 
@@ -50,7 +50,7 @@ test("requires a non-default alert receiver and critical routes", () => {
       routes: ["availability", "security", "backup", "replication"],
       repeatInterval: "4h",
     }),
-    [],
+    true,
   );
   assert.throws(
     () =>

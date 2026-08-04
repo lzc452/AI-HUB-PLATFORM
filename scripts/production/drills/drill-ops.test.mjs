@@ -6,13 +6,14 @@ import { validateRecoveryDrillEvidence } from "./drill-ops.mjs";
 const boundedEvidence = {
   drillId: "phase-07-2026-08-04-001",
   scenario: "postgres-failure",
-  startedAt: "2026-08-04T12:00:00.000Z",
+  startedAt: "2026-08-04T11:53:00.000Z",
   endedAt: "2026-08-04T12:12:00.000Z",
   rpoSeconds: 420,
   rtoSeconds: 720,
   fencingVerified: true,
   restoreVerified: true,
   events: [
+    { type: "last-replicated", at: "2026-08-04T11:53:00.000Z" },
     { type: "failure-injected", at: "2026-08-04T12:00:00.000Z" },
     { type: "standby-promoted", at: "2026-08-04T12:05:00.000Z" },
     { type: "writes-restored", at: "2026-08-04T12:12:00.000Z" },
@@ -24,6 +25,7 @@ test("rejects incomplete recovery evidence and SLO breaches", () => {
     () =>
       validateRecoveryDrillEvidence({
         ...boundedEvidence,
+        startedAt: "2026-08-04T11:53:00.000Z",
         rpoSeconds: 901,
         fencingVerified: false,
         restoreVerified: false,
@@ -40,6 +42,23 @@ test("accepts bounded evidence for a database failure drill", () => {
   });
 });
 
+test("derives RPO and RTO from ordered evidence timestamps", () => {
+  assert.throws(
+    () =>
+      validateRecoveryDrillEvidence({
+        ...boundedEvidence,
+        rtoSeconds: 1,
+        events: [
+          { type: "last-replicated", at: "2026-08-04T11:53:00.000Z" },
+          { type: "failure-injected", at: "2026-08-04T12:00:00.000Z" },
+          { type: "standby-promoted", at: "2026-08-04T12:05:00.000Z" },
+          { type: "writes-restored", at: "2026-08-04T12:12:00.000Z" },
+        ],
+      }),
+    /measured|timestamp/i,
+  );
+});
+
 test("rejects non-monotonic events and missing cutover evidence", () => {
   assert.throws(
     () =>
@@ -47,6 +66,7 @@ test("rejects non-monotonic events and missing cutover evidence", () => {
         ...boundedEvidence,
         scenario: "dns-cutover",
         events: [
+          { type: "last-replicated", at: "2026-08-04T11:53:00.000Z" },
           { type: "failure-injected", at: "2026-08-04T12:00:00.000Z" },
           { type: "writes-restored", at: "2026-08-04T12:12:00.000Z" },
           { type: "dns-cutover", at: "2026-08-04T12:05:00.000Z" },
@@ -64,6 +84,7 @@ test("requires the object-storage drill to prove a checksum-verified restore", (
         scenario: "object-storage-failure",
         restoreVerified: false,
         events: [
+          { type: "last-replicated", at: "2026-08-04T11:53:00.000Z" },
           { type: "failure-injected", at: "2026-08-04T12:00:00.000Z" },
           { type: "object-storage-cutover", at: "2026-08-04T12:05:00.000Z" },
           { type: "writes-restored", at: "2026-08-04T12:12:00.000Z" },
