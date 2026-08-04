@@ -1,0 +1,151 @@
+# Phase 7 Execution Ledger
+
+Date: 2026-08-04
+
+## Baseline decision
+
+Phase 6 is accepted input from
+`feature/phase-06-analytics-dashboard-export-assistant` at commit
+`e8255b31949fead551fae4abd3ef94d1979d38c2`. The new branch is
+`feature/phase-07-production-security-deployment-operations`.
+
+The working tree initially contained only the existing untracked `.codex/`
+directory. It is user-owned workspace state and is excluded from staging.
+The local Phase 6 remote-tracking branch resolved to the same commit. A fresh
+`git ls-remote` was attempted but the GitHub endpoint returned an empty reply;
+no unverified remote result is treated as evidence.
+
+Phase 3–6 accepted evidence is consumed from their plans, ledgers, ADRs,
+roadmap, and Phase 6 remote-tracking evidence. Their full gates are not
+repeated. Only Phase 7 boundary regressions are required.
+
+## Scope and non-goals
+
+Phase 7 covers two Ubuntu Server production Compose hosts, internal-DNS
+health-based switching, PostgreSQL streaming replication/WAL archive/manual
+promotion, object-storage replication and recovery, Prometheus/Grafana/
+Alertmanager/centralized logs, TLS/CSP/CSRF/SSRF/anti-replay controls,
+immutable-image CI, upgrade/rollback/migration gates, backups, drills, and
+operator runbooks.
+
+The single-enterprise model, existing business semantics, ActorContext/RBAC,
+Audit, Outbox, migration, and rollback boundaries remain unchanged. Redis,
+Elasticsearch, message queues, Kubernetes, microservices, a new tenant model,
+and unrestricted public Open APIs remain prohibited. Phase 8 pilot, UAT,
+formal go-live, and enterprise sign-off are explicitly deferred.
+
+## Target evidence
+
+| Target | Required evidence | Status |
+|---|---|---|
+| Two-host production Compose | Validated overlay, immutable images, host/config/secrets contract, disposable deployment evidence | pending |
+| Active-node switching | Internal DNS health check, fencing, cutover and rollback measurements | pending |
+| PostgreSQL recovery | Streaming/WAL config, backup integrity, promotion and restore evidence | pending |
+| Object-storage recovery | Replication manifest/checksum, cutover and restore evidence | pending |
+| Observability | Scrape/config tests, dashboards, alert route and redacted centralized logs | pending |
+| Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests and supply-chain scan | pending |
+| Release safety | Immutable image, SBOM/provenance, migration, upgrade and rollback gates | pending |
+| Reliability targets | Measured 99.5% availability, RPO <= 15 minutes, RTO <= 2 hours | pending |
+| Delivery | Branch push and Draft PR URL or exact external blocker | pending |
+
+## Ordered execution and evidence
+
+1. Baseline, plan, ledger, ADR 0008, visualization.
+2. Production Compose, configuration layers, secrets, immutable images.
+3. TLS, proxy, headers, CSRF, SSRF, anti-replay.
+4. PostgreSQL replication, WAL, backups, restore, manual promotion.
+5. Object-storage replication, cutover, restore.
+6. Metrics, dashboards, Alertmanager, centralized logs.
+7. CI/CD release, rollback, migration and supply-chain gates.
+8. Failure and recovery drills.
+9. Necessary API/Worker/Web/security/backup/deployment regression.
+10. Final gates, two-axis review, commit, push, Draft PR or blocker.
+
+No step is passed from an unexecuted command, cached result, local-only
+simulation, incomplete credential, incomplete network, or undelivered drill.
+
+### Step 1: Baseline and planning
+
+- Branch base: `e8255b31949fead551fae4abd3ef94d1979d38c2`.
+- Branch: `feature/phase-07-production-security-deployment-operations`.
+- Existing `.codex/` preserved and excluded.
+- Phase 6 evidence reused; Phase 3–6 full gates not repeated.
+- Plan, ledger, ADR 0008, and visualization established in commit `b64c41e`.
+- Verification: `git diff --check` and `corepack pnpm format:check` passed.
+- Step status: passed.
+
+### Step 2: Production Compose and immutable configuration
+
+- RED command and failure: pending.
+- GREEN implementation and focused verification: pending.
+- Production host/secret/image digest evidence: pending; no local fallback is accepted.
+- Commit: pending.
+
+### Step 3: Security boundaries
+
+- RED command and failure: pending.
+- GREEN implementation and adversarial verification: pending.
+- Real certificate/DNS/network evidence: pending until supplied.
+- Commit: pending.
+
+### Step 4: PostgreSQL recovery
+
+- RED command and failure: pending.
+- GREEN implementation and disposable/real pair verification: pending.
+- Backup medium, archive credentials, and two-host drill: pending.
+- Commit: pending.
+
+### Step 5: Object-storage recovery
+
+- RED command and failure: pending.
+- GREEN implementation and checksum restore verification: pending.
+- Production storage endpoints and credentials: pending.
+- Commit: pending.
+
+### Step 6: Observability and logs
+
+- RED command and failure: pending.
+- GREEN implementation and config/redaction verification: pending.
+- Connected alert receiver and central log destination: pending.
+- Commit: pending.
+
+### Step 7: CI/CD and supply chain
+
+- RED command and failure: pending.
+- GREEN implementation and local/CI gate verification: pending.
+- Registry signing, provenance, and vulnerability-service credentials: pending.
+- Commit: pending.
+
+### Step 8: Drills
+
+- RED command and failure: pending.
+- Disposable drill evidence: pending.
+- Real two-host measured RPO/RTO evidence: pending and must not be simulated.
+- Commit: pending.
+
+### Step 9: Necessary regressions
+
+- API/Worker/Web/permission/Audit/Outbox/backup/deployment command list: pending.
+- Exact test counts and environment: pending.
+- Phase 3–6 full-gate reuse remains explicit.
+
+### Step 10: Final gates and delivery
+
+- Exact Phase 7 gates: pending.
+- Two-axis review: pending.
+- Push: pending.
+- Draft PR: pending; no PR will be described without a returned URL/number.
+
+## External blockers and integrity rules
+
+- GitHub remote read was blocked during baseline by an empty reply from the
+  endpoint; the local remote-tracking commit is the only current remote
+  evidence.
+- Real Ubuntu hosts, internal DNS, TLS certificates, outbound allowlists,
+  backup media, storage replication endpoints, alert receivers, registry
+  signing, and production credentials are not present in the repository.
+- These prerequisites may be documented and validated structurally, but they
+  cannot be marked deployed, recovered, or production-ready until executed
+  with fresh evidence.
+- Draft PR existence is unknown until the configured GitHub integration returns
+  a URL or an exact external error.

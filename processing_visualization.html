@@ -481,7 +481,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-01",
+        updatedAt: "2026-08-04",
         phases: [
           {
             id: "product",
@@ -845,14 +845,14 @@
             id: "p7",
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
-            status: "待开始",
-            progress: 0,
+            status: "进行中",
+            progress: 5,
             summary:
-              "生产双机 Compose、切换方案、PostgreSQL 复制/WAL、对象存储复制、监控告警、安全头、供应链扫描、发布回滚和故障手册。",
+              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、内部 DNS 切换、PostgreSQL/WAL、对象存储恢复、监控告警、安全边界、供应链门禁和故障手册按序执行。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
-                "待开始",
+                "进行中",
                 "依赖生产服务器、网络、证书、出站白名单。",
               ],
               [
@@ -890,6 +890,7 @@
               "生产 RC 可部署",
               "数据库/对象存储/镜像/配置恢复演练通过",
               "RPO/RTO/99.5% 有证据",
+              "Phase 8 试点、UAT、正式上线和企业签字验收不提前实现",
             ],
           },
           {
@@ -936,6 +937,22 @@
           },
         ],
         tasks: [
+          {
+            id: "t-015",
+            phase: "ops",
+            status: "进行中",
+            title: "Phase 7 生产安全、部署与运维基线",
+            owner: "Codex",
+            start: "2026-08-04",
+            end: "",
+            progress:
+              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
+            problem:
+              "真实 Ubuntu 主机、DNS、TLS 证书、备份介质、生产存储端点、告警接收器、镜像签名凭据和 GitHub 远端读写权限不在仓库内；远端 ls-remote 本次返回空回复。",
+            solution:
+              "把外部前置条件与本地可验证配置契约分离，保留 Phase 6 已接受证据，不重复 Phase 3-6 全量门禁，并要求每一步失败测试、最小验证、独立 Conventional Commit 和新鲜演练证据。",
+            skip: "不提前实现 Phase 8 试点、UAT、正式上线或企业签字验收；不把本地模拟、缓存结果、未完成凭据或未完成网络配置描述为生产就绪。",
+          },
           {
             id: "t-001",
             phase: "product",
@@ -1159,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 production operations baseline established",
+            body: "Created feature/phase-07-production-security-deployment-operations from Phase 6 commit e8255b31949fead551fae4abd3ef94d1979d38c2. Added the Phase 7 plan, execution ledger, ADR 0008, and explicit evidence rules for two-host Compose, internal-DNS switching, PostgreSQL/WAL recovery, object replication, observability, security, immutable releases, drills, and the Phase 8 boundary. GitHub remote read returned an empty reply, so no unverified remote result or Draft PR is claimed.",
+          },
           {
             date: "2026-08-03",
             phase: "product",
