@@ -28,11 +28,16 @@ export function validateRecoveryDrillEvidence(evidence) {
     fail("drill evidence is required");
   }
 
-  if (!evidence.drillId || !/^[a-z0-9][a-z0-9-]{5,80}$/i.test(evidence.drillId)) {
+  if (
+    !evidence.drillId ||
+    !/^[a-z0-9][a-z0-9-]{5,80}$/i.test(evidence.drillId)
+  ) {
     fail("drillId must be a stable evidence identifier");
   }
   if (!SCENARIOS.has(evidence.scenario)) {
-    fail("scenario must be dns-cutover, postgres-failure, or object-storage-failure");
+    fail(
+      "scenario must be dns-cutover, postgres-failure, or object-storage-failure",
+    );
   }
 
   const startedAt = parseTimestamp(evidence.startedAt, "startedAt");
@@ -96,11 +101,16 @@ export function validateRecoveryDrillEvidence(evidence) {
   };
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (
+  process.argv[1] &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url
+) {
   const evidenceFlagIndex = process.argv.indexOf("--evidence");
   const evidencePath = process.argv[evidenceFlagIndex + 1];
   if (!evidencePath) {
-    console.error("Usage: node scripts/production/drills/drill-ops.mjs --evidence <json-file>");
+    console.error(
+      "Usage: node scripts/production/drills/drill-ops.mjs --evidence <json-file>",
+    );
     process.exitCode = 2;
   } else {
     const result = validateRecoveryDrillEvidence(
