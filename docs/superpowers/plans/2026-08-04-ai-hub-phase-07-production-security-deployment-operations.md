@@ -106,9 +106,9 @@
 
 **Files:** Modify Phase 7 ledger/visualization and add only focused regression fixtures/tests under `apps/api/test`, `apps/worker/test`, `apps/web/src`, `packages/server/src`, and `packages/database/src` when a Phase 7 boundary requires them.
 
-- [ ] Run the necessary API, Worker, Web, permission, Audit, Outbox, migration, backup/restore, Compose, security, and deployment tests; reuse Phase 6 accepted full-gate evidence without relabeling it as Phase 7 evidence.
-- [ ] Verify that no Phase 3–6 business semantics, tenant model, or prohibited infrastructure changed.
-- [ ] Record exact commands, counts, failures, environment, and unresolved external dependencies.
+- [x] Run the necessary API, Worker, Web, permission, Audit, Outbox, migration, backup/restore, Compose, security, and deployment tests; reuse Phase 6 accepted full-gate evidence without relabeling it as Phase 7 evidence.
+- [x] Verify that no Phase 3–6 business semantics, tenant model, or prohibited infrastructure changed.
+- [x] Record exact commands, counts, failures, environment, and unresolved external dependencies.
 
 ### Task 10: Phase 7 final gates, two-axis review, commit, push, and Draft PR status
 

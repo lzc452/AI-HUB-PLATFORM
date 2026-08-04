@@ -846,9 +846,9 @@
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
             status: "进行中",
-            progress: 75,
+            progress: 80,
             summary:
-              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复和监控告警契约已完成，本地不可变发布门禁已通过；真实双机、凭据、扫描、升级回滚和恢复演练仍需外部证据。",
+              "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布和演练契约已完成，必要 API/Worker/Web 回归通过；真实双机、凭据、扫描、升级回滚、数据库集成和恢复演练仍需外部证据。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
@@ -1176,6 +1176,13 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "test",
+            title: "Phase 7 necessary regression evidence recorded",
+            body: "Focused local regressions passed: server 27 files/105 tests, worker 3 files/7 tests, web 4 files/18 tests, config 3 tests, production contracts 25 tests, API production proxy 1/1, API/database typechecks, Compose model, format and diff checks. API real suites and database integration remained blocked before startup by the available Docker runtime strategy; inherited Phase 6 full-gate evidence was not relabeled.",
+          },
+          {
           {
             date: "2026-08-04",
             phase: "ops",

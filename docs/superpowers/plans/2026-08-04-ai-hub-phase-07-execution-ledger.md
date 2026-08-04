@@ -128,9 +128,9 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 9: Necessary regressions
 
-- API/Worker/Web/permission/Audit/Outbox/backup/deployment command list: pending.
-- Exact test counts and environment: pending.
-- Phase 3–6 full-gate reuse remains explicit.
+- Focused local evidence: server `27 files / 105 tests passed`; worker `3 files / 7 tests passed`; web `4 files / 18 tests passed`; config `1 file / 3 tests passed`; production operations/security/release/drill contracts `25 tests passed`; API production proxy `1/1`; API and database typechecks passed; Compose production model passed; format and diff checks passed.
+- API package regression also ran `11 files`: `13 passed`, `7 real tests skipped`, and `3 real suites failed` at the pre-existing `Could not find a working container runtime strategy` before database startup. Database integration attempted `24 skipped` with the same runtime failure. These are environment blockers, not passing production evidence.
+- Phase 3–6 full-gate reuse remains explicit: previously accepted Phase 6 evidence is inherited; no full Phase 3–6 gate is relabeled as Phase 7 evidence.
 
 ### Step 10: Final gates and delivery
 
