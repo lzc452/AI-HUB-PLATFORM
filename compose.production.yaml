@@ -51,7 +51,7 @@ services:
     volumes:
       - garage-metadata:/var/lib/garage/meta
       - garage-data:/var/lib/garage/data
-      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+      - ${GARAGE_CONFIG_FILE:?GARAGE_CONFIG_FILE is required}:/etc/garage.toml:ro
     networks: [application]
 
   clamav:

@@ -70,10 +70,10 @@
 
 **Files:** Create `infra/garage/production-primary.toml`, `infra/garage/production-secondary.toml`, `scripts/production/object-storage-*.mjs`, focused tests, and `docs/runbooks/object-storage-failover.md`; modify production Compose and storage configuration.
 
-- [ ] Write failing tests for versioned/encrypted buckets, replication manifests, checksum verification, denied public bucket access, cutover fencing, and restore of a representative Phase 3–6 artifact.
-- [ ] Implement asynchronous S3-compatible replication with explicit source/target credentials, manifest/checksum verification, manual cutover, and rollback-safe restore; do not add a message queue or claim synchronous durability.
-- [ ] Verify config lint, disposable storage checks where credentials exist, and a checksum-based restore test; record unavailable production endpoints as incomplete evidence.
-- [ ] Commit `feat(phase-07): add object storage replication and recovery operations`.
+- [x] Write failing tests for versioned/encrypted buckets, replication manifests, checksum verification, denied public bucket access, cutover fencing, and restore of a representative Phase 3–6 artifact.
+- [x] Implement asynchronous S3-compatible replication with explicit source/target credentials, manifest/checksum verification, manual cutover, and rollback-safe restore; do not add a message queue or claim synchronous durability.
+- [x] Verify policy/manifest tests, Compose config, formatting, and a checksum-based manifest path; record unavailable production endpoints as incomplete evidence.
+- [x] Commit `feat(phase-07): add object storage replication and recovery operations`.
 
 ### Task 6: Metrics, dashboards, alerts, and centralized logs
 

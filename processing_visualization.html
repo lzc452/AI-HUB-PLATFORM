@@ -486,7 +486,7 @@
           {
             id: "product",
             name: "产品设计",
-            progress: 35,
+            progress: 45,
             goal: "V1 范围、路线、阶段门禁和验收口径",
             tasks: [
               "规格与 roadmap 已存在",
@@ -867,8 +867,8 @@
               ],
               [
                 "对象存储异步复制和人工切换",
-                "待开始",
-                "需要容量、负责人和恢复步骤。",
+                "有风险",
+                "已完成异步复制策略、primary/secondary Garage 配置、SHA-256 manifest 和切换 Runbook；真实存储端点、凭据、容量和恢复演练仍未完成。",
               ],
               [
                 "Prometheus、Grafana、Alertmanager 和集中日志",
@@ -946,7 +946,7 @@
             start: "2026-08-04",
             end: "",
             progress:
-              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；生产 Compose 配置验证器 5/5、配置包 3/3、Compose 模型、格式和差异检查通过；server 安全边界 27 文件/105 测试、生产代理 1/1 通过；PostgreSQL ops 4/4 通过但真实 Docker 双机恢复被 runtime strategy 阻塞；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
+              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；生产 Compose 配置验证器 5/5、配置包 3/3、Compose 模型、格式和差异检查通过；server 安全边界 27 文件/105 测试、生产代理 1/1 通过；PostgreSQL ops 4/4 通过但真实 Docker 双机恢复被 runtime strategy 阻塞；对象存储 ops 4/4 通过但真实复制端点和恢复演练未完成；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
             problem:
               "真实 Ubuntu 主机、DNS、TLS 证书、备份介质、生产存储端点、告警接收器、镜像签名凭据和 GitHub 远端读写权限不在仓库内；远端 ls-remote 本次返回空回复。",
             solution:
@@ -1176,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 object-storage recovery contract recorded",
+            body: "Added primary/secondary private Garage configuration, asynchronous host replication guidance, deterministic SHA-256 manifests, checksum/conflict/fencing checks, and cutover/restore Runbook. Object-storage operations tests passed 4/4 and Compose config passed. Real storage endpoints, credentials, capacity, and recovery drill remain pending.",
+          },
           {
             date: "2026-08-04",
             phase: "ops",

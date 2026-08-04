@@ -41,7 +41,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 | Two-host production Compose | Validated Compose model, immutable image/secret contract, disposable fixture; real host deployment still external | contract passed |
 | Active-node switching | Internal DNS health check, fencing, cutover and rollback measurements | pending |
 | PostgreSQL recovery | Streaming/WAL settings and recovery evidence contract passed; real pair/restore pending Docker/host access | at risk |
-| Object-storage recovery | Replication manifest/checksum, cutover and restore evidence | pending |
+| Object-storage recovery | Async replication policy/manifest contract passed; real sites/cutover/restore pending | at risk |
 | Observability | Scrape/config tests, dashboards, alert route and redacted centralized logs | pending |
 | Security | TLS/CSP/CSRF/SSRF/anti-replay adversarial tests; real certificate/DNS scan still external | policy passed |
 | Release safety | Immutable image, SBOM/provenance, migration, upgrade and rollback gates | pending |
@@ -99,10 +99,10 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 5: Object-storage recovery
 
-- RED command and failure: pending.
-- GREEN implementation and checksum restore verification: pending.
-- Production storage endpoints and credentials: pending.
-- Commit: pending.
+- RED: `node --test scripts/production/object-storage-ops.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the storage operations validator did not exist.
+- GREEN: object-storage ops tests passed 4/4; the production Compose model accepts explicit primary/secondary Garage config paths; primary/secondary configs, versioned/private/encrypted bucket policy, deterministic SHA-256 manifests, fencing, conflict checks, and manual cutover/restore Runbook were added. No queue or synchronous durability claim was introduced.
+- Production storage endpoints, credentials, independent medium, and real replication/cutover/restore: pending; no local manifest is treated as production evidence.
+- Commit: `2fbb5aa feat(phase-07): add object storage replication and recovery operations`.
 
 ### Step 6: Observability and logs
 
