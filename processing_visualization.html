@@ -846,14 +846,14 @@
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
             status: "进行中",
-            progress: 5,
+            progress: 15,
             summary:
               "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、内部 DNS 切换、PostgreSQL/WAL、对象存储恢复、监控告警、安全边界、供应链门禁和故障手册按序执行。",
             tasks: [
               [
                 "Ubuntu 双机 production Compose",
-                "进行中",
-                "依赖生产服务器、网络、证书、出站白名单。",
+                "已完成",
+                "已通过生产 Compose 模型、Secret 分层和 digest 镜像契约；真实 Ubuntu 主机、网络、证书和出站白名单仍需外部证据。",
               ],
               [
                 "Keepalived 或内部 DNS 切换方案",
@@ -946,7 +946,7 @@
             start: "2026-08-04",
             end: "",
             progress:
-              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
+              "从 Phase 6 提交 e8255b3 建立 feature/phase-07-production-security-deployment-operations，完成基线核对并写入 Phase 7 计划、执行台账和 ADR 0008；生产 Compose 配置验证器 5/5、配置包 3/3、Compose 模型、格式和差异检查通过；采用内部 DNS 健康切换，明确双机 Compose、PostgreSQL/WAL、对象存储、监控、安全、供应链和恢复演练顺序。",
             problem:
               "真实 Ubuntu 主机、DNS、TLS 证书、备份介质、生产存储端点、告警接收器、镜像签名凭据和 GitHub 远端读写权限不在仓库内；远端 ls-remote 本次返回空回复。",
             solution:
@@ -1176,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 production Compose contract verified",
+            body: "Added a standalone active/standby production Compose model with host-mounted secrets, digest-pinned image variables, non-public database/storage services, and read-only application containers. Configuration tests passed 5/5, config package tests passed 3/3 with typecheck/lint/build, and the Compose model validated with a non-production fixture. Real host, DNS, TLS, registry, and credential evidence remains pending.",
+          },
           {
             date: "2026-08-04",
             phase: "ops",

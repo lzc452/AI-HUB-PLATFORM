@@ -38,7 +38,7 @@ formal go-live, and enterprise sign-off are explicitly deferred.
 
 | Target | Required evidence | Status |
 |---|---|---|
-| Two-host production Compose | Validated overlay, immutable images, host/config/secrets contract, disposable deployment evidence | pending |
+| Two-host production Compose | Validated Compose model, immutable image/secret contract, disposable fixture; real host deployment still external | contract passed |
 | Active-node switching | Internal DNS health check, fencing, cutover and rollback measurements | pending |
 | PostgreSQL recovery | Streaming/WAL config, backup integrity, promotion and restore evidence | pending |
 | Object-storage recovery | Replication manifest/checksum, cutover and restore evidence | pending |
@@ -76,10 +76,11 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 2: Production Compose and immutable configuration
 
-- RED command and failure: pending.
-- GREEN implementation and focused verification: pending.
-- Production host/secret/image digest evidence: pending; no local fallback is accepted.
-- Commit: pending.
+- RED: `node --test scripts/production/validate-config.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the validator did not exist; the config package secret-file test failed because `DATABASE_URL_FILE` and `COOKIE_SECRET_FILE` were ignored.
+- GREEN: the validator now rejects missing role/secrets, mutable images, development fallbacks, and database/storage host ports. It passed 5/5 tests. Config package passed 3/3 tests, typecheck, lint, and build after reading mounted secret files. `docker compose --env-file scripts/production/fixtures/compose.env -f compose.production.yaml config --quiet` passed with Docker warnings about inaccessible local Docker credentials. `corepack pnpm format:check` and `git diff --check` passed. Non-secret scan found no fallback secret values in production artifacts; the `cookie_secret` match is only a Compose secret name.
+- Implementation: `compose.production.yaml` is a standalone active/standby contract with digest-pinned image variables, host-mounted secrets, no database/storage host ports, read-only/no-new-privileges application containers, and only proxy ports. The example env files and runbook explicitly require replacement and do not claim deployment.
+- Production host/secret/image-signature/DNS evidence: pending; no local fixture is accepted as production evidence.
+- Commit: `9fc3a44 feat(phase-07): add immutable production compose contract`.
 
 ### Step 3: Security boundaries
 

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,7 +22,20 @@ export interface RuntimeConfig {
 }
 
 export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
-  const value = schema.parse(env);
+  const normalizedEnv = {
+    ...env,
+    DATABASE_URL:
+      env.DATABASE_URL ??
+      (env.DATABASE_URL_FILE
+        ? readFileSync(env.DATABASE_URL_FILE, "utf8").trim()
+        : undefined),
+    COOKIE_SECRET:
+      env.COOKIE_SECRET ??
+      (env.COOKIE_SECRET_FILE
+        ? readFileSync(env.COOKIE_SECRET_FILE, "utf8").trim()
+        : undefined),
+  };
+  const value = schema.parse(normalizedEnv);
   return {
     nodeEnv: value.NODE_ENV,
     apiPort: value.API_PORT,

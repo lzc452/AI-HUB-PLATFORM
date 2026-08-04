@@ -33,4 +33,19 @@ describe("parseRuntimeConfig", () => {
       workerMetricsPort: 9465,
     });
   });
+
+  it("reads production secrets from mounted files", () => {
+    expect(
+      parseRuntimeConfig({
+        NODE_ENV: "production",
+        API_PORT: "3000",
+        DATABASE_URL_FILE: "./test-fixtures/database-url",
+        COOKIE_SECRET_FILE: "./test-fixtures/cookie-secret",
+      }),
+    ).toMatchObject({
+      nodeEnv: "production",
+      databaseUrl: "postgres://ai_hub@postgres:5432/ai_hub",
+      cookieSecret: "production-cookie-secret-with-32-chars",
+    });
+  });
 });

@@ -1,0 +1,160 @@
+name: ai-hub-production
+
+x-production-environment: &production-environment
+  NODE_ENV: production
+  API_PORT: "3000"
+  DATABASE_URL_FILE: /run/secrets/database_url
+  COOKIE_SECRET_FILE: /run/secrets/cookie_secret
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+  WORKER_METRICS_PORT: "9464"
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?POSTGRES_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [application]
+
+  garage:
+    image: ${GARAGE_IMAGE:?GARAGE_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    command: ["/garage", "server", "--single-node", "--default-bucket"]
+    environment:
+      GARAGE_ADMIN_TOKEN_FILE: /run/secrets/garage_admin_token
+      GARAGE_DEFAULT_ACCESS_KEY_FILE: /run/secrets/garage_access_key
+      GARAGE_DEFAULT_SECRET_KEY_FILE: /run/secrets/garage_secret_key
+      GARAGE_METRICS_TOKEN_FILE: /run/secrets/garage_metrics_token
+      GARAGE_RPC_SECRET_FILE: /run/secrets/garage_rpc_secret
+    secrets:
+      - garage_admin_token
+      - garage_access_key
+      - garage_secret_key
+      - garage_metrics_token
+      - garage_rpc_secret
+    volumes:
+      - garage-metadata:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+    networks: [application]
+
+  clamav:
+    image: ${CLAMAV_IMAGE:?CLAMAV_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    volumes:
+      - clamav-definitions:/var/lib/clamav
+    networks: [application]
+
+  api:
+    image: ${API_IMAGE:?API_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment: *production-environment
+    secrets: [database_url, cookie_secret]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose: ["3000"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [application]
+
+  worker:
+    image: ${WORKER_IMAGE:?WORKER_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    environment: *production-environment
+    secrets: [database_url, cookie_secret]
+    depends_on:
+      api:
+        condition: service_healthy
+    expose: ["9464"]
+    networks: [application]
+
+  web:
+    image: ${WEB_IMAGE:?WEB_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    expose: ["80"]
+    networks: [application]
+
+  proxy:
+    image: ${PROXY_IMAGE:?PROXY_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/docker/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    networks: [application]
+
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:?PROMETHEUS_IMAGE must be a digest-pinned image}
+    restart: unless-stopped
+    volumes:
+      - prometheus-data:/prometheus
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [application]
+
+volumes:
+  postgres-data:
+  garage-metadata:
+  garage-data:
+  clamav-definitions:
+  prometheus-data:
+
+networks:
+  application:
+    internal: true
+
+secrets:
+  database_url:
+    file: ${DATABASE_URL_FILE:?DATABASE_URL_FILE is required}
+  cookie_secret:
+    file: ${COOKIE_SECRET_FILE:?COOKIE_SECRET_FILE is required}
+  db_password:
+    file: ${DB_PASSWORD_FILE:?DB_PASSWORD_FILE is required}
+  garage_admin_token:
+    file: ${GARAGE_ADMIN_TOKEN_FILE:?GARAGE_ADMIN_TOKEN_FILE is required}
+  garage_access_key:
+    file: ${GARAGE_ACCESS_KEY_FILE:?GARAGE_ACCESS_KEY_FILE is required}
+  garage_secret_key:
+    file: ${GARAGE_SECRET_KEY_FILE:?GARAGE_SECRET_KEY_FILE is required}
+  garage_metrics_token:
+    file: ${GARAGE_METRICS_TOKEN_FILE:?GARAGE_METRICS_TOKEN_FILE is required}
+  garage_rpc_secret:
+    file: ${GARAGE_RPC_SECRET_FILE:?GARAGE_RPC_SECRET_FILE is required}
