@@ -120,10 +120,11 @@ simulation, incomplete credential, incomplete network, or undelivered drill.
 
 ### Step 8: Drills
 
-- RED command and failure: pending.
-- Disposable drill evidence: pending.
+- RED: `node --test scripts/production/drills/drill-ops.test.mjs` initially failed with `ERR_MODULE_NOT_FOUND` because the drill validator did not exist.
+- GREEN: drill validator tests passed 4/4; `docs/runbooks/failover-drill.md`, `docs/runbooks/incident-response.md`, and the evidence-package template now require fencing, ordered timestamps, checksum restore proof, and measured `RPO <= 900` / `RTO <= 7200`.
+- Disposable drill evidence: validator contract passed locally; no disposable or production host drill was claimed.
 - Real two-host measured RPO/RTO evidence: pending and must not be simulated.
-- Commit: pending.
+- Commit: `2466d43 test(phase-07): add production failure and recovery drills`.
 
 ### Step 9: Necessary regressions
 

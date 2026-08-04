@@ -846,7 +846,7 @@
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
             status: "进行中",
-            progress: 65,
+            progress: 75,
             summary:
               "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复和监控告警契约已完成，本地不可变发布门禁已通过；真实双机、凭据、扫描、升级回滚和恢复演练仍需外部证据。",
             tasks: [
@@ -857,8 +857,8 @@
               ],
               [
                 "Keepalived 或内部 DNS 切换方案",
-                "待开始",
-                "需要明确切换演练和回退。",
+                "有风险",
+                "已选择内部 DNS 健康切换并补充故障演练/事故响应 Runbook；真实 DNS 控制、健康检查和双机切换仍需外部演练证据。",
               ],
               [
                 "PostgreSQL 流复制、WAL 归档和人工提升",
@@ -1176,6 +1176,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-04",
+            phase: "ops",
+            title: "Phase 7 failure and recovery drill contract recorded",
+            body: "Added a recovery-drill validator with ordered evidence, fencing, checksum restore, and RPO/RTO thresholds. Drill tests passed 4/4, and failover, incident-response, and evidence-package Runbooks were added. This is a local contract only; no disposable or real two-host drill is claimed until hosts, network, credentials, backups, and approved windows are supplied.",
+          },
           {
             date: "2026-08-04",
             phase: "ops",

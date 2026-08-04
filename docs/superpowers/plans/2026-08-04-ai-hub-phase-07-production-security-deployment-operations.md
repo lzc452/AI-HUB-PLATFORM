@@ -97,10 +97,10 @@
 
 **Files:** Create `scripts/production/drills/*.mjs`, `scripts/production/drills/*.test.mjs`, `docs/runbooks/failover-drill.md`, `docs/runbooks/incident-response.md`, and `docs/evidence/phase-07/` templates.
 
-- [ ] Write failing drill assertions for DNS active-node cutover, API/worker fencing, PostgreSQL primary failure and promotion, object-storage source failure, alert creation, backup restore, and evidence timestamps.
-- [ ] Implement repeatable operator commands with explicit preconditions, stop conditions, rollback/fencing steps, and evidence capture; keep simulated drills labeled simulated.
-- [ ] Verify against disposable infrastructure first, then run real two-host drills only when server/network/credentials are supplied; record RPO and RTO measurements rather than targets alone.
-- [ ] Commit `test(phase-07): add production failure and recovery drills`.
+- [x] Write failing drill assertions for DNS active-node cutover, API/worker fencing, PostgreSQL primary failure and promotion, object-storage source failure, alert creation, backup restore, and evidence timestamps.
+- [x] Implement repeatable operator guidance with explicit preconditions, stop conditions, rollback/fencing steps, evidence capture, and a validator that keeps simulated evidence separate from production evidence.
+- [x] Verify the validator and runbook contract locally; real two-host drills require supplied server/network/credentials and remain pending, with RPO/RTO measurements required rather than targets alone.
+- [x] Commit `test(phase-07): add production failure and recovery drills`.
 
 ### Task 9: Necessary regression and integration validation
 
