@@ -46,3 +46,92 @@
 ## 安全边界
 
 演示账号仅允许用于开发和测试。生产部署文档不提供 seed 命令，生产 Compose 不自动执行 seed；如果未来需要生产初始化账号，必须走组织管理员/密码重置流程，而不是复用这批固定凭据。
+
+## 实施计划
+
+### 1. 数据库 seed 边界
+
+文件：
+
+- 新增 `packages/database/src/demo-seed.ts`
+- 修改 `packages/database/src/index.ts`
+- 新增 `packages/database/src/demo-seed.integration.test.ts`
+
+步骤：
+
+1. 先写 Testcontainers 集成测试，验证迁移后调用 `seedDemoAccounts` 能写入 4 个部门、5 个员工、2 个新增角色和 5 条角色绑定。
+2. 运行 `pnpm --filter @ai-hub/database test -- demo-seed.integration.test.ts`，确认在 seed API 不存在时按预期失败。
+3. 实现以下接口：
+
+   ```ts
+   seedDemoAccounts(
+     db: Kysely<DatabaseSchema>,
+     passwordHashes: Readonly<Record<string, string>>,
+   ): Promise<SeedDemoAccountsResult>
+   ```
+
+   同时导出固定的部门、角色和账号定义。所有 upsert 在一个事务中执行；员工写入 `active`、`password_reset_required = false` 和传入的密码哈希，成员关系和角色关系使用冲突处理避免重复。
+
+4. 重新运行 focused test，确认首次 seed 通过。
+5. 在同一测试中把 `DEMO-EMPLOYEE` 改成 disabled/旧哈希后再次 seed，确认只保留一行且恢复为 active/新哈希，成员关系和角色关系不重复。
+
+### 2. CLI 与开发环境接入
+
+文件：
+
+- 新增 `scripts/seed-demo-accounts.mts`
+- 新增 `scripts/seed-demo-accounts.test.mjs`
+- 修改根目录 `package.json`
+- 修改 `compose.dev.yaml`
+
+步骤：
+
+1. 先写 Node 内置测试：删除子进程的 `DATABASE_URL`，执行 `pnpm exec tsx scripts/seed-demo-accounts.mts`，断言非零退出且 stderr 包含 `DATABASE_URL is required`。
+2. 运行 `node --test scripts/seed-demo-accounts.test.mjs`，确认缺少脚本或配置时失败。
+3. 实现 CLI：读取 `DATABASE_URL`，使用现有 `PasswordService` 为五个本地测试密码生成 scrypt 哈希，调用数据库 seed，最终销毁连接；只打印行数，不打印明文密码或哈希。
+4. 增加命令：
+
+   ```json
+   "seed:demo-accounts": "tsx scripts/seed-demo-accounts.mts"
+   ```
+
+   让开发 API 启动命令按 `pnpm migrate && pnpm seed:demo-accounts && exec pnpm --filter @ai-hub/api dev` 执行，生产 Compose 保持不变。
+5. 在可用的临时 PostgreSQL 上执行两次 seed，确认输出数量稳定且没有重复行。
+
+### 3. 真实登录验证
+
+文件：
+
+- 新增 `apps/api/test/demo-accounts.real.e2e-spec.ts`
+
+步骤：
+
+1. 先写真实 PostgreSQL 测试：启动 Testcontainers、运行迁移、生成五个密码哈希、执行 seed，并用 `KyselyIdentityRepository` 和 `IdentityService.loginWithPassword()` 登录五个账号。
+2. 运行 `pnpm --filter @ai-hub/api test -- demo-accounts.real.e2e-spec.ts`，确认实现前失败原因是 seed 数据/API 缺失。
+3. 使用现有登录服务，不改动登录协议；每个账号断言返回自身工号、预期单角色和有效 session ID。
+4. 同时运行数据库 seed 集成测试和 API 真实登录测试，确认全部通过。
+
+### 4. 文档、项目记录与总验证
+
+文件：
+
+- 修改 `README.md`
+- 修改根目录 `processing_visualization.html`
+
+步骤：
+
+1. README 记录 `pnpm migrate`、`pnpm seed:demo-accounts`、开发地址 `http://127.0.0.1:8080`、五组工号/密码及仅限开发测试的警告。
+2. 完成实现和测试后，在 `processing_visualization.html` 的 `seedData` 与 `events` 中记录 seed 和真实登录验证结果，保留现有未提交改动。
+3. 运行以下验证：
+
+   ```text
+   node --test scripts/seed-demo-accounts.test.mjs
+   pnpm --filter @ai-hub/database test -- demo-seed.integration.test.ts
+   pnpm --filter @ai-hub/api test -- demo-accounts.real.e2e-spec.ts
+   pnpm typecheck
+   pnpm lint
+   pnpm format:check
+   pnpm boundaries
+   ```
+
+4. 最后运行 `git diff --check` 和 `git status --short`，确认没有修改 `.env`、生产 Compose、无关用户文件或提交密码哈希；只有在真实登录集成测试通过后，才在交付中声明账号可登录。
