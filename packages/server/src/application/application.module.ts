@@ -16,31 +16,39 @@ const unavailableArtifactVerifier: ArtifactVerificationPort = {
   },
 };
 
+function createApplicationServiceProvider(
+  databaseUrl: string,
+  artifactVerifier: ArtifactVerificationPort,
+) {
+  const database = createDatabase(databaseUrl);
+  const analyticsEvents = new AnalyticsEventService(
+    new KyselyAnalyticsEventRepository(database),
+  );
+
+  return {
+    provide: APPLICATION_SERVICE,
+    useFactory: (identity: IdentityService) =>
+      new ApplicationService(
+        new KyselyApplicationRepository(database),
+        identity,
+        artifactVerifier,
+        analyticsEvents,
+      ),
+    inject: [IdentityService],
+  };
+}
+
 @Module({})
 export class ApplicationModule {
   static registerService(
     databaseUrl: string,
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
   ): DynamicModule {
-    const database = createDatabase(databaseUrl);
-    const analyticsEvents = new AnalyticsEventService(
-      new KyselyAnalyticsEventRepository(database),
-    );
     return {
       module: ApplicationModule,
       imports: [IdentityModule.register(databaseUrl)],
       providers: [
-        {
-          provide: APPLICATION_SERVICE,
-          useFactory: (identity: IdentityService) =>
-            new ApplicationService(
-              new KyselyApplicationRepository(database),
-              identity,
-              artifactVerifier,
-              analyticsEvents,
-            ),
-          inject: [IdentityService],
-        },
+        createApplicationServiceProvider(databaseUrl, artifactVerifier),
       ],
       exports: [APPLICATION_SERVICE],
     };
@@ -52,11 +60,11 @@ export class ApplicationModule {
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      imports: [
-        ApplicationModule.registerService(databaseUrl, artifactVerifier),
-      ],
+      imports: [IdentityModule.register(databaseUrl)],
       controllers: [ApplicationController],
-      providers: [],
+      providers: [
+        createApplicationServiceProvider(databaseUrl, artifactVerifier),
+      ],
       exports: [APPLICATION_SERVICE],
     };
   }
