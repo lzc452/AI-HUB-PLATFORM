@@ -1,29 +1,8 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-test("GitLab CI verifies before building container images", async () => {
-  const config = await readFile(".gitlab-ci.yml", "utf8");
-
-  assert.match(config, /node:24\.15\.0/);
-  assert.match(config, /pnpm@10\.34\.5/);
-  assert.match(config, /pnpm install --frozen-lockfile/);
-  assert.match(config, /release-gate\.mjs --contract/);
-  assert.match(config, /rollback-gate\.mjs --contract/);
-  assert.match(config, /--dry-run/);
-  assert.match(config, /forward-fix/);
-  assert.match(config, /--provenance=true/);
-  assert.match(config, /--sbom=true/);
-  assert.match(config, /pnpm verify/);
-  assert.match(config, /\.pnpm-store\//);
-  assert.match(config, /auto_cancel:/);
-  assert.match(config, /needs: \["verify"\]/);
-  assert.match(config, /api\.Dockerfile/);
-  assert.match(config, /worker\.Dockerfile/);
-  assert.match(config, /web\.Dockerfile/);
-});
-
-test("GitHub Actions uses the same verification contract", async () => {
+test("GitHub Actions owns the verification contract", async () => {
   const config = await readFile(".github/workflows/verify.yml", "utf8");
 
   assert.match(config, /actions\/checkout@v7/);
@@ -42,6 +21,26 @@ test("GitHub Actions uses the same verification contract", async () => {
   assert.match(config, /pnpm verify/);
   assert.match(config, /cancel-in-progress: true/);
   assert.match(config, /needs: verify/);
+  assert.match(config, /development/);
+});
+
+test("GitHub Actions owns immutable GHCR release publication", async () => {
+  const config = await readFile(".github/workflows/release.yml", "utf8");
+
+  assert.match(config, /tags:\s*\["v\*\.\*\.\*"\]/);
+  assert.match(config, /packages:\s*write/);
+  assert.match(config, /ghcr\.io\/lzc452\/ai-hub-platform/);
+  assert.match(config, /docker\/build-push-action@v6/);
+  assert.match(config, /git rev-parse HEAD/);
+  assert.match(config, /sbom:\s*true/);
+  assert.match(config, /provenance:\s*mode=max/);
+  assert.match(config, /release-manifest\.mjs/);
+  assert.match(config, /environment:\s*production/);
+  assert.doesNotMatch(config, /:latest/);
+});
+
+test("GitLab CI is not a second authoritative pipeline", async () => {
+  await assert.rejects(access(".gitlab-ci.yml"));
 });
 
 test("Turbo passes the isolated database URL to workspace tests", async () => {

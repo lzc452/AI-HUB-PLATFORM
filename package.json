@@ -9,6 +9,7 @@
     "build": "turbo run build",
     "compat:node": "node --test scripts/check-web-tooling-node-compat.test.mjs",
     "boundaries": "dependency-cruiser apps packages --config dependency-cruiser.cjs",
+    "governance:check": "node scripts/repository-governance.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "turbo run lint",

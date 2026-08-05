@@ -19,6 +19,10 @@ feature/phase-XX-*   phase-level delivery branch
 - `hotfix/*` is reserved for urgent production fixes. A hotfix is reviewed into both `main` and `development`.
 - `codex/phase-01-continuation` is retained as a historical archive branch and is not a development entry point.
 
+Long-lived branches are intentionally limited to `main`, `development`, an
+active phase branch, `release/*`, and `hotfix/*`. Completed phase branches are
+preserved with immutable archive tags and a migration record before deletion.
+
 The Phase 2 branch is:
 
 ```text
@@ -53,7 +57,8 @@ The Phase 2 PR remains one Draft PR throughout task delivery. It is converted to
 
 ## Gates and Protection
 
-The `verify` workflow runs on every push and pull request. Its required checks are:
+The GitHub Actions `verify` workflow runs on pushes to delivery branches and on
+pull requests targeting `main` or `development`. Its required checks are:
 
 - `verify`
 - `container-smoke`
@@ -68,6 +73,8 @@ Repository administrators must protect both `main` and `development` with these 
 - Block direct pushes, force pushes, and branch deletion.
 - Restrict bypasses to documented emergency hotfixes performed by an administrator.
 
+GitLab CI is not an authoritative or required pipeline for this repository.
+
 Branch protection is a GitHub repository setting rather than a versioned file. After changing it, verify the rules in the repository Settings page and record the date and administrator in the release or governance PR.
 
 ## Release and Rollback
@@ -75,6 +82,12 @@ Branch protection is a GitHub repository setting rather than a versioned file. A
 ```text
 development -> release/vX.Y -> full gates -> release PR -> main -> tag vX.Y
 ```
+
+The release workflow publishes `api`, `worker`, and `web` images to GHCR with
+commit-SHA tags only. The release manifest records the resulting immutable
+digests and BuildKit SBOM/provenance attestations. A production deployment is
+an explicit, manually approved checkpoint; host credentials and deployment
+targets remain outside the repository.
 
 - An unmerged feature is rolled back by closing its PR; pushed history is preserved.
 - A change already merged into `development` is rolled back with a revert PR.

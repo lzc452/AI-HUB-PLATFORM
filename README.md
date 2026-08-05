@@ -2,7 +2,7 @@
 
 AI Hub Platform is a pnpm monorepo for the React Web application, NestJS API,
 and NestJS outbox worker. The supported runtime is Node.js 18.18 or newer;
-Node.js 24 is the preferred CI and container baseline.
+Node.js 24.15.0 is the repository, CI, and container baseline.
 
 ## Development
 
@@ -13,6 +13,10 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-t
 ```
 
 The development application is available at `http://127.0.0.1:8080`.
+The same Compose workflow is supported on Windows, macOS, and Linux with
+Docker Desktop or Docker Engine using Linux containers. See the
+[cross-device development guide](docs/development/cross-device-development.md)
+for the complete bootstrap and Codex configuration checks.
 
 ## GitHub Delivery Workflow
 
@@ -24,12 +28,20 @@ a release PR. See the [branching and delivery guide](docs/development/git-branch
 and the [pull request template](.github/pull_request_template.md) for the
 required gates, review evidence, rollback procedure, and naming rules.
 
+GitHub Actions is the authoritative CI/CD platform. Pull requests require the
+`verify` and `container-smoke` checks. Semantic version tags publish immutable
+SHA-tagged images to GHCR and attach a release manifest containing image
+digests, SBOM, and provenance evidence. Production release approval is
+protected by the `production` GitHub Environment.
+
 ## Project Documents
 
 - [Approved design specification](docs/superpowers/specs/2026-07-31-ai-application-sharing-platform-design.md)
 - [V1 program roadmap](docs/superpowers/plans/2026-07-31-ai-hub-v1-program-roadmap.md)
 - [Phase 1 foundation plan](docs/superpowers/plans/2026-07-31-ai-hub-phase-01-foundation.md)
 - [Windows Docker Compose guide](docs/development/windows-docker-compose.md)
+- [Cross-device development guide](docs/development/cross-device-development.md)
+- [Branch migration and GitHub governance record](docs/development/branch-migration-2026-08-05.md)
 - [ADR 0001: React SPA and NestJS modular monolith](docs/adr/0001-modular-monolith.md)
 - [ADR 0002: PostgreSQL transactional outbox](docs/adr/0002-postgres-outbox.md)
 - [ADR 0003: Garage object storage](docs/adr/0003-garage-object-storage.md)

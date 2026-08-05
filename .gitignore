@@ -5,3 +5,11 @@ node_modules/
 .turbo/
 coverage/
 dist/
+.codex/cache/
+.codex/local/
+.codex/*.local.*
+.codex/*.secret.*
+.codex/cache/
+.codex/local/
+.codex/*.local.*
+.codex/*.secret.*

@@ -938,6 +938,23 @@
         ],
         tasks: [
           {
+            id: "t-016",
+            phase: "ops",
+            status: "杩涜涓?",
+            title: "GitHub repository and cross-device governance",
+            owner: "Codex",
+            start: "2026-08-05",
+            end: "",
+            progress:
+              "Unified GitHub Actions as the authoritative CI/CD path, added immutable GHCR release evidence, versioned repository Codex configuration, and documented cross-device bootstrap rules.",
+            problem:
+              "GitHub integration is read-only; remote development bootstrap, archive tags, branch cleanup, PR creation, and branch protection remain external actions.",
+            solution:
+              "Recorded the exact remote migration sequence and required settings in docs/development/branch-migration-2026-08-05.md while keeping local changes safe and reversible.",
+            skip:
+              "Production hosts, GHCR credentials, protected environment approvers, and remote ref mutation are not configured in this workspace.",
+          },
+          {
             id: "t-015",
             phase: "ops",
             status: "进行中",
@@ -1176,6 +1193,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-05",
+            phase: "ops",
+            title: "Repository governance implementation started",
+            body: "Implemented repository-local governance checks, GitHub-only CI/CD configuration, immutable GHCR release manifest generation, cross-device development documentation, and an explicit remote-permission blocker record.",
+          },
           {
             date: "2026-08-04",
             phase: "delivery",

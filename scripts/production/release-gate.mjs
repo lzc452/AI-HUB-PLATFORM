@@ -80,7 +80,7 @@ export function validateSourceContract(files) {
 if (process.argv.includes("--contract")) {
   const { readFile } = await import("node:fs/promises");
   const compose = await readFile("compose.production.yaml", "utf8");
-  const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".gitlab-ci.yml", "utf8")}`;
+  const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".github/workflows/release.yml", "utf8")}`;
   validateSourceContract({ compose, workflow });
   console.log("Production release contract passed");
 }

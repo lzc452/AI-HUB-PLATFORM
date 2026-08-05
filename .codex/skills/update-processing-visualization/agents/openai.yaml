@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Processing Visualization"
+  short_description: "Keep the project process visualization current after each task."
+  default_prompt: "Use $update-processing-visualization to update processing_visualization.html after completing project work."

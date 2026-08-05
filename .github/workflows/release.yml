@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing vX.Y.Z tag to publish"
+        required: true
+        type: string
+      deploy_production:
+        description: "Open the protected production approval checkpoint"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/lzc452/ai-hub-platform
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      release-tag: ${{ steps.release-meta.outputs.release-tag }}
+    steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+
+      - name: Resolve release commit
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish API image
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/api.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/api:sha-${{ steps.source.outputs.sha }}
+          sbom: true
+          provenance: mode=max
+
+      - name: Build and publish Worker image
+        id: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/worker.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/worker:sha-${{ steps.source.outputs.sha }}
+          sbom: true
+          provenance: mode=max
+
+      - name: Build and publish Web image
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/web.Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/web:sha-${{ steps.source.outputs.sha }}
+          sbom: true
+          provenance: mode=max
+
+      - name: Create immutable release manifest
+        id: release-meta
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          node scripts/production/release-manifest.mjs \
+            --output release-manifest.json \
+            --commit "${{ steps.source.outputs.sha }}" \
+            --tag "$RELEASE_TAG" \
+            --registry "$REGISTRY" \
+            --image "api=${{ steps.api.outputs.digest }}" \
+            --image "worker=${{ steps.worker.outputs.digest }}" \
+            --image "web=${{ steps.web.outputs.digest }}"
+          echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest-${{ steps.source.outputs.sha }}
+          path: release-manifest.json
+          if-no-files-found: error
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.release-meta.outputs.release-tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-manifest.json --clobber
+          else
+            gh release create "$RELEASE_TAG" release-manifest.json \
+              --target "${{ steps.source.outputs.sha }}" \
+              --title "$RELEASE_TAG" \
+              --generate-notes
+          fi
+
+  production-approval:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_production == true }}
+    needs: publish
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Record manual deployment checkpoint
+        run: |
+          echo "Release ${{ needs.publish.outputs.release-tag }} is approved for the external production runbook."
+          echo "No host credentials or deployment target are configured in this repository."

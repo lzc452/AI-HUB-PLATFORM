@@ -9,6 +9,7 @@ export const verificationCommands = Object.freeze([
   "pnpm test",
   "pnpm build",
   "node scripts/verify-doc-links.mjs",
+  "node scripts/repository-governance.mjs",
   "docker compose -f compose.yaml -f compose.test.yaml config --quiet",
 ]);
 

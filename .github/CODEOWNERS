@@ -4,3 +4,6 @@
 # Require repository-owner review for delivery policy changes.
 /.github/ @lzc452
 /docs/development/ @lzc452
+/.codex/ @lzc452
+/infra/ @lzc452
+/scripts/production/ @lzc452

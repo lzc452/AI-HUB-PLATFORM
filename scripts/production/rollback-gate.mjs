@@ -46,7 +46,7 @@ export function validateRollbackSourceContract(workflow) {
 
 if (process.argv.includes("--contract")) {
   const { readFile } = await import("node:fs/promises");
-  const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".gitlab-ci.yml", "utf8")}`;
+  const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".github/workflows/release.yml", "utf8")}`;
   validateRollbackSourceContract(workflow);
   console.log("Production rollback contract passed");
 }

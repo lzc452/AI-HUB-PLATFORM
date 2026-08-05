@@ -2,7 +2,18 @@ name: Verify
 
 on:
   push:
+    branches:
+      - main
+      - development
+      - "feature/**"
+      - "fix/**"
+      - "release/**"
+      - "hotfix/**"
   pull_request:
+    branches:
+      - main
+      - development
+  workflow_dispatch:
 
 permissions:
   contents: read
