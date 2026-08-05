@@ -1,0 +1,70 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { App } from "./App";
+
+vi.mock("./modules/marketplace/useCatalog", () => ({
+  useCatalogEntry: () => ({ data: undefined, isPending: true }),
+  useCatalogSearch: () => ({
+    data: {
+      items: [
+        {
+          applicationId: "app-platform",
+          categoryId: "平台流程自动化",
+          currentVersionId: "ver-1",
+          deliveryChannels: ["web"],
+          departmentId: "dept-1",
+          deprecatedReason: null,
+          healthStatus: "healthy",
+          likeCount: 10,
+          name: "平台助手",
+          publishedAt: "2026-07-01T00:00:00.000Z",
+          ratingAverage: 4.5,
+          replacementApplicationId: null,
+          summary: "面向平台团队的内部 AI 流程助手。",
+          tagIds: [],
+          trustLabels: ["verified"],
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    },
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
+}));
+
+describe("Phase 4 market shell", () => {
+  beforeEach(() => {
+    globalThis.window.history.pushState({}, "", "/");
+  });
+
+  it("shows fixed market sections, search and trust labels", async () => {
+    render(<App />);
+
+    expect(
+      await screen.findByRole("searchbox", { name: "搜索应用" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("最新上架")).toBeInTheDocument();
+    expect(screen.getByText("热门应用")).toBeInTheDocument();
+    expect(screen.getAllByText("已验证").length).toBeGreaterThan(0);
+    expect(screen.getByText("平台助手")).toBeInTheDocument();
+  });
+
+  it("exposes notification and creator center routes", async () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("link", { name: /站内通知/ }));
+    expect(
+      await screen.findByRole("heading", { name: "站内通知" }),
+    ).toBeInTheDocument();
+
+    globalThis.window.history.pushState({}, "", "/creator/app-platform");
+    render(<App />);
+    expect(
+      await screen.findByRole("heading", { name: "创作者中心" }),
+    ).toBeInTheDocument();
+  });
+});

@@ -5,12 +5,16 @@ import type { PropsWithChildren } from "react";
 
 import { aiHubTheme } from "@ai-hub/ui";
 
+import { AuthProvider } from "./modules/auth/auth.context";
+
 const queryClient = new QueryClient();
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <ConfigProvider locale={zhCN} theme={aiHubTheme}>
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
     </ConfigProvider>
   );
 }

@@ -1,0 +1,18 @@
+export const ROUTES = {
+  home: "/",
+  login: "/login",
+  marketplace: "/marketplace",
+  marketplaceDetail: "/marketplace/:applicationId",
+  innovation: "/innovation",
+  innovationDetail: "/innovation/:demandId",
+  applications: "/applications",
+  applicationDetail: "/applications/:applicationId",
+  applicationVersions: "/applications/:applicationId/versions",
+  applicationReview: "/applications/:applicationId/review",
+  applicationDelivery: "/applications/:applicationId/delivery",
+  analytics: "/analytics",
+  organization: "/organization",
+  security: "/security",
+  notifications: "/notifications",
+  creator: "/creator/:applicationId",
+} as const;

@@ -5,6 +5,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      "/internal": "http://localhost:3000",
+    },
+  },
   test: {
     alias: {
       "@ant-design/icons": fileURLToPath(

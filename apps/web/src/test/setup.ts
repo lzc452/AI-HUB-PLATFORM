@@ -1,6 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, beforeEach } from "vitest";
+
+import { setSession } from "../modules/auth/session.store";
 
 Object.defineProperty(globalThis.window, "matchMedia", {
   configurable: true,
@@ -14,6 +16,10 @@ Object.defineProperty(globalThis.window, "matchMedia", {
     removeEventListener: () => {},
     removeListener: () => {},
   }),
+});
+
+beforeEach(() => {
+  setSession({ employeeId: "E0001", sessionId: "test-session" });
 });
 
 afterEach(() => {

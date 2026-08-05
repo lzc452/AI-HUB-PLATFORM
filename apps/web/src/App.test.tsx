@@ -2,9 +2,91 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
+
+vi.mock("./modules/innovation/useDemand", () => ({
+  useAddDemandComment: () => ({ isError: false, isPending: false, mutate: vi.fn() }),
+  useDemand: () => ({ data: undefined, isPending: true }),
+  useDemandComments: () => ({ data: [] }),
+  useDemandList: () => ({
+    data: {
+      items: [
+        {
+          audienceDepartmentId: null,
+          audienceType: "all",
+          commentCount: 3,
+          createdAt: "2026-07-01T00:00:00.000Z",
+          demandId: "demand-1",
+          desiredOutcome: "让团队可以追溯引用来源。",
+          displayAnonymously: true,
+          likeCount: 12,
+          ownerEmployeeId: null,
+          primarySolutionApplicationId: null,
+          priorityExplanation: null,
+          priorityScore: null,
+          problemStatement: "团队需要一个能返回引用来源的内部知识助手。",
+          requesterEmployeeId: null,
+          reviewReason: null,
+          status: "published",
+          title: "Internal knowledge assistant",
+          updatedAt: "2026-07-01T00:00:00.000Z",
+          version: 1,
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    },
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
+  useLikeDemand: () => ({ isPending: false, mutate: vi.fn() }),
+}));
+
+vi.mock("./modules/application/useApplication", () => {
+  const application = {
+    applicationId: "app-001",
+    currentVersionId: "ver-1",
+    departmentId: "dept-1",
+    maintainerEmployeeId: "E0002",
+    name: "Internal AI assistant",
+    ownerEmployeeId: "E0001",
+    status: "published",
+    summary: "内部 AI 流程助手",
+  };
+  const publishedVersion = {
+    applicationId: "app-001",
+    applicationVersionId: "ver-1",
+    artifactKey: "artifacts/app-001/1.2.0",
+    artifactSha256: "sha256",
+    artifactSignature: null,
+    changelog: "首次发布",
+    createdAt: "2026-07-01T00:00:00.000Z",
+    createdByEmployeeId: "E0001",
+    scanStatus: "passed",
+    version: "1.2.0",
+  };
+  const settled = {
+    error: null,
+    isError: false,
+    isFetching: false,
+    isPending: false,
+  };
+  return {
+    useApplication: (applicationId?: string) => ({
+      ...settled,
+      data: applicationId ? application : undefined,
+    }),
+    useApplicationDeliveries: () => ({ ...settled, data: [] }),
+    useApplicationReviews: () => ({ ...settled, data: [] }),
+    useApplicationVersions: () => ({ ...settled, data: [publishedVersion] }),
+    useCreatorSummary: () => ({ ...settled, data: undefined }),
+    usePublishedVersion: () => ({ ...settled, data: publishedVersion }),
+  };
+});
 
 const styles = readFileSync(
   path.join(process.cwd(), "src", "styles.css"),
@@ -62,11 +144,11 @@ describe("App", () => {
     expect(mainContent).toHaveAttribute("tabindex", "-1");
   });
 
-  it("shows the permission-filtered marketplace by default", () => {
+  it("shows the permission-filtered marketplace by default", async () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "应用市场" }),
+      await screen.findByRole("heading", { name: "应用市场" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -75,13 +157,13 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("navigates to the innovation square demand page", () => {
+  it("navigates to the innovation square demand page", async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("link", { name: /创新广场/ }));
 
     expect(
-      screen.getByRole("heading", { name: "创新广场" }),
+      await screen.findByRole("heading", { name: "创新广场" }),
     ).toBeInTheDocument();
     expect(screen.getByText("结构化需求与受众治理")).toBeInTheDocument();
     expect(
@@ -89,27 +171,27 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("exposes organization and security administration routes", () => {
+  it("exposes organization and security administration routes", async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("link", { name: /Organization/ }));
     expect(
-      screen.getByRole("heading", { name: "Organization" }),
+      await screen.findByRole("heading", { name: "Organization" }),
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("link", { name: /Security/ }));
     expect(
-      screen.getByRole("heading", { name: "Security" }),
+      await screen.findByRole("heading", { name: "Security" }),
     ).toBeInTheDocument();
   });
 
-  it("exposes the application administration navigation", () => {
+  it("exposes the application administration navigation", async () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("link", { name: /Applications/ }));
 
     expect(
-      screen.getByRole("heading", { name: "Applications" }),
+      await screen.findByRole("heading", { name: "Applications" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Application details" }),
@@ -133,18 +215,24 @@ describe("App", () => {
     ["/applications/app-001/versions", "Versions"],
     ["/applications/app-001/review", "Review"],
     ["/applications/app-001/delivery", "Delivery"],
-  ])("renders the application route %s", (route, heading) => {
+  ])("renders the application route %s", async (route, heading) => {
     globalThis.window.history.pushState({}, "", route);
 
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: heading }),
+    ).toBeInTheDocument();
   });
 
-  it("shows application lifecycle and delivery state labels", () => {
+  it("shows application lifecycle and delivery state labels", async () => {
     globalThis.window.history.pushState({}, "", "/applications/app-001");
 
     render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Application details" }),
+    ).toBeInTheDocument();
 
     for (const label of [
       "Draft",
@@ -155,17 +243,13 @@ describe("App", () => {
       "Withdrawn",
       "Archived",
       "Published version",
-      "Loading",
-      "Empty",
     ]) {
       expect(
         screen.getAllByText(label, { exact: true }).length,
       ).toBeGreaterThan(0);
     }
     expect(
-      screen.getByText(
-        "This is a static administration shell; no business writes are enabled.",
-      ),
+      screen.getByText("数据已通过内部 API 接入；当前界面不提供写操作。"),
     ).toBeInTheDocument();
   });
 
