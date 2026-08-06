@@ -78,7 +78,7 @@ export function Navigation() {
         ],
         icon: <DashboardOutlined aria-hidden="true" />,
         key: "analytics",
-        label: "Analytics",
+        label: "数据看板",
         path: ROUTES.analytics,
       },
       {

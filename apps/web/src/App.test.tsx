@@ -189,7 +189,9 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "创新广场" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("结构化需求与受众治理")).toBeInTheDocument();
+    expect(
+      screen.getByText(/结构化需求与受众治理/),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "查看需求详情" }),
     ).toBeInTheDocument();

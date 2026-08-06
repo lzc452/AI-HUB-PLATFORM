@@ -1,10 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LikeOutlined } from "@ant-design/icons";
-import { Alert, Button, Form, Input, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Form, Input, Tag, Typography } from "antd";
 import { Controller, useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import { z } from "zod";
 
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { PageHeader } from "../../components/common/PageHeader";
+import { SkeletonDetail } from "../../components/common/SkeletonDetail";
 import {
   demandStatusColor,
   demandStatusText,
@@ -48,31 +51,24 @@ export default function InnovationDemandDetailPage() {
   });
 
   if (isPending) {
-    return <Spin aria-label="需求详情加载中" />;
+    return <SkeletonDetail />;
   }
 
   if (isError || !data) {
     return (
-      <Alert
+      <ErrorBlock
         description={error?.message ?? "需求不存在或当前员工无权访问。"}
-        showIcon
         title="需求详情加载失败"
-        type="error"
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="demand-detail-heading" className="space-y-3">
-        <Text type="secondary">Phase 5 / 受众过滤详情</Text>
-        <Title id="demand-detail-heading" level={1} className="!mb-0">
-          {data.title}
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          {data.demandId} · 需求身份在匿名展示时保留在受控审计记录中。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description={`${data.demandId} · 需求身份在匿名展示时保留在受控审计记录中。`}
+        title={data.title}
+      />
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5 lg:col-span-2">
           <Title level={2} className="!mb-3">

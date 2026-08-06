@@ -1,9 +1,16 @@
+import {
+  DeploymentUnitOutlined,
+  LikeOutlined,
+  StarFilled,
+} from "@ant-design/icons";
 import { Alert, Spin, Tag, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
+import { PageHeader } from "../../components/common/PageHeader";
+import { StatCard } from "../../components/common/StatCard";
 import { useCreatorSummary } from "../../modules/application/useApplication";
 
-const { Paragraph, Text, Title } = Typography;
+const { Paragraph, Title } = Typography;
 
 export default function CreatorCenterPage() {
   const { applicationId } = useParams();
@@ -11,15 +18,10 @@ export default function CreatorCenterPage() {
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="creator-heading" className="space-y-3">
-        <Text type="secondary">Phase 4 / Creator center</Text>
-        <Title id="creator-heading" level={1} className="!mb-0">
-          创作者中心
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          查看版本差异、自动校验报告和单应用聚合数据，不展示个人访问名单。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description="查看版本差异、自动校验报告和单应用聚合数据，不展示个人访问名单。"
+        title="创作者中心"
+      />
       {isPending ? <Spin aria-label="创作者数据加载中" /> : null}
       {isError ? (
         <Alert
@@ -32,26 +34,25 @@ export default function CreatorCenterPage() {
       {data ? (
         <>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
-              <Text type="secondary">交付动作</Text>
-              <Title level={2} className="!mb-0 !mt-2">
-                {data.metrics.redirectCount +
-                  data.metrics.downloadCount +
-                  data.metrics.qrDisplayCount}
-              </Title>
-            </div>
-            <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
-              <Text type="secondary">点赞</Text>
-              <Title level={2} className="!mb-0 !mt-2">
-                {data.metrics.likeCount}
-              </Title>
-            </div>
-            <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
-              <Text type="secondary">评分</Text>
-              <Title level={2} className="!mb-0 !mt-2">
-                {data.metrics.ratingAverage ?? "暂无"}
-              </Title>
-            </div>
+            <StatCard
+              icon={<DeploymentUnitOutlined aria-hidden="true" />}
+              label="交付动作"
+              value={
+                data.metrics.redirectCount +
+                data.metrics.downloadCount +
+                data.metrics.qrDisplayCount
+              }
+            />
+            <StatCard
+              icon={<LikeOutlined aria-hidden="true" />}
+              label="点赞"
+              value={data.metrics.likeCount}
+            />
+            <StatCard
+              icon={<StarFilled aria-hidden="true" />}
+              label="评分"
+              value={data.metrics.ratingAverage ?? "暂无"}
+            />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">

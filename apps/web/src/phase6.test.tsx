@@ -21,14 +21,14 @@ describe("Phase 6 analytics dashboard shell", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "Analytics dashboards" }),
+      await screen.findByRole("heading", { name: "数据看板" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Platform")).toBeInTheDocument();
-    expect(screen.getByText("Market")).toBeInTheDocument();
-    expect(screen.getByText("Application")).toBeInTheDocument();
-    expect(screen.getByText("Innovation")).toBeInTheDocument();
+    expect(screen.getByText("平台总览")).toBeInTheDocument();
+    expect(screen.getByText("市场采用分析")).toBeInTheDocument();
+    expect(screen.getByText("应用组合分析")).toBeInTheDocument();
+    expect(screen.getByText("创新需求漏斗")).toBeInTheDocument();
     expect(
-      screen.getByText(/Numbers are rebuildable from retained raw events/),
+      screen.getByText(/指标可由保留的原始事件重建/),
     ).toBeInTheDocument();
   });
 });

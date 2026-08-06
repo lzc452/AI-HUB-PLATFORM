@@ -1,28 +1,25 @@
-import { Alert, Empty, Input, Spin, Tag, Typography } from "antd";
+import { Input, Spin, Tag, Typography } from "antd";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { EmptyBlock } from "../../components/common/EmptyBlock";
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { PageHeader } from "../../components/common/PageHeader";
 import { demandStatusText } from "../../modules/innovation/demandMeta";
 import { useDemandList } from "../../modules/innovation/useDemand";
 
-const { Paragraph, Text, Title } = Typography;
+const { Paragraph, Title } = Typography;
 
 export default function InnovationSquarePage() {
   const [query, setQuery] = useState("");
-  const { data, error, isError, isPending } = useDemandList(query);
+  const { data, error, isError, isPending, refetch } = useDemandList(query);
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="innovation-heading" className="space-y-3">
-        <Text type="secondary">Phase 5 / AI demand and innovation square</Text>
-        <Title id="innovation-heading" level={1} className="!mb-0">
-          创新广场
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          <span>结构化需求与受众治理</span>
-          ，支持匿名展示、讨论、认领和可审计进展。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description="结构化需求与受众治理，支持匿名展示、讨论、认领和可审计进展。"
+        title="创新广场"
+      />
       <section aria-labelledby="innovation-demand-list" className="space-y-4">
         <Title id="innovation-demand-list" level={2} className="!mb-0">
           可见需求
@@ -35,15 +32,14 @@ export default function InnovationSquarePage() {
         />
         {isPending ? <Spin aria-label="需求列表加载中" /> : null}
         {isError ? (
-          <Alert
+          <ErrorBlock
             description={error.message}
-            showIcon
+            onRetry={() => void refetch()}
             title="需求列表加载失败"
-            type="error"
           />
         ) : null}
         {data && data.items.length === 0 ? (
-          <Empty description="当前受众范围内没有可见需求" />
+          <EmptyBlock description="当前受众范围内没有可见需求" />
         ) : null}
         {data?.items.map((demand) => (
           <article
@@ -55,10 +51,10 @@ export default function InnovationSquarePage() {
                 <Title level={3} className="!mb-1">
                   {demand.title}
                 </Title>
-                <Text type="secondary">
+                <Typography.Text type="secondary">
                   {demandStatusText[demand.status]} · {demand.likeCount} 个赞 ·{" "}
                   {demand.commentCount} 条补充讨论
-                </Text>
+                </Typography.Text>
               </div>
               {demand.displayAnonymously ? <Tag>匿名展示</Tag> : null}
             </div>
