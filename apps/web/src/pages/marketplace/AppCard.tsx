@@ -47,8 +47,8 @@ export function AppCard({ departmentName, entry }: AppCardProps) {
           {entry.summary}
         </Paragraph>
         <Text type="secondary" className="text-xs">
-          {channels || "未配置交付"} ｜ {departmentName ?? entry.departmentId} ｜{" "}
-          {relativeUpdateText(entry.publishedAt)}
+          {channels || "未配置交付"} ｜ {departmentName ?? entry.departmentId}{" "}
+          ｜ {relativeUpdateText(entry.publishedAt)}
         </Text>
         <div className="flex flex-wrap gap-1.5">
           {entry.trustLabels.map((label) => (

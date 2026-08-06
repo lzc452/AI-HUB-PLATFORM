@@ -5,12 +5,11 @@ export interface MarketplaceHeroProps {
   sortMode: MarketplaceSortMode;
 }
 
-const sortTabs: ReadonlyArray<{ label: string; value: MarketplaceSortMode }> =
-  [
-    { label: "推荐", value: "recommended" },
-    { label: "最新", value: "latest" },
-    { label: "热门", value: "popular" },
-  ];
+const sortTabs: ReadonlyArray<{ label: string; value: MarketplaceSortMode }> = [
+  { label: "推荐", value: "recommended" },
+  { label: "最新", value: "latest" },
+  { label: "热门", value: "popular" },
+];
 
 /** 市场页排序切换：横向标签，当前项蓝色下划线。 */
 export function MarketplaceHero({

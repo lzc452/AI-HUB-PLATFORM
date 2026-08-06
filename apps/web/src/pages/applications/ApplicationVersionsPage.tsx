@@ -43,7 +43,9 @@ export default function ApplicationVersionsPage() {
             type="error"
           />
         ) : null}
-        {data && data.length === 0 ? <Empty description="暂无版本记录" /> : null}
+        {data && data.length === 0 ? (
+          <Empty description="暂无版本记录" />
+        ) : null}
         {data?.map((version) => (
           <div
             className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"

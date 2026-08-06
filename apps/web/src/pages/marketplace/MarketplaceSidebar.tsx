@@ -111,7 +111,9 @@ export function MarketplaceSidebar({
               >
                 <Tag
                   className="!mr-0 hover:border-[#91caff]"
-                  color={tagChipColors[index % tagChipColors.length] ?? "default"}
+                  color={
+                    tagChipColors[index % tagChipColors.length] ?? "default"
+                  }
                 >
                   {tag} {count}
                 </Tag>

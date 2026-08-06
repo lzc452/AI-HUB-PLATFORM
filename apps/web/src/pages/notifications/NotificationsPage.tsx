@@ -36,9 +36,7 @@ export default function NotificationsPage() {
           title="通知加载失败"
         />
       ) : null}
-      {data && data.length === 0 ? (
-        <EmptyBlock description="暂无通知" />
-      ) : null}
+      {data && data.length === 0 ? <EmptyBlock description="暂无通知" /> : null}
       {data && data.length > 0 ? (
         <ul className="m-0 list-none space-y-3 p-0" aria-label="通知列表">
           {data.map((notification) => (
@@ -64,9 +62,7 @@ export default function NotificationsPage() {
                 {notification.readAt ? null : (
                   <Button
                     loading={markRead.isPending}
-                    onClick={() =>
-                      markRead.mutate(notification.notificationId)
-                    }
+                    onClick={() => markRead.mutate(notification.notificationId)}
                     size="small"
                   >
                     标记已读

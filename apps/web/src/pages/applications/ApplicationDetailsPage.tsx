@@ -43,10 +43,7 @@ export default function ApplicationDetailsPage() {
         <Title id="lifecycle-heading" level={2} className="!mb-0">
           生命周期状态
         </Title>
-        <div
-          className="flex flex-wrap gap-2"
-          aria-label="应用生命周期状态"
-        >
+        <div className="flex flex-wrap gap-2" aria-label="应用生命周期状态">
           {applicationLifecycleStates.map((state) => (
             <Tag color={state.color} key={state.label}>
               {state.label}

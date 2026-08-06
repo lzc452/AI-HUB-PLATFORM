@@ -86,8 +86,7 @@ export default function CreatorCenterPage() {
               <ul className="m-0 mt-3 space-y-2 pl-5">
                 {data.validationReport.checks.map((check) => (
                   <li key={check.name}>
-                    {check.name}：
-                    {check.status === "passed" ? "通过" : "失败"}
+                    {check.name}：{check.status === "passed" ? "通过" : "失败"}
                   </li>
                 ))}
               </ul>

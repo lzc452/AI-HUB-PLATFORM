@@ -22,7 +22,11 @@ import {
 const { Paragraph, Text, Title } = Typography;
 
 const commentSchema = z.object({
-  body: z.string().trim().min(1, "请输入讨论内容").max(500, "讨论内容不能超过 500 字"),
+  body: z
+    .string()
+    .trim()
+    .min(1, "请输入讨论内容")
+    .max(500, "讨论内容不能超过 500 字"),
 });
 
 type CommentFormValues = z.infer<typeof commentSchema>;

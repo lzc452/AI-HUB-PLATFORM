@@ -52,9 +52,7 @@ export default function AssistantPage() {
             <Title level={3} className="!mb-0">
               你好，我是 AI 助手
             </Title>
-            <Text type="secondary">
-              我可以帮助您搜索和推荐合适的应用
-            </Text>
+            <Text type="secondary">我可以帮助您搜索和推荐合适的应用</Text>
             <div className="flex flex-wrap justify-center gap-2 pt-2">
               {exampleQuestions.map((question) => (
                 <Button

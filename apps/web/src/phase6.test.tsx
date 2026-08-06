@@ -27,8 +27,6 @@ describe("Phase 6 analytics dashboard shell", () => {
     expect(screen.getByText("市场采用分析")).toBeInTheDocument();
     expect(screen.getByText("应用组合分析")).toBeInTheDocument();
     expect(screen.getByText("创新需求漏斗")).toBeInTheDocument();
-    expect(
-      screen.getByText(/指标可由保留的原始事件重建/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/指标可由保留的原始事件重建/)).toBeInTheDocument();
   });
 });

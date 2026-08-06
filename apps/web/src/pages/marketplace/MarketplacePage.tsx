@@ -10,10 +10,7 @@ import { useDepartments } from "../../modules/auth/useIdentity";
 import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
 import { AppCard } from "./AppCard";
 import { MarketplaceFilters } from "./MarketplaceFilters";
-import {
-  MarketplaceHero,
-  type MarketplaceSortMode,
-} from "./MarketplaceHero";
+import { MarketplaceHero, type MarketplaceSortMode } from "./MarketplaceHero";
 import { MarketplaceSidebar } from "./MarketplaceSidebar";
 
 const { Paragraph, Text, Title } = Typography;
