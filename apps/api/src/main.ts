@@ -14,6 +14,7 @@ import {
 } from "@ai-hub/server";
 
 import { ApiModule } from "./api.module.js";
+import { configureSwagger, shouldEnableApiDocs } from "./swagger.js";
 
 async function bootstrap() {
   const config = parseRuntimeConfig(process.env);
@@ -37,6 +38,9 @@ async function bootstrap() {
       replayStore: new KyselyReplayNonceRepository(replayDatabase),
     }),
   );
+  configureSwagger(app, {
+    enabled: shouldEnableApiDocs(config.nodeEnv, config.enableApiDocs),
+  });
   app.enableShutdownHooks(["SIGTERM"]);
 
   await app.listen(config.apiPort);

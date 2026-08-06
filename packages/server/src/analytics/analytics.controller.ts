@@ -10,20 +10,40 @@ import {
   Query,
   Body,
 } from "@nestjs/common";
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from "@nestjs/swagger";
 import type { ActorContext } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
 import { AnalyticsDashboardService } from "./dashboard.service.js";
 import type { DashboardKey } from "./dashboard.types.js";
 import { AnalyticsExportService } from "./export.service.js";
 import { AnalyticsAssistantService } from "./assistant.service.js";
-import type { AssistantRequest } from "./assistant.types.js";
-import type { AnalyticsExportRequest } from "./export.types.js";
+import {
+  AnalyticsAssistantRequestDto,
+  AnalyticsAssistantResultDto,
+  AnalyticsDownloadResultDto,
+  AnalyticsExportRequestDto,
+  AnalyticsExportResultDto,
+  DashboardResultDto,
+} from "./analytics.dto.js";
+import {
+  ApiIdentityHeaders,
+  ApiProblemResponses,
+} from "../system/http/api-docs.decorator.js";
 import {
   ANALYTICS_DASHBOARD_SERVICE,
   ANALYTICS_EXPORT_SERVICE,
   ANALYTICS_ASSISTANT_SERVICE,
 } from "./analytics.tokens.js";
 
+@ApiTags("分析")
 @Controller("/internal/analytics")
 export class AnalyticsController {
   constructor(
@@ -37,6 +57,40 @@ export class AnalyticsController {
   ) {}
 
   @Get("dashboards/:dashboardKey")
+  @ApiOperation({
+    summary: "分析看板",
+    description: "读取指定看板在时间范围内的日聚合指标。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({
+    name: "dashboardKey",
+    description: "看板键",
+    enum: [
+      "platform",
+      "market",
+      "application",
+      "innovation",
+      "review",
+      "department",
+      "risk",
+      "runtime",
+      "integration",
+    ],
+  })
+  @ApiQuery({
+    name: "from",
+    description: "起始日期（YYYY-MM-DD）",
+    required: false,
+    example: "",
+  })
+  @ApiQuery({
+    name: "to",
+    description: "结束日期（YYYY-MM-DD）",
+    required: false,
+    example: "",
+  })
+  @ApiOkResponse({ description: "看板结果", type: DashboardResultDto })
+  @ApiProblemResponses([400, 401, 403])
   async dashboard(
     @Param("dashboardKey") dashboardKey: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -63,10 +117,18 @@ export class AnalyticsController {
   }
 
   @Post("exports")
+  @ApiOperation({ summary: "创建分析导出" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: AnalyticsExportRequestDto })
+  @ApiCreatedResponse({
+    description: "导出结果",
+    type: AnalyticsExportResultDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
   async export(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() request: AnalyticsExportRequest,
+    @Body() request: AnalyticsExportRequestDto,
   ) {
     return this.call(async () =>
       this.exports.run(await this.requireActor(employeeId, sessionId), request),
@@ -74,6 +136,14 @@ export class AnalyticsController {
   }
 
   @Post("exports/:exportId/download")
+  @ApiOperation({ summary: "标记导出已下载" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "exportId", description: "导出任务 ID" })
+  @ApiCreatedResponse({
+    description: "下载结果",
+    type: AnalyticsDownloadResultDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
   async download(
     @Param("exportId") exportId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -89,10 +159,18 @@ export class AnalyticsController {
   }
 
   @Post("assistant")
+  @ApiOperation({ summary: "分析助手问答" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: AnalyticsAssistantRequestDto })
+  @ApiCreatedResponse({
+    description: "助手回答",
+    type: AnalyticsAssistantResultDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
   async assistantRequest(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() request: AssistantRequest,
+    @Body() request: AnalyticsAssistantRequestDto,
   ) {
     return this.call(async () =>
       this.assistant.ask(

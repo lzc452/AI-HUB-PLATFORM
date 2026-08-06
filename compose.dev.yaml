@@ -11,12 +11,7 @@ services:
   api:
     build:
       target: development
-    command:
-      [
-        "sh",
-        "-c",
-        "pnpm migrate && pnpm seed:demo-accounts && exec pnpm --filter @ai-hub/api dev",
-      ]
+    command: ["sh", "-c", "pnpm init:dev && exec pnpm --filter @ai-hub/api dev"]
     environment:
       NODE_ENV: development
     volumes:

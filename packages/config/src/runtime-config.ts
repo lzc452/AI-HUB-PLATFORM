@@ -9,6 +9,10 @@ const schema = z.object({
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).default(1000),
   WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
+  ENABLE_API_DOCS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export interface RuntimeConfig {
@@ -19,6 +23,7 @@ export interface RuntimeConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   outboxPollIntervalMs: number;
   workerMetricsPort: number;
+  enableApiDocs: boolean;
 }
 
 export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
@@ -44,5 +49,6 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     logLevel: value.LOG_LEVEL,
     outboxPollIntervalMs: value.OUTBOX_POLL_INTERVAL_MS,
     workerMetricsPort: value.WORKER_METRICS_PORT,
+    enableApiDocs: value.ENABLE_API_DOCS,
   };
 }
