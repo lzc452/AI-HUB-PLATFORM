@@ -1,9 +1,11 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
 import { DownOutlined } from "@ant-design/icons";
-import { Alert, Button, Skeleton, Typography } from "antd";
+import { Alert, Button, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { EmptyBlock } from "../../components/common/EmptyBlock";
+import { SkeletonCard } from "../../components/common/SkeletonCard";
 import { useDepartments } from "../../modules/auth/useIdentity";
 import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
 import { AppCard } from "./AppCard";
@@ -134,14 +136,7 @@ export default function MarketplacePage() {
             </div>
             {isPending ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <div
-                    className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-5"
-                    key={index}
-                  >
-                    <Skeleton active paragraph={{ rows: 4 }} />
-                  </div>
-                ))}
+                <SkeletonCard count={6} />
               </div>
             ) : null}
             {isError ? (
@@ -158,11 +153,7 @@ export default function MarketplacePage() {
               />
             ) : null}
             {data && items.length === 0 ? (
-              <div className="py-8">
-                <Typography.Text type="secondary">
-                  没有符合条件的已发布应用
-                </Typography.Text>
-              </div>
+              <EmptyBlock description="没有符合条件的已发布应用" />
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((entry) => (
