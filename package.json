@@ -14,6 +14,7 @@
     "format:check": "prettier --check .",
     "lint": "turbo run lint",
     "migrate": "tsx scripts/migrate.mts",
+    "seed:demo-accounts": "tsx scripts/seed-demo-accounts.mts",
     "test": "node --test scripts/*.test.mjs && turbo run test --concurrency=1",
     "typecheck": "turbo run typecheck",
     "verify": "node scripts/verify.mjs"

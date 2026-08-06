@@ -9,10 +9,34 @@ Node.js 24.15.0 is the repository, CI, and container baseline.
 ```powershell
 corepack pnpm install --frozen-lockfile
 corepack pnpm verify
+docker pull node:24.15.0-bookworm-slim
 docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-timeout 600
 ```
 
 The development application is available at `http://127.0.0.1:8080`.
+The development Compose API runs migrations and then seeds five local demo
+accounts. To seed an already migrated database manually, run:
+
+```powershell
+corepack pnpm migrate
+corepack pnpm seed:demo-accounts
+```
+
+These credentials are for local development and tests only; never use them in
+production:
+
+| Employee ID        | Role                 | Password                |
+| ------------------ | -------------------- | ----------------------- |
+| `DEMO-EMPLOYEE`    | `employee`           | `Demo-Employee-2026!`   |
+| `DEMO-APP-ADMIN`   | `application_admin`  | `Demo-AppAdmin-2026!`   |
+| `DEMO-INNOVATION`  | `demand_operator`    | `Demo-Innovation-2026!` |
+| `DEMO-ORG-ADMIN`   | `organization_admin` | `Demo-OrgAdmin-2026!`   |
+| `DEMO-SUPER-ADMIN` | `super_admin`        | `Demo-SuperAdmin-2026!` |
+
+When using a Windows VPN HTTP proxy, configure Docker Desktop's containers
+proxy as `http://host.docker.internal:7897` (not `127.0.0.1:7897`) before the
+first pull. See the [Windows Docker Compose guide](docs/development/windows-docker-compose.md)
+for the reason and full startup checks.
 The same Compose workflow is supported on Windows, macOS, and Linux with
 Docker Desktop or Docker Engine using Linux containers. See the
 [cross-device development guide](docs/development/cross-device-development.md)

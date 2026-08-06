@@ -325,9 +325,10 @@
           <h1>AI Hub Platform 全流程可视化复盘</h1>
           <p class="subtitle">
             按 docs/superpowers/plans 的 V1 路线追踪产品设计、UI
-            设计、开发、测试、部署运维。Phase 1–7 后端已全部落地；前端架构已从扁平 SPA
-            重构为 pages/components/modules/router/shared 分层工程，
-            已交付 Kimi K3 接手（handoff 文档见 docs/handoff/）。
+            设计、开发、测试、部署运维。Phase 1–7
+            后端已全部落地；前端架构已从扁平 SPA 重构为
+            pages/components/modules/router/shared 分层工程， 已交付 Kimi K3
+            接手（handoff 文档见 docs/handoff/）。
           </p>
         </div>
         <div class="meta" id="metrics"></div>
@@ -359,13 +360,20 @@
           <span class="badge" id="updated-at"></span>
         </div>
         <div class="flow" id="phase-flow"></div>
-        <div class=”panel” style=”margin-top: 16px”>
+        <div class="”panel”" style="”margin-top:" 16px”>
           <h2>当前判断</h2>
-          <p class=”note”>
-            <strong>后端 Phase 1–7 已全部落地。</strong>所有领域模块（identity、application、catalog、interaction、notification、creator、demand、analytics）的 service/repository/controller 均已实现并通过测试。
-            前端架构已从扁平 SPA（App.tsx + router.tsx）重构为 pages/components/modules/router/shared 分层工程。
-            <strong>2026-08-05 已交付 Kimi K3 接手前端开发</strong>，含完整架构设计和逐步实现提示词，handoff 文档见 <code>docs/handoff/</code>。
-            Phase 7 生产部署为本地契约验证通过（Compose 模型、安全边界、PG/WAL/对象存储恢复 runbook、监控告警配置），真实双机部署和演练需要外部基础设施。
+          <p class="”note”">
+            <strong>后端 Phase 1–7 已全部落地。</strong
+            >所有领域模块（identity、application、catalog、interaction、notification、creator、demand、analytics）的
+            service/repository/controller 均已实现并通过测试。 前端架构已从扁平
+            SPA（App.tsx + router.tsx）重构为
+            pages/components/modules/router/shared 分层工程。
+            <strong>2026-08-05 已交付 Kimi K3 接手前端开发</strong
+            >，含完整架构设计和逐步实现提示词，handoff 文档见
+            <code>docs/handoff/</code>。 Phase 7
+            生产部署为本地契约验证通过（Compose
+            模型、安全边界、PG/WAL/对象存储恢复
+            runbook、监控告警配置），真实双机部署和演练需要外部基础设施。
           </p>
         </div>
       </section>
@@ -508,23 +516,25 @@
           {
             id: "dev",
             name: "开发",
-            progress: 75,
+            progress: 80,
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
               "前端全部为静态壳体，API 零集成",
+              "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
               "外部集成均为 fake/unavailable adapter",
             ],
           },
           {
             id: "test",
             name: "测试",
-            progress: 65,
+            progress: 70,
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
               "Web 18 tests 通过（含静态壳体验证）",
               "E2E/Playwright 尚未建立",
+              "数据库 seed 2 tests、真实登录 API 6 tests 通过（本地 PostgreSQL）",
             ],
           },
           {
@@ -820,7 +830,11 @@
                 "已完成",
                 "Platform/Market/App/Innovation/Review/Department/Risk/Runtime/Integration 均通过权限+受众过滤。",
               ],
-              ["受权限控制的后台导出", "已完成", "逐行策略审计、下载归属校验、后台任务生命周期。"],
+              [
+                "受权限控制的后台导出",
+                "已完成",
+                "逐行策略审计、下载归属校验、后台任务生命周期。",
+              ],
               [
                 "Dify 安全边界（脱敏/授权复核/降级）",
                 "已完成",
@@ -831,7 +845,11 @@
                 "已完成",
                 "14 场景枚举，Outbox handler 携带场景元数据，失败记录 retry。",
               ],
-              ["指标口径字典与重算", "已完成", "12 指标均版本化，含源事件、公式、时间范围、权限、受众和重算方式。"],
+              [
+                "指标口径字典与重算",
+                "已完成",
+                "12 指标均版本化，含源事件、公式、时间范围、权限、受众和重算方式。",
+              ],
             ],
             gates: [
               "看板可由原始事件重算且一致（已验证）",
@@ -884,6 +902,11 @@
                 "不可变镜像、升级、回退、migration 门禁、备份恢复手册",
                 "有风险",
                 "release-gate 4/4、Compose/CI 契约和 SBOM/provenance 参数已通过；真实签名、镜像扫描、升级回滚和备份恢复演练仍未完成。",
+              ],
+              [
+                "Windows Docker Compose 本地启动与 VPN 代理排障",
+                "已完成",
+                "已完成 Node 基础镜像缓存、三项应用镜像构建、PostgreSQL 主机端口避让和 Compose 健康启动；8 个服务均 healthy，ready 检查返回 postgres=up。",
               ],
             ],
             gates: [
@@ -951,8 +974,23 @@
               "GitHub integration is read-only; remote development bootstrap, archive tags, branch cleanup, PR creation, and branch protection remain external actions.",
             solution:
               "Recorded the exact remote migration sequence and required settings in docs/development/branch-migration-2026-08-05.md while keeping local changes safe and reversible.",
-            skip:
-              "Production hosts, GHCR credentials, protected environment approvers, and remote ref mutation are not configured in this workspace.",
+            skip: "Production hosts, GHCR credentials, protected environment approvers, and remote ref mutation are not configured in this workspace.",
+          },
+          {
+            id: "t-017",
+            phase: "ops",
+            status: "已完成",
+            title: "Windows Docker Compose 本地启动与 VPN 代理排障",
+            owner: "Codex",
+            start: "2026-08-05",
+            end: "2026-08-05",
+            progress:
+              "已完成 Node 基础镜像缓存、三项应用镜像构建、PostgreSQL 主机端口避让和 Compose 健康启动；8 个服务均 healthy，http://127.0.0.1:8080/internal/health/ready 返回 postgres=up。",
+            problem:
+              "Docker Desktop 通过代理访问 Docker Hub 鉴权成功，但官方 node:24.15.0-bookworm-slim 的 CloudFront 图层和 npm tarball 下载过慢；首次构建后又发现本机 127.0.0.1:5432 被现有 ai-hub-pg 占用。",
+            solution:
+              "在 Docker Desktop 的 Resources → Proxies 中为 Containers proxy 使用 http://host.docker.internal:7897，缓存 node:24.15.0-bookworm-slim，并在 .env 中使用 POSTGRES_PORT=5433 后执行项目 Compose 启动命令。",
+            skip: "未切换到未经验证的第三方镜像，也未将 Debian slim 基线改为 Alpine；待基础镜像下载完成后继续启动和健康检查。",
           },
           {
             id: "t-015",
@@ -1191,8 +1229,31 @@
               "以独立修复提交收口审查发现，随后逐条执行精确门禁和第二轮两轴审查；Git 推送或 Draft PR 权限失败将保留为明确外部阻塞。",
             skip: "不提前实现 Phase 7 生产部署、安全上线或运维验收。",
           },
+          {
+            id: "t-018",
+            phase: "dev",
+            status: "已完成",
+            title: "本地组织架构演示账号初始化",
+            owner: "Codex",
+            start: "2026-08-05",
+            end: "2026-08-05",
+            progress:
+              "新增幂等 seed 命令和开发 Compose 接入，初始化 4 个部门、5 个员工、2 个演示角色及关系数据；README 已记录五组仅限开发/测试的登录凭据。",
+            problem:
+              "Testcontainers 无法从 sandbox 访问 Docker socket，默认集成测试 hooks 超时。",
+            solution:
+              "复用已运行 Compose PostgreSQL 创建隔离 ai_hub_codex_test 数据库，完成 seed 数据测试和真实 IdentityService/API 登录验证。",
+            skip:
+              "未将演示账号接入生产 Compose 或正式迁移；未修改现有业务登录协议。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-05",
+            phase: "dev",
+            title: "Demo organization accounts seeded and login verified",
+            body: "Added an idempotent local-only seed command for four demo departments, five role-based accounts, and two missing system roles. The five direct IdentityService logins and one HTTP password-login request passed against the isolated local PostgreSQL test database.",
+          },
           {
             date: "2026-08-05",
             phase: "ui",
@@ -1204,6 +1265,18 @@
             phase: "ops",
             title: "Repository governance implementation completed",
             body: "Implemented repository-local governance checks, GitHub-only CI/CD configuration, immutable GHCR release manifest generation, cross-device development documentation, and an explicit remote-permission blocker record.",
+          },
+          {
+            date: "2026-08-05",
+            phase: "ops",
+            title: "Docker Desktop 启动前置：VPN 系统代理影响已定位",
+            body: "确认 Windows 系统代理 127.0.0.1:7897 会直接影响 Docker 首次拉取基础镜像和 npm 依赖；主机和容器均可连通该代理，Docker Hub 鉴权成功，但下载速度较慢。首次构建后发现本机 5432 被现有 ai-hub-pg 占用，已将 host.docker.internal:7897、首次镜像预拉取、POSTGRES_PORT=5433 和 Compose 启动命令写入 README 与 Windows Docker 指南。",
+          },
+          {
+            date: "2026-08-05",
+            phase: "ops",
+            title: "Windows Docker Compose 服务启动完成",
+            body: "使用本地 .env 的 POSTGRES_PORT=5433 完成 Compose 重启；API、worker、web、PostgreSQL、Garage、ClamAV、Prometheus 和 proxy 共 8 个服务均为 healthy，/internal/health/ready 返回 status=ok 且 postgres=up。",
           },
           {
             date: "2026-08-04",
