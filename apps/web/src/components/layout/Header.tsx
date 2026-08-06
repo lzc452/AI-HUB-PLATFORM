@@ -2,6 +2,7 @@ import {
   AppstoreOutlined,
   BellOutlined,
   DownOutlined,
+  MenuUnfoldOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import {
@@ -28,7 +29,12 @@ import { ROUTES } from "../../router/routes";
 const { Header: LayoutHeader } = Layout;
 const { Text } = Typography;
 
-export function Header() {
+export interface HeaderProps {
+  onMenuClick?: () => void;
+  showMenuButton?: boolean;
+}
+
+export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const { actor, logout } = useAuth();
   const notifications = useNotifications();
   const navigate = useNavigate();
@@ -69,6 +75,14 @@ export function Header() {
       }}
     >
       <div className="flex h-full w-full items-center gap-4">
+        {showMenuButton ? (
+          <Button
+            aria-label="打开菜单"
+            icon={<MenuUnfoldOutlined aria-hidden="true" />}
+            onClick={onMenuClick}
+            type="text"
+          />
+        ) : null}
         <Link
           aria-label="返回应用市场"
           className="flex shrink-0 items-center gap-2 text-[#1f1f1f]"

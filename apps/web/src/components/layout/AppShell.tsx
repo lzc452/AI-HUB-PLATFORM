@@ -1,6 +1,11 @@
-import { Layout, Spin } from "antd";
-import { Suspense } from "react";
-import { Outlet } from "react-router-dom";
+import {
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  SoundOutlined,
+} from "@ant-design/icons";
+import { Button, Drawer, Layout, Spin } from "antd";
+import { Suspense, useEffect, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
 
 import { Breadcrumbs } from "./Breadcrumbs";
 import { Header } from "./Header";
@@ -8,7 +13,93 @@ import { Navigation } from "./Navigation";
 
 const { Content, Sider } = Layout;
 
+const SIDEBAR_COLLAPSED_KEY = "ai-hub.sidebar.collapsed";
+const MOBILE_QUERY = "(max-width: 1199px)";
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(
+    () => globalThis.window.matchMedia?.(MOBILE_QUERY).matches ?? false,
+  );
+
+  useEffect(() => {
+    const mql = globalThis.window.matchMedia?.(MOBILE_QUERY);
+    if (!mql) {
+      return;
+    }
+    const handleChange = () => setIsMobile(mql.matches);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
+
+  return isMobile;
+}
+
+/** 侧边栏底部公告区：无公告 API，默认展示"暂无公告"。 */
+function Announcement() {
+  return (
+    <div aria-label="平台公告" className="border-t border-[#f0f0f0] px-4 py-3">
+      <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-[#595959]">
+        <SoundOutlined aria-hidden="true" className="text-[#fa8c16]" />
+        平台公告
+      </p>
+      <p className="m-0 truncate text-xs text-[#8c8c8c]">暂无公告</p>
+    </div>
+  );
+}
+
 export function AppShell() {
+  const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (globalThis.window.matchMedia?.(MOBILE_QUERY).matches) {
+      return true;
+    }
+    try {
+      return globalThis.localStorage?.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  const handleCollapse = (next: boolean) => {
+    setCollapsed(next);
+    try {
+      globalThis.localStorage?.setItem(SIDEBAR_COLLAPSED_KEY, String(next));
+    } catch {
+      // localStorage 不可用时仅保持内存状态
+    }
+  };
+
+  const sidebarContent = (
+    <div className="flex h-full flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <Navigation />
+      </div>
+      <Announcement />
+      {!isMobile ? (
+        <div className="border-t border-[#f0f0f0] p-2 text-center">
+          <Button
+            aria-label={collapsed ? "展开菜单" : "收起菜单"}
+            icon={
+              collapsed ? (
+                <MenuUnfoldOutlined aria-hidden="true" />
+              ) : (
+                <MenuFoldOutlined aria-hidden="true" />
+              )
+            }
+            onClick={() => handleCollapse(!collapsed)}
+            type="text"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <Layout
       className="bg-[#f5f5f5] text-[#1f1f1f]"
@@ -17,20 +108,26 @@ export function AppShell() {
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
-      <Header />
+      <Header
+        onMenuClick={() => setDrawerOpen(true)}
+        showMenuButton={isMobile}
+      />
       <Layout style={{ overflow: "hidden" }}>
-        <Sider
-          collapsedWidth={64}
-          style={{
-            background: "#fff",
-            borderRight: "1px solid #d9d9d9",
-          }}
-          theme="light"
-          trigger={null}
-          width={220}
-        >
-          <Navigation />
-        </Sider>
+        {isMobile ? null : (
+          <Sider
+            collapsed={collapsed}
+            collapsedWidth={64}
+            style={{
+              background: "#fff",
+              borderRight: "1px solid #d9d9d9",
+            }}
+            theme="light"
+            trigger={null}
+            width={220}
+          >
+            {sidebarContent}
+          </Sider>
+        )}
         <Content
           id="main-content"
           className="min-h-0 p-6"
@@ -43,6 +140,16 @@ export function AppShell() {
           </Suspense>
         </Content>
       </Layout>
+      <Drawer
+        closable={false}
+        onClose={() => setDrawerOpen(false)}
+        open={isMobile ? drawerOpen : false}
+        placement="left"
+        styles={{ body: { padding: 0 } }}
+        width={220}
+      >
+        {sidebarContent}
+      </Drawer>
     </Layout>
   );
 }

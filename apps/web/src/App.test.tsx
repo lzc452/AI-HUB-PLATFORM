@@ -159,6 +159,17 @@ describe("App", () => {
     expect(within(breadcrumb).getByText("应用市场")).toBeInTheDocument();
   });
 
+  it("exposes the assistant menu entry", async () => {
+    render(<App />);
+
+    const primaryNavigation = await screen.findByRole("navigation", {
+      name: "主导航",
+    });
+    expect(
+      within(primaryNavigation).getByRole("link", { name: "AI 助手" }),
+    ).toHaveAttribute("href", "/assistant");
+  });
+
   it("shows the permission-filtered marketplace by default", async () => {
     render(<App />);
 
