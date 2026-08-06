@@ -3,22 +3,29 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 :root {
-  color: #1f1f1f;
-  background: #f5f5f5;
+  --color-primary: #1677ff;
+  --color-bg-page: #f5f5f5;
+  --color-bg-card: #ffffff;
+  --color-text-primary: #1f1f1f;
+  --color-text-secondary: #595959;
+  --color-text-disabled: #bfbfbf;
+  --color-border: #d9d9d9;
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
   font-family:
     "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Segoe UI", system-ui,
     sans-serif;
 }
 
 html {
-  background: #f5f5f5;
+  background: var(--color-bg-page);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--color-bg-page);
 }
 
 a {
@@ -27,6 +34,25 @@ a {
 
 #root {
   min-height: 100vh;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #bfbfbf #d9d9d9;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #d9d9d9;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 4px;
 }
 
 .skip-link {
