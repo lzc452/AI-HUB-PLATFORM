@@ -50,6 +50,7 @@ const OrganizationPage = lazy(
   () => import("../pages/organization/OrganizationPage"),
 );
 const SecurityPage = lazy(() => import("../pages/security/SecurityPage"));
+const AssistantPage = lazy(() => import("../pages/assistant/AssistantPage"));
 
 export function createRouter() {
   return createBrowserRouter([
@@ -122,6 +123,10 @@ export function createRouter() {
             {
               element: <SecurityPage />,
               path: ROUTES.security,
+            },
+            {
+              element: <AssistantPage />,
+              path: ROUTES.assistant,
             },
           ],
         },

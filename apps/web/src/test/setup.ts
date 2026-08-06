@@ -6,6 +6,17 @@ import { setSession } from "../modules/auth/session.store";
 
 configure({ asyncUtilTimeout: 5000 });
 
+class ResizeObserverStub {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+}
+
+Object.defineProperty(globalThis, "ResizeObserver", {
+  configurable: true,
+  value: ResizeObserverStub,
+});
+
 Object.defineProperty(globalThis.window, "matchMedia", {
   configurable: true,
   value: (query: string) => ({
