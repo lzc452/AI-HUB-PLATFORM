@@ -13,6 +13,7 @@ export interface CatalogSearchParams {
   query: string;
   sort: CatalogSort;
   categoryId?: string | undefined;
+  page?: number | undefined;
   pageSize?: number | undefined;
 }
 
@@ -27,6 +28,9 @@ export function searchCatalog(
     search.set("categoryId", params.categoryId);
   }
   search.set("sort", params.sort);
+  if (params.page !== undefined) {
+    search.set("page", String(params.page));
+  }
   search.set("pageSize", `${params.pageSize ?? 20}`);
   return apiFetch<CatalogListResult>(`/internal/catalog?${search.toString()}`);
 }

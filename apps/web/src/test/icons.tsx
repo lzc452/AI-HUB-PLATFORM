@@ -19,6 +19,7 @@ export const StarFilled = TestIcon;
 export const ReloadOutlined = TestIcon;
 export const DownOutlined = TestIcon;
 export const RightOutlined = TestIcon;
+export const LeftOutlined = TestIcon;
 export const ReadOutlined = TestIcon;
 export const QuestionCircleOutlined = TestIcon;
 export const SafetyCertificateOutlined = TestIcon;

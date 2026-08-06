@@ -1,9 +1,9 @@
 import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
+  LeftOutlined,
+  RightOutlined,
   SoundOutlined,
 } from "@ant-design/icons";
-import { Button, Drawer, Layout, Spin } from "antd";
+import { Drawer, Layout, Spin } from "antd";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -81,22 +81,6 @@ export function AppShell() {
         <Navigation />
       </div>
       <Announcement />
-      {!isMobile ? (
-        <div className="border-t border-[#f0f0f0] p-2 text-center">
-          <Button
-            aria-label={collapsed ? "展开菜单" : "收起菜单"}
-            icon={
-              collapsed ? (
-                <MenuUnfoldOutlined aria-hidden="true" />
-              ) : (
-                <MenuFoldOutlined aria-hidden="true" />
-              )
-            }
-            onClick={() => handleCollapse(!collapsed)}
-            type="text"
-          />
-        </div>
-      ) : null}
     </div>
   );
 
@@ -111,19 +95,33 @@ export function AppShell() {
       />
       <Layout style={{ overflow: "hidden" }}>
         {isMobile ? null : (
-          <Sider
-            collapsed={collapsed}
-            collapsedWidth={64}
-            style={{
-              background: "#fff",
-              borderRight: "1px solid #d9d9d9",
-            }}
-            theme="light"
-            trigger={null}
-            width={220}
-          >
-            {sidebarContent}
-          </Sider>
+          <div className="relative h-full">
+            <Sider
+              collapsed={collapsed}
+              collapsedWidth={64}
+              style={{
+                background: "#fff",
+                borderRight: "1px solid #d9d9d9",
+              }}
+              theme="light"
+              trigger={null}
+              width={220}
+            >
+              {sidebarContent}
+            </Sider>
+            <button
+              aria-label={collapsed ? "展开菜单" : "收起菜单"}
+              className="absolute top-1/2 z-10 -translate-y-1/2 right-[-14px] flex h-8 w-8 items-center justify-center rounded-full border border-[#d9d9d9] bg-white text-[#595959] shadow-sm transition-all duration-200 ease-out hover:border-[#1677ff] hover:text-[#1677ff] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1677ff]"
+              onClick={() => handleCollapse(!collapsed)}
+              type="button"
+            >
+              {collapsed ? (
+                <RightOutlined aria-hidden="true" />
+              ) : (
+                <LeftOutlined aria-hidden="true" />
+              )}
+            </button>
+          </div>
         )}
         <Content
           id="main-content"

@@ -1,5 +1,4 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
-import { DownOutlined } from "@ant-design/icons";
 import { Alert, Button, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -11,11 +10,10 @@ import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
 import { AppCard } from "./AppCard";
 import { MarketplaceFilters } from "./MarketplaceFilters";
 import { MarketplaceHero, type MarketplaceSortMode } from "./MarketplaceHero";
-import { MarketplaceSidebar } from "./MarketplaceSidebar";
 
-const { Paragraph, Text, Title } = Typography;
+const { Paragraph, Text } = Typography;
 
-const PAGE_SIZE_STEP = 12;
+const PAGE_SIZE = 6;
 
 export default function MarketplacePage() {
   const [searchParams] = useSearchParams();
@@ -25,17 +23,20 @@ export default function MarketplacePage() {
   const [channel, setChannel] = useState<DeliveryChannel>();
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState<string>();
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_STEP);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    setPageSize(PAGE_SIZE_STEP);
-  }, [query, sortMode, categoryId, channel, departmentId]);
+    setPage(1);
+  }, [query, sortMode, categoryId, channel, departmentId, tagIds]);
+
+  const serverSort = sortMode === "rating" ? "popular" : sortMode;
 
   const { data, error, isError, isPending, refetch } = useCatalogSearch({
     categoryId,
-    pageSize,
+    page,
+    pageSize: PAGE_SIZE,
     query,
-    sort: sortMode,
+    sort: serverSort,
   });
   const departments = useDepartments();
 
@@ -56,7 +57,7 @@ export default function MarketplacePage() {
     [data],
   );
 
-  const items = useMemo(() => {
+  const filteredItems = useMemo(() => {
     let list = data?.items ?? [];
     if (channel) {
       list = list.filter((entry) => entry.deliveryChannels.includes(channel));
@@ -72,6 +73,16 @@ export default function MarketplacePage() {
     return list;
   }, [channel, data, departmentId, tagIds]);
 
+  const sortedItems = useMemo(() => {
+    if (sortMode !== "rating") return filteredItems;
+    return [...filteredItems].sort(
+      (a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0),
+    );
+  }, [filteredItems, sortMode]);
+
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   const resetFilters = () => {
     setCategoryId(undefined);
     setChannel(undefined);
@@ -79,114 +90,94 @@ export default function MarketplacePage() {
     setTagIds([]);
   };
 
-  const toggleTag = (tagId: string) => {
-    setTagIds((current) =>
-      current.includes(tagId)
-        ? current.filter((value) => value !== tagId)
-        : [...current, tagId],
-    );
-  };
-
   return (
     <div className="space-y-4">
-      <section aria-labelledby="marketplace-heading" className="space-y-2">
-        <Title id="marketplace-heading" level={1} className="!mb-0">
-          应用市场
-        </Title>
-        <Paragraph className="!mb-0 text-[#595959]">
-          统一查找、体验与分享各部门 AI 工具
-        </Paragraph>
-      </section>
-      <MarketplaceHero onSortChange={setSortMode} sortMode={sortMode} />
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="space-y-4">
-          <MarketplaceFilters
-            categoryId={categoryId}
-            categoryOptions={categoryOptions}
-            channel={channel}
-            departmentId={departmentId}
-            departmentOptions={(departments.data ?? []).map((item) => ({
-              label: item.name,
-              value: item.departmentId,
-            }))}
-            onCategoryChange={setCategoryId}
-            onChannelChange={setChannel}
-            onDepartmentChange={setDepartmentId}
-            onReset={resetFilters}
-            onTagChange={setTagIds}
-            tagIds={tagIds}
-            tagOptions={tagOptions}
-          />
-          <section
-            aria-labelledby="market-results-heading"
-            className="space-y-4"
-          >
-            <div className="flex items-baseline justify-between">
-              <Text strong id="market-results-heading">
-                全部应用
-              </Text>
-              {data ? (
-                <Text type="secondary" className="text-xs">
-                  共 {items.length} 个应用
-                </Text>
-              ) : null}
-            </div>
-            {isPending ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <SkeletonCard count={6} />
-              </div>
-            ) : null}
-            {isError ? (
-              <Alert
-                action={
-                  <Button onClick={() => void refetch()} size="small">
-                    重试
-                  </Button>
-                }
-                description={error.message}
-                showIcon
-                title="应用列表加载失败"
-                type="error"
-              />
-            ) : null}
-            {data && items.length === 0 ? (
-              <EmptyBlock description="没有符合条件的已发布应用" />
-            ) : null}
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {items.map((entry) => (
-                <AppCard
-                  departmentName={departmentNames.get(entry.departmentId)}
-                  entry={entry}
-                  key={entry.applicationId}
-                />
-              ))}
-            </div>
-            {data && items.length < data.total ? (
-              <div className="flex justify-center">
-                <Button
-                  icon={<DownOutlined aria-hidden="true" />}
-                  onClick={() =>
-                    setPageSize((current) => current + PAGE_SIZE_STEP)
-                  }
-                  type="text"
-                >
-                  加载更多
-                </Button>
-              </div>
-            ) : null}
-            {data && data.total > 0 && items.length >= data.total ? (
-              <div className="text-center text-sm text-[#595959]">
-                已展示全部 {data.total} 个应用
-              </div>
-            ) : null}
-          </section>
+      <section
+        aria-label="应用市场欢迎"
+        className="flex items-center justify-between gap-6 rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-6 lg:p-8"
+      >
+        <div className="min-w-0 space-y-2">
+          <Typography.Title level={1} className="!mb-0 !text-2xl lg:!text-3xl">
+            发现企业内部 AI 应用
+          </Typography.Title>
+          <Paragraph className="!mb-0 text-sm text-[#595959] lg:text-base">
+            统一查找、体验与分享各部门 AI 工具
+          </Paragraph>
         </div>
-        <MarketplaceSidebar
-          departmentNames={departmentNames}
-          items={data?.items ?? []}
-          onTagSelect={toggleTag}
+        <div
+          aria-hidden="true"
+          className="hidden h-24 w-24 shrink-0 rounded-2xl bg-gradient-to-br from-[#3d6bff] to-[#7c9bff] opacity-30 shadow-inner md:block lg:h-32 lg:w-32"
         />
-      </div>
+      </section>
+
+      <MarketplaceHero
+        onPageChange={setPage}
+        onSortChange={setSortMode}
+        page={page}
+        pageCount={pageCount}
+        sortMode={sortMode}
+      />
+
+      <MarketplaceFilters
+        categoryId={categoryId}
+        categoryOptions={categoryOptions}
+        channel={channel}
+        departmentId={departmentId}
+        departmentOptions={(departments.data ?? []).map((item) => ({
+          label: item.name,
+          value: item.departmentId,
+        }))}
+        onCategoryChange={setCategoryId}
+        onChannelChange={setChannel}
+        onDepartmentChange={setDepartmentId}
+        onReset={resetFilters}
+        onTagChange={setTagIds}
+        tagIds={tagIds}
+        tagOptions={tagOptions}
+      />
+
+      <section aria-labelledby="market-results-heading" className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <Text strong id="market-results-heading">
+            全部应用
+          </Text>
+          {data ? (
+            <Text type="secondary" className="text-xs">
+              共 {total} 个应用 · 第 {page} / {pageCount} 页
+            </Text>
+          ) : null}
+        </div>
+        {isPending ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <SkeletonCard count={6} />
+          </div>
+        ) : null}
+        {isError ? (
+          <Alert
+            action={
+              <Button onClick={() => void refetch()} size="small">
+                重试
+              </Button>
+            }
+            description={error.message}
+            showIcon
+            title="应用列表加载失败"
+            type="error"
+          />
+        ) : null}
+        {data && sortedItems.length === 0 ? (
+          <EmptyBlock description="没有符合条件的已发布应用" />
+        ) : null}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sortedItems.map((entry) => (
+            <AppCard
+              departmentName={departmentNames.get(entry.departmentId)}
+              entry={entry}
+              key={entry.applicationId}
+            />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
