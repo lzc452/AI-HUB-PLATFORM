@@ -1,39 +1,42 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
 import { DownOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Input, Spin, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { Alert, Button, Skeleton, Typography } from "antd";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { useDepartments } from "../../modules/auth/useIdentity";
 import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
 import { AppCard } from "./AppCard";
-import {
-  MarketplaceFilters,
-} from "./MarketplaceFilters";
+import { MarketplaceFilters } from "./MarketplaceFilters";
 import {
   MarketplaceHero,
   type MarketplaceSortMode,
 } from "./MarketplaceHero";
 import { MarketplaceSidebar } from "./MarketplaceSidebar";
 
-const { Text } = Typography;
+const { Paragraph, Text, Title } = Typography;
 
 const PAGE_SIZE_STEP = 12;
 
 export default function MarketplacePage() {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get("q") ?? "";
   const [sortMode, setSortMode] = useState<MarketplaceSortMode>("recommended");
   const [categoryId, setCategoryId] = useState<string>();
   const [channel, setChannel] = useState<DeliveryChannel>();
-  const [tagId, setTagId] = useState<string>();
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [departmentId, setDepartmentId] = useState<string>();
   const [pageSize, setPageSize] = useState(PAGE_SIZE_STEP);
 
-  const serverSort = sortMode === "rating" ? "recommended" : sortMode;
-  const { data, error, isError, isPending } = useCatalogSearch({
+  useEffect(() => {
+    setPageSize(PAGE_SIZE_STEP);
+  }, [query, sortMode, categoryId, channel, departmentId]);
+
+  const { data, error, isError, isPending, refetch } = useCatalogSearch({
     categoryId,
     pageSize,
     query,
-    sort: serverSort,
+    sort: sortMode,
   });
   const departments = useDepartments();
 
@@ -50,9 +53,7 @@ export default function MarketplacePage() {
     [data],
   );
   const tagOptions = useMemo(
-    () => [
-      ...new Set((data?.items ?? []).flatMap((item) => item.tagIds)),
-    ],
+    () => [...new Set((data?.items ?? []).flatMap((item) => item.tagIds))],
     [data],
   );
 
@@ -61,42 +62,42 @@ export default function MarketplacePage() {
     if (channel) {
       list = list.filter((entry) => entry.deliveryChannels.includes(channel));
     }
-    if (tagId) {
-      list = list.filter((entry) => entry.tagIds.includes(tagId));
+    if (tagIds.length > 0) {
+      list = list.filter((entry) =>
+        tagIds.every((tagId) => entry.tagIds.includes(tagId)),
+      );
     }
     if (departmentId) {
       list = list.filter((entry) => entry.departmentId === departmentId);
     }
-    if (sortMode === "rating") {
-      list = [...list].sort(
-        (a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0),
-      );
-    }
     return list;
-  }, [channel, data, departmentId, sortMode, tagId]);
+  }, [channel, data, departmentId, tagIds]);
 
   const resetFilters = () => {
     setCategoryId(undefined);
     setChannel(undefined);
     setDepartmentId(undefined);
-    setTagId(undefined);
+    setTagIds([]);
+  };
+
+  const toggleTag = (tagId: string) => {
+    setTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((value) => value !== tagId)
+        : [...current, tagId],
+    );
   };
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto max-w-xl">
-        <Input.Search
-          allowClear
-          aria-label="搜索应用"
-          enterButton="搜索"
-          onSearch={(value) => {
-            setQuery(value);
-            setPageSize(PAGE_SIZE_STEP);
-          }}
-          placeholder="搜索应用 / 标签 / 场景"
-          size="large"
-        />
-      </div>
+      <section aria-labelledby="marketplace-heading" className="space-y-2">
+        <Title id="marketplace-heading" level={1} className="!mb-0">
+          应用市场
+        </Title>
+        <Paragraph className="!mb-0 text-[#595959]">
+          统一查找、体验与分享各部门 AI 工具
+        </Paragraph>
+      </section>
       <MarketplaceHero onSortChange={setSortMode} sortMode={sortMode} />
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-4">
@@ -113,10 +114,8 @@ export default function MarketplacePage() {
             onChannelChange={setChannel}
             onDepartmentChange={setDepartmentId}
             onReset={resetFilters}
-            onSortModeChange={setSortMode}
-            onTagChange={setTagId}
-            sortMode={sortMode}
-            tagId={tagId}
+            onTagChange={setTagIds}
+            tagIds={tagIds}
             tagOptions={tagOptions}
           />
           <section
@@ -134,12 +133,24 @@ export default function MarketplacePage() {
               ) : null}
             </div>
             {isPending ? (
-              <div className="flex justify-center py-12">
-                <Spin aria-label="应用列表加载中" />
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div
+                    className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-5"
+                    key={index}
+                  >
+                    <Skeleton active paragraph={{ rows: 4 }} />
+                  </div>
+                ))}
               </div>
             ) : null}
             {isError ? (
               <Alert
+                action={
+                  <Button onClick={() => void refetch()} size="small">
+                    重试
+                  </Button>
+                }
                 description={error.message}
                 showIcon
                 title="应用列表加载失败"
@@ -147,7 +158,11 @@ export default function MarketplacePage() {
               />
             ) : null}
             {data && items.length === 0 ? (
-              <Empty description="没有符合条件的已发布应用" />
+              <div className="py-8">
+                <Typography.Text type="secondary">
+                  没有符合条件的已发布应用
+                </Typography.Text>
+              </div>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((entry) => (
@@ -171,11 +186,17 @@ export default function MarketplacePage() {
                 </Button>
               </div>
             ) : null}
+            {data && data.total > 0 && items.length >= data.total ? (
+              <div className="text-center text-sm text-[#595959]">
+                已展示全部 {data.total} 个应用
+              </div>
+            ) : null}
           </section>
         </div>
         <MarketplaceSidebar
           departmentNames={departmentNames}
           items={data?.items ?? []}
+          onTagSelect={toggleTag}
         />
       </div>
     </div>

@@ -174,10 +174,10 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "发现企业内部 AI 应用" }),
+      await screen.findByRole("heading", { name: "应用市场" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("统一查找、体验与共享各部门 AI 工具"),
+      screen.getByText("统一查找、体验与分享各部门 AI 工具"),
     ).toBeInTheDocument();
   });
 
