@@ -1,6 +1,6 @@
-# AI Hub Phase 1 Foundation Implementation Plan
+# AI Hub 阶段 1 基础实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **Goal:** 建立可在 Windows Docker Compose 中重复启动、在 GitLab CI 中验证、并为后续业务模块提供稳定 interface 的 monorepo 工程基础。
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node.js >=18.18（Node.js 24 LTS 作为首选 CI/容器基线）、pnpm 10、TypeScript 5.9、React 19.2、React Router 6.30、Vite 6.4、Ant Design 6、Tailwind CSS 4、NestJS 10.4、PostgreSQL 18、Kysely 0.28.2、Zod、Vitest 3.2、Testing Library、Supertest、Docker Compose。
 
-## Global Constraints
+## 全局约束
 
 - 代码必须在 Windows Docker Desktop Linux 容器模式和 Ubuntu Linux 容器中运行。
 - 使用 ESM、TypeScript strict mode 和 pnpm workspace。
@@ -23,7 +23,7 @@
 
 ---
 
-## File Structure
+## 文件结构
 
 ```text
 .editorconfig
@@ -121,7 +121,7 @@ docs/
   development/windows-docker-compose.md
 ```
 
-## Stable Interfaces Produced by This Phase
+## 本阶段产出的稳定接口
 
 ```ts
 export interface RuntimeConfig {
@@ -167,28 +167,28 @@ export interface OutboxStorePort {
 
 ---
 
-### Task 1: Bootstrap the pnpm workspace and repository quality commands
+### 任务 1：引导 pnpm workspace 与仓库质量命令
 
-**Files:**
-- Create: `package.json`
-- Create: `pnpm-workspace.yaml`
-- Create: `turbo.json`
-- Create: `tsconfig.base.json`
-- Create: `vitest.workspace.ts`
-- Create: `eslint.config.mjs`
-- Create: `prettier.config.mjs`
-- Create: `.editorconfig`
-- Create: `.gitattributes`
-- Create: `.gitignore`
-- Create: `scripts/check-workspace.mjs`
-- Create: `scripts/check-workspace.test.mjs`
+**文件：**
+- 创建：`package.json`
+- 创建：`pnpm-workspace.yaml`
+- 创建：`turbo.json`
+- 创建：`tsconfig.base.json`
+- 创建：`vitest.workspace.ts`
+- 创建：`eslint.config.mjs`
+- 创建：`prettier.config.mjs`
+- 创建：`.editorconfig`
+- 创建：`.gitattributes`
+- 创建：`.gitignore`
+- 创建：`scripts/check-workspace.mjs`
+- 创建：`scripts/check-workspace.test.mjs`
 
-**Interfaces:**
-- Consumes: Node.js built-in test runner.
-- Produces: runnable root commands `format:check`, `lint`, `typecheck`, `test`, and `build`.
-- Declares reserved root command names `boundaries` and `verify`; `boundaries` becomes runnable in Task 7 and `verify` becomes runnable in Task 10. Do not create placeholder implementations in Task 1.
+**接口：**
+- 消费：Node.js 内置测试运行器。
+- 产出：可运行的根命令 `format:check`、`lint`、`typecheck`、`test` 与 `build`。
+- 声明保留的根命令名 `boundaries` 与 `verify`；`boundaries` 在任务 7 变为可运行，`verify` 在任务 10 变为可运行。任务 1 中不要创建占位实现。
 
-- [ ] **Step 1: Write the failing repository-structure test**
+- [ ] **步骤 1：编写失败的仓库结构测试**
 
 ```js
 // scripts/check-workspace.test.mjs
@@ -230,17 +230,17 @@ export async function requiredWorkspaceFiles() {
 }
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 node --test scripts/check-workspace.test.mjs
 ```
 
-Expected: FAIL because the root workspace files do not exist.
+预期：FAIL，因为根 workspace 文件不存在。
 
-- [ ] **Step 3: Create the root workspace manifest**
+- [ ] **步骤 3：创建根 workspace 清单**
 
 ```json
 {
@@ -263,7 +263,7 @@ Expected: FAIL because the root workspace files do not exist.
 }
 ```
 
-Create `pnpm-workspace.yaml`:
+创建 `pnpm-workspace.yaml`：
 
 ```yaml
 packages:
@@ -271,7 +271,7 @@ packages:
   - packages/*
 ```
 
-Create `turbo.json`:
+创建 `turbo.json`：
 
 ```json
 {
@@ -285,20 +285,20 @@ Create `turbo.json`:
 }
 ```
 
-- [ ] **Step 4: Pin pnpm and install root tooling**
+- [ ] **步骤 4：锁定 pnpm 并安装根工具链**
 
-Run:
+运行：
 
 ```powershell
 corepack use pnpm@10.34.5
 pnpm add -Dw typescript@~5.9.3 turbo@2.5.8 vitest@3.2.4 jsdom@26.1.0 eslint@9.39.1 typescript-eslint@8.46.0 prettier@3.6.2 dependency-cruiser@16.10.4 @types/node@18.19.130 semver@7.7.4
 ```
 
-Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is created.
+预期：`package.json` 中添加 `packageManager`，并创建 `pnpm-lock.yaml`。
 
-- [ ] **Step 5: Add strict TypeScript and repository formatting rules**
+- [ ] **步骤 5：添加严格 TypeScript 与仓库格式规则**
 
-`tsconfig.base.json` must include:
+`tsconfig.base.json` 必须包含：
 
 ```json
 {
@@ -317,20 +317,20 @@ Expected: `packageManager` is added to `package.json` and `pnpm-lock.yaml` is cr
 }
 ```
 
-Set `.gitattributes` to `* text=auto eol=lf` and configure `.editorconfig` for UTF-8, LF, final newline, two-space indentation, and trailing whitespace removal.
+将 `.gitattributes` 设为 `* text=auto eol=lf`，并配置 `.editorconfig` 为 UTF-8、LF、末尾换行、两空格缩进与去除行尾空白。
 
-- [ ] **Step 6: Run the repository test and formatting check**
+- [ ] **步骤 6：运行仓库测试与格式检查**
 
-Run:
+运行：
 
 ```powershell
 node --test scripts/check-workspace.test.mjs
 pnpm format:check
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
 ```powershell
 git add package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json vitest.workspace.ts eslint.config.mjs prettier.config.mjs .editorconfig .gitattributes .gitignore scripts/check-workspace.mjs scripts/check-workspace.test.mjs
@@ -339,29 +339,29 @@ git commit -m "chore: bootstrap pnpm workspace"
 
 ---
 
-### Task 2: Add shared contracts and fail-fast runtime configuration
+### 任务 2：添加共享契约与快速失败的运行时配置
 
-**Files:**
-- Create: `packages/contracts/package.json`
-- Create: `packages/contracts/src/index.ts`
-- Create: `packages/contracts/src/problem-details.ts`
-- Create: `packages/contracts/src/system/health.ts`
-- Create: `packages/config/package.json`
-- Create: `packages/config/src/index.ts`
-- Create: `packages/config/src/runtime-config.ts`
-- Create: `packages/config/src/runtime-config.test.ts`
-- Create: `.env.example`
-- Modify: `.gitignore`
-- Delete: `.npmrc`
-- Modify: `package.json`
-- Modify: `pnpm-lock.yaml`
-- Modify: `pnpm-workspace.yaml`
+**文件：**
+- 创建：`packages/contracts/package.json`
+- 创建：`packages/contracts/src/index.ts`
+- 创建：`packages/contracts/src/problem-details.ts`
+- 创建：`packages/contracts/src/system/health.ts`
+- 创建：`packages/config/package.json`
+- 创建：`packages/config/src/index.ts`
+- 创建：`packages/config/src/runtime-config.ts`
+- 创建：`packages/config/src/runtime-config.test.ts`
+- 创建：`.env.example`
+- 修改：`.gitignore`
+- 删除：`.npmrc`
+- 修改：`package.json`
+- 修改：`pnpm-lock.yaml`
+- 修改：`pnpm-workspace.yaml`
 
-**Interfaces:**
-- Consumes: Zod.
-- Produces: `ProblemDetails`, `HealthSnapshot`, `RuntimeConfig`, `parseRuntimeConfig(env)`.
+**接口：**
+- 消费：Zod。
+- 产出：`ProblemDetails`、`HealthSnapshot`、`RuntimeConfig`、`parseRuntimeConfig(env)`。
 
-- [ ] **Step 1: Write failing configuration tests**
+- [ ] **步骤 1：编写失败的配置测试**
 
 ```ts
 // packages/config/src/runtime-config.test.ts
@@ -401,39 +401,39 @@ describe('parseRuntimeConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify module resolution fails**
+- [ ] **步骤 2：运行测试并验证模块解析失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/config test
 ```
 
-Expected: FAIL because the package and `parseRuntimeConfig` do not exist.
+预期：FAIL，因为包与 `parseRuntimeConfig` 不存在。
 
-- [ ] **Step 3: Restore a deterministic Windows package environment**
+- [ ] **步骤 3：恢复确定性的 Windows 包环境**
 
-The default user-level pnpm store is read-only in the Windows sandbox. pnpm 10 reads project settings from `pnpm-workspace.yaml`; `.npmrc` is reserved for registry and authentication settings. Apply the approved environment correction:
+Windows 沙箱中默认的用户级 pnpm store 是只读的。pnpm 10 从 `pnpm-workspace.yaml` 读取项目设置；`.npmrc` 保留给镜像源与认证设置。应用经批准的环境修正：
 
-- Add `nodeLinker: hoisted` and `storeDir: .pnpm-store` to `pnpm-workspace.yaml`.
-- Keep `allowBuilds.esbuild: true` in `pnpm-workspace.yaml`.
-- Delete `.npmrc`; do not move `engineStrict` into workspace settings. The project accepts Node 18.18 or newer, while CI and container verification continue to prefer the pinned Phase 1 Node 24 version.
-- Add `.pnpm-store/` to `.gitignore`.
-- Keep the root `vitest` dev dependency pinned to `3.2.4`, the latest compatible line for the Node 18 baseline.
-- Resolve the absolute `node_modules` path and verify it is exactly inside this worktree before removing that generated directory.
-- Do not remove or modify the user-level pnpm store.
-- Regenerate `pnpm-lock.yaml` from the manifests and install through the project-local store.
+- 在 `pnpm-workspace.yaml` 中添加 `nodeLinker: hoisted` 与 `storeDir: .pnpm-store`。
+- 在 `pnpm-workspace.yaml` 中保留 `allowBuilds.esbuild: true`。
+- 删除 `.npmrc`；不要把 `engineStrict` 移入 workspace 设置。项目接受 Node 18.18 或更高版本，而 CI 与容器验证继续优先使用阶段 1 锁定的 Node 24 版本。
+- 在 `.gitignore` 中添加 `.pnpm-store/`。
+- 保持根 `vitest` 开发依赖锁定为 `3.2.4`，这是与 Node 18 基线兼容的最新行。
+- 在删除生成的 `node_modules` 目录前，解析其绝对路径并确认它恰好位于此工作树内。
+- 不要删除或修改用户级 pnpm store。
+- 从清单重新生成 `pnpm-lock.yaml`，并通过项目本地 store 安装。
 
-Run:
+运行：
 
 ```powershell
 corepack pnpm install --no-frozen-lockfile
 corepack pnpm exec vitest run packages/config/src/runtime-config.test.ts
 ```
 
-Before installation, `corepack pnpm store path` must resolve inside this checkout without a CLI `--store-dir` override. Expected: installation completes without `ERR_SQLITE_ERROR`; Vitest is `3.2.4` and reaches the test, which fails only because `runtime-config.ts` does not exist. The previous `Unknown method: getBuiltins` protocol error must not recur.
+安装前，`corepack pnpm store path` 必须在不使用 CLI `--store-dir` 覆盖的情况下解析到此检出目录内。预期：安装完成且无 `ERR_SQLITE_ERROR`；Vitest 为 `3.2.4` 并执行到测试，测试仅因 `runtime-config.ts` 不存在而失败。之前的 `Unknown method: getBuiltins` 协议错误不得再次出现。
 
-- [ ] **Step 4: Create the contracts**
+- [ ] **步骤 4：创建契约**
 
 ```ts
 // packages/contracts/src/problem-details.ts
@@ -457,7 +457,7 @@ export interface HealthSnapshot {
 }
 ```
 
-- [ ] **Step 5: Implement fail-fast configuration parsing**
+- [ ] **步骤 5：实现快速失败的配置解析**
 
 ```ts
 // packages/config/src/runtime-config.ts
@@ -494,19 +494,19 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
 }
 ```
 
-- [ ] **Step 6: Create package manifests and exports**
+- [ ] **步骤 6：创建包清单与导出**
 
-Create manifests named `@ai-hub/contracts` and `@ai-hub/config`. Both packages must expose only `./src/index.ts` through `exports`, include `build`, `lint`, `test`, and `typecheck` scripts, and extend the workspace TypeScript settings. Export every public contract from the package index; do not expose deep import paths.
+创建名为 `@ai-hub/contracts` 与 `@ai-hub/config` 的清单。两个包都必须只通过 `exports` 暴露 `./src/index.ts`，包含 `build`、`lint`、`test` 与 `typecheck` 脚本，并继承 workspace 的 TypeScript 设置。从包索引导出每个公共契约；不要暴露深层导入路径。
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/config add zod@^4.1.0
 ```
 
-- [ ] **Step 7: Run tests and type checking**
+- [ ] **步骤 7：运行测试与类型检查**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/config test
@@ -514,9 +514,9 @@ pnpm --filter @ai-hub/config typecheck
 pnpm --filter @ai-hub/contracts typecheck
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
 ```powershell
 git add packages/config packages/contracts .env.example pnpm-lock.yaml
@@ -525,29 +525,29 @@ git commit -m "feat: add shared contracts and runtime config"
 
 ---
 
-### Task 3: Establish PostgreSQL, migrations, and the outbox store
+### 任务 3：建立 PostgreSQL、迁移与 outbox 存储
 
-**Files:**
-- Create: `packages/contracts/src/outbox.ts`
-- Modify: `packages/contracts/src/index.ts`
-- Create: `packages/database/package.json`
-- Create: `packages/database/src/database.ts`
-- Create: `packages/database/src/index.ts`
-- Create: `packages/database/src/migrate.ts`
-- Create: `packages/database/src/schema.ts`
-- Create: `packages/database/src/migrations/0001_system_foundation.ts`
-- Create: `packages/database/src/outbox/outbox-store.ts`
-- Create: `packages/database/src/outbox/outbox-store.integration.test.ts`
-- Create: `packages/testing/package.json`
-- Create: `packages/testing/src/index.ts`
-- Create: `packages/testing/src/postgres-test-container.ts`
+**文件：**
+- 创建：`packages/contracts/src/outbox.ts`
+- 修改：`packages/contracts/src/index.ts`
+- 创建：`packages/database/package.json`
+- 创建：`packages/database/src/database.ts`
+- 创建：`packages/database/src/index.ts`
+- 创建：`packages/database/src/migrate.ts`
+- 创建：`packages/database/src/schema.ts`
+- 创建：`packages/database/src/migrations/0001_system_foundation.ts`
+- 创建：`packages/database/src/outbox/outbox-store.ts`
+- 创建：`packages/database/src/outbox/outbox-store.integration.test.ts`
+- 创建：`packages/testing/package.json`
+- 创建：`packages/testing/src/index.ts`
+- 创建：`packages/testing/src/postgres-test-container.ts`
 
-**Interfaces:**
-- Consumes: `RuntimeConfig.databaseUrl`.
-- Produces: `createDatabase(databaseUrl)`, `runMigrations(db)`, `OutboxStore` implementing `OutboxStorePort`.
-- Publishes `OutboxEventInput`, `ClaimedOutboxEvent`, and `OutboxStorePort` from `@ai-hub/contracts`, using the exact stable interface definitions declared above.
+**接口：**
+- 消费：`RuntimeConfig.databaseUrl`。
+- 产出：`createDatabase(databaseUrl)`、`runMigrations(db)`、实现 `OutboxStorePort` 的 `OutboxStore`。
+- 从 `@ai-hub/contracts` 发布 `OutboxEventInput`、`ClaimedOutboxEvent` 与 `OutboxStorePort`，使用上文声明的完全一致的稳定接口定义。
 
-- [ ] **Step 1: Write a failing outbox integration test**
+- [ ] **步骤 1：编写失败的 outbox 集成测试**
 
 ```ts
 // packages/database/src/outbox/outbox-store.integration.test.ts
@@ -592,23 +592,23 @@ describe('OutboxStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/database test -- outbox-store.integration.test.ts
 ```
 
-Expected: FAIL because database and testing packages do not exist.
+预期：FAIL，因为 database 与 testing 包不存在。
 
-- [ ] **Step 3: Create package manifests and install database tooling**
+- [ ] **步骤 3：创建包清单并安装数据库工具链**
 
-Create manifests named `@ai-hub/database` and `@ai-hub/testing`. Both packages expose only `./src/index.ts`, use the common `build`, `lint`, `test`, and `typecheck` scripts, and depend on workspace packages through `workspace:*`.
+创建名为 `@ai-hub/database` 与 `@ai-hub/testing` 的清单。两个包都只暴露 `./src/index.ts`，使用通用 `build`、`lint`、`test` 与 `typecheck` 脚本，并通过 `workspace:*` 依赖 workspace 包。
 
-Create `packages/contracts/src/outbox.ts` with the exact phase-stable `OutboxEventInput`, `ClaimedOutboxEvent`, and `OutboxStorePort` interfaces, and export them through `packages/contracts/src/index.ts`. `OutboxStore` must import and implement `OutboxStorePort` through the `@ai-hub/contracts` package export.
+创建 `packages/contracts/src/outbox.ts`，包含确切的阶段稳定 `OutboxEventInput`、`ClaimedOutboxEvent` 与 `OutboxStorePort` 接口，并通过 `packages/contracts/src/index.ts` 导出。`OutboxStore` 必须通过 `@ai-hub/contracts` 包导出导入并实现 `OutboxStorePort`。
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/database add kysely@0.28.2 pg@^8.16.0 @ai-hub/contracts@workspace:*
@@ -616,7 +616,7 @@ pnpm --filter @ai-hub/database add -D @types/pg@^8.15.0 @ai-hub/testing@workspac
 pnpm --filter @ai-hub/testing add testcontainers@10.18.0
 ```
 
-- [ ] **Step 4: Define the initial schema**
+- [ ] **步骤 4：定义初始 schema**
 
 ```ts
 // packages/database/src/schema.ts
@@ -644,19 +644,19 @@ export interface DatabaseSchema {
 }
 ```
 
-- [ ] **Step 5: Create migration `0001_system_foundation`**
+- [ ] **步骤 5：创建迁移 `0001_system_foundation`**
 
-The migration must:
+迁移必须：
 
-- Enable `pgcrypto`.
-- Create `outbox_events` with UUID primary key generated by PostgreSQL.
-- Add a unique index on `idempotency_key`.
-- Add a claim index on `(status, available_at, created_at)`.
-- Restrict `status` to the four declared values.
+- 启用 `pgcrypto`。
+- 创建带 PostgreSQL 生成的 UUID 主键的 `outbox_events`。
+- 在 `idempotency_key` 上添加唯一索引。
+- 在 `(status, available_at, created_at)` 上添加认领索引。
+- 将 `status` 限制为声明的四个值。
 
-Use Kysely schema builder for tables and explicit SQL for the status check.
+表使用 Kysely schema builder，状态检查使用显式 SQL。
 
-- [ ] **Step 6: Implement database creation and migration**
+- [ ] **步骤 6：实现数据库创建与迁移**
 
 ```ts
 // packages/database/src/database.ts
@@ -677,28 +677,28 @@ export function createDatabase(databaseUrl: string) {
 }
 ```
 
-- [ ] **Step 7: Implement the complete outbox store**
+- [ ] **步骤 7：实现完整的 outbox 存储**
 
-`OutboxStore.claim` must use one transaction and `FOR UPDATE SKIP LOCKED`. It must change selected rows to `processing`, set `claimed_by`, set `claimed_at`, increment `attempts`, and return the claimed records.
+`OutboxStore.claim` 必须使用一个事务与 `FOR UPDATE SKIP LOCKED`。它必须将所选行改为 `processing`、设置 `claimed_by`、设置 `claimed_at`、递增 `attempts`，并返回已认领记录。
 
-`append` must use `ON CONFLICT (idempotency_key) DO NOTHING` so retrying a business transaction cannot duplicate an event.
+`append` 必须使用 `ON CONFLICT (idempotency_key) DO NOTHING`，使重试业务事务不会产生重复事件。
 
-`complete(id)` must move only a `processing` event to `completed`, set `completed_at`, and clear claim fields.
+`complete(id)` 必须只把 `processing` 事件移到 `completed`、设置 `completed_at` 并清除认领字段。
 
-`fail(id, errorCode, nextAvailableAt)` must sanitize `errorCode`, return the event to `pending` while `attempts < 10`, set `available_at` for retry, and move it to `failed` at attempt 10. Both transitions must reject an ID that is not currently `processing`.
+`fail(id, errorCode, nextAvailableAt)` 必须净化 `errorCode`，在 `attempts < 10` 时将事件退回 `pending`、设置用于重试的 `available_at`，并在第 10 次尝试时移到 `failed`。两个迁移都必须拒绝当前不是 `processing` 的 ID。
 
-- [ ] **Step 8: Run integration tests twice**
+- [ ] **步骤 8：运行两次集成测试**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/database test -- outbox-store.integration.test.ts
 pnpm --filter @ai-hub/database test -- outbox-store.integration.test.ts
 ```
 
-Expected: both runs PASS without leaked containers or ports.
+预期：两次运行都 PASS，且无泄漏的容器或端口。
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
 ```powershell
 git add packages/contracts packages/database packages/testing pnpm-lock.yaml
@@ -707,29 +707,29 @@ git commit -m "feat: add postgres migration and outbox foundation"
 
 ---
 
-### Task 4: Bootstrap NestJS API and worker with health interfaces
+### 任务 4：引导 NestJS API 与带健康接口的 worker
 
-**Files:**
-- Create: `apps/api/package.json`
-- Create: `apps/api/tsconfig.json`
-- Create: `apps/api/src/api.module.ts`
-- Create: `apps/api/src/main.ts`
-- Create: `apps/api/test/health.e2e-spec.ts`
-- Create: `apps/worker/package.json`
-- Create: `apps/worker/tsconfig.json`
-- Create: `apps/worker/src/main.ts`
-- Create: `apps/worker/src/worker.module.ts`
-- Create: `packages/server/package.json`
-- Create: `packages/server/src/index.ts`
-- Create: `packages/server/src/system/health/health.controller.ts`
-- Create: `packages/server/src/system/health/health.module.ts`
-- Create: `packages/server/src/system/health/health.reader.ts`
+**文件：**
+- 创建：`apps/api/package.json`
+- 创建：`apps/api/tsconfig.json`
+- 创建：`apps/api/src/api.module.ts`
+- 创建：`apps/api/src/main.ts`
+- 创建：`apps/api/test/health.e2e-spec.ts`
+- 创建：`apps/worker/package.json`
+- 创建：`apps/worker/tsconfig.json`
+- 创建：`apps/worker/src/main.ts`
+- 创建：`apps/worker/src/worker.module.ts`
+- 创建：`packages/server/package.json`
+- 创建：`packages/server/src/index.ts`
+- 创建：`packages/server/src/system/health/health.controller.ts`
+- 创建：`packages/server/src/system/health/health.module.ts`
+- 创建：`packages/server/src/system/health/health.reader.ts`
 
-**Interfaces:**
-- Consumes: `RuntimeConfig`, `createDatabase`.
-- Produces: `GET /internal/health/live`, `GET /internal/health/ready`, `HealthReader`.
+**接口：**
+- 消费：`RuntimeConfig`、`createDatabase`。
+- 产出：`GET /internal/health/live`、`GET /internal/health/ready`、`HealthReader`。
 
-- [ ] **Step 1: Write failing health endpoint tests**
+- [ ] **步骤 1：编写失败的健康端点测试**
 
 ```ts
 // apps/api/test/health.e2e-spec.ts
@@ -774,21 +774,21 @@ describe('health endpoints', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/api test -- health.e2e-spec.ts
 ```
 
-Expected: FAIL because API and server packages do not exist.
+预期：FAIL，因为 API 与 server 包不存在。
 
-- [ ] **Step 3: Create manifests and install NestJS dependencies**
+- [ ] **步骤 3：创建清单并安装 NestJS 依赖**
 
-Create manifests named `@ai-hub/api`, `@ai-hub/worker`, and `@ai-hub/server`. API and worker are private applications; server exports only `./src/index.ts`. Each manifest defines exact `dev`, `build`, `lint`, `test`, and `typecheck` scripts for its runtime.
+创建名为 `@ai-hub/api`、`@ai-hub/worker` 与 `@ai-hub/server` 的清单。API 与 worker 是私有应用；server 只导出 `./src/index.ts`。每个清单为其运行时定义确切的 `dev`、`build`、`lint`、`test` 与 `typecheck` 脚本。
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server add @nestjs/common@10.4.22 reflect-metadata@0.2.2 rxjs@7.8.2 @ai-hub/contracts@workspace:* @ai-hub/database@workspace:*
@@ -797,7 +797,7 @@ pnpm --filter @ai-hub/api add -D @nestjs/testing@10.4.22 supertest@7.1.0 @types/
 pnpm --filter @ai-hub/worker add @nestjs/common@10.4.22 @nestjs/core@10.4.22 reflect-metadata@0.2.2 rxjs@7.8.2 @ai-hub/config@workspace:* @ai-hub/database@workspace:* @ai-hub/server@workspace:*
 ```
 
-- [ ] **Step 4: Implement `HealthReader`**
+- [ ] **步骤 4：实现 `HealthReader`**
 
 ```ts
 export class HealthReader {
@@ -825,21 +825,21 @@ export class HealthReader {
 }
 ```
 
-- [ ] **Step 5: Implement controllers and bootstrap**
+- [ ] **步骤 5：实现控制器与引导**
 
-Requirements:
+要求：
 
-- `ApiModule.forTest({ databaseCheck })` returns a Nest `DynamicModule` that replaces only the database health-check provider; production wiring never imports a test fake.
-- `/internal/health/live` always returns 200 while the process event loop is responsive.
-- `/internal/health/ready` returns 200 for `ok` and 503 for `degraded`.
-- Production bootstrap parses configuration before creating the Nest application.
-- API listens on `RuntimeConfig.apiPort`.
-- Worker creates an application context without opening an HTTP port.
-- Both processes handle `SIGTERM` with graceful shutdown.
+- `ApiModule.forTest({ databaseCheck })` 返回一个只替换数据库健康检查提供者的 Nest `DynamicModule`；生产装配绝不导入测试假件。
+- 进程事件循环响应时，`/internal/health/live` 始终返回 200。
+- `/internal/health/ready` 对 `ok` 返回 200，对 `degraded` 返回 503。
+- 生产引导在创建 Nest 应用之前解析配置。
+- API 监听 `RuntimeConfig.apiPort`。
+- worker 创建应用上下文但不打开 HTTP 端口。
+- 两个进程都处理 `SIGTERM` 并优雅关闭。
 
-- [ ] **Step 6: Run health and type tests**
+- [ ] **步骤 6：运行健康与类型测试**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/api test -- health.e2e-spec.ts
@@ -847,9 +847,9 @@ pnpm --filter @ai-hub/api typecheck
 pnpm --filter @ai-hub/worker typecheck
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
 ```powershell
 git add apps/api apps/worker packages/server pnpm-lock.yaml
@@ -858,24 +858,24 @@ git commit -m "feat: bootstrap api worker and health checks"
 
 ---
 
-### Task 5: Run outbox events through the worker
+### 任务 5：通过 worker 处理 outbox 事件
 
-**Files:**
-- Create: `packages/server/src/system/outbox/outbox-worker.ts`
-- Create: `packages/server/src/system/outbox/outbox-worker.test.ts`
-- Modify: `apps/worker/src/worker.module.ts`
-- Modify: `packages/server/src/index.ts`
+**文件：**
+- 创建：`packages/server/src/system/outbox/outbox-worker.ts`
+- 创建：`packages/server/src/system/outbox/outbox-worker.test.ts`
+- 修改：`apps/worker/src/worker.module.ts`
+- 修改：`packages/server/src/index.ts`
 
-**Interfaces:**
-- Consumes: `OutboxStore.claim`, `OutboxStore.complete`, `OutboxStore.fail`.
-- Produces: `OutboxHandler`, `OutboxHandlerMap`, `OutboxWorker.runOnce(workerId)`.
+**接口：**
+- 消费：`OutboxStore.claim`、`OutboxStore.complete`、`OutboxStore.fail`。
+- 产出：`OutboxHandler`、`OutboxHandlerMap`、`OutboxWorker.runOnce(workerId)`。
 
 ```ts
 export type OutboxHandler = (event: ClaimedOutboxEvent) => Promise<void>;
 export type OutboxHandlerMap = Readonly<Record<string, OutboxHandler>>;
 ```
 
-- [ ] **Step 1: Write the failing worker test**
+- [ ] **步骤 1：编写失败的 worker 测试**
 
 ```ts
 import { describe, expect, it, vi } from 'vitest';
@@ -912,49 +912,49 @@ describe('OutboxWorker', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server test -- outbox-worker.test.ts
 ```
 
-Expected: FAIL because `OutboxWorker` does not exist.
+预期：FAIL，因为 `OutboxWorker` 不存在。
 
-- [ ] **Step 3: Implement one-batch processing**
+- [ ] **步骤 3：实现单批次处理**
 
-`runOnce` must:
+`runOnce` 必须：
 
-- Claim at most 20 events.
-- Look up a handler by exact `eventType`.
-- Mark unknown event types failed with code `OUTBOX_HANDLER_MISSING`.
-- Complete successful events.
-- Mark failures with a sanitized error message.
-- Never stop processing the remaining batch because one event fails.
-- Return the number of claimed records so the polling loop can distinguish work from an empty queue.
+- 最多认领 20 个事件。
+- 按精确 `eventType` 查找处理器。
+- 用代码 `OUTBOX_HANDLER_MISSING` 将未知事件类型标记为失败。
+- 完成成功事件。
+- 用净化后的错误消息标记失败。
+- 绝不因单个事件失败而停止处理批次中其余事件。
+- 返回已认领记录数，使轮询循环能区分有工作与空队列。
 
-- [ ] **Step 4: Add the worker polling loop**
+- [ ] **步骤 4：添加 worker 轮询循环**
 
-The worker entrypoint must:
+worker 入口必须：
 
-- Call `runOnce` immediately.
-- Wait `outboxPollIntervalMs` only after an empty batch.
-- Stop claiming new work after `SIGTERM`.
-- Finish the current batch before closing the database pool.
+- 立即调用 `runOnce`。
+- 仅在空批次后等待 `outboxPollIntervalMs`。
+- 收到 `SIGTERM` 后停止认领新工作。
+- 关闭数据库连接池前完成当前批次。
 
-- [ ] **Step 5: Run tests**
+- [ ] **步骤 5：运行测试**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server test -- outbox-worker.test.ts
 pnpm --filter @ai-hub/worker typecheck
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 6：提交**
 
 ```powershell
 git add packages/server/src/system/outbox apps/worker/src/worker.module.ts packages/server/src/index.ts
@@ -963,27 +963,27 @@ git commit -m "feat: process transactional outbox events"
 
 ---
 
-### Task 6: Build the React application shell and design-system baseline
+### 任务 6：构建 React 应用外壳与设计系统基线
 
-**Files:**
-- Create: `apps/web/package.json`
-- Create: `apps/web/tsconfig.json`
-- Create: `apps/web/vite.config.ts`
-- Create: `apps/web/src/main.tsx`
-- Create: `apps/web/src/styles.css`
-- Create: `apps/web/src/app/App.tsx`
-- Create: `apps/web/src/app/App.test.tsx`
-- Create: `apps/web/src/app/providers.tsx`
-- Create: `apps/web/src/app/router.tsx`
-- Create: `packages/ui/package.json`
-- Create: `packages/ui/src/index.ts`
-- Create: `packages/ui/src/theme.ts`
+**文件：**
+- 创建：`apps/web/package.json`
+- 创建：`apps/web/tsconfig.json`
+- 创建：`apps/web/vite.config.ts`
+- 创建：`apps/web/src/main.tsx`
+- 创建：`apps/web/src/styles.css`
+- 创建：`apps/web/src/app/App.tsx`
+- 创建：`apps/web/src/app/App.test.tsx`
+- 创建：`apps/web/src/app/providers.tsx`
+- 创建：`apps/web/src/app/router.tsx`
+- 创建：`packages/ui/package.json`
+- 创建：`packages/ui/src/index.ts`
+- 创建：`packages/ui/src/theme.ts`
 
-**Interfaces:**
-- Consumes: `HealthSnapshot`.
-- Produces: `AppProviders`, `AppRouter`, Ant Design theme configuration.
+**接口：**
+- 消费：`HealthSnapshot`。
+- 产出：`AppProviders`、`AppRouter`、Ant Design 主题配置。
 
-- [ ] **Step 1: Write the failing application-shell test**
+- [ ] **步骤 1：编写失败的应用外壳测试**
 
 ```tsx
 // apps/web/src/app/App.test.tsx
@@ -1004,21 +1004,21 @@ describe('App', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/web test -- App.test.tsx
 ```
 
-Expected: FAIL because the web package does not exist.
+预期：FAIL，因为 web 包不存在。
 
-- [ ] **Step 3: Create manifests and install the Web stack**
+- [ ] **步骤 3：创建清单并安装 Web 技术栈**
 
-Create `apps/web/package.json` with name `@ai-hub/web`, `private: true`, and `dev`, `build`, `lint`, `test`, and `typecheck` scripts. Create `packages/ui/package.json` with name `@ai-hub/ui`, a single root export, the same quality scripts, and `antd: ^6.5.0` as a peer dependency.
+创建 `apps/web/package.json`，名称为 `@ai-hub/web`，`private: true`，包含 `dev`、`build`、`lint`、`test` 与 `typecheck` 脚本。创建 `packages/ui/package.json`，名称为 `@ai-hub/ui`，单一根导出、相同的质量脚本，并将 `antd: ^6.5.0` 作为 peer 依赖。
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/web add react@^19.2.0 react-dom@^19.2.0 react-router-dom@6.30.4 antd@^6.5.0 @ant-design/icons@^6.1.0 @tanstack/react-query@^5.90.0 @ai-hub/contracts@workspace:* @ai-hub/ui@workspace:*
@@ -1026,9 +1026,9 @@ pnpm --filter @ai-hub/web add -D vite@6.4.3 @vitejs/plugin-react@^4.7.0 tailwind
 pnpm --filter @ai-hub/ui add -D antd@^6.5.0
 ```
 
-- [ ] **Step 4: Configure Tailwind without Preflight**
+- [ ] **步骤 4：配置不使用 Preflight 的 Tailwind**
 
-`apps/web/src/styles.css`:
+`apps/web/src/styles.css`：
 
 ```css
 @layer theme, antd, components, utilities;
@@ -1053,9 +1053,9 @@ pnpm --filter @ai-hub/ui add -D antd@^6.5.0
 }
 ```
 
-Do not import `tailwindcss/preflight.css` or Ant Design `reset.css`.
+不要导入 `tailwindcss/preflight.css` 或 Ant Design `reset.css`。
 
-- [ ] **Step 5: Create the theme and providers**
+- [ ] **步骤 5：创建主题与提供者**
 
 ```ts
 // packages/ui/src/theme.ts
@@ -1072,22 +1072,22 @@ export const aiHubTheme: ThemeConfig = {
 };
 ```
 
-`AppProviders` must configure `ConfigProvider` with `zhCN`, `aiHubTheme`, and one `QueryClient`. Do not customize the default Ant Design primary color.
+`AppProviders` 必须用 `zhCN`、`aiHubTheme` 与一个 `QueryClient` 配置 `ConfigProvider`。不要自定义 Ant Design 默认主色。
 
-- [ ] **Step 6: Implement the shell**
+- [ ] **步骤 6：实现外壳**
 
-The initial shell must include:
+初始外壳必须包含：
 
-- A skip link to `#main-content`.
-- A navigation landmark named `主导航`.
-- Links for 应用市场 and 创新广场.
-- Static feature-status pages that say the feature is being built without adding business behavior.
-- A responsive Ant Design `Layout` with Tailwind layout utilities.
-- No gradient styles or decorative continuous animation.
+- 跳到 `#main-content` 的跳过链接。
+- 名为 `主导航` 的导航地标。
+- 应用市场与创新广场的链接。
+- 静态的功能状态页，说明功能正在构建中，不添加业务行为。
+- 使用 Tailwind 布局工具类的响应式 Ant Design `Layout`。
+- 无渐变样式或装饰性连续动画。
 
-- [ ] **Step 7: Run UI tests and build**
+- [ ] **步骤 7：运行 UI 测试与构建**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/web test -- App.test.tsx
@@ -1095,9 +1095,9 @@ pnpm --filter @ai-hub/web typecheck
 pnpm --filter @ai-hub/web build
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
 ```powershell
 git add apps/web packages/ui pnpm-lock.yaml
@@ -1106,29 +1106,29 @@ git commit -m "feat: add React application shell"
 
 ---
 
-### Task 7: Enforce module and package boundaries
+### 任务 7：强制模块与包边界
 
-**Files:**
-- Create: `dependency-cruiser.cjs`
-- Create: `packages/server/src/architecture-boundaries.fixture.ts`
-- Modify: `package.json`
-- Modify: `apps/api/package.json`
-- Modify: `apps/web/package.json`
-- Modify: `apps/worker/package.json`
-- Modify: `packages/config/package.json`
-- Modify: `packages/contracts/package.json`
-- Modify: `packages/database/package.json`
-- Modify: `packages/server/package.json`
-- Modify: `packages/testing/package.json`
-- Modify: `packages/ui/package.json`
+**文件：**
+- 创建：`dependency-cruiser.cjs`
+- 创建：`packages/server/src/architecture-boundaries.fixture.ts`
+- 修改：`package.json`
+- 修改：`apps/api/package.json`
+- 修改：`apps/web/package.json`
+- 修改：`apps/worker/package.json`
+- 修改：`packages/config/package.json`
+- 修改：`packages/contracts/package.json`
+- 修改：`packages/database/package.json`
+- 修改：`packages/server/package.json`
+- 修改：`packages/testing/package.json`
+- 修改：`packages/ui/package.json`
 
-**Interfaces:**
-- Consumes: package exports and directory ownership.
-- Produces: `pnpm boundaries`.
+**接口：**
+- 消费：包导出与目录归属。
+- 产出：`pnpm boundaries`。
 
-- [ ] **Step 1: Add a deliberate failing dependency rule**
+- [ ] **步骤 1：添加一个刻意的失败依赖规则**
 
-Create a temporary import in `packages/server/src/architecture-boundaries.fixture.ts`:
+在 `packages/server/src/architecture-boundaries.fixture.ts` 中创建临时导入：
 
 ```ts
 import '../../../apps/api/src/api.module.js';
@@ -1136,41 +1136,41 @@ import '../../../apps/api/src/api.module.js';
 export const invalidDependency = true;
 ```
 
-- [ ] **Step 2: Create boundary rules**
+- [ ] **步骤 2：创建边界规则**
 
-`dependency-cruiser.cjs` must forbid:
+`dependency-cruiser.cjs` 必须禁止：
 
-- Circular dependencies.
-- Imports from `packages/*/src/**` except through package exports.
-- `packages/server/src/**/domain/**` importing NestJS, Kysely, `pg`, HTTP or external SDK packages.
-- `packages/server` importing `apps/*`.
-- One `apps/web/src/modules/*` module deep-importing another feature module.
+- 循环依赖。
+- 除通过包导出外的 `packages/*/src/**` 导入。
+- `packages/server/src/**/domain/**` 导入 NestJS、Kysely、`pg`、HTTP 或外部 SDK 包。
+- `packages/server` 导入 `apps/*`。
+- `apps/web/src/modules/*` 中的模块深层导入另一个功能模块。
 
-- [ ] **Step 3: Run the boundary check and verify it fails**
+- [ ] **步骤 3：运行边界检查并验证失败**
 
-Run:
-
-```powershell
-pnpm boundaries
-```
-
-Expected: FAIL and name the import from `packages/server` to `apps/api`.
-
-- [ ] **Step 4: Remove the deliberate violation**
-
-Delete `packages/server/src/architecture-boundaries.fixture.ts`.
-
-- [ ] **Step 5: Run the boundary check**
-
-Run:
+运行：
 
 ```powershell
 pnpm boundaries
 ```
 
-Expected: PASS with zero violations.
+预期：FAIL，并指出从 `packages/server` 到 `apps/api` 的导入。
 
-- [ ] **Step 6: Commit**
+- [ ] **步骤 4：移除刻意违规**
+
+删除 `packages/server/src/architecture-boundaries.fixture.ts`。
+
+- [ ] **步骤 5：运行边界检查**
+
+运行：
+
+```powershell
+pnpm boundaries
+```
+
+预期：PASS，零违规。
+
+- [ ] **步骤 6：提交**
 
 ```powershell
 git add dependency-cruiser.cjs package.json apps packages
@@ -1179,108 +1179,108 @@ git commit -m "chore: enforce module boundaries"
 
 ---
 
-### Task 8: Add Windows development and isolated test Compose stacks
+### 任务 8：添加 Windows 开发与隔离测试 Compose 环境
 
-**Files:**
-- Create: `.dockerignore`
-- Create: `compose.yaml`
-- Create: `compose.dev.yaml`
-- Create: `compose.test.yaml`
-- Modify: `.env.example`
-- Modify: `.gitignore`
-- Modify: `package.json`
-- Modify: `pnpm-lock.yaml`
-- Create: `tsconfig.runtime.json`
-- Modify: `apps/api/package.json`
-- Modify: `apps/worker/package.json`
-- Modify: `packages/testing/src/postgres-test-container.ts`
-- Create: `packages/testing/test/postgres-test-container.test.ts`
-- Modify: `packages/testing/package.json`
-- Create: `infra/docker/api.Dockerfile`
-- Create: `infra/docker/web.Dockerfile`
-- Create: `infra/docker/worker.Dockerfile`
-- Create: `infra/docker/nginx.conf`
-- Create: `infra/docker/web.nginx.conf`
-- Create: `infra/garage/garage.toml`
-- Create: `docs/adr/0003-garage-object-storage.md`
-- Create: `docs/development/windows-docker-compose.md`
-- Create: `scripts/migrate.mts`
+**文件：**
+- 创建：`.dockerignore`
+- 创建：`compose.yaml`
+- 创建：`compose.dev.yaml`
+- 创建：`compose.test.yaml`
+- 修改：`.env.example`
+- 修改：`.gitignore`
+- 修改：`package.json`
+- 修改：`pnpm-lock.yaml`
+- 创建：`tsconfig.runtime.json`
+- 修改：`apps/api/package.json`
+- 修改：`apps/worker/package.json`
+- 修改：`packages/testing/src/postgres-test-container.ts`
+- 创建：`packages/testing/test/postgres-test-container.test.ts`
+- 修改：`packages/testing/package.json`
+- 创建：`infra/docker/api.Dockerfile`
+- 创建：`infra/docker/web.Dockerfile`
+- 创建：`infra/docker/worker.Dockerfile`
+- 创建：`infra/docker/nginx.conf`
+- 创建：`infra/docker/web.nginx.conf`
+- 创建：`infra/garage/garage.toml`
+- 创建：`docs/adr/0003-garage-object-storage.md`
+- 创建：`docs/development/windows-docker-compose.md`
+- 创建：`scripts/migrate.mts`
 
-**Interfaces:**
-- Consumes: API, worker, web, PostgreSQL, Garage, ClamAV.
-- Produces: `docker compose -f compose.yaml -f compose.dev.yaml up`.
+**接口：**
+- 消费：API、worker、web、PostgreSQL、Garage、ClamAV。
+- 产出：`docker compose -f compose.yaml -f compose.dev.yaml up`。
 
-- [ ] **Step 1: Write an invalid Compose reference**
+- [ ] **步骤 1：编写一个无效的 Compose 引用**
 
-Create `compose.dev.yaml` with a temporary dependency on `missing-service`.
+创建 `compose.dev.yaml`，临时依赖 `missing-service`。
 
-- [ ] **Step 2: Run Compose validation and verify it fails**
+- [ ] **步骤 2：运行 Compose 校验并验证失败**
 
-Run:
+运行：
 
 ```powershell
 docker compose -f compose.yaml -f compose.dev.yaml config --quiet
 ```
 
-Expected: FAIL because `missing-service` is undefined.
+预期：FAIL，因为 `missing-service` 未定义。
 
-- [ ] **Step 3: Implement the base stack**
+- [ ] **步骤 3：实现基础环境**
 
-`compose.yaml` must define:
+`compose.yaml` 必须定义：
 
-- `postgres` using `postgres:18.4-bookworm`.
-- `garage` using `dxflrs/garage:v2.3.0` as accepted by ADR 0003.
-- `clamav` using `clamav/clamav:1.4.5-debian`.
-- `api`, `worker`, `web`, and `proxy`.
-- Named volumes for database, object storage, and virus definitions.
-- Health checks for all dependency containers.
-- One internal application network.
-- No production secrets.
+- 使用 `postgres:18.4-bookworm` 的 `postgres`。
+- 使用 ADR 0003 接受的 `dxflrs/garage:v2.3.0` 的 `garage`。
+- 使用 `clamav/clamav:1.4.5-debian` 的 `clamav`。
+- `api`、`worker`、`web` 与 `proxy`。
+- 数据库、对象存储与病毒定义的命名卷。
+- 所有依赖容器的健康检查。
+- 一个内部应用网络。
+- 无生产密钥。
 
-Before writing the Compose file, run:
+编写 Compose 文件前，运行：
 
 ```powershell
 docker manifest inspect dxflrs/garage:v2.3.0
 docker manifest inspect clamav/clamav:1.4.5-debian
 ```
 
-Expected: both replacement manifests resolve. The original MinIO manifest failed with `no such manifest`; ADR 0003 records the required replacement decision. If either replacement image is unavailable, stop and amend the ADR before implementation. Do not silently substitute `latest`.
+预期：两个替代镜像清单都能解析。原始 MinIO 清单以 `no such manifest` 失败；ADR 0003 记录了所需的替代决策。如果任一替代镜像不可用，请在实施前停下并修订 ADR。不要静默替换为 `latest`。
 
-- [ ] **Step 4: Implement the development override**
+- [ ] **步骤 4：实现开发覆盖**
 
-`compose.dev.yaml` must:
+`compose.dev.yaml` 必须：
 
-- Bind source directories for hot reload.
-- Expose proxy only on `127.0.0.1:8080`.
-- Expose PostgreSQL plus Garage S3/admin ports only on `127.0.0.1`.
-- Use development credentials from `.env`.
-- Start Vite, Nest watch mode, and worker watch mode.
-- Remove the temporary `missing-service`.
+- 为热重载绑定源码目录。
+- 只在 `127.0.0.1:8080` 暴露代理。
+- 只在 `127.0.0.1` 暴露 PostgreSQL 与 Garage S3/admin 端口。
+- 使用来自 `.env` 的开发凭据。
+- 启动 Vite、Nest watch 模式与 worker watch 模式。
+- 移除临时的 `missing-service`。
 
-- [ ] **Step 5: Implement the test override**
+- [ ] **步骤 5：实现测试覆盖**
 
-`compose.test.yaml` must:
+`compose.test.yaml` 必须：
 
-- Use a distinct Compose project name.
-- Use isolated volumes.
-- Disable real external network integrations.
-- Start dependencies, execute `pnpm verify`, and exit.
-- Remove test containers and volumes through the documented cleanup command.
+- 使用不同的 Compose 项目名。
+- 使用隔离卷。
+- 禁用真实的外部网络集成。
+- 启动依赖、执行 `pnpm verify` 并退出。
+- 通过文档化的清理命令移除测试容器与卷。
 
-- [ ] **Step 6: Validate both stacks**
+- [ ] **步骤 6：验证两个环境**
 
-Run:
+运行：
 
 ```powershell
 docker compose -f compose.yaml -f compose.dev.yaml config --quiet
 docker compose -f compose.yaml -f compose.test.yaml config --quiet
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 7: Start the development stack and check health**
+- [ ] **步骤 7：启动开发环境并检查健康**
 
-Run:
+运行：
 
 ```powershell
 docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-timeout 600
@@ -1288,22 +1288,22 @@ docker compose -f compose.yaml -f compose.dev.yaml ps
 Invoke-RestMethod http://127.0.0.1:8080/internal/health/ready
 ```
 
-Expected: every container is healthy and readiness returns `status: ok`.
+预期：每个容器都健康，就绪检查返回 `status: ok`。
 
-- [ ] **Step 8: Document Windows setup**
+- [ ] **步骤 8：记录 Windows 设置**
 
-The document must include:
+文档必须包含：
 
-- Docker Desktop Linux container requirement.
-- Required ports.
-- First startup.
-- Migration command.
-- Test command.
-- Data reset command with an explicit warning.
-- Log inspection.
-- Clean shutdown.
+- Docker Desktop Linux 容器要求。
+- 必需端口。
+- 首次启动。
+- 迁移命令。
+- 测试命令。
+- 带明确警告的数据重置命令。
+- 日志检查。
+- 干净关闭。
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
 ```powershell
 git add compose.yaml compose.dev.yaml compose.test.yaml .env.example infra/docker docs/development
@@ -1312,25 +1312,25 @@ git commit -m "chore: add Windows Docker Compose environments"
 
 ---
 
-### Task 9: Add structured logs, trace IDs, metrics, and HTTP errors
+### 任务 9：添加结构化日志、追踪 ID、指标与 HTTP 错误
 
-**Files:**
-- Create: `packages/server/src/system/observability/observability.module.ts`
-- Create: `packages/server/src/system/observability/request-context.middleware.ts`
-- Create: `packages/server/src/system/observability/request-context.middleware.test.ts`
-- Create: `packages/server/src/system/http/problem-details.filter.ts`
-- Create: `packages/server/src/system/http/problem-details.filter.test.ts`
-- Create: `infra/monitoring/prometheus.yml`
-- Modify: `apps/api/src/api.module.ts`
-- Modify: `apps/api/src/main.ts`
-- Modify: `apps/worker/src/main.ts`
-- Modify: `compose.yaml`
+**文件：**
+- 创建：`packages/server/src/system/observability/observability.module.ts`
+- 创建：`packages/server/src/system/observability/request-context.middleware.ts`
+- 创建：`packages/server/src/system/observability/request-context.middleware.test.ts`
+- 创建：`packages/server/src/system/http/problem-details.filter.ts`
+- 创建：`packages/server/src/system/http/problem-details.filter.test.ts`
+- 创建：`infra/monitoring/prometheus.yml`
+- 修改：`apps/api/src/api.module.ts`
+- 修改：`apps/api/src/main.ts`
+- 修改：`apps/worker/src/main.ts`
+- 修改：`compose.yaml`
 
-**Interfaces:**
-- Consumes: inbound `x-request-id` when valid.
-- Produces: response `x-request-id`, JSON logs, `ProblemDetails`, `/internal/metrics`.
+**接口：**
+- 消费：有效的入站 `x-request-id`。
+- 产出：响应 `x-request-id`、JSON 日志、`ProblemDetails`、`/internal/metrics`。
 
-- [ ] **Step 1: Write failing trace-ID and HTTP-error tests**
+- [ ] **步骤 1：编写失败的追踪 ID 与 HTTP 错误测试**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -1371,54 +1371,54 @@ describe('toProblemDetails', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [ ] **步骤 2：运行测试并验证失败**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server test -- request-context.middleware.test.ts
 pnpm --filter @ai-hub/server test -- problem-details.filter.test.ts
 ```
 
-Expected: FAIL because the observability module does not exist.
+预期：FAIL，因为可观测性模块不存在。
 
-- [ ] **Step 3: Install observability dependencies**
+- [ ] **步骤 3：安装可观测性依赖**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server add pino@^9.5.0 pino-http@^10.3.0 prom-client@^15.1.3 ulid@^3.0.1
 ```
 
-- [ ] **Step 4: Implement request context and the HTTP error filter**
+- [ ] **步骤 4：实现请求上下文与 HTTP 错误过滤器**
 
-Requirements:
+要求：
 
-- Accept only a 26-character ULID in `x-request-id`.
-- Generate a ULID for missing or invalid values.
-- Return the trace ID in the response header.
-- Add the trace ID to request-scoped logs and `ProblemDetails`.
-- Redact authorization, Cookie, set-cookie, password, secret, token, and database URL fields.
-- Convert Nest HTTP exceptions, Zod validation errors, and unknown errors into the shared `ProblemDetails` shape.
-- Never expose stack traces, SQL, connection strings, filesystem paths, or raw third-party error bodies to the caller.
-- Record unknown errors at `error` level with the same trace ID; return code `INTERNAL_ERROR`.
+- `x-request-id` 只接受 26 字符的 ULID。
+- 为缺失或无效的值生成 ULID。
+- 在响应头中返回追踪 ID。
+- 将追踪 ID 加入请求级日志与 `ProblemDetails`。
+- 脱敏 authorization、Cookie、set-cookie、password、secret、token 与数据库 URL 字段。
+- 将 Nest HTTP 异常、Zod 校验错误与未知错误转换为共享的 `ProblemDetails` 结构。
+- 绝不向调用方暴露堆栈、SQL、连接串、文件系统路径或第三方原始错误体。
+- 用相同追踪 ID 在 `error` 级别记录未知错误；返回代码 `INTERNAL_ERROR`。
 
-- [ ] **Step 5: Add metrics**
+- [ ] **步骤 5：添加指标**
 
-Expose Prometheus metrics for:
+暴露以下 Prometheus 指标：
 
-- Process health.
-- HTTP duration and status.
-- Active requests.
-- Database readiness.
-- Outbox pending, processing and failed counts.
-- Worker handler duration and failures.
+- 进程健康。
+- HTTP 耗时与状态。
+- 活动请求数。
+- 数据库就绪状态。
+- outbox 待处理、处理中与失败计数。
+- worker 处理器耗时与失败数。
 
-The metrics endpoint must bind to the internal proxy path only and must not be linked from the user interface.
+指标端点必须只绑定到内部代理路径，且不得从用户界面链接。
 
-- [ ] **Step 6: Run tests and inspect logs**
+- [ ] **步骤 6：运行测试并检查日志**
 
-Run:
+运行：
 
 ```powershell
 pnpm --filter @ai-hub/server test
@@ -1427,9 +1427,9 @@ Invoke-WebRequest http://127.0.0.1:8080/internal/health/live -Headers @{ 'x-requ
 docker compose -f compose.yaml -f compose.dev.yaml logs api
 ```
 
-Expected: response and JSON log share the supplied trace ID and contain no credentials.
+预期：响应与 JSON 日志共享所提供的追踪 ID，且不含任何凭据。
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
 ```powershell
 git add packages/server/src/system/observability packages/server/src/system/http apps/api apps/worker infra/monitoring compose.yaml pnpm-lock.yaml
@@ -1438,22 +1438,22 @@ git commit -m "feat: add observability foundation"
 
 ---
 
-### Task 10: Add the local verification pipeline and GitLab CI
+### 任务 10：添加本地验证流水线与 GitLab CI
 
-**Files:**
-- Create: `scripts/verify.mjs`
-- Create: `scripts/verify-doc-links.mjs`
-- Create: `.gitlab-ci.yml`
-- Create: `docs/adr/0001-modular-monolith.md`
-- Create: `docs/adr/0002-postgres-outbox.md`
-- Modify: `package.json`
-- Modify: `README.md`
+**文件：**
+- 创建：`scripts/verify.mjs`
+- 创建：`scripts/verify-doc-links.mjs`
+- 创建：`.gitlab-ci.yml`
+- 创建：`docs/adr/0001-modular-monolith.md`
+- 创建：`docs/adr/0002-postgres-outbox.md`
+- 修改：`package.json`
+- 修改：`README.md`
 
-**Interfaces:**
-- Consumes: all root quality commands.
-- Produces: `pnpm verify`, GitLab `verify` and `container-smoke` jobs.
+**接口：**
+- 消费：所有根质量命令。
+- 产出：`pnpm verify`、GitLab `verify` 与 `container-smoke` 任务。
 
-- [ ] **Step 1: Write a failing documentation-link check**
+- [ ] **步骤 1：编写失败的文档链接检查**
 
 ```js
 // scripts/verify-doc-links.mjs
@@ -1476,35 +1476,35 @@ if (failures.length > 0) {
 }
 ```
 
-Add one README link to `docs/development/missing.md`.
+在 README 中添加一个指向 `docs/development/missing.md` 的链接。
 
-- [ ] **Step 2: Run the check and verify it fails**
+- [ ] **步骤 2：运行检查并验证失败**
 
-Run:
+运行：
 
 ```powershell
 node scripts/verify-doc-links.mjs
 ```
 
-Expected: FAIL naming `docs/development/missing.md`.
+预期：FAIL，指出 `docs/development/missing.md`。
 
-- [ ] **Step 3: Replace the bad link with real project documentation**
+- [ ] **步骤 3：用真实项目文档替换坏链接**
 
-README must link to:
+README 必须链接到：
 
-- Approved design spec.
-- Program roadmap.
-- Phase 1 plan.
-- Windows Compose guide.
-- Both ADRs.
+- 已批准的设计规格。
+- 项目路线图。
+- 阶段 1 计划。
+- Windows Compose 指南。
+- 两份 ADR。
 
-ADR 0001 records React SPA + NestJS modular monolith and rejects Next.js full-stack and microservices.
+ADR 0001 记录 React SPA + NestJS 模块化单体，并否决 Next.js 全栈与微服务。
 
-ADR 0002 records PostgreSQL transactional outbox and rejects Redis/message-queue introduction in V1.
+ADR 0002 记录 PostgreSQL 事务性 outbox，并否决在 V1 中引入 Redis/消息队列。
 
-- [ ] **Step 4: Implement the verification runner**
+- [ ] **步骤 4：实现验证运行器**
 
-`scripts/verify.mjs` must run sequentially and stop at the first failure:
+`scripts/verify.mjs` 必须顺序运行并在首个失败处停止：
 
 1. `pnpm format:check`
 2. `pnpm lint`
@@ -1515,36 +1515,36 @@ ADR 0002 records PostgreSQL transactional outbox and rejects Redis/message-queue
 7. `node scripts/verify-doc-links.mjs`
 8. `docker compose -f compose.yaml -f compose.test.yaml config --quiet`
 
-Use `spawnSync` with `shell: true`, inherit stdio, and return the failing command's exit code.
+使用带 `shell: true` 的 `spawnSync`，继承 stdio，并返回失败命令的退出码。
 
-- [ ] **Step 5: Create GitLab CI**
+- [ ] **步骤 5：创建 GitLab CI**
 
-`.gitlab-ci.yml` must:
+`.gitlab-ci.yml` 必须：
 
-- Use Node 24.
-- Enable Corepack and install the pinned pnpm version.
-- Cache the pnpm store, not `node_modules`.
-- Run `pnpm install --frozen-lockfile`.
-- Run `pnpm verify`.
-- Build API, worker, and Web images only after verification passes.
-- Run `docker compose ... config --quiet`.
-- Retain test reports and coverage as artifacts.
-- Cancel superseded pipelines on the same branch.
+- 使用 Node 24。
+- 启用 Corepack 并安装锁定的 pnpm 版本。
+- 缓存 pnpm store，而不是 `node_modules`。
+- 运行 `pnpm install --frozen-lockfile`。
+- 运行 `pnpm verify`。
+- 仅在验证通过后构建 API、worker 与 Web 镜像。
+- 运行 `docker compose ... config --quiet`。
+- 将测试报告与覆盖率保留为制品。
+- 取消同一分支上被取代的流水线。
 
-- [ ] **Step 6: Run the complete local gate**
+- [ ] **步骤 6：运行完整本地门禁**
 
-Run:
+运行：
 
 ```powershell
 pnpm install --frozen-lockfile
 pnpm verify
 ```
 
-Expected: PASS.
+预期：PASS。
 
-- [ ] **Step 7: Run a clean Compose smoke test**
+- [ ] **步骤 7：运行干净的 Compose 冒烟测试**
 
-Run:
+运行：
 
 ```powershell
 docker compose -f compose.yaml -f compose.test.yaml down -v
@@ -1552,9 +1552,9 @@ docker compose -f compose.yaml -f compose.test.yaml up --build --abort-on-contai
 docker compose -f compose.yaml -f compose.test.yaml down -v
 ```
 
-Expected: test container exits 0 and cleanup removes isolated volumes.
+预期：测试容器退出码为 0，清理移除隔离卷。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
 ```powershell
 git add scripts/verify.mjs scripts/verify-doc-links.mjs .gitlab-ci.yml docs/adr README.md package.json
@@ -1563,21 +1563,21 @@ git commit -m "ci: add reproducible verification pipeline"
 
 ---
 
-## Phase 1 Completion Check
+## 阶段 1 完成检查
 
-- [ ] Run `pnpm verify`.
-- [ ] Run the clean Compose smoke test.
-- [ ] Start the development stack from a clean volume.
-- [ ] Verify Web loads at `http://127.0.0.1:8080`.
-- [ ] Verify API liveness and readiness.
-- [ ] Stop PostgreSQL and verify readiness returns 503.
-- [ ] Restart PostgreSQL and verify readiness recovers.
-- [ ] Append one probe outbox event and verify the worker completes it once.
-- [ ] Inspect logs and confirm trace IDs and redaction.
-- [ ] Confirm `git status --short` is empty.
-- [ ] Record the exact resolved dependency and image versions in the Phase 1 completion note.
+- [ ] 运行 `pnpm verify`。
+- [ ] 运行干净的 Compose 冒烟测试。
+- [ ] 从干净卷启动开发环境。
+- [ ] 验证 Web 在 `http://127.0.0.1:8080` 加载。
+- [ ] 验证 API 存活与就绪。
+- [ ] 停止 PostgreSQL 并验证就绪返回 503。
+- [ ] 重启 PostgreSQL 并验证就绪恢复。
+- [ ] 追加一条探针 outbox 事件并验证 worker 恰好处理一次。
+- [ ] 检查日志并确认追踪 ID 与脱敏。
+- [ ] 确认 `git status --short` 为空。
+- [ ] 在阶段 1 完成说明中记录解析后的确切依赖与镜像版本。
 
-Expected final evidence:
+预期最终证据：
 
 ```text
 pnpm verify                                      PASS

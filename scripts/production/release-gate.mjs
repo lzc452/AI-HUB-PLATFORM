@@ -82,5 +82,5 @@ if (process.argv.includes("--contract")) {
   const compose = await readFile("compose.production.yaml", "utf8");
   const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".github/workflows/release.yml", "utf8")}`;
   validateSourceContract({ compose, workflow });
-  console.log("Production release contract passed");
+  console.log("生产发布契约检查通过");
 }

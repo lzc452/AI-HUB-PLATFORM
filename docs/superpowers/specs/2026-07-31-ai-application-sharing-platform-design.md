@@ -594,7 +594,7 @@ V1 还包含：
 - API 与 worker 共享核心实现。
 - 单人团队可以保持一个代码库和统一发布版本。
 
-### 8.2 Monorepo
+### 8.2 Monorepo（单体仓库）
 
 ```text
 apps/
@@ -631,7 +631,7 @@ packages/
 - 钉钉身份 adapter。
 - 钉钉通讯录 adapter。
 - 钉钉通知 adapter。
-- Dify adapter。
+- Dify 适配器。
 - 对象存储 adapter。
 - 恶意文件扫描 adapter。
 - 安装包签名检查 adapter。
@@ -1012,7 +1012,7 @@ compose.production.yaml
 
 关键授权、审核、文件安全和审计模块要求高分支覆盖，不使用单一整体覆盖率掩盖关键缺口。
 
-### 14.5 Definition of Done
+### 14.5 完成定义（Definition of Done）
 
 每项功能完成必须同时具备：
 
@@ -1049,7 +1049,7 @@ compose.production.yaml
 - M4：四类应用完成发布审核闭环。
 - M6：应用市场和创新广场完成业务闭环。
 - M7：看板和外部集成完成。
-- M8：Release Candidate。
+- M8：候选发布（Release Candidate）。
 - M9：试点验收和正式上线。
 
 ## 16. 试点与上线
@@ -1145,4 +1145,3 @@ compose.production.yaml
 - 必须进入 V1 的新增功能需要明确移除等量现有范围。
 - 第 8 个月末停止新增功能。
 - 第 9 个月只进行试点、缺陷修复、部署演练、培训和上线。
-

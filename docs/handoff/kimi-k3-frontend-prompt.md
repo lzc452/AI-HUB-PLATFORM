@@ -1,15 +1,16 @@
-# Kimi K3 — AI Hub Platform Frontend Build Prompt
+# Kimi K3 — AI Hub 平台前端构建提示词
 
-**Date:** 2026-08-05
-**Context:** Backend Phase 1–7 complete. Frontend is currently a temporary flat SPA (two files: `App.tsx` + `router.tsx`). This prompt asks you to rebuild it as a full frontend engineering project.
+**日期：** 2026-08-05
+**背景：** 后端阶段 1–7 已完成。前端目前是临时性的扁平 SPA（两个文件：`App.tsx` + `router.tsx`）。本提示词要求你将其重建为完整的前端工程项目。
 
 ---
 
-## Task
 
-Rebuild `apps/web/src/` from a flat two-file SPA into a layered frontend project with proper separation of concerns: pages, components, modules, router, and shared infrastructure. The current static shell components should be decomposed into the target structure, preserving all existing behavior and tests, then new real-data pages should be built on top.
+## 任务
 
-## Current State (what exists)
+将 `apps/web/src/` 从扁平的两文件 SPA 重建为分层前端项目，实现正确的关注点分离：pages、components、modules、router 与 shared 基础设施。当前静态外壳组件应拆分到目标结构中，保留所有现有行为与测试，然后在之上构建新的真实数据页面。
+
+## 当前状态（现有内容）
 
 ```
 apps/web/src/
@@ -29,11 +30,11 @@ apps/web/src/
     └── icons.tsx
 ```
 
-`router.tsx` contains these inline components mixed with route configuration:
+`router.tsx` 包含这些与路由配置混在一起的内部组件：
 - `AppShell`, `MarketplacePage`, `MarketplaceDetailPage`, `InnovationSquarePage`, `InnovationDemandDetailPage`, `NotificationsPage`, `CreatorCenterPage`, `ApplicationsPage`, `ApplicationDetailsPage`, `ApplicationVersionsPage`, `ApplicationReviewPage`, `ApplicationDeliveryPage`, `AnalyticsDashboardPage`, `OrganizationPage`, `SecurityPage`, `FeatureStatusPage`, `ApplicationAdminPage`
-- All render static placeholder content. Zero API calls exist anywhere in the frontend.
+- 全部渲染静态占位内容。前端任何位置都没有 API 调用。
 
-## Target Architecture
+## 目标架构
 
 ```
 apps/web/src/
@@ -114,33 +115,34 @@ apps/web/src/
     └── icons.tsx
 ```
 
-## Layer Rules
+## 分层规则
 
 ```
 pages ──► components ──► shared
   │           │
   └───────────┼──────► modules ──► shared
 
-pages CAN import: components/, modules/, router/routes, shared/
-pages CANNOT: import other pages, contain fetch calls directly
+pages 可导入：components/、modules/、router/routes、shared/
+pages 不可：导入其他页面、直接包含 fetch 调用
 
-components CAN import: shared/, other components
-components CANNOT: call APIs, import from modules/ (except type-only imports)
+components 可导入：shared/、其他组件
+components 不可：调用 API、从 modules/ 导入（仅类型导入除外）
 
-modules CAN import: shared/, TanStack Query
-modules CANNOT: import React components (except context providers)
+modules 可导入：shared/、TanStack Query
+modules 不可：导入 React 组件（上下文提供者除外）
 
-router CAN import: pages/ (lazy-loaded), modules/auth (guards)
-router CANNOT: contain UI or business logic
+router 可导入：pages/（懒加载）、modules/auth（守卫）
+router 不可：包含 UI 或业务逻辑
 ```
 
-## Phase 1: Decompose (no new features, preserve all tests)
 
-### Step 1.1: Create directory scaffold
+## 阶段 1：拆分（不新增功能，保留所有测试）
 
-Create all the empty directories under `pages/`, `components/`, `modules/`, `router/`, `shared/`.
+### 步骤 1.1：创建目录脚手架
 
-### Step 1.2: Extract `router/routes.ts`
+在 `pages/`、`components/`、`modules/`、`router/`、`shared/` 下创建所有空目录。
+
+### 步骤 1.2：抽取 `router/routes.ts`
 
 ```ts
 // router/routes.ts
@@ -163,17 +165,17 @@ export const ROUTES = {
 } as const;
 ```
 
-### Step 1.3: Extract shared components
+### 步骤 1.3：抽取共享组件
 
-Pull `AppShell`, `Header`, `Navigation`, `FeatureStatusPage`, `HealthSnapshotCard`, and `ApplicationAdminPage` out of `router.tsx` into `components/`. Each component gets its own file. Export props interfaces.
+将 `AppShell`、`Header`、`Navigation`、`FeatureStatusPage`、`HealthSnapshotCard` 与 `ApplicationAdminPage` 从 `router.tsx` 抽取到 `components/`。每个组件一个文件，并导出 props 接口。
 
-### Step 1.4: Extract pages
+### 步骤 1.4：抽取页面
 
-Move each page component (MarketplacePage, InnovationSquarePage, etc.) into its own file under `pages/`. Each file default-exports the page component.
+将每个页面组件（MarketplacePage、InnovationSquarePage 等）移动到 `pages/` 下的独立文件。每个文件默认导出页面组件。
 
-### Step 1.5: Rewrite `router/index.ts`
+### 步骤 1.5：重写 `router/index.ts`
 
-Use `lazy()` for every route to enable code splitting:
+对每个路由使用 `lazy()` 以启用代码分割：
 
 ```ts
 // router/index.ts
@@ -199,17 +201,17 @@ export function createRouter() {
 }
 ```
 
-### Step 1.6: Verify all 13 existing tests still pass after decomposition
+### 步骤 1.6：验证拆分后全部 13 个现有测试仍然通过
 
 ```
 pnpm --filter @ai-hub/web test
 ```
 
-If any test fails, fix the import paths.
+如果有测试失败，请修正导入路径。
 
-## Phase 2: Shared API Client
+## 阶段 2：共享 API 客户端
 
-### Step 2.1: Create `shared/api/client.ts`
+### 步骤 2.1：创建 `shared/api/client.ts`
 
 ```ts
 // shared/api/client.ts
@@ -254,33 +256,33 @@ export async function apiFetch<T>(
 }
 ```
 
-## Phase 3: Auth Module
+## 阶段 3：认证模块
 
-### Step 3.1: Create `modules/auth/auth.client.ts`
+### 步骤 3.1：创建 `modules/auth/auth.client.ts`
 
-Calls to `/internal/login/password`, `/internal/logout`, `/internal/actor`.
+调用 `/internal/login/password`、`/internal/logout`、`/internal/actor`。
 
-### Step 3.2: Create `modules/auth/auth.context.tsx`
+### 步骤 3.2：创建 `modules/auth/auth.context.tsx`
 
-React context providing `ActorContext | null`, `login()`, `logout()`, `isLoading`, `error`.
+提供 `ActorContext | null`、`login()`、`logout()`、`isLoading`、`error` 的 React 上下文。
 
-### Step 3.3: Create `modules/auth/useAuth.ts`
+### 步骤 3.3：创建 `modules/auth/useAuth.ts`
 
-Hook to consume the auth context. Provides helpers like `hasRole(code)`, `isAuthenticated`.
+消费认证上下文的 hook。提供 `hasRole(code)`、`isAuthenticated` 等辅助函数。
 
-### Step 3.4: Build login page at `pages/auth/LoginPage.tsx`
+### 步骤 3.4：在 `pages/auth/LoginPage.tsx` 构建登录页
 
-Employee ID + password form. Wire to `/login` route. Redirect to marketplace on success.
+员工工号 + 密码表单。接入 `/login` 路由。成功后重定向到应用市场。
 
-## Phase 4+: Build real pages
+## 阶段 4+：构建真实页面
 
-For each domain, follow this pattern:
+每个领域遵循以下模式：
 
-1. **Module `.client.ts`** — typed API calls using `apiFetch`
-2. **Module `use*.ts`** — TanStack Query hooks (`useQuery`, `useMutation`)
-3. **Page** — composes components, calls hooks, handles loading/error/empty states
+1. **模块 `.client.ts`** —— 使用 `apiFetch` 的类型化 API 调用
+2. **模块 `use*.ts`** —— TanStack Query hooks（`useQuery`、`useMutation`）
+3. **页面** —— 组合组件、调用 hooks、处理加载/错误/空状态
 
-### Marketplace example
+### 应用市场示例
 
 ```ts
 // modules/marketplace/marketplace.client.ts
@@ -327,31 +329,31 @@ export default function MarketplacePage() {
 }
 ```
 
-## Code Conventions
+## 代码规范
 
-- ESM only, strict TypeScript (inherited from `tsconfig.base.json`)
-- One component per file, default-export for pages, named exports for utilities
-- Tailwind for layout/spacing; Ant Design components for interactive elements
-- No `!important` on Ant Design internals
-- Chinese text for all user-facing strings
-- Ant Design Icons only (`@ant-design/icons`)
-- Semantic HTML: `aria-label` on nav, headings in hierarchy, skip link to `#main-content`
-- Reduced motion: respect `prefers-reduced-motion`
-- Responsive at 375, 768, 1024, 1440px
+- 仅 ESM，严格 TypeScript（继承自 `tsconfig.base.json`）
+- 每个文件一个组件；页面默认导出，工具函数具名导出
+- 布局/间距使用 Tailwind；交互元素使用 Ant Design 组件
+- 不使用 `!important` 覆盖 Ant Design 内部样式
+- 所有用户可见字符串使用中文
+- 仅使用 Ant Design 图标（`@ant-design/icons`）
+- 语义化 HTML：导航加 `aria-label`、标题层级、跳到 `#main-content` 的跳过链接
+- 减少动效：尊重 `prefers-reduced-motion`
+- 在 375、768、1024、1440px 下响应式适配
 
-## Packages to Install
+## 需要安装的包
 
 ```bash
 cd apps/web
 pnpm add react-hook-form @hookform/resolvers zod echarts echarts-for-react motion
 ```
 
-## Success Criteria
+## 成功标准
 
-1. `pnpm --filter @ai-hub/web test` passes (all existing tests)
-2. `pnpm --filter @ai-hub/web typecheck` passes
-3. `pnpm --filter @ai-hub/web build` produces a working bundle
-4. No files over 300 lines (decomposition verified)
-5. Every route has a corresponding page file
-6. API calls go through `shared/api/client.ts`
-7. Business logic lives in `modules/`, not in pages or components
+1. `pnpm --filter @ai-hub/web test` 通过（所有现有测试）
+2. `pnpm --filter @ai-hub/web typecheck` 通过
+3. `pnpm --filter @ai-hub/web build` 产出可用的构建产物
+4. 没有超过 300 行的文件（拆分已验证）
+5. 每个路由都有对应的页面文件
+6. API 调用都经过 `shared/api/client.ts`
+7. 业务逻辑位于 `modules/` 中，而不是 pages 或 components 中

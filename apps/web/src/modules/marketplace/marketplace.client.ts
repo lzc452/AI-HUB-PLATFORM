@@ -31,9 +31,7 @@ export function searchCatalog(
   return apiFetch<CatalogListResult>(`/internal/catalog?${search.toString()}`);
 }
 
-export function getCatalogEntry(
-  applicationId: string,
-): Promise<CatalogEntry> {
+export function getCatalogEntry(applicationId: string): Promise<CatalogEntry> {
   return apiFetch<CatalogEntry>(
     `/internal/catalog/${encodeURIComponent(applicationId)}`,
   );

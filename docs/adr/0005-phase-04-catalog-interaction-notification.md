@@ -1,49 +1,23 @@
-# ADR 0005: Phase 4 catalog, interaction, and notification boundaries
+# ADR 0005：阶段 4 目录、互动与通知边界
 
-- Status: Accepted for Phase 4
-- Date: 2026-08-03
-- Decision owners: Product, platform engineering, security review
+- 状态：阶段 4 已接受
+- 日期：2026-08-03
+- 决策负责人：产品、平台工程、安全评审
 
-## Context
+## 背景
 
-Phase 3 provides the published application lifecycle, four delivery channels,
-identity context, authorization, audit, and transactional outbox. Phase 4
-needs to expose a searchable application market and creator-facing aggregates
-without weakening those lifecycle gates or exposing employee-level access data.
+阶段 3 提供了已发布应用的生命周期、四个交付渠道、身份上下文、授权、审计与事务性 outbox。阶段 4 需要在不削弱这些生命周期门禁、不暴露员工级访问数据的前提下，提供可搜索的应用市场与面向创建者的聚合数据。
 
-## Decisions
+## 决策
 
-1. The catalog is a PostgreSQL read model. It stores explicit category, tag,
-   audience, normalized name/summary, pinyin, initials, health, and trust-label
-   fields. Search uses indexed `ILIKE` predicates; Elasticsearch, Redis, and a
-   second search service are out of scope for V1.
-2. Audience predicates are applied in the catalog query before sorting and
-   pagination. The same visible-record check protects detail and delivery
-   action recording, so an unauthorized application is not revealed by a
-   count, detail response, or action endpoint.
-3. Catalog detail exposes only the published current version and delivery
-   channels. Web redirect, package download, and QR display are recorded as
-   append-only action events. Health and deprecated/replacement metadata remain
-   read-only catalog labels; they do not bypass Phase 3 publication guards.
-4. Likes and ratings are unique per employee/application. Reviews and replies
-   are stateful records; replies are limited to one nested level and official
-   replies require the application owner or maintainer. Reports hide or restore
-   content through state changes, never physical deletion.
-5. Anonymous display is presentation-only. The real author remains in the
-   interaction row; super-admin identity lookup requires an explicit
-   authorization decision and creates an audit event.
-6. Notifications have a durable in-app record and idempotency key. DingTalk is
-   an adapter port: delivery failure records retry state and does not roll back
-   the successful business transaction.
-7. Creator center returns version differences, validation status, and aggregate
-   action/like/rating metrics only. It never returns visitor lists or individual
-   access identities.
+1. 目录是 PostgreSQL 只读模型，存储明确的分类、标签、受众、规范化名称/摘要、拼音、首字母、健康度与信任标签字段。搜索使用带索引的 `ILIKE` 谓词；Elasticsearch、Redis 与第二个搜索服务不在 V1 范围内。
+2. 受众谓词在排序与分页之前应用于目录查询。同一套可见记录检查保护详情与交付动作记录，因此未授权应用不会通过计数、详情响应或动作端点泄露。
+3. 目录详情仅暴露已发布的当前版本与交付渠道。Web 跳转、包下载与二维码展示记录为只追加的动作事件。健康度与废弃/替代元数据仍只是只读目录标签，不绕过阶段 3 的发布门禁。
+4. 点赞与评分按员工/应用唯一。评审与回复是有状态记录；回复限制为一层嵌套，官方回复要求应用所有者或维护人身份。举报通过状态变更隐藏或恢复内容，绝不物理删除。
+5. 匿名展示仅存在于呈现层。真实作者仍在互动记录中；超管身份查询需要显式授权决策并产生审计事件。
+6. 通知具备持久的应用内记录与幂等键。钉钉是适配器端口：投递失败记录重试状态，不回滚已成功的业务事务。
+7. 创作者中心仅返回版本差异、校验状态与聚合的动作/点赞/评分指标，绝不返回访客列表或个体访问身份。
 
-## Consequences
+## 影响
 
-These decisions keep permission enforcement close to the data read path and
-make the Phase 4 tests deterministic with PostgreSQL and in-memory adapters.
-The catalog mapping currently performs small related-record reads per result;
-that is acceptable for the Phase 4 V1 scale and is a later optimization target.
-Real DingTalk credentials, external delivery, personalized recommendations,
-and Phase 5 innovation-square workflows remain deployment or later-phase work.
+这些决策将权限校验保持在数据读取路径附近，并通过 PostgreSQL 与内存适配器使阶段 4 测试保持确定性。当前目录映射会对每个结果执行少量关联记录读取；对阶段 4 V1 规模而言可以接受，属于后续优化目标。真实钉钉凭据、外部交付、个性化推荐与阶段 5 的创新广场工作流仍是部署或后续阶段的工作。

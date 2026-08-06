@@ -14,8 +14,10 @@
 基础设施跑在 Docker 中，API/前端/Worker 跑在宿主机上。宿主机原生文件监听不受 Docker VM 边界影响，改代码即时生效。
 
 ```powershell
-# 1. 设置环境变量
+# 1. 设置环境变量（三个都必须设置，缺一不可）
+$env:NODE_ENV = "development"
 $env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5433/ai_hub"
+$env:COOKIE_SECRET = "ai-hub-local-cookie-secret-change-me"
 
 # 2. 启动公共服务（只需一次，保持运行即可）
 pnpm dev:services
@@ -40,6 +42,16 @@ pnpm dev:worker
 ```
 
 访问：打开浏览器 `http://localhost:5173`
+
+**演示账号**（种子数据已导入时可用）：
+
+| 账号 | 工号 | 密码 |
+|------|------|------|
+| 普通员工 | `DEMO-EMPLOYEE` | `Demo-Employee-2026!` |
+| 应用管理员 | `DEMO-APP-ADMIN` | `Demo-AppAdmin-2026!` |
+| 创新运营管理员 | `DEMO-INNOVATION` | `Demo-Innovation-2026!` |
+| 组织管理员 | `DEMO-ORG-ADMIN` | `Demo-OrgAdmin-2026!` |
+| 超级管理员 | `DEMO-SUPER-ADMIN` | `Demo-SuperAdmin-2026!` |
 
 ### 全 Docker 开发（可选）
 

@@ -9,11 +9,7 @@ export function RequireAuth() {
 
   if (!isAuthenticated) {
     return (
-      <Navigate
-        replace
-        state={{ from: location.pathname }}
-        to={ROUTES.login}
-      />
+      <Navigate replace state={{ from: location.pathname }} to={ROUTES.login} />
     );
   }
 

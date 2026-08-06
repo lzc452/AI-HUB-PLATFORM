@@ -7,7 +7,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 vi.mock("./modules/innovation/useDemand", () => ({
-  useAddDemandComment: () => ({ isError: false, isPending: false, mutate: vi.fn() }),
+  useAddDemandComment: () => ({
+    isError: false,
+    isPending: false,
+    mutate: vi.fn(),
+  }),
   useDemand: () => ({ data: undefined, isPending: true }),
   useDemandComments: () => ({ data: [] }),
   useDemandList: () => ({
@@ -189,9 +193,7 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "创新广场" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/结构化需求与受众治理/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/结构化需求与受众治理/)).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "查看需求详情" }),
     ).toBeInTheDocument();
@@ -219,9 +221,10 @@ describe("App", () => {
     expect(
       await screen.findByRole("heading", { name: "应用管理" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "应用详情" }),
-    ).toHaveAttribute("href", "/applications/app-001");
+    expect(screen.getByRole("link", { name: "应用详情" })).toHaveAttribute(
+      "href",
+      "/applications/app-001",
+    );
     expect(screen.getByRole("link", { name: "版本管理" })).toHaveAttribute(
       "href",
       "/applications/app-001/versions",

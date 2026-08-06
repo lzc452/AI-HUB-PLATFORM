@@ -1,28 +1,28 @@
-# AI Hub Phase 2 Identity Organization Authorization Implementation Plan
+# AI Hub 阶段 2 身份、组织与授权实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
-> **Execution status (2026-08-03):** Phase 2 V1 scope completed. Full `pnpm verify` passed with Docker/Testcontainers available. Remaining risk is external DingTalk OAuth credentials and deployment-specific security policy.
+> **执行状态（2026-08-03）：** 阶段 2 V1 范围已完成。在 Docker/Testcontainers 可用环境下完整 `pnpm verify` 通过。剩余风险为外部钉钉 OAuth 凭据与部署相关的安全策略。
 
-**Goal:** Deliver the V1 identity, organization, session, DingTalk binding/sync, RBAC, audience, and unified authorization baseline required by Phase 3.
+**目标：** 交付阶段 3 所需的 V1 身份、组织、会话、钉钉绑定/同步、RBAC、受众与统一授权基线。
 
-**Architecture:** Phase 2 is implemented as a deep `identity` module in `packages/server`, backed by Kysely tables in `packages/database` and stable contracts in `packages/contracts`. API endpoints only call public service interfaces, and all state-changing flows emit audit/outbox events inside the same PostgreSQL transaction boundary.
+**架构：** 阶段 2 在 `packages/server` 中实现为深度 `identity` 模块，由 `packages/database` 中的 Kysely 表与 `packages/contracts` 中的稳定契约支撑。API 端点只调用公开的服务接口，所有状态变更流程都在同一个 PostgreSQL 事务边界内发出审计/outbox 事件。
 
-**Tech Stack:** Node.js >=18.18, TypeScript strict mode, NestJS 10, Kysely, PostgreSQL 18, Vitest, React/Vite/Ant Design.
+**技术栈：** Node.js >=18.18、TypeScript 严格模式、NestJS 10、Kysely、PostgreSQL 18、Vitest、React/Vite/Ant Design。
 
-## Global Constraints
+## 全局约束
 
-- Single enterprise, single instance; do not introduce `tenant_id`.
-- Employee ID is the immutable, never-reused primary employee key.
-- Passwords are local fallback credentials and must be strongly hashed.
-- DingTalk unavailability must not block password login for employees with configured passwords.
-- Authorization denial must not reveal whether a restricted object exists.
-- Role, organization, disable/archive, and password-reset changes must revoke necessary sessions.
-- No Redis, message queue, Elasticsearch, Kubernetes, public Open API, or microservices in V1.
+- 单企业、单实例；不引入 `tenant_id`。
+- 员工 ID 是不可变、永不复用的员工主键。
+- 密码是本地兜底凭据，必须强哈希存储。
+- 钉钉不可用不得阻断已配置密码员工的密码登录。
+- 授权拒绝不得暴露受限对象是否存在。
+- 角色、组织、禁用/归档与密码重置变更必须撤销相关会话。
+- V1 不使用 Redis、消息队列、Elasticsearch、Kubernetes、公开 Open API 或微服务。
 
 ---
 
-## File Structure
+## 文件结构
 
 ```text
 packages/contracts/src/identity.ts
@@ -44,7 +44,7 @@ apps/web/src/app/App.test.tsx
 processing_visualization.html
 ```
 
-## Stable Interfaces Produced by This Phase
+## 本阶段产出的稳定接口
 
 ```ts
 export type EmployeeId = string;
@@ -71,56 +71,61 @@ export interface AuthorizationDecision {
 }
 ```
 
-## Tasks
+## 任务
 
-### Task 1: Contracts and Database Baseline
+### 任务 1：契约与数据库基线
 
-**Files:**
-- Create `packages/contracts/src/identity.ts`
-- Modify `packages/contracts/src/index.ts`
-- Create `packages/database/src/migrations/0002_identity_organization_authorization.ts`
-- Modify `packages/database/src/migrate.ts`
-- Modify `packages/database/src/schema.ts`
+**文件：**
+- 创建 `packages/contracts/src/identity.ts`
+- 修改 `packages/contracts/src/index.ts`
+- 创建 `packages/database/src/migrations/0002_identity_organization_authorization.ts`
+- 修改 `packages/database/src/migrate.ts`
+- 修改 `packages/database/src/schema.ts`
 
-**Acceptance:** migrations create employees, departments, memberships, roles, user roles, sessions, DingTalk bindings, DingTalk sync runs, password reset challenges, and audit events without `tenant_id`.
+**验收标准：** 迁移在不使用 `tenant_id` 的前提下创建员工、部门、成员关系、角色、用户角色、会话、钉钉绑定、钉钉同步记录、密码重置挑战与审计事件。
 
-### Task 2: Password, Session, and Local Login
 
-**Files:**
-- Create `packages/server/src/identity/password.service.ts`
-- Create `packages/server/src/identity/identity.service.ts`
-- Create tests beside both services.
+### 任务 2：密码、会话与本地登录
 
-**Acceptance:** ASCII-only 8+ character passwords are hashed with `crypto.scrypt`; login succeeds with active employees and revokes no unrelated sessions; disabled/archive/pending-binding employees cannot password-login.
+**文件：**
+- 创建 `packages/server/src/identity/password.service.ts`
+- 创建 `packages/server/src/identity/identity.service.ts`
+- 在两个服务旁创建测试。
 
-### Task 3: Organization and DingTalk Sync Ports
+**验收标准：** 仅含 ASCII、8 位以上的密码使用 `crypto.scrypt` 哈希；活跃员工可登录成功且不撤销无关会话；禁用/归档/待绑定员工不能通过密码登录。
 
-**Files:**
-- Extend `identity.service.ts`
-- Add repository methods for departments, memberships, and DingTalk bindings.
 
-**Acceptance:** local records are editable, DingTalk-sourced fields are not overwritten by local edits, daily/manual sync runs are auditable, and first OAuth binding is keyed by employee ID.
+### 任务 3：组织与钉钉同步端口
 
-### Task 4: RBAC and Unified Authorization
+**文件：**
+- 扩展 `identity.service.ts`
+- 为部门、成员关系与钉钉绑定添加仓库方法。
 
-**Files:**
-- Extend contracts and `identity.service.ts`
-- Add audience evaluator interfaces.
+**验收标准：** 本地记录可编辑；本地编辑不会覆盖钉钉来源字段；每日/手动同步可审计；首次 OAuth 绑定以员工 ID 为键。
 
-**Acceptance:** predefined/custom platform roles resolve into `ActorContext`; `authorize()` returns generic denial reason codes and never checks object existence before permission/audience rules.
 
-### Task 5: API and Web Administration Surface
+### 任务 4：RBAC 与统一授权
 
-**Files:**
-- Create `identity.controller.ts` and `identity.module.ts`
-- Modify `apps/api/src/api.module.ts`
-- Modify web shell routes.
+**文件：**
+- 扩展契约与 `identity.service.ts`
+- 添加受众评估器接口。
 
-**Acceptance:** internal admin endpoints expose current actor, roles, employees, departments, local login, logout, and session revocation primitives; web shell has organization/security placeholders wired to routes.
+**验收标准：** 预定义/自定义平台角色解析为 `ActorContext`；`authorize()` 返回通用拒绝原因码，且在权限/受众规则之前绝不检查对象是否存在。
 
-### Task 6: Verification and Gate
 
-**Files:**
-- Add e2e tests and update `processing_visualization.html`.
+### 任务 5：API 与 Web 管理界面
 
-**Acceptance:** `pnpm verify` passes; targeted identity tests pass; documentation records Phase 2 decisions and remaining external DingTalk credentials risk.
+**文件：**
+- 创建 `identity.controller.ts` 与 `identity.module.ts`
+- 修改 `apps/api/src/api.module.ts`
+- 修改 web 外壳路由。
+
+**验收标准：** 内部管理端点暴露当前操作者、角色、员工、部门、本地登录、登出与会话撤销原语；Web 外壳的组织/安全占位页面已接入路由。
+
+
+### 任务 6：验证与门禁
+
+**文件：**
+- 添加 e2e 测试并更新 `processing_visualization.html`。
+
+**验收标准：** `pnpm verify` 通过；定向身份测试通过；文档记录阶段 2 决策与剩余的外部钉钉凭据风险。

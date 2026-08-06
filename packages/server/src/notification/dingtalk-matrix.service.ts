@@ -4,59 +4,59 @@ import type { NotificationService } from "./notification.service.js";
 export const DINGTALK_NOTIFICATION_MATRIX = {
   "application.review_requested": {
     recipientRole: "application_reviewer",
-    messageTemplate: "Application {aggregateId} is ready for review.",
+    messageTemplate: "应用 {aggregateId} 已提交评审。",
   },
   "application.review_decided": {
     recipientRole: "application_owner",
-    messageTemplate: "Application {aggregateId} review decision: {decision}.",
+    messageTemplate: "应用 {aggregateId} 的评审结论：{decision}。",
   },
   "application.published": {
     recipientRole: "application_owner",
-    messageTemplate: "Application {aggregateId} is published.",
+    messageTemplate: "应用 {aggregateId} 已发布。",
   },
   "application.withdrawn": {
     recipientRole: "application_owner",
-    messageTemplate: "Application {aggregateId} is withdrawn.",
+    messageTemplate: "应用 {aggregateId} 已撤回。",
   },
   "demand.submitted": {
     recipientRole: "demand_owner",
-    messageTemplate: "Demand {aggregateId} was submitted.",
+    messageTemplate: "需求 {aggregateId} 已提交。",
   },
   "demand.claimed": {
     recipientRole: "demand_submitter",
-    messageTemplate: "Demand {aggregateId} was claimed by a delivery team.",
+    messageTemplate: "需求 {aggregateId} 已被交付团队认领。",
   },
   "demand.collaborator_assigned": {
     recipientRole: "demand_collaborator",
-    messageTemplate: "You were assigned to demand {aggregateId}.",
+    messageTemplate: "你已被分配至需求 {aggregateId}。",
   },
   "demand.progress_updated": {
     recipientRole: "demand_submitter",
-    messageTemplate: "Demand {aggregateId} progress changed to {status}.",
+    messageTemplate: "需求 {aggregateId} 的进度已更新为 {status}。",
   },
   "demand.pilot_started": {
     recipientRole: "demand_submitter",
-    messageTemplate: "Demand {aggregateId} pilot started.",
+    messageTemplate: "需求 {aggregateId} 的试点已启动。",
   },
   "demand.closed": {
     recipientRole: "demand_submitter",
-    messageTemplate: "Demand {aggregateId} was closed.",
+    messageTemplate: "需求 {aggregateId} 已关闭。",
   },
   "demand.merged": {
     recipientRole: "demand_submitter",
-    messageTemplate: "Demand {aggregateId} was merged.",
+    messageTemplate: "需求 {aggregateId} 已合并。",
   },
   "analytics.export.completed": {
     recipientRole: "export_requester",
-    messageTemplate: "Analytics export {aggregateId} is ready ({target}).",
+    messageTemplate: "分析导出 {aggregateId} 已就绪（{target}）。",
   },
   "analytics.export.failed": {
     recipientRole: "export_requester",
-    messageTemplate: "Analytics export {aggregateId} failed safely.",
+    messageTemplate: "分析导出 {aggregateId} 失败，已安全处理。",
   },
   "analytics.assistant.failed": {
     recipientRole: "assistant_requester",
-    messageTemplate: "External assistant request {aggregateId} is unavailable.",
+    messageTemplate: "外部助手请求 {aggregateId} 当前不可用。",
   },
 } as const;
 

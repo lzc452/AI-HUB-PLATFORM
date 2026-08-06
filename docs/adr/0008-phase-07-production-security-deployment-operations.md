@@ -1,61 +1,26 @@
-# ADR 0008: Phase 7 production security, deployment, and operations boundaries
+# ADR 0008：阶段 7 生产安全、部署与运维边界
 
-- Status: Accepted for Phase 7 execution
-- Date: 2026-08-04
-- Decision owners: Product, platform engineering, security review, operations
+- 状态：阶段 7 执行已接受
+- 日期：2026-08-04
+- 决策负责人：产品、平台工程、安全评审、运维
 
-## Context
+## 背景
 
-Phase 6 is accepted at `e8255b31949fead551fae4abd3ef94d1979d38c2`. It provides
-the single-enterprise identity model, ActorContext/RBAC, PostgreSQL Audit and
-Outbox, analytics retention and rebuild boundaries, guarded external-assistant
-boundary, and the existing Docker Compose runtime. Phase 7 must make those
-boundaries operable on two Ubuntu Servers without changing business semantics
-or treating a local template as a production deployment.
+阶段 6 在 `e8255b31949fead551fae4abd3ef94d1979d38c2` 通过。它提供了单企业身份模型、ActorContext/RBAC、PostgreSQL 审计与 Outbox、分析保留与重建边界、受防护的外部助手边界以及现有 Docker Compose 运行时。阶段 7 必须让这些边界在两台 Ubuntu Server 上可运维，且不改变业务语义，也不把本地模板当作生产部署。
 
-The required reliability objectives are 99.5% availability, RPO 15 minutes,
-and RTO 2 hours. External production hosts, DNS, certificates, backup media,
-storage endpoints, alert receivers, registry credentials, and GitHub write
-permissions are environmental prerequisites and must be evidenced separately.
+所需的可靠性目标为 99.5% 可用性、RPO 15 分钟、RTO 2 小时。外部生产主机、DNS、证书、备份介质、存储端点、告警接收人、镜像仓库凭据与 GitHub 写入权限属于环境前置条件，必须单独提供证据。
 
-## Decisions
+## 决策
 
-1. Use one parameterized production Compose overlay on each of two Ubuntu
-   hosts. The overlay accepts an explicit `NODE_ROLE` and immutable image
-   references, publishes only the TLS reverse proxy, and reads secrets from
-   host-mounted secret files or an approved secret provider. Development
-   defaults are rejected in production validation.
-2. Use internal DNS health-based switching rather than adding Keepalived to the
-   application repository. DNS points to the fenced active proxy; promotion,
-   health verification, TTL measurement, and rollback are operator actions
-   recorded by a runbook. The DNS choice does not remove the need for fencing.
-3. Use PostgreSQL primary/standby streaming replication with a replication
-   slot, WAL archiving to independent storage, periodic base backups, and
-   manual promotion. Promotion is never implicit in application code. Restore
-   must verify migrations, Audit, Outbox, and Phase 6 analytics data.
-4. Use asynchronous S3-compatible object replication with versioning,
-   encryption, manifest/checksum verification, and manual cutover. It is not
-   described as synchronous durability and does not introduce a queue.
-5. Use Prometheus, Grafana, Alertmanager, and centralized redacted logs to
-   expose service, worker, database, storage, security, backup, replication,
-   and SLO evidence. An unconfigured receiver is not evidence of delivered
-   alerting.
-6. Terminate TLS at the production proxy and enforce secure headers, CSP,
-   CSRF, SSRF, and anti-replay at the existing authenticated API boundary.
-   Controls must preserve existing authorization, Audit, and Outbox behavior.
-7. Build once per commit, record image digests/SBOM/provenance, gate migration
-   compatibility, and retain a tested rollback path. Mutable tags and automatic
-   destructive rollback are prohibited.
-8. Keep Phase 8 pilot, UAT, formal go-live, and enterprise sign-off out of
-   scope. Local/disposable drills are labeled as such until real two-host
-   evidence is captured.
+1. 在两台 Ubuntu 主机上各使用一份参数化的生产 Compose 覆盖。覆盖层接受显式 `NODE_ROLE` 与不可变镜像引用，只发布 TLS 反向代理，并从宿主机挂载的密钥文件或经批准的密钥提供方读取密钥。开发默认值会在生产校验中被拒绝。
+2. 使用内部 DNS 基于健康度的切换，而不是在应用仓库中引入 Keepalived。DNS 指向已隔离（fenced）的活动代理；提升、健康验证、TTL 测量与回滚都是操作人员动作，由 runbook 记录。DNS 方案并不能免除隔离（fencing）需求。
+3. 使用 PostgreSQL 主/备流复制，包含复制槽、独立存储的 WAL 归档、周期性基础备份与手动提升。提升永远不会隐含在应用代码中。恢复必须验证迁移、审计、Outbox 与阶段 6 分析数据。
+4. 使用异步 S3 兼容对象复制，包含版本控制、加密、清单/校验和验证与手动切换。它不被描述为同步持久化，也不引入队列。
+5. 使用 Prometheus、Grafana、Alertmanager 与集中式脱敏日志暴露服务、worker、数据库、存储、安全、备份、复制与 SLO 证据。未配置的接收人不构成已投递告警的证据。
+6. 在生产代理处终止 TLS，并在现有已认证 API 边界强制执行安全头、CSP、CSRF、SSRF 与防重放。控制措施必须保留现有授权、审计与 Outbox 行为。
+7. 每次提交构建一次，记录镜像摘要/SBOM/供应链证明，把关迁移兼容性，并保留经过测试的回滚路径。禁止可变标签与自动破坏性回滚。
+8. 将阶段 8 试点、UAT、正式上线与企业签核排除在范围之外。在获得真实双主机证据之前，本地/一次性演练必须如实标注。
 
-## Consequences
+## 影响
 
-The production operating model remains a modular monolith with explicit
-failure boundaries instead of adding distributed application infrastructure.
-Manual promotion and DNS switching add operator work but make fencing,
-rollback, and evidence visible. Async object replication means the measured
-RPO must be proven by drill; the target is not inferred from configuration.
-Security and supply-chain checks become repeatable CI/configuration contracts,
-while real credentials, hosts, and network behavior remain external evidence.
+生产运行模型仍是带显式故障边界的模块化单体，而非新增分布式应用基础设施。手动提升与 DNS 切换增加了操作工作量，但使隔离（fencing）、回滚与证据可见。异步对象复制意味着实测 RPO 必须通过演练证明，而不能仅从配置推断目标。安全与供应链检查成为可重复的 CI/配置契约，而真实凭据、主机与网络行为仍属外部证据。

@@ -35,7 +35,7 @@ async function bootstrap() {
   const retentionTimer = setInterval(
     () => {
       void retentionRunner().catch((error: unknown) => {
-        logger.error({ error }, "analytics retention job failed");
+        logger.error({ error }, "分析保留任务执行失败");
       });
     },
     24 * 60 * 60 * 1000,

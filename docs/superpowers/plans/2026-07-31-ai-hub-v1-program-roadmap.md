@@ -1,14 +1,14 @@
-# AI Hub V1 Program Implementation Plan
+# AI Hub V1 项目实施方案
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **Goal:** 在 9 个月内交付单企业私有化的 AI 应用共享平台 V1，并完成试点、双机部署和正式上线。
 
 **Architecture:** 采用 React SPA + NestJS 模块化单体。HTTP 入口、后台 worker 和前端来自同一个 pnpm monorepo；业务状态、会话、事务发件箱和聚合数据以 PostgreSQL 为主数据源，文件经对象存储隔离、扫描和发布。
 
-**Tech Stack:** Node.js 24 LTS、pnpm 11、TypeScript 5.9、React 19.2、Vite 8.1、Ant Design 6、Tailwind CSS 4、NestJS 11、PostgreSQL 18、Kysely、Vitest、Playwright、Docker Compose。
+**技术栈：** Node.js 24 LTS、pnpm 11、TypeScript 5.9、React 19.2、Vite 8.1、Ant Design 6、Tailwind CSS 4、NestJS 11、PostgreSQL 18、Kysely、Vitest、Playwright、Docker Compose。
 
-## Global Constraints
+## 全局约束
 
 - 单企业、单实例，不包含 `tenant_id`。
 - 企业员工少于 5,000 人，平台实际用户不超过 500 人。

@@ -1,34 +1,39 @@
-# Phase 3 Execution Ledger
+# 阶段 3 执行台账
 
-Date: 2026-08-03
+日期：2026-08-03
 
-## Gate decision
 
-Phase 2 was rechecked before Phase 3 execution. The fresh `corepack pnpm verify` run passed format, lint, typecheck, boundaries, the full workspace test graph, build, and Docker compose config. Direct identity, API identity, and PostgreSQL outbox integration tests also passed. Phase 2 gate: **OPEN**.
+## 门禁决策
 
-## Ordered execution
+阶段 3 执行前重新检查了阶段 2。全新的 `corepack pnpm verify` 运行通过了 format、lint、typecheck、boundaries、完整 workspace 测试图、build 与 Docker compose config。身份直接测试、API 身份测试与 PostgreSQL outbox 集成测试也通过。阶段 2 门禁：**开启**。
 
-1. **Contracts and database** — added application/version/delivery/review/audit contracts, ownership columns, migration `0003`, review-pool table, schema registration, artifact immutability trigger, and schema integration assertions.
-2. **State machine** — added transactional service/repository ports, lifecycle transitions, self-review and physical-delete guards, audit/outbox writes, and rollback with old-version readability.
-3. **Artifact security** — added ordered chunk assembly, duplicate/missing chunk rejection, SHA-256 verification, malware scanner and signature verifier ports, temporary storage cleanup, final-key copy, and a service gate requiring accepted pipeline evidence.
-4. **Review operations** — added review-pool entry, 24-hour SLA, claim/release, claimant-only decisions, deterministic SLA status, and notification outbox events in the transaction boundary.
-5. **API** — added protected Nest routes for application creation, versions, four delivery channels, review queue operations, review, publication, withdrawal, archive, rollback, and published-version lookup.
-6. **Real lifecycle e2e** — added PostgreSQL/Testcontainers coverage for owner/maintainer/department, authorization denial, self-review denial, approve, reject, claim/release, four-channel publication, rollback, old-version readability, withdrawal, and archive.
-7. **Web administration** — kept the administration shell read-only and covered application, version, review, and delivery lifecycle labels.
 
-## Evidence captured
+## 有序执行
 
-- Focused server artifact/application tests: 13 passed.
-- Real and isolated API e2e tests: 4 passed.
-- PostgreSQL outbox/schema integration: 13 passed.
-- Final fresh workspace gate passed after this ledger and ADR update: `corepack pnpm verify` exited 0.
+1. **契约与数据库** — 新增应用/版本/交付/评审/审计契约、所有权列、迁移 `0003`、评审池表、schema 注册、制品不可变触发器与 schema 集成断言。
+2. **状态机** — 新增事务感知的服务/仓库端口、生命周期迁移、自评与物理删除防护、审计/outbox 写入，以及支持旧版本可读性的回滚。
+3. **制品安全** — 新增有序分块组装、重复/缺失分块拒绝、SHA-256 校验、恶意软件扫描器与签名验证器端口、临时存储清理、最终键复制，以及要求已接受流水线证据的服务门禁。
+4. **评审操作** — 在事务边界内新增评审池入池、24 小时 SLA、认领/释放、仅认领者裁决、确定性 SLA 状态与通知 outbox 事件。
+5. **API** — 为应用创建、版本、四个交付渠道、评审队列操作、评审、发布、撤回、归档、回滚与已发布版本查询新增受保护的 Nest 路由。
+6. **真实生命周期 e2e** — 新增 PostgreSQL/Testcontainers 覆盖：owner/maintainer/department、授权拒绝、自评拒绝、审批、驳回、认领/释放、四渠道发布、回滚、旧版本可读性、撤回与归档。
+7. **Web 管理** — 保持管理外壳只读，并覆盖应用、版本、评审与交付生命周期标签。
 
-## Scope decisions
 
-- Owner, maintainer, and department are Phase 3 data, API, and persistence fields.
-- Web, desktop, mobile, and mini-program are all required and independently configured before publish.
-- Review pool, claim/release, SLA, and outbox notification events are the minimum review-operations scope. External notification delivery and a full operations UI are deferred.
+## 已捕获的证据
 
-## Phase 4 entry decision
+- 定向 server 制品/应用测试：13 个通过。
+- 真实与隔离 API e2e 测试：4 个通过。
+- PostgreSQL outbox/schema 集成：13 个通过。
+- 本台账与 ADR 更新后的最终全新工作区门禁通过：`corepack pnpm verify` 退出码为 0。
 
-Phase 4 is **OPEN**. No Phase 3 gate remains open after the passing fresh verification and local archive commit/tag. Deferred deployment adapters and external notification transport remain explicitly recorded follow-up risks.
+
+## 范围决策
+
+- 所有者、维护人与部门是阶段 3 的数据、API 与持久化字段。
+- Web、桌面、移动端与小程序在发布前都必须配置且相互独立。
+- 评审池、认领/释放、SLA 与 outbox 通知事件是评审运维的最小范围。外部通知投递与完整运维 UI 延后。
+
+
+## 阶段 4 进入决策
+
+阶段 4 **已开启**。在全新的验证与本地归档提交/标签通过后，阶段 3 不再有未关闭的门禁。延后的部署适配器与外部通知传输仍是明确记录的后续风险。

@@ -271,7 +271,7 @@ describe("real Phase 6 analytics API", () => {
     expect(dingtalk.send).toHaveBeenCalledWith({
       idempotencyKey: "analytics.export.completed:export-real-1:E901",
       recipientEmployeeId: "E901",
-      message: "Analytics export export-real-1 is ready (platform).",
+      message: "分析导出 export-real-1 已就绪（platform）。",
     });
     const delivery = await sql<{ delivery_status: string }>`
       select delivery_status

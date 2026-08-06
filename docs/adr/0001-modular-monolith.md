@@ -1,32 +1,24 @@
-# ADR 0001: React SPA and NestJS Modular Monolith
+# ADR 0001：React SPA 与 NestJS 模块化单体
 
-- Status: Accepted
-- Date: 2026-07-31
+- 状态：已接受
+- 日期：2026-07-31
 
-## Context
+## 背景
 
-AI Hub V1 needs independently deployable Web, API, and background worker
-processes while the product and domain boundaries are still evolving. The team
-needs one transactional data model, explicit package boundaries, and a simple
-local development topology.
+AI Hub V1 需要可独立部署的 Web、API 与后台 worker 进程，而产品与领域边界仍在演进中。团队需要一个事务性数据模型、明确的包边界以及简单的本地开发拓扑。
 
-## Decision
+## 决策
 
-Use a React single-page application built with Vite for the Web process. Use
-NestJS for the API and worker entrypoints, with domain capabilities organized as
-modules inside one TypeScript monorepo. Enforce package exports and dependency
-rules so modules communicate through stable public interfaces.
+Web 进程采用基于 Vite 构建的 React 单页应用；API 与 worker 入口使用 NestJS，领域能力在单个 TypeScript monorepo 内以模块形式组织。强制约定包导出与依赖规则，使模块之间通过稳定的公共接口通信。
 
-## Consequences
+## 影响
 
-- Web delivery remains independent from the API runtime.
-- API and worker can share infrastructure modules without sharing process state.
-- PostgreSQL transactions can span related server-side module operations.
-- A future service extraction requires an explicit operational and domain case.
+- Web 交付与 API 运行时相互独立。
+- API 与 worker 可共享基础设施模块，但彼此不共享进程状态。
+- PostgreSQL 事务可横跨相关的服务端模块操作。
+- 未来拆分服务必须给出明确的操作与领域依据。
 
-## Rejected Alternatives
+## 被否决的备选方案
 
-- Next.js full-stack: rejected because V1 does not need server-rendered React or
-  a second server-side application framework.
-- Microservices: rejected because the operational and distributed-transaction
-  cost is not justified before domain boundaries and scaling needs are proven.
+- Next.js 全栈：被否决，因为 V1 不需要服务端渲染的 React，也不需要第二个服务端应用框架。
+- 微服务：被否决，因为在领域边界与扩容需求被证实之前，分布式事务与运维成本不合理。

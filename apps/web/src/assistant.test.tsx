@@ -14,9 +14,7 @@ describe("assistant page", () => {
     expect(
       await screen.findByRole("heading", { name: "你好，我是 AI 助手" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("有什么适合数据分析的应用？"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("有什么适合数据分析的应用？")).toBeInTheDocument();
   });
 
   it("shows the degradation alert after sending a question", async () => {

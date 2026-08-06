@@ -69,8 +69,8 @@ export async function checkRepositoryGovernance(root = process.cwd()) {
 if (process.argv[1] && process.argv[1].endsWith("repository-governance.mjs")) {
   const result = await checkRepositoryGovernance();
   if (result.missing.length > 0 || result.violations.length > 0) {
-    console.error("Repository governance check failed");
-    for (const file of result.missing) console.error(`Missing: ${file}`);
+    console.error("仓库治理检查失败");
+    for (const file of result.missing) console.error(`缺失：${file}`);
     for (const violation of result.violations) console.error(violation);
     process.exitCode = 1;
   } else {

@@ -1,30 +1,30 @@
-## Scope
+## 范围
 
-- Phase or release:
-- Task IDs:
-- Summary:
-- Target branch: `development` / `main`
-- Release tag or image digest, when applicable:
+- 阶段或发布：
+- 任务 ID：
+- 摘要：
+- 目标分支：`development` / `main`
+- 发布标签或镜像摘要（如适用）：
 
-## Change Evidence
+## 变更证据
 
-- Changed modules/files:
-- Database migration involved: `yes` / `no`
-- External credentials, deployment, or compatibility risk: `none` / describe below
-- Rollback procedure:
-- `.codex/` or CI/CD configuration changed: `yes` / `no`
+- 变更的模块/文件：
+- 是否涉及数据库迁移：`是` / `否`
+- 外部凭据、部署或兼容性风险：`无` / 请在下方说明
+- 回滚流程：
+- 是否修改了 `.codex/` 或 CI/CD 配置：`是` / `否`
 
-## Verification
+## 验证
 
-- [ ] Targeted tests passed
-- [ ] `git diff --check` passed
-- [ ] `pnpm verify` passed
-- [ ] Docker Compose smoke passed
-- [ ] `corepack pnpm governance:check` passed when repository tooling changed
-- [ ] Documentation and dashboard evidence updated where required
+- [ ] 定向测试通过
+- [ ] `git diff --check` 通过
+- [ ] `pnpm verify` 通过
+- [ ] Docker Compose 冒烟测试通过
+- [ ] 修改仓库工具链时 `corepack pnpm governance:check` 通过
+- [ ] 文档与仪表盘证据已按要求更新
 
-## Review and Merge
+## 评审与合并
 
-- [ ] All review conversations are resolved
-- [ ] Branch is up to date with the target branch
-- [ ] This PR is ready to squash merge
+- [ ] 所有评审对话均已解决
+- [ ] 分支与目标分支保持同步
+- [ ] 本 PR 已准备好进行 squash 合并

@@ -29,7 +29,7 @@ export class AnalyticsRetentionService {
           metadata: { source: "analytics.retention" },
         });
       } catch {
-        // A telemetry retry on the next worker run must not abort retention.
+        // 下一次 worker 运行中的遥测重试不得中止保留清理。
       }
     }
     return { deleted: result.deleted };

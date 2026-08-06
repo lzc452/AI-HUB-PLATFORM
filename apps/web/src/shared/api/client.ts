@@ -1,6 +1,6 @@
 import { getSession, setSession } from "../../modules/auth/session.store";
 
-const BASE = ""; // same-origin, no prefix needed
+const BASE = ""; // 同源，无需前缀
 
 export class ApiError extends Error {
   constructor(

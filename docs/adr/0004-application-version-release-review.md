@@ -1,28 +1,28 @@
-# ADR-0004: Application Version, Release, and Review Boundary
+# ADR 0004：应用版本、发布与评审边界
 
-## Status
+## 状态
 
-Accepted for Phase 3.
+阶段 3 已接受。
 
-## Context
+## 背景
 
-The platform needs a controlled internal application delivery path. An application has an owner, immutable versions, four independent delivery channels, an artifact verification pipeline, manual review, publication, withdrawal, archive, and rollback. Phase 2 already provides the actor context and authorization boundary; Phase 3 consumes that boundary without introducing tenancy or a second permission model.
+平台需要一条受控的内部应用交付路径。一个应用包含所有者、不可变版本、四个独立交付渠道、制品校验流水线、人工评审、发布、撤回、归档与回滚。阶段 2 已提供操作者上下文与授权边界；阶段 3 直接使用该边界，不引入租户概念或第二套权限模型。
 
-## Decision
+## 决策
 
-- Store applications, versions, delivery configurations, reviews, and application audit events in PostgreSQL.
-- Store `owner_employee_id`, `maintainer_employee_id`, and `department_id` on every application. If the caller omits maintainer or department, the service derives them from the Phase 2 actor context.
-- Make version identity and artifact metadata append-only. A changed artifact creates a new version; a database trigger rejects mutation of the artifact key, digest, or signature.
-- Require accepted artifact-pipeline verification, a passed malware scan, an exact SHA-256 digest, and a valid signature before a version can enter review or publication.
-- Enforce `draft -> in_review -> approved -> published -> withdrawn -> archived`. A published application may submit a newly created version for review while the current version remains available.
-- Permit rollback only between versions of the same published application. Rollback keeps both versions readable, points the application at the selected version, and writes audit and outbox records.
-- Prevent self-review and physical deletion. Withdrawal and archive are explicit state transitions.
-- Keep web, desktop, mobile, and mini-program delivery configurations separate and independently addressable.
-- Publishing is a Phase 3 gate only when all four delivery records are enabled; no channel is silently treated as optional.
-- On submission, create one review-pool item with a 24-hour SLA. Reviewers may claim or release it; only the claimant may decide. SLA status is calculated as `on_time` or `overdue` and submission emits notification outbox events. External delivery and a dedicated operations UI are deferred.
-- Write state-change audit and outbox records in the same repository transaction.
-- Use storage, scanner, and signature ports. Deterministic memory adapters are for tests; Garage-compatible object storage, ClamAV, and signing credentials remain deployment adapters.
+- 应用、版本、交付配置、评审与应用审计事件全部存储在 PostgreSQL 中。
+- 每个应用保存 `owner_employee_id`、`maintainer_employee_id` 与 `department_id`。若调用方省略维护人或部门，服务会从阶段 2 的操作者上下文推导。
+- 版本身份与制品元数据只追加（append-only）。制品变更会创建新版本；数据库触发器拒绝修改制品键、摘要或签名。
+- 版本进入评审或发布前，必须通过制品流水线校验、恶意软件扫描、精确 SHA-256 摘要与有效签名。
+- 强制状态机 `draft -> in_review -> approved -> published -> withdrawn -> archived`。已发布的应用可提交新创建的版本进行评审，同时当前版本保持可用。
+- 仅允许在同一已发布应用的不同版本之间回滚。回滚后两个版本仍可读，应用指向所选版本，并写入审计与 outbox 记录。
+- 禁止自评与物理删除；撤回与归档是显式状态迁移。
+- Web、桌面、移动端与小程序四类交付配置相互独立、可单独寻址。
+- 仅当四个交付记录全部启用时，发布才作为阶段 3 的门禁放行；任何渠道都不会被静默视为可选。
+- 提交时创建一条带 24 小时 SLA 的评审池记录。评审人可认领或释放；只有认领者可作出裁决。SLA 状态计算为 `on_time` 或 `overdue`，提交会发出通知 outbox 事件。外部交付与专用运维 UI 延后实现。
+- 状态变更的审计与 outbox 记录写入同一仓库事务。
+- 使用存储、扫描与签名端口。确定性的内存适配器用于测试；兼容 Garage 的对象存储、ClamAV 与签名凭据作为部署适配器。
 
-## Consequences
+## 影响
 
-The API exposes a protected lifecycle while the web administration shell remains read-only. Review, publication, and rollback are auditable and recoverable. The real API e2e suite exercises approve, reject, claim/release, publish, rollback, withdraw, archive, and four-channel delivery against PostgreSQL. External scanner/storage credentials, production delivery endpoints, and external notification transport remain deployment risks and are not hidden behind local test adapters.
+API 暴露受保护的生命周期，而 Web 管理外壳保持只读。评审、发布与回滚均可审计、可恢复。真实 API e2e 套件在 PostgreSQL 上演练审批、驳回、认领/释放、发布、回滚、撤回、归档与四渠道交付。外部扫描/存储凭据、生产交付端点与外部通知传输仍是部署风险，不能用本地测试适配器掩盖。

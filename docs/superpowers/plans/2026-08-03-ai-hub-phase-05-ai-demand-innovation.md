@@ -1,36 +1,38 @@
-# AI Hub Phase 5 AI Demand and Innovation Square Implementation Plan
+# AI Hub 阶段 5 AI 需求与创新广场实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
-**Goal:** Deliver a governed, auditable AI demand lifecycle from structured request through innovation-square collaboration, prioritization, piloting, application association, and formal application publication without bypassing the Phase 3 application lifecycle gates.
+**目标：** 交付受治理、可审计的 AI 需求生命周期，从结构化请求一路到创新广场协作、优先级排序、试点、应用关联与正式应用发布，且不绕过阶段 3 应用生命周期门禁。
 
-**Architecture:** Add a bounded `demand` module to the existing NestJS modular monolith. PostgreSQL migration `0006` stores normalized demand, audience, collaboration, moderation, progress, pilot, application-link, and audit records; all writes use repository transactions, audit rows, and outbox events. Audience predicates are applied before list/detail output, anonymous display is presentation-only, and application promotion delegates to the existing `ApplicationService` so artifact verification, review, publication, and archive guards remain authoritative.
+**架构：** 在现有 NestJS 模块化单体中新增有界 `demand` 模块。PostgreSQL 迁移 `0006` 存储规范化的需求、受众、协作、治理、进度、试点、应用关联与审计记录；所有写入使用仓库事务、审计行与 outbox 事件。受众谓词在列表/详情输出前应用，匿名展示仅存在于呈现层，应用发布委托给现有 `ApplicationService`，因此制品校验、评审、发布与归档防护仍然权威。
 
-**Tech Stack:** Node.js >=18.18, TypeScript strict mode, NestJS, Kysely, PostgreSQL, Vitest, Supertest, React/Vite/Ant Design, existing `ActorContext`, RBAC, authorization, Audit, Outbox, and application lifecycle modules.
+**技术栈：** Node.js >=18.18、TypeScript 严格模式、NestJS、Kysely、PostgreSQL、Vitest、Supertest、React/Vite/Ant Design、现有 `ActorContext`、RBAC、授权、审计、Outbox 与应用生命周期模块。
 
-## Global Constraints
 
-- Phase 4 is accepted input from commit `f60def66699bfbb0192b60fa1d256d98159d198b`; do not rerun Phase 4 or Phase 3 full gates as a Phase 5 prerequisite.
-- Continue the single-enterprise model; do not add `tenant_id`.
-- Continue using `ActorContext`, RBAC, audience authorization, transaction boundaries, Audit, and Outbox.
-- Anonymous display must never delete real identity; administrator traceability requires authorization and an audit event.
-- Claim, merge, status transition, and primary-solution selection must use database concurrency protection and produce audit records.
-- Do not physically delete demands, discussions, reports, or links; use state transitions and audit metadata.
-- Do not introduce Redis, Elasticsearch, message queues, Kubernetes, microservices, or a public Open API.
-- Phase 6 analytics dashboards, exports, external Dify assistant, and metric dictionary are deferred.
-- Do not change completed Phase 4 business semantics; extensions require a new migration and focused tests.
-- The formal application-publishing path must delegate to the existing Phase 3 `ApplicationService` and may not directly set an application to `published`.
+## 全局约束
 
-## Phase 5 Baseline
+- 阶段 4 作为输入从提交 `f60def66699bfbb0192b60fa1d256d98159d198b` 接受；不要以重跑阶段 4 或阶段 3 完整门禁作为阶段 5 前置条件。
+- 延续单企业模型；不新增 `tenant_id`。
+- 继续使用 `ActorContext`、RBAC、受众授权、事务边界、审计与 Outbox。
+- 匿名展示绝不删除真实身份；管理员溯源需要授权与审计事件。
+- 认领、合并、状态迁移与主解决方案选择必须使用数据库并发保护并产生审计记录。
+- 不得物理删除需求、讨论、举报或关联；使用状态迁移与审计元数据。
+- 不引入 Redis、Elasticsearch、消息队列、Kubernetes、微服务或公开 Open API。
+- 阶段 6 分析仪表盘、导出、外部 Dify 助手与指标字典延后。
+- 不改变已完成的阶段 4 业务语义；扩展需要新迁移与定向测试。
+- 正式应用发布路径必须委托给现有阶段 3 `ApplicationService`，不得直接将应用设置为 `published`。
 
-- Base branch: `feature/phase-04-market-search-interaction`.
-- Base commit: `f60def66699bfbb0192b60fa1d256d98159d198b`.
-- New branch: `feature/phase-05-ai-demand-innovation`.
-- Phase 3 gate evidence remains accepted from Codex session `019fc537-5ae6-7f42-bb49-ff0fc969afac`; it is not repeated here.
-- Existing untracked `.codex/` is user-owned workspace state and remains excluded from staging.
-- Phase 4 evidence is consumed from its plan, execution ledger, ADR 0005, and remote branch; no Phase 4 full gate is repeated before Phase 5.
 
-## File Structure
+## 阶段 5 基线
+
+- 基础分支：`feature/phase-04-market-search-interaction`。
+- 基础提交：`f60def66699bfbb0192b60fa1d256d98159d198b`。
+- 新分支：`feature/phase-05-ai-demand-innovation`。
+- 阶段 3 门禁证据仍从 Codex 会话 `019fc537-5ae6-7f42-bb49-ff0fc969afac` 接受；此处不重复。
+- 现有未跟踪的 `.codex/` 是用户拥有的工作区状态，仍被排除在暂存之外。
+- 阶段 4 证据从其计划、执行台账、ADR 0005 与远程分支消费；阶段 5 之前不重复阶段 4 完整门禁。
+
+## 文件结构
 
 ```text
 packages/contracts/src/demand.ts
@@ -60,7 +62,7 @@ docs/superpowers/plans/2026-08-03-ai-hub-phase-05-execution-ledger.md
 processing_visualization.html
 ```
 
-## Stable Interfaces
+## 稳定接口
 
 ```ts
 export type DemandStatus =
@@ -118,99 +120,101 @@ export interface DemandRepository {
 }
 ```
 
-## Ordered Tasks
 
-### Task 1: Phase 5 baseline, plan, ledger, ADR, and visualization
+## 有序任务
 
-**Files:** this plan, execution ledger, ADR 0006, `processing_visualization.html`.
+### 任务 1：阶段 5 基线、计划、台账、ADR 与可视化
 
-- [x] Verify the current branch, exact Phase 4 commit, remote tracking branch, clean tracked status, and preserved `.codex/` state.
-- [x] Create `feature/phase-05-ai-demand-innovation` from the Phase 4 branch.
-- [x] Record the accepted baseline and explicit Phase 4/6 boundaries in the ledger and ADR.
-- [x] Update the visualization with an in-progress Phase 5 task and baseline event.
-- [x] Run `git diff --check`, then commit `docs(phase-05): establish AI demand innovation plan`.
+**文件：** 本计划、执行台账、ADR 0006、`processing_visualization.html`。
 
-### Task 2: Contracts, migration, state model, audience and audit boundaries
+- [x] 验证当前分支、确切的阶段 4 提交、远程跟踪分支、干净的跟踪状态与保留的 `.codex/` 状态。
+- [x] 从阶段 4 分支创建 `feature/phase-05-ai-demand-innovation`。
+- [x] 在台账与 ADR 中记录接受的基线与明确的阶段 4/6 边界。
+- [x] 用进行中的阶段 5 任务与基线事件更新可视化。
+- [x] 运行 `git diff --check`，然后提交 `docs(phase-05): establish AI demand innovation plan`。
 
-**Files:** `packages/contracts/src/demand.ts`, contracts index, database schema/migrator, migration `0006`, demand types/repository scaffolding, migration test.
+### 任务 2：契约、迁移、状态模型、受众与审计边界
 
-- [x] Write a failing migration test for normalized demands, audience checks, append-only discussion/report/link tables, unique likes/collaborators, optimistic version, partial unique primary solution, audit, outbox, and absence of `tenant_id`.
-- [x] Run the focused test and observe failure because `0006` is absent (after enabling the recorded Docker Desktop engine, assertions failed on missing tables/constraints/triggers).
-- [x] Implement the migration with check constraints, foreign keys, indexes, optimistic version column, and a trigger preventing physical deletes from demand content tables.
-- [x] Add contracts and Kysely schema types; register `0006`.
-- [x] Run the focused PostgreSQL migration test and commit `feat(phase-05): add demand contracts and schema`.
+**文件：** `packages/contracts/src/demand.ts`、契约索引、数据库 schema/迁移器、迁移 `0006`、需求类型/仓库脚手架、迁移测试。
 
-### Task 3: Demand creation, drafts, lightweight review and rejection
+- [x] 为规范化需求、受众检查、只追加的讨论/举报/关联表、唯一点赞/协作者、乐观版本、部分唯一主解决方案、审计、outbox 与无 `tenant_id` 编写失败的迁移测试。
+- [x] 运行定向测试并观察因缺少 `0006` 而失败（启用已记录的 Docker Desktop 引擎后，断言在缺失的表/约束/触发器上失败）。
+- [x] 实现带检查约束、外键、索引、乐观版本列与阻止需求内容表物理删除触发器的迁移。
+- [x] 添加契约与 Kysely schema 类型；注册 `0006`。
+- [x] 运行定向 PostgreSQL 迁移测试并提交 `feat(phase-05): add demand contracts and schema`。
 
-**Files:** demand service/repository/controller/module, service tests, API test, server export.
+### 任务 3：需求创建、草稿、轻量评审与驳回
 
-- [x] Write failing tests for required-field validation, draft save/resume, submit-for-review, reviewer-only decision, rejection reason, immutable requester identity, and transactional audit/outbox.
-- [x] Run the service test red.
-- [x] Implement minimal validation and state transitions: `draft -> pending_review -> published|rejected`, with reviewer authorization and no physical delete.
-- [x] Run focused service/API tests, update the ledger, and commit `feat(phase-05): add governed demand submission`.
+**文件：** demand 服务/仓库/控制器/模块、服务测试、API 测试、server 导出。
 
-### Task 4: Demand list/detail, audience filtering, anonymous display, likes, discussion and reports
+- [x] 为必填字段校验、草稿保存/恢复、提交评审、仅评审人决策、驳回原因、不可变需求方身份与事务审计/outbox 编写失败测试。
+- [x] 运行服务测试使其先红。
+- [x] 实现最小校验与状态迁移：`draft -> pending_review -> published|rejected`，带评审人授权且不物理删除。
+- [x] 运行定向服务/API 测试、更新台账并提交 `feat(phase-05): add governed demand submission`。
 
-**Files:** repository/service/controller, interaction contracts if needed, service tests, API/Web tests, router/App.
+### 任务 4：需求列表/详情、受众过滤、匿名展示、点赞、讨论与举报
 
-- [x] Write failing tests proving list/search/detail filter before pagination for all/department/employee audiences, and ordinary readers cannot see requester identity when anonymous.
-- [x] Write failing tests for idempotent like/unlike, append-only one-level discussion, hidden-content filtering, report creation, moderation hide/restore, and authorized anonymous identity lookup audit.
-- [x] Implement the read and write paths with the same audience semantics as Phase 4 catalog reads; preserve identity in storage and reject physical delete.
-- [x] Add innovation-square and demand-detail routes with loading, empty, rejected, hidden, and closed states.
-- [x] Run focused server/API/Web tests and commit `feat(phase-05): add demand square interactions`.
+**文件：** 仓库/服务/控制器，必要时使用 interaction 契约、服务测试、API/Web 测试、router/App。
 
-### Task 5: Claim, owner, collaborators, operator selection and concurrency protection
+- [x] 编写失败测试，证明 all/department/employee 受众在分页前过滤列表/搜索/详情，且匿名时普通读者看不到需求方身份。
+- [x] 为幂等点赞/取消点赞、只追加的单层讨论、隐藏内容过滤、举报创建、内容治理隐藏/恢复与授权匿名身份查询审计编写失败测试。
+- [x] 使用与阶段 4 目录读取相同的受众语义实现读写路径；在存储中保留身份并拒绝物理删除。
+- [x] 添加带加载、空、被拒、隐藏与关闭状态的创新广场与需求详情路由。
+- [x] 运行定向 server/API/Web 测试并提交 `feat(phase-05): add demand square interactions`。
 
-**Files:** demand repository/service/controller/tests, migration constraints if needed, API e2e.
+### 任务 5：认领、所有者、协作者、运营人员选择与并发保护
 
-- [x] Write failing tests for first-writer-wins claim, owner-only collaborator changes, operator assignment, duplicate collaborator rejection, stale-version conflict, and audit/outbox for every assignment.
-- [x] Run tests red.
-- [x] Implement atomic `UPDATE ... WHERE version = expectedVersion`/unique constraints and return `DEMAND_CONFLICT` on lost update.
-- [x] Run focused tests and commit `feat(phase-05): protect demand ownership concurrency`.
+**文件：** demand 仓库/服务/控制器/测试，必要时补充迁移约束、API e2e。
 
-### Task 6: Value/cost/risk/priority scoring and administrator audit
+- [x] 为首次写入者优先认领、仅所有者修改协作者、运营人员分配、重复协作者拒绝、过期版本冲突与每次分配的审计/outbox 编写失败测试。
+- [x] 运行测试使其先红。
+- [x] 实现原子 `UPDATE ... WHERE version = expectedVersion`/唯一约束，并在丢失更新时返回 `DEMAND_CONFLICT`。
+- [x] 运行定向测试并提交 `feat(phase-05): protect demand ownership concurrency`。
 
-**Files:** contracts, schema/repository/service/controller/tests, Web priority view.
+### 任务 6：价值/成本/风险/优先级评分与管理员审计
 
-- [x] Write failing tests for 1-5 bounded inputs, deterministic explainable score, admin-only changes, audit details, and stable ordering with ID tie-breaker.
-- [x] Implement a documented score formula, persist the inputs and explanation, and expose only authorized priority data.
-- [x] Run focused tests and commit `feat(phase-05): add explainable demand prioritization`.
+**文件：** 契约、schema/仓库/服务/控制器/测试、Web 优先级视图。
 
-### Task 7: Status progression, official progress, pilot and close
+- [x] 为 1–5 有界输入、确定性可解释分数、仅管理员修改、审计详情与带 ID 决胜的稳定排序编写失败测试。
+- [x] 实现有文档的分数公式，持久化输入与解释，并只暴露已授权的优先级数据。
+- [x] 运行定向测试并提交 `feat(phase-05): add explainable demand prioritization`。
 
-**Files:** demand state service/repository/controller, tests, API/Web routes.
+### 任务 7：状态推进、官方进度、试点与关闭
 
-- [x] Write failing tests for the allowed state graph, invalid transition rejection, official progress authorization, pilot dates/outcomes, close reason, and append-only state/progress audit.
-- [x] Implement state transitions under optimistic concurrency; every transition emits an outbox event and audit row.
-- [x] Run focused tests and commit `feat(phase-05): add demand progress and pilot lifecycle`.
+**文件：** demand 状态服务/仓库/控制器、测试、API/Web 路由。
 
-### Task 8: Merge, many-to-many application links, primary solution and formal application listing
+- [x] 为允许的状态图、无效迁移拒绝、官方进度授权、试点日期/结果、关闭原因与只追加的状态/进度审计编写失败测试。
+- [x] 在乐观并发下实现状态迁移；每个迁移发出 outbox 事件与审计行。
+- [x] 运行定向测试并提交 `feat(phase-05): add demand progress and pilot lifecycle`。
 
-**Files:** application bridge contracts/service, demand repository/service/controller, migration extensions only if required, tests, API e2e.
+### 任务 8：合并、多对多应用关联、主解决方案与正式应用列表
 
-- [x] Write failing tests for merge conflict protection, merged-demand visibility, many-to-many links, one primary solution, link role authorization, and link audit.
-- [x] Write a failing integration test that creates a formal application from a demand and proves publication still requires artifact verification, review, and the Phase 3 publish guard.
-- [x] Implement `createApplicationFromDemand` as a transactionally audited bridge that creates an application draft through the existing application service and never directly updates `applications.status` to `published`.
-- [x] Run focused service/API and PostgreSQL e2e tests and commit `feat(phase-05): close demand to application loop`.
+**文件：** application 桥接契约/服务、demand 仓库/服务/控制器、仅在需要时扩展迁移、测试、API e2e。
 
-### Task 9: API/Web e2e, PostgreSQL verification, full gates and two-axis review
+- [x] 为合并冲突保护、合并需求可见性、多对多关联、单一主解决方案、关联角色授权与关联审计编写失败测试。
+- [x] 编写失败的集成测试：从需求创建正式应用，并证明发布仍要求制品校验、评审与阶段 3 发布防护。
+- [x] 将 `createApplicationFromDemand` 实现为事务性审计的桥接，通过现有应用服务创建应用草稿，绝不直接把 `applications.status` 更新为 `published`。
+- [x] 运行定向服务/API 与 PostgreSQL e2e 测试并提交 `feat(phase-05): close demand to application loop`。
 
-**Files:** Phase 5 API real e2e, Web tests, ledger, ADR, visualization, review notes.
+### 任务 9：API/Web e2e、PostgreSQL 验证、完整门禁与双轴评审
 
-- [x] Run the focused service/API/Web tests and real PostgreSQL e2e for audience, moderation, concurrency, merge, audit, outbox, and application lifecycle gates.
-- [x] Run exactly the Phase 5 final gate commands: format, lint, typecheck, boundaries, full test, build, doc links, and Compose config.
-- [x] Review `git diff f60def66699bfbb0192b60fa1d256d98159d198b..HEAD` on standards and spec axes; resolve actionable findings.
-- [x] Record exact counts, skipped external capabilities, and any environmental blockers in the ledger; update visualization.
-- [x] Commit `docs(phase-05): close AI demand innovation gates`.
+**文件：** 阶段 5 API 真实 e2e、Web 测试、台账、ADR、可视化、评审说明。
 
-### Task 10: GitHub handoff
+- [x] 运行定向服务/API/Web 测试与真实 PostgreSQL e2e，覆盖受众、治理、并发、合并、审计、outbox 与应用生命周期门禁。
+- [x] 精确运行阶段 5 最终门禁命令：format、lint、typecheck、boundaries、完整测试、build、文档链接与 Compose config。
+- [x] 在标准与规格轴上评审 `git diff f60def66699bfbb0192b60fa1d256d98159d198b..HEAD`；解决可执行发现项。
+- [x] 在台账中记录精确计数、跳过的外部能力与任何环境阻断项；更新可视化。
+- [x] 提交 `docs(phase-05): close AI demand innovation gates`。
 
-**Files:** none beyond closeout docs if GitHub metadata requires a factual update.
+### 任务 10：GitHub 交接
 
-- [ ] Verify status, branch, commit ancestry, and remote URL.
-- [ ] Push `feature/phase-05-ai-demand-innovation` without force push.
-- [ ] Create or update a Draft PR if write permission and connector support are available; otherwise record the exact permission blocker and report it as incomplete.
+**文件：** 除收尾文档外无其他；若 GitHub 元数据需要事实性更新则相应调整。
 
-## Phase 5 Gate
+- [ ] 验证状态、分支、提交祖先与远程 URL。
+- [ ] 不使用强推推送 `feature/phase-05-ai-demand-innovation`。
+- [ ] 若写入权限与连接器支持可用，创建或更新草稿 PR；否则记录确切的权限阻断项并报告为未完成。
 
-Phase 5 may be called complete only when the demand-to-formal-application path is proven without bypassing Phase 3 gates; merge, claim, status transition, and primary solution selection have concurrency protection and audit; anonymous and audience behavior matches the application side; PostgreSQL/API/Web tests and every final gate command pass; two-axis review has no unresolved actionable findings; the branch is committed and pushed; and a Draft PR exists or the external permission blocker is explicitly recorded as incomplete.
+
+## 阶段 5 门禁
+
+只有满足以下条件，阶段 5 才可称为完成：需求到正式应用的路径被证明未绕过阶段 3 门禁；合并、认领、状态迁移与主解决方案选择具备并发保护与审计；匿名与受众行为与应用侧一致；PostgreSQL/API/Web 测试与每一条最终门禁命令通过；双轴评审无未解决执行项；分支已提交并推送；存在草稿 PR 或外部权限阻断项被明确记录为未完成。

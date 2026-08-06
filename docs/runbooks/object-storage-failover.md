@@ -1,42 +1,28 @@
-# Object-storage replication, cutover, and restore runbook
+# 对象存储复制、切换与恢复 Runbook
 
-The production storage boundary uses two private S3-compatible Garage sites
-and host-level asynchronous replication. Replication is deliberately
-manifest/checksum based and does not add a message queue.
+生产存储边界使用两个私有 S3 兼容 Garage 站点与主机级异步复制。复制刻意基于清单/校验和，不引入消息队列。
 
-## Replication
+## 复制
 
-1. Create versioned, encrypted, non-public source and target buckets with
-   different credentials and record the bucket versioning/encryption policy.
-2. Export a sorted object/version manifest and SHA-256 digest from the source.
-3. Run the approved host replication tool with checksum and immutable-version
-   options, then export the target manifest. Compare digests before declaring a
-   replication cycle complete.
-4. Record the newest source object timestamp, target completion timestamp,
-   object count, byte count, digest, and operator. The difference is the
-   measured object-storage replication lag and contributes to RPO evidence.
+1. 使用不同凭据创建带版本控制、加密且非公开的源与目标桶，并记录桶的版本控制/加密策略。
+2. 从源端导出排序后的对象/版本清单与 SHA-256 摘要。
+3. 使用经批准的宿主复制工具并开启校验和与不可变版本选项，然后导出目标清单。在声明复制周期完成前比较摘要。
+4. 记录最新的源对象时间戳、目标完成时间戳、对象数、字节数、摘要与操作人员。两者的差即为实测对象存储复制延迟，并计入 RPO 证据。
 
-An example host-side command shape is:
+主机侧命令的示例形态如下：
 
 ```text
 rclone sync s3-primary:ai-hub s3-secondary:ai-hub --checksum --immutable --s3-no-check-bucket
 ```
 
-The actual endpoint, credentials, TLS CA, and retention policy are supplied by
-operations and are not stored in this repository.
+实际的端点、凭据、TLS CA 与保留策略由运维提供，不存储在本仓库中。
 
-## Cutover and restore
+## 切换与恢复
 
-1. Fence writes to the source application/storage endpoint.
-2. Confirm target health, verified manifest, no version conflicts, and a recent
-   restore of a representative Phase 3–6 artifact.
-3. Switch the storage endpoint in the host-only configuration, then verify
-   object read, signed delivery, audit metadata, and malware-scan flow.
-4. Keep the source fenced until the reverse manifest comparison is complete.
-5. To roll back, fence the target and restore the previous endpoint; never
-   merge divergent object versions without an explicit operator decision.
+1. 隔离（fence）对源应用/存储端点的写入。
+2. 确认目标健康、清单已验证、无版本冲突，并最近恢复过一个代表性的阶段 3–6 制品。
+3. 在仅宿主机可见的配置中切换存储端点，然后验证对象读取、签名交付、审计元数据与恶意软件扫描流程。
+4. 在反向清单比较完成前，保持源端隔离（fenced）。
+5. 回滚时隔离（fence）目标端并恢复原端点；未经显式操作决策，绝不合并分歧的对象版本。
 
-The repository currently has no production Garage sites, replication
-credentials, independent storage medium, or completed cutover/restore drill.
-The object-storage target therefore remains unverified even though the policy
-and manifest tests pass.
+仓库目前没有生产 Garage 站点、复制凭据、独立存储介质或已完成的切换/恢复演练。因此，即使策略与清单测试通过，对象存储目标仍未验证。

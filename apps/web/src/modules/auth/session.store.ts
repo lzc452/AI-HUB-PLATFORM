@@ -45,7 +45,7 @@ export function setSession(session: AuthSession | null): void {
       globalThis.localStorage?.removeItem(STORAGE_KEY);
     }
   } catch {
-    // localStorage may be unavailable; session stays in memory only.
+    // localStorage 可能不可用；会话仅保存在内存中。
   }
   for (const listener of listeners) {
     listener(currentSession);

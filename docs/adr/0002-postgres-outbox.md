@@ -1,31 +1,24 @@
-# ADR 0002: PostgreSQL Transactional Outbox
+# ADR 0002：PostgreSQL 事务性 Outbox
 
-- Status: Accepted
-- Date: 2026-07-31
+- 状态：已接受
+- 日期：2026-07-31
 
-## Context
+## 背景
 
-Background work must be recorded atomically with the database changes that
-request it. V1 also needs repeatable local and CI environments without another
-stateful infrastructure dependency.
+后台工作必须与触发它的数据库变更在同一个事务中原子地记录。V1 还需要可重复的本地与 CI 环境，且不引入额外的有状态基础设施依赖。
 
-## Decision
+## 决策
 
-Store background events in the PostgreSQL `outbox_events` table in the same
-transaction as the originating change. Workers claim available rows with
-database locking, execute registered handlers, and record completion or a safe
-failure code. Idempotency keys protect producers from duplicate appends.
+将后台事件写入 PostgreSQL 的 `outbox_events` 表，并与源变更处于同一事务。worker 通过数据库锁认领可用行、执行已注册的处理器，并记录完成状态或安全的失败码。幂等键保护生产者避免重复追加。
 
-## Consequences
+## 影响
 
-- PostgreSQL remains the single transactional source of truth.
-- Worker delivery is at least once, so handlers must remain idempotent.
-- Outbox backlog and handler outcomes are observable through Prometheus metrics.
-- Retention and archival policies will be added when production volume is known.
+- PostgreSQL 仍是唯一的事务性事实来源。
+- worker 投递语义为至少一次（at-least-once），因此处理器必须保持幂等。
+- outbox 积压与处理器结果可通过 Prometheus 指标观测。
+- 保留与归档策略将在生产规模明确后补充。
 
-## Rejected Alternatives
+## 被否决的备选方案
 
-- Redis-backed queues: rejected because Redis is not otherwise required by V1
-  and would introduce another persistence and recovery model.
-- External message brokers: rejected because V1 throughput and integration
-  requirements do not justify their operational cost.
+- 基于 Redis 的队列：被否决，因为 V1 本身并不需要 Redis，且会引入另一套持久化与恢复模型。
+- 外部消息中间件：被否决，因为 V1 的吞吐与集成需求不足以支撑其运维成本。

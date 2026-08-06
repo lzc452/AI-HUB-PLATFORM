@@ -95,9 +95,7 @@ export function getApplicationDeliveries(
 export function getApplicationReviews(
   applicationId: string,
 ): Promise<ReviewRecord[]> {
-  return apiFetch<ReviewRecord[]>(
-    `${applicationsPath(applicationId)}/reviews`,
-  );
+  return apiFetch<ReviewRecord[]>(`${applicationsPath(applicationId)}/reviews`);
 }
 
 export function getPublishedVersion(

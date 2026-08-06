@@ -1,53 +1,23 @@
-# ADR 0006: Phase 5 AI demand and innovation-square boundaries
+# ADR 0006：阶段 5 AI 需求与创新广场边界
 
-- Status: Accepted for Phase 5 execution
-- Date: 2026-08-03
-- Decision owners: Product, platform engineering, security review
+- 状态：阶段 5 执行已接受
+- 日期：2026-08-03
+- 决策负责人：产品、平台工程、安全评审
 
-## Context
+## 背景
 
-Phase 4 provides the single-enterprise identity, ActorContext, RBAC and
-audience authorization, PostgreSQL audit/outbox boundaries, and the published
-application lifecycle. Phase 5 needs an auditable demand workflow that can be
-shown to authorized employees, coordinated by owners and operators, prioritized
-with explainable inputs, and connected to formal applications without creating
-a second publication path.
+阶段 4 提供了单企业身份、ActorContext、RBAC 与受众授权、PostgreSQL 审计/outbox 边界以及已发布应用的生命周期。阶段 5 需要一个可审计的需求工作流：可向授权员工展示、由所有者和运营人员协调、基于可解释输入确定优先级，并能与正式应用关联，同时不创建第二条发布路径。
 
-## Decisions
+## 决策
 
-1. Store demands and their lifecycle as normalized PostgreSQL records. Draft,
-   review, publication, progress, pilot, close, merge, comment, report, and
-   application-link rows are stateful or append-only; none are physically
-   deleted.
-2. Reuse the existing audience model (`all`, `department`, `employee`) and
-   apply the employee's department/employee predicates in the repository before
-   sorting, pagination, or detail output. Do not add `tenant_id`.
-3. Anonymous display is a projection concern. The requester/author identity
-   stays in the database; ordinary readers receive an anonymous projection and
-   an authorized administrator identity lookup creates a dedicated audit event.
-4. Claim, merge, status transitions, and primary-solution selection use an
-   optimistic version plus database uniqueness/conditional-update protection.
-   A lost update returns an explicit conflict and never silently overwrites a
-   newer decision.
-5. Priority is a deterministic, persisted score derived from bounded business
-   value, implementation cost, risk, and administrator priority inputs. The
-   stored explanation is returned with authorized management views and recorded
-   in the demand audit trail.
-6. The demand-to-application bridge may create or associate a draft application
-   and may prepare versions/delivery data through existing services, but it may
-   not set `applications.status = 'published'`. Artifact verification, review,
-   publication, withdrawal, and archive remain Phase 3 application lifecycle
-   responsibilities.
-7. Demand mutations write audit and outbox records in the same transaction as
-   the business state change. No Redis, Elasticsearch, external message queue,
-   microservice, public Open API, or Phase 6 analytics/export surface is added.
+1. 需求及其生命周期以规范化的 PostgreSQL 记录存储。草稿、评审、发布、进度、试点、关闭、合并、评论、举报与应用关联记录均是有状态或只追加的，任何记录都不物理删除。
+2. 复用现有受众模型（`all`、`department`、`employee`），在仓库层于排序、分页或详情输出之前应用员工的部门/员工谓词。不新增 `tenant_id`。
+3. 匿名展示是投影关注点。需求方/作者身份保留在数据库中；普通读者获得匿名投影，获得授权的管理员身份查询会生成专门的审计事件。
+4. 认领、合并、状态迁移与主解决方案选择使用乐观版本号加数据库唯一性/条件更新保护。丢失更新返回显式冲突，绝不静默覆盖更新的决策。
+5. 优先级是由有界的业务价值、实施成本、风险与管理员优先级输入推导出的确定性、持久化分数。存储的解释会随授权的管理视图返回，并记入需求审计轨迹。
+6. 需求到应用的桥接可创建或关联草稿应用，也可通过现有服务准备版本/交付数据，但不得设置 `applications.status = 'published'`。制品校验、评审、发布、撤回与归档仍是阶段 3 应用生命周期的职责。
+7. 需求变更在与业务状态变更相同的事务中写入审计与 outbox 记录。不引入 Redis、Elasticsearch、外部消息队列、微服务、公开 Open API 或阶段 6 的分析/导出面。
 
-## Consequences
+## 影响
 
-The demand module remains a bounded context within the modular monolith and
-can reuse authorization and application services without duplicating lifecycle
-rules. PostgreSQL conditional updates and partial unique indexes make the
-high-value concurrent decisions testable with real database e2e tests. The V1
-priority formula is intentionally explainable and fixed; personalized ranking,
-analytics dashboards, exports, and external assistant integration remain later
-phase work.
+需求模块仍是模块化单体中的有界上下文，可复用授权与应用服务而无需重复生命周期规则。PostgreSQL 条件更新与部分唯一索引使高价值的并发决策可通过真实数据库 e2e 测试验证。V1 优先级公式刻意保持可解释且固定；个性化排序、分析仪表盘、导出与外部助手集成仍是后续阶段的工作。

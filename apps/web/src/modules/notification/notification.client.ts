@@ -24,7 +24,9 @@ export function markNotificationRead(
   );
 }
 
-export function retryNotificationDelivery(idempotencyKey: string): Promise<void> {
+export function retryNotificationDelivery(
+  idempotencyKey: string,
+): Promise<void> {
   return apiFetch<void>("/internal/notifications/retry", {
     body: JSON.stringify({ idempotencyKey }),
     method: "POST",

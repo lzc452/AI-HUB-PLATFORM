@@ -48,5 +48,5 @@ if (process.argv.includes("--contract")) {
   const { readFile } = await import("node:fs/promises");
   const workflow = `${await readFile(".github/workflows/verify.yml", "utf8")}\n${await readFile(".github/workflows/release.yml", "utf8")}`;
   validateRollbackSourceContract(workflow);
-  console.log("Production rollback contract passed");
+  console.log("生产回滚契约检查通过");
 }

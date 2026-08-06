@@ -101,10 +101,7 @@ export function AppShell() {
   );
 
   return (
-    <Layout
-      className="bg-[#f5f5f5] text-[#1f1f1f]"
-      style={{ height: "100vh" }}
-    >
+    <Layout className="bg-[#f5f5f5] text-[#1f1f1f]" style={{ height: "100vh" }}>
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>

@@ -27,7 +27,9 @@ export interface DashboardResult {
   metrics: DailyAggregate[];
 }
 
-export function getDashboard(dashboardKey: DashboardKey): Promise<DashboardResult> {
+export function getDashboard(
+  dashboardKey: DashboardKey,
+): Promise<DashboardResult> {
   return apiFetch<DashboardResult>(
     `/internal/analytics/dashboards/${encodeURIComponent(dashboardKey)}`,
   );

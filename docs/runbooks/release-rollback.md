@@ -1,33 +1,22 @@
-# Release Upgrade and Rollback Runbook
+# 发布升级与回滚 Runbook
 
-Application rollback is immutable-image replacement plus a forward-compatible
-database fix. Automatic destructive down-migrations are forbidden.
+应用回滚由不可变镜像替换加前向兼容的数据库修复组成。禁止自动执行破坏性 down-migration（降级迁移）。
 
-## Before upgrade
+## 升级前
 
-1. Record the release commit SHA, every image digest, SBOM/provenance report,
-   migration plan, rollback marker, fresh backup ID, and restore verification
-   path.
-2. Confirm the target migration is forward compatible and that the previous
-   image digests are available in the registry.
-3. Fence the active writer before database or object-storage recovery actions.
-4. Run `rollback-gate.mjs` in dry-run mode and obtain the operations approval
-   marker. A dry-run is evidence of preconditions, not a production recovery.
+1. 记录发布提交 SHA、每个镜像摘要、SBOM/供应链证明报告、迁移计划、回滚标记、最新备份 ID 与恢复验证路径。
+2. 确认目标迁移前向兼容，且旧镜像摘要仍可从镜像仓库获取。
+3. 在数据库或对象存储恢复操作前，隔离（fence）活动写入端。
+4. 以 dry-run 模式运行 `rollback-gate.mjs` 并获得运维批准标记。dry-run 只是前置条件的证据，并非生产恢复。
 
-## Upgrade and rollback
+## 升级与回滚
 
-1. Build once with commit, SBOM, and provenance metadata; promote only the
-   resulting immutable digests.
-2. Apply the forward-compatible migration before serving the new application.
-3. If the application fails health, stop traffic, preserve logs/audit/Outbox
-   evidence, and switch back to the previous image digests only after fencing.
-4. If the schema requires correction, deploy a reviewed forward-fix. Do not
-   run an automatic `DROP`, `TRUNCATE`, `DELETE`, or down-migration rollback.
-5. Verify authenticated API, worker, web, permission, audit, Outbox, database
-   restore, and object-storage checksum checks before reopening traffic.
+1. 带提交、SBOM 与供应链证明元数据构建一次；只推广由此产生的不可变摘要。
+2. 在服务新应用之前应用前向兼容迁移。
+3. 若应用健康检查失败，停止流量、保留日志/审计/Outbox 证据，并仅在隔离（fencing）后切回旧镜像摘要。
+4. 若 schema 需要修正，部署经过评审的前向修复。不得运行自动 `DROP`、`TRUNCATE`、`DELETE` 或 down-migration 回滚。
+5. 重新开放流量前，验证已认证 API、worker、web、权限、审计、Outbox、数据库恢复与对象存储校验和检查。
 
-## Evidence boundary
+## 证据边界
 
-The CI source contract and local rollback validator are necessary controls.
-They do not prove a registry signature, vulnerability scan, migration against
-production-like PostgreSQL, or a real upgrade/rollback window.
+CI 源契约与本地回滚校验器是必要的控制措施，但并不能证明镜像仓库签名、漏洞扫描、针对生产级 PostgreSQL 的迁移或真实升级/回滚窗口。

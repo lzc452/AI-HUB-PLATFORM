@@ -9,11 +9,7 @@ export interface PageHeaderProps {
 }
 
 /** 页面标题区：h1 + 描述 + 操作区；面包屑由 AppShell 集中渲染。 */
-export function PageHeader({
-  actions,
-  description,
-  title,
-}: PageHeaderProps) {
+export function PageHeader({ actions, description, title }: PageHeaderProps) {
   return (
     <section
       aria-labelledby={`${title}-heading`}

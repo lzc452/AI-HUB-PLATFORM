@@ -1,43 +1,24 @@
-# PostgreSQL replication, backup, restore, and promotion runbook
+# PostgreSQL 复制、备份、恢复与提升 Runbook
 
-This is an operator procedure and evidence contract. It does not mean that a
-production pair exists in the repository.
+这是操作流程与证据契约，并不表示仓库中存在生产主备对。
 
-## Provisioning
+## 配置（Provisioning）
 
-1. Select the approved private replication CIDR and replace the example
-   `10.20.0.0/24` in `infra/postgres/pg_hba.production.conf`; never use
-   `0.0.0.0/0` for replication.
-2. On the primary, create a dedicated `replicator` role with `REPLICATION` and
-   `LOGIN`, a password stored outside the repository, and a physical replication
-   slot. Mount `primary.conf`, `pg_hba.production.conf`, and an independent WAL
-   archive directory.
-3. Take a fresh `pg_basebackup` from the primary into the standby data volume.
-   Write `primary_conninfo` and the replication password through a host-only
-   `pgpass`/`postgresql.auto.conf` file. Mount `standby.conf` and keep the
-   standby fenced from the application DNS name.
-4. Confirm `pg_stat_replication`, replay timestamp, archive freshness, and
-   replication lag before serving any traffic.
+1. 选择经批准的私有复制 CIDR，并替换 `infra/postgres/pg_hba.production.conf` 中的示例 `10.20.0.0/24`；复制绝不允许使用 `0.0.0.0/0`。
+2. 在主库上创建专用 `replicator` 角色（带 `REPLICATION` 与 `LOGIN`），密码存储在仓库之外，并创建物理复制槽。挂载 `primary.conf`、`pg_hba.production.conf` 与独立的 WAL 归档目录。
+3. 从主库向备库数据卷执行一次全新的 `pg_basebackup`。通过仅宿主机可见的 `pgpass`/`postgresql.auto.conf` 文件写入 `primary_conninfo` 与复制密码。挂载 `standby.conf`，并让备库与应用 DNS 名隔离（fenced）。
+4. 在提供任何流量前，确认 `pg_stat_replication`、重放时间戳、归档新鲜度与复制延迟。
 
-## Backup and restore
+## 备份与恢复
 
-Use a scheduled encrypted physical base backup plus WAL archive on independent
-storage. For every backup, record `backupId`, start/end times, SHA-256, archive
-range, restore timestamp, and verified `schema_migrations`, `audit_events`,
-`outbox_events`, and `analytics_daily_aggregates`. A backup without restore
-verification is not recovery evidence.
+在独立存储上使用计划任务执行加密物理基础备份加 WAL 归档。每个备份都要记录 `backupId`、开始/结束时间、SHA-256、归档范围、恢复时间戳，以及验证过的 `schema_migrations`、`audit_events`、`outbox_events` 与 `analytics_daily_aggregates`。未经验证恢复的备份不构成恢复证据。
 
-## Manual promotion
+## 手动提升
 
-1. Confirm the primary is fenced at the process, host, and internal DNS layers.
-2. Confirm the latest backup and WAL archive are no older than 15 minutes and
-   replication lag is measured.
-3. Stop the standby replay, promote it manually, verify migrations/readiness,
-   then start API/Worker only on the promoted host.
-4. Switch internal DNS after health checks pass, record DNS TTL and first
-   successful request, and preserve the old primary as fenced evidence.
-5. Rebuild the former primary from a fresh base backup before rejoining it.
+1. 确认主库已在进程、主机与内部 DNS 各层隔离（fenced）。
+2. 确认最新备份与 WAL 归档不超过 15 分钟，且已测量复制延迟。
+3. 停止备库重放，手动提升，验证迁移/就绪状态，然后仅在已提升主机上启动 API/Worker。
+4. 健康检查通过后切换内部 DNS，记录 DNS TTL 与首个成功请求，并保留旧主库作为已隔离（fenced）的证据。
+5. 重新加入前，从全新基础备份重建原主库。
 
-The repository currently lacks two Ubuntu hosts, an independent backup medium,
-replication credentials, and a DNS zone. Until a real promotion and restore
-are measured, RPO 15 minutes and RTO 2 hours remain targets, not passed gates.
+仓库目前缺少两台 Ubuntu 主机、独立备份介质、复制凭据与 DNS 区域。在完成真实提升与恢复测量之前，RPO 15 分钟与 RTO 2 小时仍只是目标，而非已通过的门禁。

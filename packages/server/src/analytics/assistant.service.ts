@@ -124,7 +124,7 @@ export class AnalyticsAssistantService {
         idempotencyKey: `analytics.assistant.requested:${actor.sessionId}:${Date.now()}`,
       });
     } catch {
-      // The provider remains behind the authorization boundary when telemetry is unavailable.
+      // 遥测不可用时，提供商仍保持在授权边界之后。
     }
     try {
       await this.analyticsEvents?.record(actor, {
@@ -138,7 +138,7 @@ export class AnalyticsAssistantService {
         },
       });
     } catch {
-      // Telemetry must not prevent an authorized request from reaching Dify.
+      // 遥测不得阻止已授权请求到达 Dify。
     }
     try {
       const response = await this.provider.ask(providerRequest);
@@ -156,7 +156,7 @@ export class AnalyticsAssistantService {
           idempotencyKey: `analytics.assistant.completed:${actor.sessionId}:${Date.now()}`,
         });
       } catch {
-        // Successful provider responses stay successful if local telemetry is unavailable.
+        // 本地遥测不可用时，提供商的成功响应仍保持成功。
       }
       return { status: "ok", answer: response.answer };
     } catch (error) {
@@ -169,7 +169,7 @@ export class AnalyticsAssistantService {
           },
         });
       } catch {
-        // Preserve the local fallback when audit storage is unavailable.
+        // 审计存储不可用时保留本地降级。
       }
       try {
         await this.audit.appendOutbox({
@@ -182,7 +182,7 @@ export class AnalyticsAssistantService {
           idempotencyKey: `analytics.assistant.failed:${actor.sessionId}:${Date.now()}`,
         });
       } catch {
-        // Preserve the local fallback when the post-failure boundary is down.
+        // 失败后边界不可用时保留本地降级。
       }
       try {
         await this.analyticsEvents?.record(actor, {
@@ -196,7 +196,7 @@ export class AnalyticsAssistantService {
           },
         });
       } catch {
-        // Preserve the local fallback even when telemetry is unavailable.
+        // 即使遥测不可用也保留本地降级。
       }
       return { status: "degraded", answer: FALLBACK_ANSWER };
     }

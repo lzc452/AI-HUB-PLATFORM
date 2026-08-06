@@ -14,8 +14,7 @@ export interface DashboardCardProps {
 
 function prefersReducedMotion(): boolean {
   return (
-    globalThis.window
-      .matchMedia?.("(prefers-reduced-motion: reduce)")
+    globalThis.window.matchMedia?.("(prefers-reduced-motion: reduce)")
       .matches ?? false
   );
 }
@@ -45,8 +44,8 @@ export function DashboardCard({
       </Title>
       <Text type="secondary">{description}</Text>
       <div className="mt-4">
-        <Tag color="blue">Daily aggregate</Tag>
-        <Tag>180-day rebuild</Tag>
+        <Tag color="blue">每日聚合</Tag>
+        <Tag>180 天重建</Tag>
       </div>
       {isPending ? <Spin aria-label={`${title} 数据加载中`} /> : null}
       {data ? (

@@ -1,114 +1,114 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code（claude.ai/code）在本仓库中工作时提供指引。
 
-## Project Overview
+## 项目概览
 
-AI Hub Platform — a pnpm monorepo for an enterprise AI application sharing platform. Three deployable apps (React SPA, NestJS API, NestJS outbox worker) share packages in a modular monolith. Node.js 24.15.0 is the baseline; Node.js ≥18.18 is supported.
+AI Hub Platform —— 面向企业 AI 应用共享平台的 pnpm monorepo。三个可部署应用（React SPA、NestJS API、NestJS outbox worker）以模块化单体架构共享多个包。Node.js 24.15.0 为基线版本，支持 Node.js ≥18.18。
 
-## Essential Commands
+## 常用命令
 
 ```bash
-# Install dependencies
+# 安装依赖
 corepack pnpm install --frozen-lockfile
 
-# Full verification pipeline (format → lint → typecheck → boundaries → test → build → doc-links → governance → compose config)
+# 完整验证流水线（format → lint → typecheck → boundaries → test → build → doc-links → governance → compose config）
 corepack pnpm verify
 
-# Individual checks
+# 单项检查
 pnpm format:check          # Prettier
-pnpm lint                   # Turbo runs ESLint across all workspaces
-pnpm typecheck              # Turbo runs tsc --noEmit across all workspaces
-pnpm boundaries             # dependency-cruiser module boundary check
-pnpm test                   # Node test runner for scripts + vitest for workspaces (serial)
-pnpm build                  # Turbo build all workspaces
-pnpm migrate                # Run Kysely migrations against DATABASE_URL
+pnpm lint                   # Turbo 对所有 workspace 运行 ESLint
+pnpm typecheck              # Turbo 对所有 workspace 运行 tsc --noEmit
+pnpm boundaries             # dependency-cruiser 模块边界检查
+pnpm test                   # scripts 使用 Node test runner + workspace 使用 vitest（串行）
+pnpm build                  # Turbo 构建所有 workspace
+pnpm migrate                # 针对 DATABASE_URL 运行 Kysely 迁移
 
-# Single workspace commands (run from root)
+# 单 workspace 命令（在根目录运行）
 pnpm --filter @ai-hub/api test
 pnpm --filter @ai-hub/api lint
 pnpm --filter @ai-hub/database test
 
-# Start development stack (app at http://127.0.0.1:8080)
+# 启动开发环境（应用地址 http://127.0.0.1:8080）
 docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-timeout 600
 
-# Run CI test suite in containers
+# 在容器中运行 CI 测试套件
 docker compose -f compose.yaml -f compose.test.yaml run --rm test
 ```
 
-## Monorepo Structure
+## Monorepo 结构
 
 ```
 apps/
-  api/         @ai-hub/api      — NestJS API entrypoint, assembles modules via ApiModule.register()
-  web/         @ai-hub/web      — React SPA (Vite + React Router + Ant Design + Tailwind)
-  worker/      @ai-hub/worker   — NestJS outbox worker, polls outbox_events and dispatches handlers
+  api/         @ai-hub/api      — NestJS API 入口，通过 ApiModule.register() 组装各模块
+  web/         @ai-hub/web      — React SPA（Vite + React Router + Ant Design + Tailwind）
+  worker/      @ai-hub/worker   — NestJS outbox worker，轮询 outbox_events 并分发处理器
 packages/
-  config/      @ai-hub/config   — Zod-validated RuntimeConfig from environment variables
-  contracts/   @ai-hub/contracts — Shared TypeScript types (no runtime deps)
-  database/    @ai-hub/database — Kysely schema, migrations, OutboxStore
-  server/      @ai-hub/server   — All domain logic: NestJS modules, services, controllers, repositories
-  testing/     @ai-hub/testing  — Testcontainers helper (PostgreSQL)
-  ui/          @ai-hub/ui       — Ant Design theme tokens
+  config/      @ai-hub/config   — 基于环境变量的 Zod 校验 RuntimeConfig
+  contracts/   @ai-hub/contracts — 共享 TypeScript 类型（无运行时依赖）
+  database/    @ai-hub/database — Kysely schema、迁移、OutboxStore
+  server/      @ai-hub/server   — 全部领域逻辑：NestJS 模块、服务、控制器、仓库
+  testing/     @ai-hub/testing  — Testcontainers 辅助（PostgreSQL）
+  ui/          @ai-hub/ui       — Ant Design 主题令牌
 ```
 
-### Dependency Rules (enforced by dependency-cruiser)
+### 依赖规则（由 dependency-cruiser 强制检查）
 
-- `@ai-hub/contracts` is a leaf — no runtime deps
-- `@ai-hub/config` depends only on `zod`
-- `@ai-hub/database` depends on `contracts`, `kysely`, `pg`
-- `@ai-hub/server` depends on `contracts`, `database`, `pino`, NestJS
-- Apps depend on packages but not on each other
-- Domain modules inside `server` must not import infrastructure concerns (NestJS controllers, HTTP) from other domain modules
+- `@ai-hub/contracts` 是叶子包 —— 无运行时依赖
+- `@ai-hub/config` 仅依赖 `zod`
+- `@ai-hub/database` 依赖 `contracts`、`kysely`、`pg`
+- `@ai-hub/server` 依赖 `contracts`、`database`、`pino`、NestJS
+- 各应用依赖 packages，但应用之间互不依赖
+- `server` 内的领域模块不得从其他领域模块导入基础设施关注点（NestJS 控制器、HTTP）
 
-## Architecture Patterns
+## 架构模式
 
-### Domain Module Pattern
+### 领域模块模式
 
-Every domain module (identity, application, catalog, interaction, notification, creator, demand, analytics) in `packages/server/src/<domain>/` follows the same structure:
+`packages/server/src/<domain>/` 下的每个领域模块（identity、application、catalog、interaction、notification、creator、demand、analytics）都遵循相同的结构：
 
-- **`<domain>.module.ts`** — NestJS `DynamicModule` with `static register(databaseUrl)` and `static forTest(mock)` factories. Production wiring creates real Kysely repositories; test wiring accepts mock services.
-- **`<domain>.service.ts`** — Pure business logic. Depends on repository interfaces and port abstractions (not on NestJS or HTTP).
-- **`<domain>.controller.ts`** — NestJS controller. Thin delegation to the service; extracts headers/params, passes to service, transforms results.
-- **`<domain>.repository.ts`** — Kysely implementation of the repository interface.
-- **`<domain>.types.ts`** — Repository interfaces, port interfaces, and domain types. Repositories have `withTransaction()` for atomicity.
-- **`<domain>.tokens.ts`** — (Optional) NestJS injection tokens when abstract classes/interfaces need a DI symbol.
+- **`<domain>.module.ts`** —— NestJS `DynamicModule`，提供 `static register(databaseUrl)` 与 `static forTest(mock)` 工厂。生产装配创建真实的 Kysely 仓库；测试装配接受 mock 服务。
+- **`<domain>.service.ts`** —— 纯业务逻辑，依赖仓库接口与端口抽象（不依赖 NestJS 或 HTTP）。
+- **`<domain>.controller.ts`** —— NestJS 控制器，薄委托给服务：提取 header/参数、传给服务、转换结果。
+- **`<domain>.repository.ts`** —— 仓库接口的 Kysely 实现。
+- **`<domain>.types.ts`** —— 仓库接口、端口接口与领域类型。仓库通过 `withTransaction()` 保证原子性。
+- **`<domain>.tokens.ts`** ——（可选）当抽象类/接口需要 DI 符号时的 NestJS 注入令牌。
 
-### Module Registration
+### 模块注册
 
-`ApiModule.register(databaseUrl)` is the composition root — it creates a fresh Kysely instance per module. This means each domain module gets its own database connection pool (max 10 each). The `forTest()` static method on each module accepts pre-built mock services, enabling isolated integration tests.
+`ApiModule.register(databaseUrl)` 是组合根 —— 它为每个模块创建新的 Kysely 实例，因此每个领域模块拥有独立的数据库连接池（每个最多 10 个）。各模块的 `forTest()` 静态方法接受预先构建的 mock 服务，从而支持隔离的集成测试。
 
-### Authorization Model
+### 授权模型
 
-`IdentityService.authorize()` performs RBAC: `super_admin` bypasses all checks; other roles match `{resourceType}.{action}` permissions. An `AudienceEvaluator` callback gates department-scoped visibility — replaced in tests.
+`IdentityService.authorize()` 执行 RBAC：`super_admin` 跳过所有检查；其他角色匹配 `{resourceType}.{action}` 权限。`AudienceEvaluator` 回调控制部门范围的可见性 —— 在测试中会被替换。
 
-### Transactional Outbox
+### 事务性 Outbox
 
-Background work (e.g., DingTalk notifications) is recorded atomically in `outbox_events` within the same database transaction as the originating change. The worker polls via `SELECT ... FOR UPDATE SKIP LOCKED`, dispatches to registered handlers, and records completion/failure. Handlers must be idempotent — delivery is at-least-once.
+后台工作（例如钉钉通知）会在与源变更相同的数据库事务中原子地写入 `outbox_events`。worker 通过 `SELECT ... FOR UPDATE SKIP LOCKED` 轮询、分发给已注册的处理器，并记录完成/失败状态。处理器必须幂等 —— 投递语义为 at-least-once（至少一次）。
 
-### Web App
+### Web 应用
 
-React SPA with React Router, Ant Design components, Tailwind CSS, and TanStack Query for server state. Currently a static shell — most pages are placeholder UIs representing planned feature areas. The app uses Ant Design's `ConfigProvider` with a custom theme from `@ai-hub/ui` and `zh_CN` locale.
+基于 React Router、Ant Design 组件、Tailwind CSS 与 TanStack Query 管理服务端状态的 React SPA。目前是静态外壳 —— 大部分页面是代表规划中功能区域的占位 UI。应用使用来自 `@ai-hub/ui` 的自定义主题，并通过 Ant Design 的 `ConfigProvider` 设置 `zh_CN` 语言环境。
 
-## Testing
+## 测试
 
-- **Unit tests**: In-memory repository implementations (e.g., `MemoryIdentityRepository` inside the test file). Services are tested in isolation; no database required.
-- **Integration tests**: Use `@ai-hub/testing` → `startPostgresTestContainer()` which spawns a testcontainers PostgreSQL instance. Set `TEST_DATABASE_URL` to use a shared database instead.
-- **Test runner**: Vitest (`vitest run`) for workspace packages. Node built-in test runner (`node --test`) for scripts.
-- **Test file convention**: Co-located `*.test.ts` files. Integration tests use `*.integration.test.ts`.
+- **单元测试**：内存版仓库实现（例如测试文件内的 `MemoryIdentityRepository`）。服务被隔离测试，无需数据库。
+- **集成测试**：使用 `@ai-hub/testing` → `startPostgresTestContainer()` 启动 testcontainers PostgreSQL 实例；也可以设置 `TEST_DATABASE_URL` 使用共享数据库。
+- **测试运行器**：workspace 包使用 Vitest（`vitest run`）；scripts 使用 Node 内置测试运行器（`node --test`）。
+- **测试文件约定**：与被测代码同目录的 `*.test.ts` 文件；集成测试使用 `*.integration.test.ts`。
 
-## Infrastructure Services (Docker Compose)
+## 基础设施服务（Docker Compose）
 
-| Service | Purpose |
-|---------|---------|
-| PostgreSQL 18.4 | Primary database (Kysely ORM) |
-| Garage v2.3 | S3-compatible object storage (dev/test only) |
-| ClamAV 1.4.5 | Malware scanning for uploaded artifacts |
-| Prometheus | Metrics collection from API and worker |
-| nginx | Reverse proxy, routes to web and API |
+| 服务            | 用途                              |
+| --------------- | --------------------------------- |
+| PostgreSQL 18.4 | 主数据库（Kysely ORM）            |
+| Garage v2.3     | 兼容 S3 的对象存储（仅开发/测试） |
+| ClamAV 1.4.5    | 上传制品的恶意软件扫描            |
+| Prometheus      | 收集 API 与 worker 的指标         |
+| nginx           | 反向代理，转发到 web 与 API       |
 
-## Key Design Decisions (ADRs)
+## 关键设计决策（ADR）
 
-- **ADR 0001**: React SPA + NestJS modular monolith (not Next.js, not microservices)
-- **ADR 0002**: PostgreSQL transactional outbox for background work (not Redis/AMQP)
-- **ADR 0003**: Garage for local S3-compatible storage (MinIO image was unavailable)
+- **ADR 0001**：React SPA + NestJS 模块化单体（不用 Next.js、不用微服务）
+- **ADR 0002**：后台工作使用 PostgreSQL 事务性 outbox（不用 Redis/AMQP）
+- **ADR 0003**：本地使用 Garage 作为 S3 兼容存储（MinIO 镜像不可用）

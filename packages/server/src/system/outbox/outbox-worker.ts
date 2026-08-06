@@ -52,7 +52,7 @@ export class OutboxWorker {
         const nextAvailableAt = new Date(this.now().getTime() + RETRY_DELAY_MS);
         await this.store.fail(event.id, errorCode, nextAvailableAt);
       } catch {
-        // A store failure must not prevent the rest of the claimed batch running.
+        // 存储失败不得阻止已认领批次中的其余事件继续运行。
       }
     } finally {
       this.metrics?.recordWorkerHandler(

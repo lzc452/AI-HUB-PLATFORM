@@ -108,9 +108,7 @@ export function Navigation() {
         path: ROUTES.notifications,
       },
     ];
-    return items.filter((item) =>
-      canSeeMenu(actor, item.allowedRoles ?? []),
-    );
+    return items.filter((item) => canSeeMenu(actor, item.allowedRoles ?? []));
   }, [actor, reviewPath]);
 
   const selectedKey = useMemo(() => {

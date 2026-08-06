@@ -35,17 +35,14 @@ export function useLikeDemand(demandId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => likeDemand(demandId as string),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["demands"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
   });
 }
 
 export function useAddDemandComment(demandId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      addDemandComment(demandId as string, body),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["demands"] }),
+    mutationFn: (body: string) => addDemandComment(demandId as string, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
   });
 }

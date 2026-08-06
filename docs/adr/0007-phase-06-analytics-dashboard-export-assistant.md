@@ -1,67 +1,25 @@
-# ADR 0007: Phase 6 analytics, dashboards, export, and external assistant boundaries
+# ADR 0007：阶段 6 分析、仪表盘、导出与外部助手边界
 
-- Status: Accepted for Phase 6 execution
-- Date: 2026-08-03
-- Decision owners: Product, platform engineering, security review
+- 状态：阶段 6 执行已接受
+- 日期：2026-08-03
+- 决策负责人：产品、平台工程、安全评审
 
-## Context
+## 背景
 
-Phase 5 is accepted at commit `4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5`.
-It provides the single-enterprise identity model, `ActorContext`, RBAC,
-audience authorization, PostgreSQL Audit/Outbox, governed application
-lifecycle, and AI demand lifecycle. Phase 6 needs trustworthy analytics and
-operator assistance without changing those business semantics or exposing
-employee identity and internal resources to an external system.
+阶段 5 在提交 `4a6e9e4c48ecfaaf8895db56741e7e0f7675b3d5` 通过。它提供了单企业身份模型、`ActorContext`、RBAC、受众授权、PostgreSQL 审计/Outbox、受治理的应用生命周期与 AI 需求生命周期。阶段 6 需要可信的分析与运营助手能力，同时不改变这些业务语义，也不向外部系统暴露员工身份与内部资源。
 
-## Decisions
+## 决策
 
-The analytics base schema is migration `0008`; the separately sequenced `0009`
-migration is the focused export-job schema extension. Both migrations are
-owned by Phase 6 and are covered by PostgreSQL integration tests. Sequenced
-migrations `0010` and `0011` provision the analytics RBAC roles and carry the
-metric version into daily aggregate rows. The existing worker runs retention
-and overdue-review scans at startup and daily thereafter; retention deletion
-uses a `SECURITY DEFINER` database function, and dashboard/export ranges are
-bounded by the retained 180-day window.
+分析基础 schema 是迁移 `0008`；独立排序的 `0009` 迁移是聚焦的导出任务 schema 扩展。两个迁移都由阶段 6 负责，并受 PostgreSQL 集成测试覆盖。排序迁移 `0010` 与 `0011` 配置分析 RBAC 角色，并将指标版本带入每日聚合行。现有 worker 在启动时及此后每天运行保留清理与逾期评审扫描；保留删除使用 `SECURITY DEFINER` 数据库函数，仪表盘/导出时间范围受保留的 180 天窗口约束。
 
-1. Record normalized raw behavior events as the analytics source of truth.
-   Events retain only the approved event payload, actor reference, aggregate
-   reference, audience context, and occurred-at time; no `tenant_id` is added.
-2. Keep raw events for 180 days. Daily aggregates are derived state and can be
-   rebuilt from the retained raw events for any permitted time range. A
-   retention job writes its deletion/rebuild audit record and never deletes
-   Phase 3–5 business records.
-3. Fixed dashboards read a versioned metric dictionary and daily aggregates.
-   Each metric declares source events, formula, time range, audience, required
-   permission, and re-computation procedure. Dashboard queries apply
-   `ActorContext`, RBAC, and audience predicates before aggregation output.
-4. Background export is an authenticated, permission-checked application
-   capability. Every request, denial, row policy decision, completion/failure,
-   and download is audited and emits an Outbox lifecycle event. Export
-   payloads use the same anonymous projection as ordinary reads and never
-   include an employee access list to an application owner.
-5. The Dify adapter is an outbound boundary, not a public Open API. It sends
-   only the minimum authorized, redacted context after an explicit assistant
-   authorization review. It never sends employee IDs, employee numbers,
-   internal URLs, files, QR codes, or anonymous identities. Failures return a
-   safe local fallback and remain auditable. Its context accepts only canonical
-   metric/day/unit/value fields and redacts identifiers, URLs, files, QR data,
-   and Chinese or English equivalents before the provider call.
-6. DingTalk work notifications are represented by a fixed scenario matrix and
-   delivered through the existing transactional Outbox. Production queueing
-   requires both the recipient role and the aggregate resource relationship;
-   the Worker owns the post-commit `notification.created` handler. External
-   credentials and production deployment remain Phase 7 concerns.
-7. No Redis, Elasticsearch, message queue, Kubernetes, microservice,
-   tenant model, or Phase 7 production/security/operations implementation is
-   introduced.
+1. 记录规范化原始行为事件作为分析的事实来源。事件只保留已批准的事件载荷、操作者引用、聚合引用、受众上下文与发生时间；不新增 `tenant_id`。
+2. 原始事件保留 180 天。每日聚合是派生状态，可在任何允许的时间范围内从保留的原始事件重建。保留任务写入其删除/重建审计记录，绝不删除阶段 3–5 的业务记录。
+3. 固定仪表盘读取带版本的指标字典与每日聚合。每个指标声明源事件、公式、时间范围、受众、所需权限与重算流程。仪表盘查询在聚合输出前应用 `ActorContext`、RBAC 与受众谓词。
+4. 后台导出是经过认证与权限校验的应用能力。每个请求、拒绝、行策略决策、完成/失败与下载都会被审计并发出 Outbox 生命周期事件。导出载荷使用与普通读取相同的匿名投影，绝不在应用所有者处包含员工访问列表。
+5. Dify 适配器是出站边界，而非公开 Open API。它仅在显式助手授权评审后发送最小授权的脱敏上下文；绝不发送员工 ID、员工编号、内部 URL、文件、二维码或匿名身份。失败时返回安全的本地降级并保持可审计。其上下文只接受规范的指标/日期/单位/数值字段，并在调用提供商前对标识符、URL、文件、二维码数据及其中英文等价形式进行脱敏。
+6. 钉钉工作通知由固定场景矩阵表示，并通过现有事务性 Outbox 投递。生产入队要求同时满足收件人角色与聚合资源关系；Worker 拥有提交后 `notification.created` 处理器。外部凭据与生产部署仍是阶段 7 的关注点。
+7. 不引入 Redis、Elasticsearch、消息队列、Kubernetes、微服务、租户模型或阶段 7 的生产/安全/运维实现。
 
-## Consequences
+## 影响
 
-The analytics module remains a bounded context in the modular monolith. Raw
-events make dashboard numbers reproducible, while precomputed daily rows keep
-fixed dashboard reads bounded. Permission and anonymity decisions are made at
-the application boundary before data leaves the platform; the Dify provider
-cannot become an alternate identity or data-access path. Rebuilds, exports,
-assistant requests, and notifications have explicit audit evidence and can be
-tested with fake adapters plus real PostgreSQL/API e2e.
+分析模块仍是模块化单体中的有界上下文。原始事件使仪表盘数字可复现，预计算的每日行使固定仪表盘读取保持有界。权限与匿名决策在数据离开平台前于应用边界作出；Dify 提供商不可能成为备选的身份或数据访问路径。重建、导出、助手请求与通知都有明确的审计证据，可通过假适配器加真实 PostgreSQL/API e2e 测试。

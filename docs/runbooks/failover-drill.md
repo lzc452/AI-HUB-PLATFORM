@@ -1,49 +1,31 @@
-# Phase 7 Failure and Recovery Drill Runbook
+# 阶段 7 故障与恢复演练 Runbook
 
-This runbook defines the evidence required for a production-like drill. The
-repository validator is a contract test only; a passing local or disposable
-environment is not production evidence.
+本 runbook 定义一次生产级演练所需的证据。仓库内的校验器只是契约测试；通过本地或一次性环境并不构成生产证据。
 
-## Preconditions
+## 前置条件
 
-1. Record the drill ID, operator, approver, UTC start time, active host,
-   standby host, DNS health-check result, PostgreSQL LSN/replication lag, WAL
-   archive location, object-storage replication watermark, and alert channel.
-2. Confirm a fresh backup and a known-good restore target. Confirm fencing is
-   available before any promotion or write traffic is enabled.
-3. Confirm the rollback owner and abort authority. Do not run a drill against
-   an unapproved production customer window.
+1. 记录演练 ID、操作人员、审批人、UTC 开始时间、活动主机、备主机、DNS 健康检查结果、PostgreSQL LSN/复制延迟、WAL 归档位置、对象存储复制水位线与告警渠道。
+2. 确认存在最新备份与已知良好的恢复目标。在启用任何提升或写入流量前确认隔离（fencing）可用。
+3. 确认回滚负责人与中止权限。不得在未经批准的生产客户窗口内进行演练。
 
-## Ordered scenarios
+## 有序场景
 
-Run one scenario per evidence package. Stop if the preceding restore or
-fencing check fails.
+每个证据包只运行一个场景。如果前置的恢复或隔离（fencing）检查失败，立即停止。
 
-| Scenario | Injected failure | Required control evidence | Recovery proof |
+| 场景 | 注入的故障 | 必需的控制证据 | 恢复证明 |
 | --- | --- | --- | --- |
-| DNS cutover | Mark active health check failed | `dns-cutover`, old endpoint fenced | API health, write/read check, DNS TTL observation |
-| PostgreSQL failure | Isolate primary database | `standby-promoted`, old primary fenced | migration/schema check, write/read check, backup restore checksum |
-| Object-storage failure | Isolate primary bucket/site | `object-storage-cutover`, old site fenced | manifest checksum, upload/download check, restore checksum |
+| DNS 切换 | 将活动健康检查标记为失败 | `dns-cutover`，旧端点已隔离（fenced） | API 健康、读写检查、DNS TTL 观测 |
+| PostgreSQL 故障 | 隔离主数据库 | `standby-promoted`，旧主库已隔离（fenced） | 迁移/schema 检查、读写检查、备份恢复校验和 |
+| 对象存储故障 | 隔离主桶/站点 | `object-storage-cutover`，旧站点已隔离（fenced） | 清单校验和、上传/下载检查、恢复校验和 |
 
-For every scenario, capture monotonic UTC timestamps for last replication,
-failure injection, fencing, cutover/promotion, health recovery, and restore
-verification. The validator derives RPO from last replication to failure and
-RTO from failure to writes restored; evidence must prove `rpoSeconds <= 900`
-and `rtoSeconds <= 7200`.
+每个场景都要记录最后复制、故障注入、隔离（fencing）、切换/提升、健康恢复与恢复验证的单调递增 UTC 时间戳。校验器从最后复制到故障推导 RPO，从故障到写入恢复推导 RTO；证据必须证明 `rpoSeconds <= 900` 且 `rtoSeconds <= 7200`。
 
-## Abort and rollback
+## 中止与回滚
 
-- Abort if fencing is not confirmed, replication lag exceeds the declared RPO,
-  checksum verification fails, or writes could reach both sides.
-- Re-fence the promoted side before reversing traffic. Restore the last known
-  good backup if data checks fail; never use an automatic destructive database
-  rollback.
-- Attach command output, alert notifications, timestamps, and operator signoff
-  to the evidence package. Record all deviations as unresolved findings.
+- 出现以下任一情况即中止：隔离（fencing）未确认、复制延迟超过声明 RPO、校验和验证失败，或写入可能同时到达两侧。
+- 在反转流量前重新隔离（fence）已提升一侧。数据检查失败时恢复最近一次已知良好的备份；绝不允许自动执行破坏性数据库回滚。
+- 将命令输出、告警通知、时间戳与操作人员签核附加到证据包。所有偏差记录为未解决发现项。
 
-## Evidence status
+## 证据状态
 
-The repository currently contains the validator and runbook contract only.
-Real Ubuntu hosts, DNS control, backup media, storage endpoints, credentials,
-alert receivers, and an approved drill window are external prerequisites and
-must be completed before this runbook can be marked passed.
+仓库目前只包含校验器与 runbook 契约。真实 Ubuntu 主机、DNS 控制权、备份介质、存储端点、凭据、告警接收人与获批的演练窗口都是外部前置条件，必须在可标记本 runbook 通过前完成。

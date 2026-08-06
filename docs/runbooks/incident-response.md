@@ -1,38 +1,24 @@
-# Phase 7 Incident Response Runbook
+# 阶段 7 事件响应 Runbook
 
-## First ten minutes
+## 最初十分钟
 
-1. Declare the incident and assign incident commander, operations lead,
-   database/storage lead, and communications owner.
-2. Record UTC timestamps, affected host, public origin, current DNS answer,
-   database role/LSN, object-storage site, and the latest alert payload.
-3. Preserve logs and audit records. Do not disable authorization, CSRF,
-   anti-replay, audit, Outbox, or migration safeguards to restore traffic.
-4. Fence the suspected active writer before any promotion or storage cutover.
+1. 宣布事件，并指定事件指挥、运维负责人、数据库/存储负责人与沟通负责人。
+2. 记录 UTC 时间戳、受影响主机、公网源站、当前 DNS 应答、数据库角色/LSN、对象存储站点与最新告警载荷。
+3. 保留日志与审计记录。不得为恢复流量而禁用授权、CSRF、防重放、审计、Outbox 或迁移防护。
+4. 在任何提升或存储切换之前，先隔离（fence）疑似活动写入端。
 
-## Decision rules
+## 决策规则
 
-- Use the internal DNS health-based switch only after the active endpoint is
-  fenced and the standby health checks are green.
-- Promote PostgreSQL manually only after fresh-backup, WAL/archive, replay,
-  and fencing checks are recorded.
-- Switch object storage only after the replication manifest and checksum are
-  verified; record the replication watermark and any conflicts.
-- If evidence cannot demonstrate RPO <= 15 minutes or RTO <= 2 hours, keep the
-  service in the declared degraded state and escalate rather than claiming the
-  target was met.
+- 仅在活动端点已隔离（fenced）且备端健康检查为绿色后，才使用内部 DNS 基于健康度的切换。
+- 仅在记录最新备份、WAL/归档、重放与隔离（fencing）检查后，才手动提升 PostgreSQL。
+- 仅在复制清单与校验和验证通过后，才切换对象存储；记录复制水位线与任何冲突。
+- 若证据无法证明 RPO <= 15 分钟或 RTO <= 2 小时，保持服务处于已声明的降级状态并升级处理，而不是宣称目标已达成。
 
-## Recovery and closure
+## 恢复与关闭
 
-1. Run authenticated API, worker health, web origin, permission, audit, and
-   representative read/write checks.
-2. Verify no duplicate writes, missing audit entries, stuck Outbox rows, or
-   schema drift. Preserve the database and object-storage restore checksums.
-3. Communicate impact and recovery timestamps. Open corrective actions for
-   every failed or unmeasured control.
-4. Close only when the incident commander approves the evidence package and
-   the post-incident review records root cause, containment, recovery, and
-   follow-up owners.
+1. 运行已认证 API、worker 健康、Web 源站、权限、审计与代表性读写检查。
+2. 确认没有重复写入、缺失审计条目、卡住的 Outbox 行或 schema 漂移。保留数据库与对象存储的恢复校验和。
+3. 通报影响与恢复时间戳。为每个失败或未测量的控制项开启纠正行动。
+4. 只有事件指挥批准证据包，且事后评审记录了根因、遏制、恢复与后续负责人后，才能关闭事件。
 
-This runbook is operational guidance, not evidence that a production incident
-or recovery drill has occurred.
+本 runbook 属于运维指引，不构成生产事件或恢复演练已发生的证据。

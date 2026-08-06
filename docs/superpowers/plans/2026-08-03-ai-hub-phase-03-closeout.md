@@ -1,59 +1,59 @@
-# Phase 3 Closeout Implementation Plan
+# 阶段 3 收尾实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans or inline TDD execution. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **给智能体工作者：** 必需子技能：使用 superpowers:executing-plans 或内联 TDD 执行。步骤使用复选框（`- [ ]`）语法跟踪。
 
-**Goal:** Close the approved Phase 3 gaps so application ownership, artifact verification, review operations, and four-channel publication are real protected workflows rather than isolated baselines.
+**目标：** 关闭已批准的阶段 3 缺口，使应用所有权、制品校验、评审操作与四渠道发布成为真正受保护的工作流，而不是孤立的基线。
 
-**Status:** Completed. Final fresh workspace gate passed; local commit/tag is the archive boundary.
+**状态：** 已完成。最终的全新工作区门禁通过；本地提交/标签为归档边界。
 
-**Architecture:** Extend the existing application module and migration `0003` while Phase 3 is still uncommitted. The application service receives verified artifact evidence from the artifact pipeline, persists owner/maintainer/department fields, and records review-pool/SLA/notification state in the same transaction as audit and outbox events. The API e2e suite uses a real Nest module and real application service/repository against PostgreSQL; delivery channels are verified through independent published delivery records.
+**架构：** 在阶段 3 尚未提交时扩展现有 application 模块与迁移 `0003`。应用服务从制品流水线接收已验证的制品证据，持久化 owner/maintainer/department 字段，并在与审计和 outbox 事件相同的事务中记录评审池/SLA/通知状态。API e2e 套件针对 PostgreSQL 使用真实的 Nest 模块与真实的应用服务/仓库；交付渠道通过独立的已发布交付记录验证。
 
-**Tech Stack:** TypeScript strict mode, NestJS 10, Kysely, PostgreSQL 18, Vitest, Supertest, React/Vite, Docker Desktop.
+**技术栈：** TypeScript 严格模式、NestJS 10、Kysely、PostgreSQL 18、Vitest、Supertest、React/Vite、Docker Desktop。
 
-## Confirmed scope decisions
+## 已确认的范围决策
 
-- Phase 3 includes `owner_employee_id`, `maintainer_employee_id`, and `department_id`.
-- Web, desktop, mobile, and mini-program end-to-end publication is a Phase 3 gate.
-- Review pool, claim/release, SLA timestamps/status, and Outbox notification events are the Phase 3 minimum review-operations scope. External notification delivery and a full operations UI are deferred.
+- 阶段 3 包含 `owner_employee_id`、`maintainer_employee_id` 与 `department_id`。
+- Web、桌面、移动端与小程序端到端发布是阶段 3 的门禁。
+- 评审池、认领/释放、SLA 时间戳/状态与 Outbox 通知事件是阶段 3 评审运维的最小范围。外部通知投递与完整运维 UI 延后。
 
-## Global constraints
+## 全局约束
 
-- Preserve the single-enterprise model; do not add `tenant_id`.
-- Consume Phase 2 `ActorContext` and authorization only.
-- A version cannot be persisted as reviewable or publishable unless the pipeline returns accepted verification evidence.
-- All state-changing application, review-pool, SLA, delivery, and notification writes use one transaction boundary.
-- Keep the four delivery channels independent.
+- 保持单企业模型；不新增 `tenant_id`。
+- 只消费阶段 2 的 `ActorContext` 与授权。
+- 除非流水线返回已接受的校验证据，否则版本不能被持久化为可评审或可发布状态。
+- 所有状态变更的应用、评审池、SLA、交付与通知写入使用同一个事务边界。
+- 保持四个交付渠道相互独立。
 
-## Ordered tasks
+## 有序任务
 
-### Task 1: Ownership and artifact verification contract
+### 任务 1：所有权与制品校验契约
 
-- [x] Add failing service tests for maintainer/department persistence and rejection of unverified artifact evidence.
-- [x] Add failing pipeline/service integration test proving only an accepted `ArtifactVerificationResult` can create a version.
-- [x] Extend contracts, schema, migration, repository mappings, and service inputs.
-- [x] Run focused tests, then server/database typecheck and lint.
+- [x] 为 maintainer/department 持久化与拒绝未校验制品证据添加失败的服务测试。
+- [x] 添加失败的流水线/服务集成测试，证明只有已接受的 `ArtifactVerificationResult` 才能创建版本。
+- [x] 扩展契约、schema、迁移、仓库映射与服务输入。
+- [x] 运行定向测试，然后运行 server/database 的 typecheck 与 lint。
 
-### Task 2: Review pool and SLA minimum
+### 任务 2：评审池与 SLA 最小范围
 
-- [x] Add failing service tests for pool entry, reviewer claim, claim release, self-claim rejection, SLA deadline, and notification outbox events.
-- [x] Add review-pool table/schema/contracts and transaction-aware repository methods.
-- [x] Implement protected service/API routes and deterministic SLA status calculation.
-- [x] Run focused service/API tests and database schema integration.
+- [x] 为评审池入池、评审人认领、认领释放、自认领拒绝、SLA 截止时间与通知 outbox 事件添加失败的服务测试。
+- [x] 添加评审池表/schema/契约与事务感知的仓库方法。
+- [x] 实现受保护的服务/API 路由与确定性 SLA 状态计算。
+- [x] 运行定向服务/API 测试与数据库 schema 集成。
 
-### Task 3: Real lifecycle and four-channel API e2e
+### 任务 3：真实生命周期与四渠道 API e2e
 
-- [x] Add real application module/repository lifecycle assertions against PostgreSQL alongside the isolated contract test.
-- [x] Add reviewer and owner identities, authorization denial, reject, approve, publish, withdraw, archive, rollback, and old-version-readability assertions.
-- [x] Verify each delivery channel has an independently addressable entry and publication requires all four enabled records.
-- [x] Run uncached API/database e2e tests.
+- [x] 在隔离契约测试之外，针对 PostgreSQL 添加真实 application 模块/仓库生命周期断言。
+- [x] 添加评审人与所有者身份、授权拒绝、驳回、审批、发布、撤回、归档、回滚与旧版本可读性断言。
+- [x] 验证每个交付渠道都有可独立寻址的入口，且发布要求四个启用记录齐全。
+- [x] 运行无缓存的 API/database e2e 测试。
 
-### Task 4: Review and handoff
+### 任务 4：评审与交接
 
-- [x] Update the Phase 3 plan checkboxes, execution ledger, ADR, and processing visualization with factual closeout evidence.
-- [x] Run format, lint, typecheck, boundaries, tests, build, docs link validation, and compose config.
-- [x] Perform diff review and commit/tag the Phase 3 closeout without pushing or merging unless separately authorized.
-- [x] Record the Phase 4 entry decision and remaining deferred risks.
+- [x] 用事实性的收尾证据更新阶段 3 计划复选框、执行台账、ADR 与处理可视化。
+- [x] 运行 format、lint、typecheck、boundaries、tests、build、文档链接校验与 compose config。
+- [x] 执行 diff 评审并提交/打标签阶段 3 收尾；未经单独授权不推送或合并。
+- [x] 记录阶段 4 进入决策与剩余延后风险。
 
-## Handoff decision
+## 交接决策
 
-Phase 4 is open. The only explicit deferrals are deployment adapters for production artifact storage/scanning/signing, external notification delivery, and a dedicated review-operations UI; they are recorded risks, not Phase 3 gate failures under the confirmed minimum scope.
+阶段 4 已开启。唯一的显式延后项是生产制品存储/扫描/签名的部署适配器、外部通知投递与专用评审运维 UI；它们是被记录的风险，而非已确认最小范围下的阶段 3 门禁失败。
