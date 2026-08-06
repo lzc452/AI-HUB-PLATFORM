@@ -1,5 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Alert, Button, Card, Form, Input, Typography } from "antd";
+import { AppstoreOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Card,
+  Divider,
+  Form,
+  Input,
+  Typography,
+  message,
+} from "antd";
 import { Controller, useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
@@ -40,14 +50,21 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="mx-auto max-w-md py-8">
-      <Card>
-        <div className="mb-6 space-y-2">
-          <Text type="secondary">企业内部 AI 应用共享平台</Text>
-          <Title level={1} className="!mb-0 !text-2xl">
-            员工登录
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f5f5] px-4 py-10">
+      <Card className="w-full max-w-md">
+        <div className="mb-6 flex flex-col items-center gap-1 text-center">
+          <AppstoreOutlined
+            aria-hidden="true"
+            className="mb-1 text-3xl text-[#1677ff]"
+          />
+          <Title level={2} className="!mb-0">
+            AI 应用市场
           </Title>
+          <Text type="secondary">企业内部 AI 应用共享平台</Text>
         </div>
+        <Title level={3} className="!mb-4 text-center">
+          员工登录
+        </Title>
         {error ? (
           <Alert
             className="!mb-4"
@@ -71,6 +88,7 @@ export default function LoginPage() {
                   {...field}
                   aria-label="员工工号"
                   autoComplete="username"
+                  placeholder="工号 / 邮箱"
                 />
               )}
             />
@@ -93,9 +111,19 @@ export default function LoginPage() {
             />
           </Form.Item>
           <Button block htmlType="submit" loading={isLoading} type="primary">
-            登录
+            登 录
           </Button>
         </form>
+        <Divider plain>或</Divider>
+        <Button
+          block
+          onClick={() => message.info("钉钉登录暂未配置，请联系管理员")}
+        >
+          钉钉扫码登录
+        </Button>
+        <p className="mt-5 text-center text-sm text-[#595959]">
+          首次使用？请联系管理员开通账号
+        </p>
       </Card>
     </div>
   );

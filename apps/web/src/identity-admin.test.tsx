@@ -11,14 +11,14 @@ describe("identity administration routes", () => {
   it("exposes organization and security administration routes", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /Organization/ }));
+    fireEvent.click(screen.getByRole("link", { name: /组织管理/ }));
     expect(
-      await screen.findByRole("heading", { name: "Organization" }),
+      await screen.findByRole("heading", { name: "组织管理" }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("link", { name: /Security/ }));
+    fireEvent.click(screen.getByRole("link", { name: /系统安全/ }));
     expect(
-      await screen.findByRole("heading", { name: "Security" }),
+      await screen.findByRole("heading", { name: "系统安全" }),
     ).toBeInTheDocument();
   });
 });

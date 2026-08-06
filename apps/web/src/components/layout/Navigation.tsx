@@ -85,14 +85,14 @@ export function Navigation() {
         allowedRoles: [ROLE_ORG_ADMIN, ROLE_SUPER_ADMIN],
         icon: <TeamOutlined aria-hidden="true" />,
         key: "organization",
-        label: "Organization",
+        label: "组织管理",
         path: ROUTES.organization,
       },
       {
         allowedRoles: [ROLE_SUPER_ADMIN],
         icon: <SafetyCertificateOutlined aria-hidden="true" />,
         key: "security",
-        label: "Security",
+        label: "系统安全",
         path: ROUTES.security,
       },
       {

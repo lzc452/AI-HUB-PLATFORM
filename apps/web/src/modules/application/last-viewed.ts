@@ -11,3 +11,12 @@ export function readLastViewedApplicationId(): string | undefined {
     return undefined;
   }
 }
+
+/** 记录最近查看的应用 id（Header/侧边栏入口依赖该值）。 */
+export function rememberLastViewedApplicationId(id: string): void {
+  try {
+    globalThis.sessionStorage?.setItem(LAST_VIEWED_APPLICATION_KEY, id);
+  } catch {
+    // sessionStorage 不可用时仅忽略
+  }
+}

@@ -1,11 +1,14 @@
-import { Alert, Button, Spin, Tag, Typography } from "antd";
+import { Button, Spin, Tag, Typography } from "antd";
 
+import { EmptyBlock } from "../../components/common/EmptyBlock";
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { PageHeader } from "../../components/common/PageHeader";
 import {
   useMarkNotificationRead,
   useNotifications,
 } from "../../modules/notification/useNotification";
 
-const { Paragraph, Text, Title } = Typography;
+const { Paragraph, Text } = Typography;
 
 function formatCreatedAt(timestamp: string) {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -16,36 +19,25 @@ function formatCreatedAt(timestamp: string) {
 }
 
 export default function NotificationsPage() {
-  const { data, error, isError, isPending } = useNotifications();
+  const { data, error, isError, isPending, refetch } = useNotifications();
   const markRead = useMarkNotificationRead();
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="notifications-heading" className="space-y-3">
-        <Text type="secondary">Phase 4 / In-app notification center</Text>
-        <Title id="notifications-heading" level={1} className="!mb-0">
-          站内通知
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          业务通知保留在站内；钉钉投递失败会进入可重试状态。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description="业务通知保留在站内；钉钉投递失败会进入可重试状态。"
+        title="站内通知"
+      />
       {isPending ? <Spin aria-label="通知加载中" /> : null}
       {isError ? (
-        <Alert
+        <ErrorBlock
           description={error.message}
-          showIcon
+          onRetry={() => void refetch()}
           title="通知加载失败"
-          type="error"
         />
       ) : null}
       {data && data.length === 0 ? (
-        <Alert
-          showIcon
-          type="info"
-          title="暂无未读通知"
-          description="通知中心会显示审核、下架、举报处理和安全告警等事件。"
-        />
+        <EmptyBlock description="暂无通知" />
       ) : null}
       {data && data.length > 0 ? (
         <ul className="m-0 list-none space-y-3 p-0" aria-label="通知列表">
@@ -62,7 +54,9 @@ export default function NotificationsPage() {
                     </Tag>
                     <Text type="secondary">{notification.eventType}</Text>
                   </div>
-                  <Paragraph className="!mb-0">{notification.message}</Paragraph>
+                  <Paragraph className="!mb-0">
+                    {notification.message}
+                  </Paragraph>
                   <Text type="secondary" className="text-xs">
                     {formatCreatedAt(notification.createdAt)}
                   </Text>

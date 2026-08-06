@@ -1,8 +1,10 @@
-import { Alert, Spin, Table, Tag, Typography } from "antd";
+import { Spin, Table, Tag, Typography } from "antd";
 
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { PageHeader } from "../../components/common/PageHeader";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 
-const { Paragraph, Text, Title } = Typography;
+const { Title } = Typography;
 
 const employeeStatusText: Record<string, string> = {
   active: "在职",
@@ -16,26 +18,27 @@ export default function OrganizationPage() {
   const departments = useDepartments();
 
   const isPending = employees.isPending || departments.isPending;
-  const firstError = employees.isError ? employees.error : departments.isError ? departments.error : null;
+  const firstError = employees.isError
+    ? employees.error
+    : departments.isError
+      ? departments.error
+      : null;
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="organization-heading" className="space-y-3">
-        <Text type="secondary">Phase 2 / Identity and organization</Text>
-        <Title id="organization-heading" level={1} className="!mb-0">
-          Organization
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          员工与部门数据来自内部身份 API，当前为只读视图。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description="员工与部门数据来自内部身份 API，当前为只读视图。"
+        title="组织管理"
+      />
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
       {firstError ? (
-        <Alert
+        <ErrorBlock
           description={firstError.message}
-          showIcon
+          onRetry={() => {
+            void employees.refetch();
+            void departments.refetch();
+          }}
           title="组织数据加载失败"
-          type="error"
         />
       ) : null}
       <div className="grid gap-4 lg:grid-cols-2">

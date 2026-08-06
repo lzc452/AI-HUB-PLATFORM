@@ -1,22 +1,28 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
 import { LikeOutlined } from "@ant-design/icons";
-import { Alert, Button, Rate, Space, Spin, Tag, Typography } from "antd";
+import { Alert, Button, Rate, Space, Tag, Typography } from "antd";
+import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { NotFoundBlock } from "../../components/common/NotFoundBlock";
+import { PageHeader } from "../../components/common/PageHeader";
+import { SkeletonDetail } from "../../components/common/SkeletonDetail";
+import { rememberLastViewedApplicationId } from "../../modules/application/last-viewed";
 import {
   useRateApplication,
   useToggleLike,
 } from "../../modules/interaction/useInteraction";
 import { useCatalogEntry } from "../../modules/marketplace/useCatalog";
 
-const { Paragraph, Text, Title } = Typography;
+const { Text, Title } = Typography;
 
 const channelMeta: Record<DeliveryChannel, { action: string; title: string }> =
   {
-    desktop: { action: "下载已签名安装包", title: "Desktop" },
-    mini_program: { action: "展示可解析二维码", title: "Mini-program" },
-    mobile: { action: "查看移动端交付", title: "Mobile" },
-    web: { action: "打开内网应用", title: "Web" },
+    desktop: { action: "下载已签名安装包", title: "桌面端" },
+    mini_program: { action: "展示可解析二维码", title: "小程序" },
+    mobile: { action: "查看移动端交付", title: "移动端" },
+    web: { action: "打开内网应用", title: "Web 应用" },
   };
 
 export default function MarketplaceDetailPage() {
@@ -25,35 +31,39 @@ export default function MarketplaceDetailPage() {
   const toggleLike = useToggleLike(applicationId);
   const rateApplication = useRateApplication(applicationId);
 
+  useEffect(() => {
+    if (applicationId) {
+      rememberLastViewedApplicationId(applicationId);
+    }
+  }, [applicationId]);
+
   if (isPending) {
-    return <Spin aria-label="应用详情加载中" />;
+    return <SkeletonDetail />;
   }
 
   if (isError || !data) {
+    if (error?.message.includes("403")) {
+      return <NotFoundBlock description="您没有访问此应用的权限" />;
+    }
     return (
-      <Alert
+      <ErrorBlock
         description={error?.message ?? "应用不存在或当前员工无权访问。"}
-        showIcon
         title="应用详情加载失败"
-        type="error"
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      <section
-        aria-labelledby="marketplace-detail-heading"
-        className="space-y-3"
-      >
-        <Text type="secondary">已发布应用 / 受众权限过滤</Text>
-        <Title id="marketplace-detail-heading" level={1} className="!mb-0">
-          {data.name}
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          {data.summary}
-        </Paragraph>
-      </section>
+      <PageHeader
+        actions={
+          <Button disabled title="交付动作接口待接入" type="primary">
+            开始使用
+          </Button>
+        }
+        description={data.summary}
+        title={data.name}
+      />
       <section aria-label="应用互动" className="space-y-3">
         <Space size="large" wrap>
           <Button

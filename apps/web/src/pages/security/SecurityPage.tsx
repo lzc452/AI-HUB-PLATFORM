@@ -1,32 +1,28 @@
-import { Alert, Button, Descriptions, Spin, Tag, Typography } from "antd";
+import { Button, Descriptions, Spin, Tag, Typography } from "antd";
 
+import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { PageHeader } from "../../components/common/PageHeader";
 import { useAuth } from "../../modules/auth/useAuth";
 import { useActor } from "../../modules/auth/useIdentity";
 
-const { Paragraph, Text, Title } = Typography;
+const { Text, Title } = Typography;
 
 export default function SecurityPage() {
-  const { data, error, isError, isPending } = useActor();
+  const { data, error, isError, isPending, refetch } = useActor();
   const { logout } = useAuth();
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="security-heading" className="space-y-3">
-        <Text type="secondary">Phase 2 / Security</Text>
-        <Title id="security-heading" level={1} className="!mb-0">
-          Security
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          当前登录身份、角色与部门授权来自内部身份 API；会话可在此处退出。
-        </Paragraph>
-      </section>
+      <PageHeader
+        description="当前登录身份、角色与部门授权来自内部身份 API；会话可在此处退出。"
+        title="系统安全"
+      />
       {isPending ? <Spin aria-label="身份信息加载中" /> : null}
       {isError ? (
-        <Alert
+        <ErrorBlock
           description={error.message}
-          showIcon
+          onRetry={() => void refetch()}
           title="身份信息加载失败"
-          type="error"
         />
       ) : null}
       {data ? (
