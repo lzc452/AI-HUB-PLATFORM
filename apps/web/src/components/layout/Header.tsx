@@ -1,7 +1,5 @@
 import { Layout, Tag } from "antd";
 
-import { Navigation } from "./Navigation";
-
 const { Header: LayoutHeader } = Layout;
 
 export function Header() {
@@ -27,7 +25,6 @@ export function Header() {
           </div>
           <Tag color="blue">Phase 01 / Foundation</Tag>
         </div>
-        <Navigation />
       </div>
     </LayoutHeader>
   );

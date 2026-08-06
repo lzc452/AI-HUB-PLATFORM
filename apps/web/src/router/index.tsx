@@ -54,12 +54,12 @@ const SecurityPage = lazy(() => import("../pages/security/SecurityPage"));
 export function createRouter() {
   return createBrowserRouter([
     {
+      element: <LoginPage />,
+      path: ROUTES.login,
+    },
+    {
       element: <AppShell />,
       children: [
-        {
-          element: <LoginPage />,
-          path: ROUTES.login,
-        },
         {
           element: <RequireAuth />,
           children: [

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
@@ -142,6 +142,15 @@ describe("App", () => {
     expect(skipLink).toHaveFocus();
     expect(mainContent).toHaveAttribute("id", "main-content");
     expect(mainContent).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("renders a breadcrumb navigation on the marketplace page", async () => {
+    render(<App />);
+
+    const breadcrumb = await screen.findByRole("navigation", {
+      name: "面包屑",
+    });
+    expect(within(breadcrumb).getByText("应用市场")).toBeInTheDocument();
   });
 
   it("shows the permission-filtered marketplace by default", async () => {
