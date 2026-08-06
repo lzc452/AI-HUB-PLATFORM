@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
 import { PageHeader } from "../../components/common/PageHeader";
 import { SkeletonDetail } from "../../components/common/SkeletonDetail";
@@ -14,6 +15,7 @@ import {
   useToggleLike,
 } from "../../modules/interaction/useInteraction";
 import { useCatalogEntry } from "../../modules/marketplace/useCatalog";
+import { ApiError } from "../../shared/api/client";
 
 const { Text, Title } = Typography;
 
@@ -42,8 +44,11 @@ export default function MarketplaceDetailPage() {
   }
 
   if (isError || !data) {
-    if (error?.message.includes("403")) {
-      return <NotFoundBlock description="您没有访问此应用的权限" />;
+    if (error instanceof ApiError && error.status === 403) {
+      return <ForbiddenBlock description="您没有访问此应用的权限" />;
+    }
+    if (error instanceof ApiError && error.status === 404) {
+      return <NotFoundBlock />;
     }
     return (
       <ErrorBlock
