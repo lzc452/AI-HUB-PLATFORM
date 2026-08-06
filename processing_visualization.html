@@ -489,7 +489,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-05",
+        updatedAt: "2026-08-06",
         phases: [
           {
             id: "product",
@@ -505,12 +505,12 @@
           {
             id: "ui",
             name: "UI 设计",
-            progress: 30,
+            progress: 80,
             goal: "Web 壳、核心页面、组件与交互状态",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
               "五层架构已设计：pages/components/modules/router/shared",
-              "已交付 Kimi K3 接手前端实现",
+              "按 frontend-ui-design.md 完成管理后台布局重构与全页面中文换壳",
             ],
           },
           {
@@ -1246,8 +1246,31 @@
             skip:
               "未将演示账号接入生产 Compose 或正式迁移；未修改现有业务登录协议。",
           },
+          {
+            id: "t-019",
+            phase: "ui",
+            status: "已完成",
+            title: "前端页面样式与布局重构（frontend-ui-design.md v1.0）",
+            owner: "Codex",
+            start: "2026-08-06",
+            end: "2026-08-06",
+            progress:
+              "按 docs/ui-design/frontend-ui-design.md 完成管理后台布局壳（固定 56px Header + 可收起 Sidebar + 面包屑内容区）、Header 搜索/通知/用户菜单、角色感知侧边栏与公告区、应用市场页（排序/筛选/卡片/右侧栏/状态）、通用组件库、全页面简体中文换壳、独立登录页与 AI 助手页骨架；web 测试 25/25、typecheck、lint 通过。",
+            problem:
+              "原前端为顶部横向导航基础壳，与设计文档要求的侧边栏管理后台结构差异大，且页面标题中英混杂、缺少消息通知/用户菜单/AI 助手页。",
+            solution:
+              "按文档逐任务重构：先铺设计 token，再搭布局壳与面包屑，随后完成 Header、Sidebar、市场页、通用组件与全部页面中文换壳，并新增 /assistant 路由与页面。",
+            skip:
+              "发布向导、审核操作流、版本 Diff、交付配置表单、组织/安全 Tab 业务功能未实现（仅换壳）；平台公告无 API 默认空态；钉钉登录与交付动作接口未接入；浏览器可视化核对因本会话无浏览器控制工具改为构建与冒烟验证。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-06",
+            phase: "ui",
+            title: "前端页面样式与布局重构完成",
+            body: "按 frontend-ui-design.md v1.0 将 apps/web 重构为管理后台布局：固定 56px Header（Logo/市场搜索/通知 Popover/用户菜单）、可收起 Sidebar（220/64px，角色过滤、底部公告）、面包屑内容区；市场页重做排序/筛选/卡片网格/右侧栏；全部页面统一简体中文与卡片化样式；新增 AI 助手页骨架。web 测试 25/25、typecheck 与 lint 全绿。",
+          },
           {
             date: "2026-08-05",
             phase: "dev",
