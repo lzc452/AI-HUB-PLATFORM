@@ -116,18 +116,24 @@ describe("App", () => {
     expect(
       screen.getByRole("navigation", { name: "主导航" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /应用市场/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /创新广场/ })).toBeInTheDocument();
+    const primaryNavigation = screen.getByRole("navigation", {
+      name: "主导航",
+    });
+    expect(
+      within(primaryNavigation).getByRole("link", { name: /应用市场/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(primaryNavigation).getByRole("link", { name: /创新广场/ }),
+    ).toBeInTheDocument();
   });
 
-  it("lets the responsive header size itself to its content", () => {
+  it("keeps the header at the fixed 56px height", () => {
     render(<App />);
 
     expect(screen.getByRole("banner")).toHaveStyle({
       background: "#fff",
-      height: "auto",
-      lineHeight: "normal",
-      padding: "0px",
+      height: "56px",
+      lineHeight: "56px",
     });
   });
 

@@ -5,8 +5,11 @@ function TestIcon(props: ComponentPropsWithoutRef<"span">) {
 }
 
 export const AppstoreOutlined = TestIcon;
+export const AppstoreAddOutlined = TestIcon;
+export const BellOutlined = TestIcon;
 export const CheckCircleOutlined = TestIcon;
 export const ClockCircleOutlined = TestIcon;
+export const DashboardOutlined = TestIcon;
 export const DeploymentUnitOutlined = TestIcon;
 export const ExperimentOutlined = TestIcon;
 export const StarOutlined = TestIcon;
@@ -19,3 +22,10 @@ export const RightOutlined = TestIcon;
 export const ReadOutlined = TestIcon;
 export const QuestionCircleOutlined = TestIcon;
 export const SafetyCertificateOutlined = TestIcon;
+export const MenuFoldOutlined = TestIcon;
+export const MenuUnfoldOutlined = TestIcon;
+export const RobotOutlined = TestIcon;
+export const SendOutlined = TestIcon;
+export const SoundOutlined = TestIcon;
+export const TeamOutlined = TestIcon;
+export const UserOutlined = TestIcon;
