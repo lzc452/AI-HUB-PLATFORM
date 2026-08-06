@@ -12,6 +12,8 @@ export interface CatalogListResult {
 export interface CatalogSearchParams {
   query: string;
   sort: CatalogSort;
+  categoryId?: string | undefined;
+  pageSize?: number | undefined;
 }
 
 export function searchCatalog(
@@ -21,7 +23,11 @@ export function searchCatalog(
   if (params.query) {
     search.set("query", params.query);
   }
+  if (params.categoryId) {
+    search.set("categoryId", params.categoryId);
+  }
   search.set("sort", params.sort);
+  search.set("pageSize", `${params.pageSize ?? 20}`);
   return apiFetch<CatalogListResult>(`/internal/catalog?${search.toString()}`);
 }
 

@@ -49,8 +49,8 @@ describe("Phase 4 market shell", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("最新上架")).toBeInTheDocument();
     expect(screen.getByText("热门应用")).toBeInTheDocument();
-    expect(screen.getAllByText("已验证").length).toBeGreaterThan(0);
-    expect(screen.getByText("平台助手")).toBeInTheDocument();
+    expect(screen.getAllByText("已审核").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("平台助手").length).toBeGreaterThan(0);
   });
 
   it("exposes notification and creator center routes", async () => {

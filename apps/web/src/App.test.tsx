@@ -148,12 +148,10 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "应用市场" }),
+      await screen.findByRole("heading", { name: "发现企业内部 AI 应用" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "只展示当前员工有权访问的已发布应用，排序采用固定运营规则。",
-      ),
+      screen.getByText("统一查找、体验与共享各部门 AI 工具"),
     ).toBeInTheDocument();
   });
 
