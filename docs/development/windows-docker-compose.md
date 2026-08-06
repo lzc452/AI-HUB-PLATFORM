@@ -54,6 +54,78 @@ Open `http://127.0.0.1:8080`. Garage's S3 API is available at `http://127.0.0.1:
 
 Application and shared-package source directories are bind-mounted for hot reload. After changing a package manifest or `pnpm-lock.yaml`, rerun the first-start command to rebuild dependencies; database and object-storage volumes are preserved.
 
+> **Windows 用户注意**：Docker Desktop on Windows 无法将宿主机文件变更事件 (inotify) 可靠传递给 Linux 容器。即使 compose.dev.yaml 已配置 bind mount 和 watch 模式，全 Docker 开发模式下文件变更可能不会触发热更新。建议使用下方的「前后端分离开发」模式。
+
+## 前后端分离开发（推荐 Windows 用户）
+
+将基础设施服务（数据库、对象存储、病毒扫描）留在 Docker 中，API、前端和 Worker 直接在 Windows 宿主机上运行。宿主机原生文件监听不受 Docker VM 边界影响，改代码即时生效。
+
+### 前置条件
+
+- Node.js ≥ 18.18（推荐 24.15.0）已安装
+- pnpm 已安装（`corepack enable && corepack prepare pnpm@10.34.5 --activate`）
+- Docker Desktop 运行中
+
+### 环境变量
+
+在终端中设置 `DATABASE_URL` 指向宿主机端口（当前 workspace 使用 `5433`）：
+
+```powershell
+# 根据 .env 中的 POSTGRES_PORT 调整端口号
+$env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5433/ai_hub"
+```
+
+其他需要从 `.env` 注入的环境变量（如 `GARAGE_*`、`COOKIE_SECRET`）也需要一并设置，或直接使用 `.env` 文件配合 dotenv 工具加载。
+
+### 启动
+
+```powershell
+# 1. 启动公共服务（postgres、garage、clamav），只需一次
+pnpm dev:services
+
+# 首次启动需手动执行迁移和种子数据：
+pnpm migrate
+pnpm seed:demo-accounts
+
+# 2. 终端 A：启动后端 API
+pnpm dev:api
+# API 运行在 http://localhost:3000，tsx watch 监听文件变更自动重启
+
+# 3. 终端 B：启动前端
+pnpm dev:web
+# Vite 开发服务器运行在 http://localhost:5173
+# /internal 请求由 Vite 代理 → localhost:3000（API）
+# 修改代码后浏览器即时热更新（HMR）
+
+# 4. 终端 C（可选）：启动 Worker
+pnpm dev:worker
+```
+
+### 访问
+
+- 前端：`http://localhost:5173`（Vite 开发服务器，支持 HMR）
+- API：`http://localhost:3000/internal/health/live`
+- 完整栈（含 nginx）：`http://127.0.0.1:8080`（需先启动 proxy 容器）
+
+### 热更新对比
+
+| 操作 | 效果 |
+|------|------|
+| 修改 `apps/web/src/**` | 浏览器即时 HMR 更新（< 1 秒） |
+| 修改 `packages/server/src/**` | `tsx watch` 自动重启 API 进程（2–3 秒） |
+| 修改 `packages/database/src/**` | `tsx watch` 自动重启 API 进程 |
+| 新增 npm 依赖 | 在根目录执行 `pnpm install`，重新启动对应 dev 进程 |
+
+### 停止
+
+```powershell
+# 各终端按 Ctrl+C 停止 dev 进程
+# 停止 Docker 服务（保留数据卷）：
+docker compose -f compose.yaml -f compose.dev.yaml down
+# 完全清理（删除数据库和对象存储数据）：
+docker compose -f compose.yaml -f compose.dev.yaml down -v
+```
+
 ## Migrations
 
 The API applies migrations before it starts. To run them again explicitly:
