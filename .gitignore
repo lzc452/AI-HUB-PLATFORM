@@ -13,3 +13,5 @@ dist/
 .codex/local/
 .codex/*.local.*
 .codex/*.secret.*
+.workbuddy/
+2026.zip
