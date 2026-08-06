@@ -522,6 +522,8 @@
               "Phase 1–7 后端模块全部落地",
               "前端全部为静态壳体，API 零集成",
               "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
+              "新增业务演示数据 seed（应用/需求/互动/通知/分析）与 init:dev、init:production 统一入口",
+              "API Swagger 完整文档已接入（/internal/docs，开发/测试默认开启）",
               "外部集成均为 fake/unavailable adapter",
             ],
           },
@@ -532,9 +534,11 @@
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
-              "Web 18 tests 通过（含静态壳体验证）",
+              "server 106 tests, API 31 tests, DB 28 tests 通过",
+              "Web 25 tests 通过（含静态壳体验证）",
               "E2E/Playwright 尚未建立",
               "数据库 seed 2 tests、真实登录 API 6 tests 通过（本地 PostgreSQL）",
+              "demo-business seed 集成 2 tests、Swagger 文档真实 e2e 2 tests 通过",
             ],
           },
           {
@@ -961,6 +965,22 @@
         ],
         tasks: [
           {
+            id: "t-020",
+            phase: "product",
+            status: "已完成",
+            title: "项目设计流程图归档完成",
+            owner: "Codex",
+            start: "2026-08-06",
+            end: "2026-08-06",
+            progress:
+              "基于 V1 设计规格、项目路线图与当前代码结构生成 9 张 draw.io 设计流程图（系统架构、认证与组织、应用发布审核、创新需求闭环、市场与互动治理、数据看板与导出、V1 路线图、部署与运维、数据流转闭环），源文件与 PNG 导出归档至 docs/flowchart/，并附 README 索引与可复现生成脚本。",
+            problem:
+              "本会话未挂载 node_repl/browser 控制工具，无法在 Chrome 的 draw.io 界面内逐张人工校对与导出；PNG 改由同源 SVG 经本机 Chrome 无头渲染生成。",
+            solution:
+              "以标准 draw.io（mxGraphModel）XML 产出 .drawio 源文件，保证可在 draw.io 中直接打开编辑；PNG 由同一份节点/连线数据渲染，几何校验通过。",
+            skip: "未在 draw.io 界面内完成人工排版微调；后续可在启用浏览器控制工具后按 README 逐张校对。",
+          },
+          {
             id: "t-016",
             phase: "ops",
             status: "杩涜涓?",
@@ -1261,8 +1281,42 @@
               "按文档逐任务重构：先铺设计 token，再搭布局壳与面包屑，随后完成 Header、Sidebar、市场页、通用组件与全部页面中文换壳，并新增 /assistant 路由与页面。",
             skip: "发布向导、审核操作流、版本 Diff、交付配置表单、组织/安全 Tab 业务功能未实现（仅换壳）；平台公告无 API 默认空态；钉钉登录与交付动作接口未接入；浏览器可视化核对因本会话无浏览器控制工具改为构建与冒烟验证。",
           },
+          {
+            id: "t-021",
+            phase: "dev",
+            status: "已完成",
+            title: "初始化数据脚本与 API Swagger 完整文档",
+            owner: "Codex",
+            start: "2026-08-06",
+            end: "2026-08-06",
+            progress:
+              "新增业务演示数据 seed（4 个应用覆盖发布/审核/草稿/归档、4 条需求覆盖发布/审核/草稿/合并、评论/点赞/举报/试点/协作、6 条通知、分析事件与日聚合），统一 init:dev 与 init:production 脚本并接入开发 Compose；为 10 个控制器约 69 个端点接入 @nestjs/swagger 完整文档（DTO、鉴权头、请求/响应模型、Problem Details 错误模型、示例），/internal/docs 在开发/测试默认开启、生产由 ENABLE_API_DOCS 控制。",
+            problem:
+              "esbuild 转译不为方法发射 design:paramtypes 且不发射属性 design:type，导致 Swagger 参数探测与 schema 生成失败；生产初始化此前无统一入口。",
+            solution:
+              "在 configureSwagger 前为控制器方法补齐缺失参数元数据，并为全部 ApiProperty 显式声明类型；seed 采用确定性 UUID 单事务幂等 upsert；生产 init:production 仅执行迁移。",
+            skip: "业务演示数据仅在开发/测试环境写入，生产 Compose 不自动初始化；Swagger 生产启用时调用仍须满足 CSRF/防重放头。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-06",
+            phase: "product",
+            title: "数据流转闭环图补充归档",
+            body: "补充 docs/flowchart/09-data-flow-loop：登录 → 上传 → 审核（通过 / 修改重审 / 驳回）→ 上架 → 发现 / 查看 / 互动 → 应用（下载 / 跳转 / 扫码）→ 数据聚合反哺的大闭环拓扑，含角色节点、数据存储与依赖连线。",
+          },
+          {
+            date: "2026-08-06",
+            phase: "dev",
+            title: "初始化数据脚本与 API Swagger 完整文档完成",
+            body: "新增 demo-business seed（应用/需求/互动/通知/分析全覆盖、确定性 UUID 幂等可重复执行）与 init:dev、init:production 脚本；10 个控制器约 69 个端点接入 Swagger 完整文档（/internal/docs 与 /internal/docs-json），开发/测试默认开启、生产由 ENABLE_API_DOCS 控制；typecheck、lint、format、boundaries 与全部测试通过（含真实数据库 seed 集成与 Swagger 真实 e2e）。",
+          },
+          {
+            date: "2026-08-06",
+            phase: "product",
+            title: "项目设计流程图归档完成",
+            body: "新增 docs/flowchart/：8 张 draw.io 流程图（系统架构、认证与组织、应用发布审核、创新需求闭环、市场与互动治理、数据看板与导出、V1 路线图、部署与运维）+ PNG 导出 + README 索引 + 可复现生成脚本。",
+          },
           {
             date: "2026-08-06",
             phase: "ui",

@@ -12,12 +12,56 @@ import {
   Post,
   Query,
 } from "@nestjs/common";
-import type { ActorContext, DemandStatus } from "@ai-hub/contracts";
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from "@nestjs/swagger";
+import type { ActorContext } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
 import { DEMAND_SERVICE } from "./demand.tokens.js";
 import { DemandService } from "./demand.service.js";
-import type { DemandDraftInput } from "./demand.types.js";
+import {
+  DemandApplicationLinkDto,
+  DemandClaimRequestDto,
+  DemandCollaboratorDto,
+  DemandCollaboratorRequestDto,
+  DemandCommentDto,
+  DemandCommentRequestDto,
+  DemandCreateApplicationRequestDto,
+  DemandDraftRequestDto,
+  DemandEntryDto,
+  DemandListResultDto,
+  DemandMergeRequestDto,
+  DemandMergeResultDto,
+  DemandPilotDto,
+  DemandPilotRequestDto,
+  DemandPilotUpdateRequestDto,
+  DemandPriorityRequestDto,
+  DemandProgressDto,
+  DemandProgressRequestDto,
+  DemandReportDto,
+  DemandReportRequestDto,
+  DemandReportResolveRequestDto,
+  DemandReviewRequestDto,
+  DemandStatusRequestDto,
+  SaveDemandDraftRequestDto,
+  DemandLinkApplicationRequestDto,
+} from "./demand.dto.js";
+import {
+  EmployeeIdResultDto,
+  LikeResultDto,
+} from "../system/http/simple-results.dto.js";
+import {
+  ApiIdentityHeaders,
+  ApiProblemResponses,
+} from "../system/http/api-docs.decorator.js";
 
+@ApiTags("需求")
 @Controller("/internal/demands")
 export class DemandController {
   constructor(
@@ -26,10 +70,15 @@ export class DemandController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: "创建需求草稿" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: DemandDraftRequestDto })
+  @ApiCreatedResponse({ description: "创建后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403])
   create(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: DemandDraftInput,
+    @Body() body: DemandDraftRequestDto,
   ) {
     return this.call(async () =>
       this.demands.createDraft(await this.actor(employeeId, sessionId), body),
@@ -37,11 +86,17 @@ export class DemandController {
   }
 
   @Patch(":demandId")
+  @ApiOperation({ summary: "保存需求草稿" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: SaveDemandDraftRequestDto })
+  @ApiOkResponse({ description: "保存后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   saveDraft(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: DemandDraftInput & { expectedVersion: number },
+    @Body() body: SaveDemandDraftRequestDto,
   ) {
     return this.call(async () => {
       const { expectedVersion, ...input } = body;
@@ -55,6 +110,11 @@ export class DemandController {
   }
 
   @Post(":demandId/submit-review")
+  @ApiOperation({ summary: "提交需求评审" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiCreatedResponse({ description: "提交后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   submitForReview(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -69,11 +129,17 @@ export class DemandController {
   }
 
   @Post(":demandId/review")
+  @ApiOperation({ summary: "评审需求" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandReviewRequestDto })
+  @ApiCreatedResponse({ description: "评审后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   review(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { decision: "publish" | "reject"; reason?: string },
+    @Body() body: DemandReviewRequestDto,
   ) {
     return this.call(async () =>
       this.demands.review(
@@ -86,11 +152,17 @@ export class DemandController {
   }
 
   @Post(":demandId/claim")
+  @ApiOperation({ summary: "认领需求" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandClaimRequestDto })
+  @ApiCreatedResponse({ description: "认领后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   claim(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { expectedVersion: number },
+    @Body() body: DemandClaimRequestDto,
   ) {
     return this.call(async () =>
       this.demands.claim(
@@ -102,16 +174,20 @@ export class DemandController {
   }
 
   @Post(":demandId/collaborators")
+  @ApiOperation({ summary: "添加协作成员" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandCollaboratorRequestDto })
+  @ApiCreatedResponse({
+    description: "协作成员记录",
+    type: DemandCollaboratorDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   addCollaborator(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      employeeId: string;
-      role: "collaborator" | "operator";
-      expectedVersion: number;
-    },
+    @Body() body: DemandCollaboratorRequestDto,
   ) {
     return this.call(async () =>
       this.demands.addCollaborator(
@@ -125,6 +201,15 @@ export class DemandController {
   }
 
   @Get(":demandId/collaborators")
+  @ApiOperation({ summary: "协作成员列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "协作成员列表",
+    type: DemandCollaboratorDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   collaborators(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -139,18 +224,17 @@ export class DemandController {
   }
 
   @Post(":demandId/priority")
+  @ApiOperation({ summary: "设置需求优先级" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandPriorityRequestDto })
+  @ApiCreatedResponse({ description: "设置后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   setPriority(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      expectedVersion: number;
-      businessValue: number;
-      implementationCost: number;
-      riskLevel: number;
-      adminPriority: number;
-    },
+    @Body() body: DemandPriorityRequestDto,
   ) {
     const { expectedVersion, ...input } = body;
     return this.call(async () =>
@@ -164,16 +248,17 @@ export class DemandController {
   }
 
   @Post(":demandId/status")
+  @ApiOperation({ summary: "推进需求状态" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandStatusRequestDto })
+  @ApiCreatedResponse({ description: "推进后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   advanceStatus(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      expectedVersion: number;
-      nextStatus: DemandStatus;
-      reason?: string;
-    },
+    @Body() body: DemandStatusRequestDto,
   ) {
     return this.call(async () =>
       this.demands.advanceStatus(
@@ -187,11 +272,17 @@ export class DemandController {
   }
 
   @Post(":demandId/progress")
+  @ApiOperation({ summary: "新增进度更新" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandProgressRequestDto })
+  @ApiCreatedResponse({ description: "进度更新记录", type: DemandProgressDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   addProgress(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { title: string; body: string },
+    @Body() body: DemandProgressRequestDto,
   ) {
     return this.call(async () =>
       this.demands.addProgressUpdate(
@@ -203,6 +294,15 @@ export class DemandController {
   }
 
   @Get(":demandId/progress")
+  @ApiOperation({ summary: "进度更新列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "进度更新列表",
+    type: DemandProgressDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   listProgress(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -217,17 +317,17 @@ export class DemandController {
   }
 
   @Post(":demandId/pilots")
+  @ApiOperation({ summary: "创建试点" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandPilotRequestDto })
+  @ApiCreatedResponse({ description: "试点记录", type: DemandPilotDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   createPilot(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      applicationId?: string;
-      name: string;
-      startsAt: string;
-      endsAt?: string;
-    },
+    @Body() body: DemandPilotRequestDto,
   ) {
     return this.call(async () =>
       this.demands.createPilot(
@@ -248,17 +348,19 @@ export class DemandController {
   }
 
   @Patch(":demandId/pilots/:pilotId")
+  @ApiOperation({ summary: "更新试点" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "pilotId", description: "试点 ID" })
+  @ApiBody({ type: DemandPilotUpdateRequestDto })
+  @ApiOkResponse({ description: "更新后的试点记录", type: DemandPilotDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   updatePilot(
     @Param("demandId") demandId: string,
     @Param("pilotId") pilotId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      endsAt?: string | null;
-      outcome?: string | null;
-      status?: "planned" | "running" | "completed" | "cancelled";
-    },
+    @Body() body: DemandPilotUpdateRequestDto,
   ) {
     return this.call(async () =>
       this.demands.updatePilot(
@@ -277,16 +379,23 @@ export class DemandController {
   }
 
   @Post(":demandId/merge")
+  @ApiOperation({
+    summary: "合并需求",
+    description: "将当前需求合并到目标需求。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID（合并源）" })
+  @ApiBody({ type: DemandMergeRequestDto })
+  @ApiCreatedResponse({
+    description: "合并结果（源与目标需求）",
+    type: DemandMergeResultDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   merge(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      targetDemandId: string;
-      sourceExpectedVersion: number;
-      targetExpectedVersion: number;
-    },
+    @Body() body: DemandMergeRequestDto,
   ) {
     return this.call(async () =>
       this.demands.merge(
@@ -300,17 +409,20 @@ export class DemandController {
   }
 
   @Post(":demandId/applications")
+  @ApiOperation({ summary: "关联应用到需求" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandLinkApplicationRequestDto })
+  @ApiCreatedResponse({
+    description: "需求-应用关联记录",
+    type: DemandApplicationLinkDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   linkApplication(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      applicationId: string;
-      role: "candidate" | "pilot" | "solution";
-      isPrimary?: boolean;
-      expectedVersion: number;
-    },
+    @Body() body: DemandLinkApplicationRequestDto,
   ) {
     return this.call(async () =>
       this.demands.linkApplication(
@@ -325,20 +437,23 @@ export class DemandController {
   }
 
   @Post(":demandId/applications/from-demand")
+  @ApiOperation({
+    summary: "从需求创建应用",
+    description: "为需求创建新应用并建立关联。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandCreateApplicationRequestDto })
+  @ApiCreatedResponse({
+    description: "需求-应用关联记录",
+    type: DemandApplicationLinkDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   createApplicationFromDemand(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      name: string;
-      summary: string;
-      maintainerEmployeeId?: string;
-      departmentId?: string;
-      role: "candidate" | "pilot" | "solution";
-      isPrimary?: boolean;
-      expectedVersion: number;
-    },
+    @Body() body: DemandCreateApplicationRequestDto,
   ) {
     return this.call(async () =>
       this.demands.createApplicationFromDemand(
@@ -350,6 +465,15 @@ export class DemandController {
   }
 
   @Get(":demandId/applications")
+  @ApiOperation({ summary: "需求关联应用列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "关联记录列表",
+    type: DemandApplicationLinkDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   listApplicationLinks(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -364,6 +488,48 @@ export class DemandController {
   }
 
   @Get()
+  @ApiOperation({
+    summary: "需求列表",
+    description: "按状态、关键词与分页查询可见需求。",
+  })
+  @ApiIdentityHeaders()
+  @ApiQuery({
+    name: "status",
+    description: "需求状态过滤",
+    required: false,
+    enum: [
+      "draft",
+      "pending_review",
+      "rejected",
+      "published",
+      "in_progress",
+      "pilot",
+      "completed",
+      "closed",
+      "merged",
+    ],
+  })
+  @ApiQuery({ name: "query", description: "搜索关键词", required: false })
+  @ApiQuery({
+    name: "page",
+    description: "页码（从 1 开始）",
+    required: false,
+    example: "1",
+  })
+  @ApiQuery({
+    name: "pageSize",
+    description: "每页数量",
+    required: false,
+    example: "20",
+  })
+  @ApiQuery({
+    name: "sort",
+    description: "排序方式",
+    required: false,
+    enum: ["recent", "priority"],
+  })
+  @ApiOkResponse({ description: "需求列表结果", type: DemandListResultDto })
+  @ApiProblemResponses([400, 401, 403])
   list(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -387,6 +553,11 @@ export class DemandController {
   }
 
   @Get(":demandId")
+  @ApiOperation({ summary: "需求详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({ description: "需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   detail(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -398,6 +569,11 @@ export class DemandController {
   }
 
   @Post(":demandId/like")
+  @ApiOperation({ summary: "点赞/取消点赞" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiCreatedResponse({ description: "点赞后的状态", type: LikeResultDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   like(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -412,6 +588,15 @@ export class DemandController {
   }
 
   @Get(":demandId/comments")
+  @ApiOperation({ summary: "需求评论列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "评论列表",
+    type: DemandCommentDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   comments(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -426,16 +611,17 @@ export class DemandController {
   }
 
   @Post(":demandId/comments")
+  @ApiOperation({ summary: "发表评论" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandCommentRequestDto })
+  @ApiCreatedResponse({ description: "评论记录", type: DemandCommentDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   comment(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      parentCommentId: string | null;
-      body: string;
-      displayAnonymously?: boolean;
-    },
+    @Body() body: DemandCommentRequestDto,
   ) {
     return this.call(async () =>
       this.demands.addComment(await this.actor(employeeId, sessionId), {
@@ -446,11 +632,17 @@ export class DemandController {
   }
 
   @Post(":demandId/reports")
+  @ApiOperation({ summary: "举报需求或评论" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandReportRequestDto })
+  @ApiCreatedResponse({ description: "举报记录", type: DemandReportDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   report(
     @Param("demandId") demandId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { commentId: string | null; reason: string },
+    @Body() body: DemandReportRequestDto,
   ) {
     return this.call(async () =>
       this.demands.report(await this.actor(employeeId, sessionId), {
@@ -461,11 +653,21 @@ export class DemandController {
   }
 
   @Post(":demandId/reports/:reportId/resolve")
+  @ApiOperation({ summary: "处理需求举报" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "reportId", description: "举报 ID" })
+  @ApiBody({ type: DemandReportResolveRequestDto })
+  @ApiCreatedResponse({
+    description: "处理后的举报记录",
+    type: DemandReportDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   resolveReport(
     @Param("reportId") reportId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { status: "dismissed" | "hidden" | "restored" },
+    @Body() body: DemandReportResolveRequestDto,
   ) {
     return this.call(async () =>
       this.demands.resolveReport(
@@ -477,6 +679,15 @@ export class DemandController {
   }
 
   @Get(":demandId/comments/:commentId/anonymous-author")
+  @ApiOperation({
+    summary: "查询匿名评论作者",
+    description: "需要匿名审计权限。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "commentId", description: "评论 ID" })
+  @ApiOkResponse({ description: "作者员工工号", type: EmployeeIdResultDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   anonymousAuthor(
     @Param("commentId") commentId: string,
     @Headers("x-employee-id") employeeId: string | undefined,

@@ -14,3 +14,5 @@ export type {
   DemoRoleDefinition,
   SeedDemoAccountsResult,
 } from "./demo-seed.js";
+export { seedDemoBusinessData } from "./demo-business-seed.js";
+export type { SeedDemoBusinessResult } from "./demo-business-seed.js";

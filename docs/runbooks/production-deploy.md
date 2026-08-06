@@ -14,6 +14,14 @@
    docker compose --env-file /etc/ai-hub/production.env -f compose.production.yaml up --detach
    ```
 
+4.5. 执行生产环境初始化（仅数据库迁移，不写入任何演示或业务数据）：
+
+   ```powershell
+   corepack pnpm init:production
+   ```
+
+   该命令在容器外针对生产 `DATABASE_URL` 一次性运行；生产 Compose 不会自动执行初始化。
+
 5. 确认代理健康、API 就绪、数据库迁移门禁、worker 健康与 DNS 健康检查状态。在数据库、对象存储、备份与可观测性检查全部为绿色之前，不要切换内部 DNS。
 
 当前仓库不包含实际主机、DNS 区域、TLS 证书、生产凭据或镜像仓库签名。这些缺失输入必须保持为显式的部署阻断项，而不能由本地 Compose 配置检查推断为已具备。

@@ -11,12 +11,32 @@ import {
   Body,
   Query,
 } from "@nestjs/common";
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from "@nestjs/swagger";
 import type { ActorContext } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import type { CatalogSearchInput } from "./catalog.types.js";
+import {
+  CatalogActionRequestDto,
+  CatalogEntryDto,
+  CatalogListResultDto,
+} from "./catalog.dto.js";
+import { RecordActionResultDto } from "../system/http/simple-results.dto.js";
+import {
+  ApiIdentityHeaders,
+  ApiProblemResponses,
+} from "../system/http/api-docs.decorator.js";
 
+@ApiTags("市场目录")
 @Controller("/internal/catalog")
 export class CatalogController {
   constructor(
@@ -25,6 +45,38 @@ export class CatalogController {
   ) {}
 
   @Get()
+  @ApiOperation({
+    summary: "目录列表",
+    description: "按条件搜索已发布应用目录。",
+  })
+  @ApiIdentityHeaders()
+  @ApiQuery({ name: "query", description: "搜索关键词", required: false })
+  @ApiQuery({ name: "categoryId", description: "分类 ID", required: false })
+  @ApiQuery({
+    name: "applicationType",
+    description: "应用类型",
+    required: false,
+  })
+  @ApiQuery({
+    name: "sort",
+    description: "排序方式",
+    required: false,
+    enum: ["recommended", "latest", "popular"],
+  })
+  @ApiQuery({
+    name: "page",
+    description: "页码（从 1 开始）",
+    required: false,
+    example: "1",
+  })
+  @ApiQuery({
+    name: "pageSize",
+    description: "每页数量",
+    required: false,
+    example: "20",
+  })
+  @ApiOkResponse({ description: "目录列表结果", type: CatalogListResultDto })
+  @ApiProblemResponses([400, 401, 403])
   async list(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -48,6 +100,11 @@ export class CatalogController {
   }
 
   @Get(":applicationId")
+  @ApiOperation({ summary: "目录条目详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "目录条目详情", type: CatalogEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async detail(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -62,15 +119,20 @@ export class CatalogController {
   }
 
   @Post(":applicationId/actions")
+  @ApiOperation({
+    summary: "记录目录行为",
+    description: "记录网页跳转、包下载或二维码展示等行为。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: CatalogActionRequestDto })
+  @ApiCreatedResponse({ description: "记录完成", type: RecordActionResultDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async recordAction(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      actionType: "web_redirect" | "package_download" | "qr_display";
-      channel?: string;
-    },
+    @Body() body: CatalogActionRequestDto,
   ) {
     return this.call(async () => {
       await this.catalog.recordDeliveryAction(

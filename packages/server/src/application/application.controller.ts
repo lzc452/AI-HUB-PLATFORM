@@ -12,11 +12,38 @@ import {
   Post,
   Put,
 } from "@nestjs/common";
+import {
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from "@nestjs/swagger";
 import type { ActorContext } from "@ai-hub/contracts";
 import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
 import { ApplicationService } from "./application.service.js";
+import {
+  ApplicationDto,
+  ApplicationVersionDto,
+  ConfigureDeliveryRequestDto,
+  CreateApplicationRequestDto,
+  CreateVersionRequestDto,
+  DeliveryDto,
+  PublishRequestDto,
+  ReviewDto,
+  ReviewQueueDto,
+  ReviewRequestDto,
+  RollbackRequestDto,
+  WithdrawRequestDto,
+} from "./application.dto.js";
+import {
+  ApiIdentityHeaders,
+  ApiProblemResponses,
+} from "../system/http/api-docs.decorator.js";
 
+@ApiTags("应用")
 @Controller("/internal/applications")
 export class ApplicationController {
   constructor(
@@ -26,16 +53,15 @@ export class ApplicationController {
   ) {}
 
   @Post()
+  @ApiOperation({ summary: "创建应用" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: CreateApplicationRequestDto })
+  @ApiCreatedResponse({ description: "创建后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403])
   async create(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      name: string;
-      summary: string;
-      maintainerEmployeeId?: string;
-      departmentId?: string;
-    },
+    @Body() body: CreateApplicationRequestDto,
   ) {
     return this.call(async () =>
       this.applications.createApplication(
@@ -46,19 +72,20 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/versions")
+  @ApiOperation({ summary: "创建应用版本" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: CreateVersionRequestDto })
+  @ApiCreatedResponse({
+    description: "创建后的版本记录",
+    type: ApplicationVersionDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async createVersion(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: {
-      version: string;
-      changelog: string;
-      artifactKey: string;
-      artifactSha256: string;
-      artifactSignature: string;
-      scanStatus: "passed";
-    },
+    @Body() body: CreateVersionRequestDto,
   ) {
     return this.call(async () =>
       this.applications.createVersion(
@@ -71,13 +98,23 @@ export class ApplicationController {
 
   @Put(":applicationId/deliveries/:channel")
   @HttpCode(200)
+  @ApiOperation({ summary: "配置交付渠道" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({
+    name: "channel",
+    description: "交付渠道",
+    enum: ["web", "desktop", "mobile", "mini_program"],
+  })
+  @ApiBody({ type: ConfigureDeliveryRequestDto })
+  @ApiOkResponse({ description: "配置后的交付记录", type: DeliveryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async configureDelivery(
     @Param("applicationId") applicationId: string,
     @Param("channel") channel: "web" | "desktop" | "mobile" | "mini_program",
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body()
-    body: { entryUrl: string; minClientVersion?: string; enabled: boolean },
+    @Body() body: ConfigureDeliveryRequestDto,
   ) {
     return this.call(async () =>
       this.applications.configureDelivery(
@@ -90,6 +127,11 @@ export class ApplicationController {
 
   @Post("versions/:applicationVersionId/submit-review")
   @HttpCode(200)
+  @ApiOperation({ summary: "提交版本评审" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiOkResponse({ description: "提交后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async submitReview(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -105,15 +147,17 @@ export class ApplicationController {
 
   @Post("versions/:applicationVersionId/review")
   @HttpCode(200)
+  @ApiOperation({ summary: "评审版本" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiBody({ type: ReviewRequestDto })
+  @ApiOkResponse({ description: "评审后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async review(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
     @Param("applicationVersionId") versionId: string,
-    @Body()
-    body: {
-      decision: "approve" | "reject" | "request_changes";
-      comment: string;
-    },
+    @Body() body: ReviewRequestDto,
   ) {
     return this.call(async () =>
       this.applications.review(
@@ -127,6 +171,11 @@ export class ApplicationController {
 
   @Post("versions/:applicationVersionId/claim-review")
   @HttpCode(200)
+  @ApiOperation({ summary: "认领评审" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiOkResponse({ description: "认领后的评审队列记录", type: ReviewQueueDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async claimReview(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -142,6 +191,11 @@ export class ApplicationController {
 
   @Post("versions/:applicationVersionId/release-review")
   @HttpCode(200)
+  @ApiOperation({ summary: "释放评审认领" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiOkResponse({ description: "释放后的评审队列记录", type: ReviewQueueDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async releaseReview(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -156,6 +210,14 @@ export class ApplicationController {
   }
 
   @Get("versions/:applicationVersionId/review-queue")
+  @ApiOperation({ summary: "评审队列详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiOkResponse({
+    description: "评审队列记录（含 SLA 状态）",
+    type: ReviewQueueDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async getReviewQueue(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -167,11 +229,17 @@ export class ApplicationController {
 
   @Post(":applicationId/publish")
   @HttpCode(200)
+  @ApiOperation({ summary: "发布应用" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: PublishRequestDto })
+  @ApiOkResponse({ description: "发布后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async publish(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { applicationVersionId: string },
+    @Body() body: PublishRequestDto,
   ) {
     await this.requireApplication(applicationId);
     return this.call(async () =>
@@ -184,11 +252,17 @@ export class ApplicationController {
 
   @Post(":applicationId/withdraw")
   @HttpCode(200)
+  @ApiOperation({ summary: "撤回应用" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: WithdrawRequestDto })
+  @ApiOkResponse({ description: "撤回后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async withdraw(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { reason: string },
+    @Body() body: WithdrawRequestDto,
   ) {
     return this.call(async () =>
       this.applications.withdraw(
@@ -201,11 +275,17 @@ export class ApplicationController {
 
   @Post(":applicationId/rollback")
   @HttpCode(200)
+  @ApiOperation({ summary: "回滚应用版本" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: RollbackRequestDto })
+  @ApiOkResponse({ description: "回滚后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async rollback(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { applicationVersionId: string },
+    @Body() body: RollbackRequestDto,
   ) {
     return this.call(async () =>
       this.applications.rollback(
@@ -218,6 +298,11 @@ export class ApplicationController {
 
   @Post(":applicationId/archive")
   @HttpCode(200)
+  @ApiOperation({ summary: "归档应用" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "归档后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async archive(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -232,6 +317,11 @@ export class ApplicationController {
   }
 
   @Get(":applicationId")
+  @ApiOperation({ summary: "应用详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
   async getApplication(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -244,6 +334,15 @@ export class ApplicationController {
   }
 
   @Get(":applicationId/versions")
+  @ApiOperation({ summary: "应用版本列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "版本列表",
+    type: ApplicationVersionDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async listVersions(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -254,6 +353,15 @@ export class ApplicationController {
   }
 
   @Get(":applicationId/deliveries")
+  @ApiOperation({ summary: "交付渠道列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "交付记录列表",
+    type: DeliveryDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async listDeliveries(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -264,6 +372,15 @@ export class ApplicationController {
   }
 
   @Get(":applicationId/reviews")
+  @ApiOperation({ summary: "评审记录列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "评审记录列表",
+    type: ReviewDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async listReviews(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
@@ -274,6 +391,14 @@ export class ApplicationController {
   }
 
   @Get(":applicationId/published-version")
+  @ApiOperation({ summary: "当前发布版本" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "当前发布版本记录",
+    type: ApplicationVersionDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
   async getPublishedVersion(
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,

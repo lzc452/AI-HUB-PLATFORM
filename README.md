@@ -12,12 +12,13 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-t
 ```
 
 开发应用地址为 `http://127.0.0.1:8080`。
-开发环境的 Compose API 会自动执行数据库迁移并初始化五个本地演示账号。如需为已迁移的数据库手动补充种子数据，请运行：
+开发环境的 Compose API 会自动执行 `pnpm init:dev`（数据库迁移 + 演示账号 + 业务演示数据）。可初始化数据包括：系统角色与分析指标定义（随迁移自动写入）、演示组织与账号（4 个部门、5 个账号）、业务演示数据（示例应用、需求、评论、通知与分析行为事件，仅用于本地联调）。如需为已迁移的数据库手动补充种子数据，请运行：
 
 ```powershell
-corepack pnpm migrate
-corepack pnpm seed:demo-accounts
+corepack pnpm init:dev
 ```
+
+生产环境初始化：部署时在容器外针对生产 `DATABASE_URL` 一次性执行 `corepack pnpm init:production`（仅数据库迁移，不写入任何演示或业务数据）。
 
 以下凭据仅用于本地开发与测试，严禁在生产环境使用：
 

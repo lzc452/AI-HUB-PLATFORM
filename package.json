@@ -19,6 +19,9 @@
     "lint": "turbo run lint",
     "migrate": "tsx scripts/migrate.mts",
     "seed:demo-accounts": "tsx scripts/seed-demo-accounts.mts",
+    "seed:demo-business": "tsx scripts/seed-demo-business.mts",
+    "init:dev": "pnpm migrate && pnpm seed:demo-accounts && pnpm seed:demo-business",
+    "init:production": "pnpm migrate",
     "test": "node --test scripts/*.test.mjs && turbo run test --concurrency=1",
     "typecheck": "turbo run typecheck",
     "verify": "node scripts/verify.mjs"

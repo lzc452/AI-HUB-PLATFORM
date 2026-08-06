@@ -22,6 +22,7 @@ describe("parseRuntimeConfig", () => {
         LOG_LEVEL: "warn",
         OUTBOX_POLL_INTERVAL_MS: "750",
         WORKER_METRICS_PORT: "9465",
+        ENABLE_API_DOCS: "true",
       }),
     ).toEqual({
       nodeEnv: "test",
@@ -31,7 +32,18 @@ describe("parseRuntimeConfig", () => {
       logLevel: "warn",
       outboxPollIntervalMs: 750,
       workerMetricsPort: 9465,
+      enableApiDocs: true,
     });
+  });
+
+  it("defaults API docs to disabled", () => {
+    expect(
+      parseRuntimeConfig({
+        NODE_ENV: "development",
+        DATABASE_URL: "postgres://ai_hub:ai_hub@postgres:5432/ai_hub",
+        COOKIE_SECRET: "12345678901234567890123456789012",
+      }).enableApiDocs,
+    ).toBe(false);
   });
 
   it("reads production secrets from mounted files", () => {
