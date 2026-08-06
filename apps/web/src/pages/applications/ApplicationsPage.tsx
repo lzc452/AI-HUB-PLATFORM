@@ -15,15 +15,15 @@ export default function ApplicationsPage() {
 
   return (
     <ApplicationAdminPage
-      description="Review application records, immutable versions, review history, and delivery configuration from one administration surface."
-      title="Applications"
+      description="统一管理应用发布、版本、审核与交付配置。"
+      title="应用管理"
     >
       <section
         aria-labelledby="application-directory-heading"
         className="space-y-4"
       >
         <Title id="application-directory-heading" level={2} className="!mb-0">
-          Application directory
+          应用目录
         </Title>
         <Input.Search
           aria-label="应用 ID"
@@ -51,14 +51,14 @@ export default function ApplicationsPage() {
                   {data.name}
                 </Title>
                 <Text type="secondary">
-                  {data.applicationId} · owned by {data.ownerEmployeeId}
+                  {data.applicationId} · 负责人 {data.ownerEmployeeId}
                 </Text>
               </div>
               <Tag color="blue">{data.status}</Tag>
             </div>
             <div className="mt-4">
               <Link to={`/applications/${data.applicationId}`}>
-                Open application details
+                查看应用详情
               </Link>
             </div>
           </div>

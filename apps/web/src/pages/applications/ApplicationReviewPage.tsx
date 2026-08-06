@@ -11,9 +11,9 @@ const decisionMeta: Record<
   ReviewRecord["decision"],
   { color: string; label: string }
 > = {
-  approve: { color: "success", label: "Approved" },
-  reject: { color: "error", label: "Rejected" },
-  request_changes: { color: "warning", label: "Request changes" },
+  approve: { color: "success", label: "通过" },
+  reject: { color: "error", label: "驳回" },
+  request_changes: { color: "warning", label: "请求变更" },
 };
 
 export default function ApplicationReviewPage() {
@@ -23,12 +23,12 @@ export default function ApplicationReviewPage() {
 
   return (
     <ApplicationAdminPage
-      description="Inspect review readiness and the audit-safe review history."
-      title="Review"
+      description="查看审核就绪状态与可审计的审核记录。"
+      title="审核工作台"
     >
       <section aria-labelledby="review-heading" className="space-y-4">
         <Title id="review-heading" level={2} className="!mb-0">
-          Review history
+          审核记录
         </Title>
         {isPending ? <Spin aria-label="审核记录加载中" /> : null}
         {isError ? (

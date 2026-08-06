@@ -8,10 +8,10 @@ import { useApplicationDeliveries } from "../../modules/application/useApplicati
 const { Text, Title } = Typography;
 
 const channelTitle: Record<DeliveryChannel, string> = {
-  desktop: "Desktop",
-  mini_program: "Mini-program",
-  mobile: "Mobile",
-  web: "Web",
+  desktop: "桌面端",
+  mini_program: "小程序",
+  mobile: "移动端",
+  web: "Web 应用",
 };
 
 export default function ApplicationDeliveryPage() {
@@ -21,12 +21,12 @@ export default function ApplicationDeliveryPage() {
 
   return (
     <ApplicationAdminPage
-      description="Inspect separate delivery configurations for each supported client channel."
-      title="Delivery"
+      description="查看各交付渠道的独立配置。"
+      title="交付配置"
     >
       <section aria-labelledby="delivery-heading" className="space-y-4">
         <Title id="delivery-heading" level={2} className="!mb-0">
-          Delivery channels
+          交付渠道
         </Title>
         {isPending ? <Spin aria-label="交付配置加载中" /> : null}
         {isError ? (
@@ -51,7 +51,7 @@ export default function ApplicationDeliveryPage() {
                   {channelTitle[delivery.channel]}
                 </Title>
                 <Tag color={delivery.enabled ? "success" : "default"}>
-                  {delivery.enabled ? "Enabled" : "Disabled"}
+                  {delivery.enabled ? "已启用" : "未启用"}
                 </Tag>
               </div>
               <Text type="secondary">

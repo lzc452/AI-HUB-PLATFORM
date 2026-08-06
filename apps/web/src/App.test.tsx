@@ -212,33 +212,33 @@ describe("App", () => {
   it("exposes the application administration navigation", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /Applications/ }));
+    fireEvent.click(screen.getByRole("link", { name: /应用管理/ }));
 
     expect(
-      await screen.findByRole("heading", { name: "Applications" }),
+      await screen.findByRole("heading", { name: "应用管理" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Application details" }),
+      screen.getByRole("link", { name: "应用详情" }),
     ).toHaveAttribute("href", "/applications/app-001");
-    expect(screen.getByRole("link", { name: "Versions" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "版本管理" })).toHaveAttribute(
       "href",
       "/applications/app-001/versions",
     );
-    expect(screen.getByRole("link", { name: "Review" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "审核工作台" })).toHaveAttribute(
       "href",
       "/applications/app-001/review",
     );
-    expect(screen.getByRole("link", { name: "Delivery" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "交付配置" })).toHaveAttribute(
       "href",
       "/applications/app-001/delivery",
     );
   });
 
   it.each([
-    ["/applications/app-001", "Application details"],
-    ["/applications/app-001/versions", "Versions"],
-    ["/applications/app-001/review", "Review"],
-    ["/applications/app-001/delivery", "Delivery"],
+    ["/applications/app-001", "应用详情"],
+    ["/applications/app-001/versions", "版本管理"],
+    ["/applications/app-001/review", "审核工作台"],
+    ["/applications/app-001/delivery", "交付配置"],
   ])("renders the application route %s", async (route, heading) => {
     globalThis.window.history.pushState({}, "", route);
 
@@ -255,18 +255,18 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "Application details" }),
+      await screen.findByRole("heading", { name: "应用详情" }),
     ).toBeInTheDocument();
 
     for (const label of [
-      "Draft",
-      "In review",
-      "Approved",
-      "Published",
-      "Rejected",
-      "Withdrawn",
-      "Archived",
-      "Published version",
+      "草稿",
+      "审核中",
+      "已通过",
+      "已上架",
+      "已驳回",
+      "已下架",
+      "已归档",
+      "当前版本",
     ]) {
       expect(
         screen.getAllByText(label, { exact: true }).length,

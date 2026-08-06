@@ -59,7 +59,7 @@ export function Navigation() {
         allowedRoles: [ROLE_APP_ADMIN, ROLE_SUPER_ADMIN],
         icon: <AppstoreAddOutlined aria-hidden="true" />,
         key: "applications",
-        label: "Applications",
+        label: "应用管理",
         path: ROUTES.applications,
       },
       {

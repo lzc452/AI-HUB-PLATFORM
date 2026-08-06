@@ -11,22 +11,22 @@ import {
 const { Paragraph, Text, Title } = Typography;
 
 const applicationLifecycleStates = [
-  { color: "default", label: "Draft" },
-  { color: "processing", label: "In review" },
-  { color: "success", label: "Approved" },
-  { color: "blue", label: "Published" },
-  { color: "error", label: "Rejected" },
-  { color: "warning", label: "Withdrawn" },
-  { color: "default", label: "Archived" },
+  { color: "default", label: "草稿" },
+  { color: "processing", label: "审核中" },
+  { color: "success", label: "已通过" },
+  { color: "blue", label: "已上架" },
+  { color: "error", label: "已驳回" },
+  { color: "warning", label: "已下架" },
+  { color: "default", label: "已归档" },
 ] as const;
 
 const statusLabel: Record<ApplicationStatus, string> = {
-  approved: "Approved",
-  archived: "Archived",
-  draft: "Draft",
-  in_review: "In review",
-  published: "Published",
-  withdrawn: "Withdrawn",
+  approved: "已通过",
+  archived: "已归档",
+  draft: "草稿",
+  in_review: "审核中",
+  published: "已上架",
+  withdrawn: "已下架",
 };
 
 export default function ApplicationDetailsPage() {
@@ -36,16 +36,16 @@ export default function ApplicationDetailsPage() {
 
   return (
     <ApplicationAdminPage
-      description={`Lifecycle overview for ${applicationId ?? "app-001"}.`}
-      title="Application details"
+      description={`${applicationId ?? "app-001"} 的应用生命周期概览。`}
+      title="应用详情"
     >
       <section aria-labelledby="lifecycle-heading" className="space-y-4">
         <Title id="lifecycle-heading" level={2} className="!mb-0">
-          Lifecycle states
+          生命周期状态
         </Title>
         <div
           className="flex flex-wrap gap-2"
-          aria-label="Application lifecycle states"
+          aria-label="应用生命周期状态"
         >
           {applicationLifecycleStates.map((state) => (
             <Tag color={state.color} key={state.label}>
@@ -66,14 +66,14 @@ export default function ApplicationDetailsPage() {
           <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <Text type="secondary">Current state</Text>
+                <Text type="secondary">当前状态</Text>
                 <Title level={3} className="!mb-0 !mt-1">
                   {statusLabel[data.status]}
                 </Title>
               </div>
               {publishedVersion.data ? (
                 <span className="flex items-center gap-2">
-                  <Tag color="blue">Published version</Tag>
+                  <Tag color="blue">当前版本</Tag>
                   <Text type="secondary">v{publishedVersion.data.version}</Text>
                 </span>
               ) : null}

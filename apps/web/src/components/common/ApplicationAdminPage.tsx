@@ -1,19 +1,19 @@
-import { Alert, Typography } from "antd";
+import { Alert } from "antd";
 import { NavLink, useParams } from "react-router-dom";
 
-const { Paragraph, Text, Title } = Typography;
+import { PageHeader } from "./PageHeader";
 
 export function ApplicationNavigation() {
   const { applicationId = "app-001" } = useParams();
   const items = [
-    { label: "Application details", path: `/applications/${applicationId}` },
-    { label: "Versions", path: `/applications/${applicationId}/versions` },
-    { label: "Review", path: `/applications/${applicationId}/review` },
-    { label: "Delivery", path: `/applications/${applicationId}/delivery` },
+    { label: "应用详情", path: `/applications/${applicationId}` },
+    { label: "版本管理", path: `/applications/${applicationId}/versions` },
+    { label: "审核工作台", path: `/applications/${applicationId}/review` },
+    { label: "交付配置", path: `/applications/${applicationId}/delivery` },
   ] as const;
 
   return (
-    <nav aria-label="Application administration">
+    <nav aria-label="应用管理导航">
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {items.map((item) => (
           <li key={item.path}>
@@ -49,20 +49,12 @@ export function ApplicationAdminPage({
 }: ApplicationAdminPageProps) {
   return (
     <div className="space-y-6">
-      <section aria-labelledby={`${title}-heading`} className="space-y-3">
-        <Text type="secondary">Phase 3 / Application administration</Text>
-        <Title id={`${title}-heading`} level={1} className="!mb-0">
-          {title}
-        </Title>
-        <Paragraph className="!mb-0 max-w-3xl text-base">
-          {description}
-        </Paragraph>
-      </section>
+      <PageHeader description={description} title={title} />
       <ApplicationNavigation />
       <Alert
         description="数据已通过内部 API 接入；当前界面不提供写操作。"
         showIcon
-        title="Read-only preview"
+        title="只读预览"
         type="info"
       />
       {children}

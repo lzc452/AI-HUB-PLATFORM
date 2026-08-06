@@ -27,12 +27,12 @@ export default function ApplicationVersionsPage() {
 
   return (
     <ApplicationAdminPage
-      description="Compare immutable application versions and their artifact metadata."
-      title="Versions"
+      description="比较不可变的应用版本及其产物元数据。"
+      title="版本管理"
     >
       <section aria-labelledby="versions-heading" className="space-y-4">
         <Title id="versions-heading" level={2} className="!mb-0">
-          Version history
+          版本历史
         </Title>
         {isPending ? <Spin aria-label="版本记录加载中" /> : null}
         {isError ? (
@@ -65,14 +65,14 @@ export default function ApplicationVersionsPage() {
                 </Tag>
                 {publishedVersion.data?.applicationVersionId ===
                 version.applicationVersionId ? (
-                  <Tag color="blue">Published</Tag>
+                  <Tag color="blue">当前版本</Tag>
                 ) : null}
               </div>
             </div>
           </div>
         ))}
         <Paragraph className="!mb-0 text-[#595959]">
-          Version records are append-only; editing creates a new version.
+          版本记录只追加；编辑会创建新版本。
         </Paragraph>
       </section>
     </ApplicationAdminPage>
