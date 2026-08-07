@@ -38,7 +38,7 @@ export function HealthSnapshotCard({
   headingId,
 }: HealthSnapshotCardProps) {
   return (
-    <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+    <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <Title id={headingId} level={4} className="!mb-0">
           基线状态

@@ -67,9 +67,9 @@ export default function InnovationDemandDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5 lg:col-span-2">
+        <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4 lg:col-span-2">
           <Title level={2} className="!mb-3">
             需求说明
           </Title>
@@ -83,8 +83,8 @@ export default function InnovationDemandDetailPage() {
             <Tag>受众已过滤</Tag>
           </div>
         </section>
-        <aside className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
-          <Title level={3} className="!mb-3">
+        <aside className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
+          <Title level={5} className="!mb-3">
             互动与治理
           </Title>
           <div className="space-y-3">
@@ -106,7 +106,7 @@ export default function InnovationDemandDetailPage() {
       </div>
       <section
         aria-labelledby="demand-comments-heading"
-        className="space-y-4 rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+        className="space-y-4 rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
       >
         <Title id="demand-comments-heading" level={2} className="!mb-0">
           补充讨论（{data.commentCount}）

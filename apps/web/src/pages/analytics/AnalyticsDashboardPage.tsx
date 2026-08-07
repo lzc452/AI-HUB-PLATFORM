@@ -57,7 +57,7 @@ const fixedAnalyticsDashboards: ReadonlyArray<{
 
 export default function AnalyticsDashboardPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Alert
         description="每个指标声明其来源事件、公式、时间范围、权限、受众规则与重算方式。"
         showIcon

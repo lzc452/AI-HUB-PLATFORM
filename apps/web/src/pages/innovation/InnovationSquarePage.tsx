@@ -14,7 +14,7 @@ export default function InnovationSquarePage() {
   const { data, error, isError, isPending, refetch } = useDemandList(query);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <section aria-labelledby="innovation-demand-list" className="space-y-4">
         <Title id="innovation-demand-list" level={2} className="!mb-0">
           可见需求
@@ -38,12 +38,12 @@ export default function InnovationSquarePage() {
         ) : null}
         {data?.items.map((demand) => (
           <article
-            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
             key={demand.demandId}
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <Title level={3} className="!mb-1">
+                <Title level={5} className="!mb-1">
                   {demand.title}
                 </Title>
                 <Typography.Text type="secondary">

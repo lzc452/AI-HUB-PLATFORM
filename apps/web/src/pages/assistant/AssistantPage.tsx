@@ -32,7 +32,7 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <section
         aria-label="AI 助手对话"
         className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-6"
@@ -43,7 +43,7 @@ export default function AssistantPage() {
               aria-hidden="true"
               className="text-4xl text-[#722ed1]"
             />
-            <Title level={3} className="!mb-0">
+            <Title level={5} className="!mb-0 !mt-0">
               你好，我是 AI 助手
             </Title>
             <Text type="secondary">我可以帮助您搜索和推荐合适的应用</Text>

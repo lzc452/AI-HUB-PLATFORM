@@ -60,11 +60,11 @@ export default function ApplicationDetailsPage() {
           />
         ) : null}
         {data ? (
-          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <Text type="secondary">当前状态</Text>
-                <Title level={3} className="!mb-0 !mt-1">
+                <Title level={5} className="!mb-0 !mt-1">
                   {statusLabel[data.status]}
                 </Title>
               </div>

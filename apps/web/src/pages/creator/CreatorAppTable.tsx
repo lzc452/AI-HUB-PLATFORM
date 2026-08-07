@@ -264,13 +264,13 @@ export function CreatorAppTable({
   return (
     <section
       aria-label="应用管理"
-      className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-5"
+      className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
     >
-      <Title level={3} className="!mb-4 !text-base">
+      <Title level={5} className="!mb-4 !mt-0 !text-base">
         应用管理
       </Title>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-solid border-[#d9d9d9] bg-white p-3 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl bg-white">
         <Select
           allowClear
           aria-label="全部状态"
@@ -305,14 +305,14 @@ export function CreatorAppTable({
           options={[...creatorSortOptions]}
           value={sortMode}
         />
-        <Button
+        {data && items.length === 0 ? null : (<Button
           className="ml-auto"
           icon={<PlusOutlined aria-hidden="true" />}
           onClick={() => navigate("/applications")}
           type="primary"
         >
           创建新应用
-        </Button>
+        </Button>)}
       </div>
 
       {isPending ? <Skeleton active paragraph={{ rows: 6 }} /> : null}

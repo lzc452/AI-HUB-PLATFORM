@@ -37,7 +37,7 @@ export function FeatureStatusPage({
 }: FeatureStatusPageProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-      <section aria-labelledby={`${title}-heading`} className="space-y-6">
+      <section aria-labelledby={`${title}-heading`} className="space-y-4">
         <div className="space-y-3">
           <Text type="secondary">{statusLabel}</Text>
           <Title id={`${title}-heading`} level={1} className="!mb-0">
@@ -55,7 +55,7 @@ export function FeatureStatusPage({
           type="info"
         />
         <section aria-labelledby={`${title}-next-steps`} className="space-y-3">
-          <Title id={`${title}-next-steps`} level={3} className="!mb-0">
+          <Title id={`${title}-next-steps`} level={5} className="!mb-0 !mt-0">
             后续接入范围
           </Title>
           <ul className="m-0 space-y-3 pl-5">
@@ -72,7 +72,7 @@ export function FeatureStatusPage({
           healthSnapshot={healthSnapshot}
           headingId={`${title}-baseline`}
         />
-        <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+        <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
           <Title level={4} className="!mb-3">
             当前壳体已覆盖
           </Title>

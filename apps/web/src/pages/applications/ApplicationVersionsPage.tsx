@@ -48,12 +48,12 @@ export default function ApplicationVersionsPage() {
         ) : null}
         {data?.map((version) => (
           <div
-            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
             key={version.applicationVersionId}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <Title level={3} className="!mb-1">
+                <Title level={5} className="!mb-0 !mt-0">
                   v{version.version}
                 </Title>
                 <Text type="secondary">

@@ -44,10 +44,10 @@ export default function ApplicationsPage() {
           <Empty description="输入应用 ID 查看应用管理信息" />
         ) : null}
         {data ? (
-          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5">
+          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-2">
-                <Title level={3} className="!mb-0">
+                <Title level={5} className="!mb-0 !mt-0">
                   {data.name}
                 </Title>
                 <Text type="secondary">

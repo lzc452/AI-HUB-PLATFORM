@@ -12,7 +12,7 @@ export interface KpiCardProps {
 /** 指标卡片：图标 + 数值 + 标题 + 可选趋势。 */
 export function KpiCard({ icon, label, trend, value }: KpiCardProps) {
   return (
-    <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-5">
+    <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
       <div className="mb-2 flex items-center gap-2">
         {icon}
         <Text type="secondary">{label}</Text>

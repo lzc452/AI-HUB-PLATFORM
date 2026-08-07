@@ -24,7 +24,7 @@ export default function OrganizationPage() {
       : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
       {firstError ? (
         <ErrorBlock
@@ -40,7 +40,7 @@ export default function OrganizationPage() {
         {employees.data ? (
           <section
             aria-labelledby="employees-heading"
-            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
           >
             <Title id="employees-heading" level={2} className="!mb-3">
               员工
@@ -68,7 +68,7 @@ export default function OrganizationPage() {
         {departments.data ? (
           <section
             aria-labelledby="departments-heading"
-            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
           >
             <Title id="departments-heading" level={2} className="!mb-3">
               部门

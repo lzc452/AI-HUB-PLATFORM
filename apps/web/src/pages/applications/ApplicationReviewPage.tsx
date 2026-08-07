@@ -44,7 +44,7 @@ export default function ApplicationReviewPage() {
         ) : null}
         {data?.map((review) => (
           <div
-            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+            className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
             key={review.reviewId}
           >
             <Tag color={decisionMeta[review.decision].color}>

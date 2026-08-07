@@ -48,7 +48,7 @@ export function MarketplaceDetailHeader({
   return (
     <header
       aria-label="应用详情头部"
-      className="rounded-2xl border border-[#d9d9d9] bg-white p-5 shadow-sm md:p-6"
+      className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="flex min-w-0 items-start gap-4">

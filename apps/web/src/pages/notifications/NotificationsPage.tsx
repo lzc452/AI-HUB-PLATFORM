@@ -22,7 +22,7 @@ export default function NotificationsPage() {
   const markRead = useMarkNotificationRead();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isPending ? <Spin aria-label="通知加载中" /> : null}
       {isError ? (
         <ErrorBlock
@@ -36,7 +36,7 @@ export default function NotificationsPage() {
         <ul className="m-0 list-none space-y-3 p-0" aria-label="通知列表">
           {data.map((notification) => (
             <li
-              className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+              className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
               key={notification.notificationId}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">

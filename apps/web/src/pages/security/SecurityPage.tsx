@@ -11,7 +11,7 @@ export default function SecurityPage() {
   const { logout } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isPending ? <Spin aria-label="身份信息加载中" /> : null}
       {isError ? (
         <ErrorBlock
@@ -23,7 +23,7 @@ export default function SecurityPage() {
       {data ? (
         <section
           aria-labelledby="actor-heading"
-          className="max-w-3xl rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+          className="max-w-3xl rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
         >
           <Title id="actor-heading" level={2} className="!mb-3">
             当前身份

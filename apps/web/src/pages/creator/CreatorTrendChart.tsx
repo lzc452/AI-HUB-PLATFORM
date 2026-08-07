@@ -36,10 +36,10 @@ export function CreatorTrendChart() {
   return (
     <section
       aria-label="本月应用使用趋势"
-      className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-5"
+      className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
     >
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <Title level={3} className="!mb-0 !text-base">
+        <Title level={5} className="!mb-0 !mt-0 !text-base">
           本月应用使用趋势
         </Title>
         {data ? (

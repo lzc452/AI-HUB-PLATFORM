@@ -47,7 +47,7 @@ export function ApplicationAdminPage({
   title,
 }: ApplicationAdminPageProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <ApplicationNavigation />
       <Alert
         description="数据已通过内部 API 接入；当前界面不提供写操作。"

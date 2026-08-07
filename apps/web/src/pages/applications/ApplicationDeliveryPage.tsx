@@ -43,11 +43,11 @@ export default function ApplicationDeliveryPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {data?.map((delivery) => (
             <div
-              className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5"
+              className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
               key={delivery.deliveryId}
             >
               <div className="flex items-center justify-between gap-3">
-                <Title level={3} className="!mb-0">
+                <Title level={5} className="!mb-0 !mt-0">
                   {channelTitle[delivery.channel]}
                 </Title>
                 <Tag color={delivery.enabled ? "success" : "default"}>

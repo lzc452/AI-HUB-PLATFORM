@@ -14,7 +14,7 @@ export function CreatorWelcomeBanner() {
   return (
     <section
       aria-label="创作者中心欢迎"
-      className="flex items-center justify-between gap-6 rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-6 lg:p-8"
+      className="flex items-center justify-between gap-6 rounded-2xl bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-6 lg:p-8"
     >
       <div className="min-w-0 space-y-2">
         <Title level={1} className="!mb-0 !text-2xl lg:!text-3xl">
@@ -28,28 +28,6 @@ export function CreatorWelcomeBanner() {
             工号 {actor.data.employeeId}
           </Text>
         ) : null}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
-          <Button
-            icon={<PlusOutlined aria-hidden="true" />}
-            onClick={() => navigate("/applications")}
-            type="primary"
-          >
-            创建新应用
-          </Button>
-          <Button
-            className="shadow-sm"
-            icon={<BarChartOutlined aria-hidden="true" />}
-            onClick={() => navigate("/analytics")}
-            style={{
-              background: "linear-gradient(135deg, #f79009, #ffc53d)",
-              borderColor: "transparent",
-              borderRadius: 9999,
-              color: "#fff",
-            }}
-          >
-            查看我的应用数据
-          </Button>
-        </div>
       </div>
       <div
         aria-hidden="true"

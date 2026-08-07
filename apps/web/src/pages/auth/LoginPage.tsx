@@ -62,7 +62,7 @@ export default function LoginPage() {
           </Title>
           <Text type="secondary">企业内部 AI 应用共享平台</Text>
         </div>
-        <Title level={3} className="!mb-4 text-center">
+        <Title level={5} className="!mb-4 text-center">
           员工登录
         </Title>
         {error ? (
