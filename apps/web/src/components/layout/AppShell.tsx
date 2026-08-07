@@ -74,7 +74,7 @@ export function AppShell() {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Navigation />
       </div>
-      <Announcement />
+      {/* <Announcement /> */}
     </div>
   );
 
@@ -96,10 +96,11 @@ export function AppShell() {
               style={{
                 background: "#fff",
                 borderRight: "1px solid #d9d9d9",
+                height: "100%",
               }}
               theme="light"
               trigger={null}
-              width={220}
+              width={180}
             >
               {sidebarContent}
             </Sider>
@@ -135,7 +136,7 @@ export function AppShell() {
         open={isMobile ? drawerOpen : false}
         placement="left"
         styles={{ body: { padding: 0 } }}
-        width={220}
+        width={180}
       >
         {sidebarContent}
       </Drawer>

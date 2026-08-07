@@ -165,7 +165,6 @@ export default function CreatorCenterPage() {
             ) : null}
           </div>
         </div>
-
         <CreatorSidebar />
       </div>
     </div>

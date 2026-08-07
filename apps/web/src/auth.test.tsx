@@ -19,7 +19,7 @@ describe("authentication", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "员工登录" }),
+      await screen.findByRole("heading", { name: "欢迎登录" }),
     ).toBeInTheDocument();
   });
 
@@ -33,7 +33,7 @@ describe("authentication", () => {
 
     fireEvent.submit(await screen.findByRole("form", { name: "登录表单" }));
 
-    expect(await screen.findByText("请输入员工工号")).toBeInTheDocument();
+    expect(await screen.findByText("请输入工号或邮箱")).toBeInTheDocument();
     expect(await screen.findByText("请输入密码")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -53,7 +53,7 @@ describe("authentication", () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByLabelText("员工工号"), {
+    fireEvent.change(await screen.findByLabelText("工号 / 邮箱"), {
       target: { value: "E0001" },
     });
     fireEvent.change(screen.getByLabelText("密码"), {
