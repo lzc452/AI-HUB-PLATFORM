@@ -6,6 +6,7 @@ function TestIcon(props: ComponentPropsWithoutRef<"span">) {
 
 export const AppstoreOutlined = TestIcon;
 export const AppstoreAddOutlined = TestIcon;
+export const DownloadOutlined = TestIcon;
 export const BellOutlined = TestIcon;
 export const CheckCircleOutlined = TestIcon;
 export const ClockCircleOutlined = TestIcon;
