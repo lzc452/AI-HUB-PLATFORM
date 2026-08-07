@@ -87,8 +87,19 @@ vi.mock("./modules/application/useApplication", () => {
     useApplicationDeliveries: () => ({ ...settled, data: [] }),
     useApplicationReviews: () => ({ ...settled, data: [] }),
     useApplicationVersions: () => ({ ...settled, data: [publishedVersion] }),
+    useArchiveApplication: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+    }),
+    useCreatorApplications: () => ({ ...settled, data: undefined }),
     useCreatorSummary: () => ({ ...settled, data: undefined }),
     usePublishedVersion: () => ({ ...settled, data: publishedVersion }),
+    useWithdrawApplication: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+    }),
   };
 });
 
@@ -178,7 +189,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "应用市场" }),
+      await screen.findByRole("heading", { name: "发现企业内部 AI 应用" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("统一查找、体验与分享各部门 AI 工具"),

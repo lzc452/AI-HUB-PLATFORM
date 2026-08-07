@@ -46,6 +46,24 @@ export interface ReviewRecord {
   createdAt: string;
 }
 
+export interface CreatorApplicationRecord {
+  applicationId: string;
+  name: string;
+  status: ApplicationStatus;
+  categoryId: string;
+  tagIds: string[];
+  publishedAt: string | null;
+  ratingAverage: number | null;
+  likeCount: number;
+}
+
+export interface CreatorApplicationList {
+  items: CreatorApplicationRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export interface CreatorSummary {
   versionDiff: {
     fromVersion: string;
@@ -111,5 +129,34 @@ export function getCreatorSummary(
 ): Promise<CreatorSummary> {
   return apiFetch<CreatorSummary>(
     `/internal/creator/applications/${encodeURIComponent(applicationId)}/summary`,
+  );
+}
+
+export function getCreatorApplications(): Promise<CreatorApplicationList> {
+  return apiFetch<CreatorApplicationList>("/internal/creator/applications");
+}
+
+/** 撤回/下架应用；后端要求携带撤回原因。 */
+export function withdrawApplication(
+  applicationId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `${applicationsPath(applicationId)}/withdraw`,
+    {
+      body: JSON.stringify({ reason: "创作者主动撤回" }),
+      method: "POST",
+    },
+  );
+}
+
+export function archiveApplication(
+  applicationId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `${applicationsPath(applicationId)}/archive`,
+    {
+      body: JSON.stringify({}),
+      method: "POST",
+    },
   );
 }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 import { CreatorService } from "./creator.service.js";
-import type { CreatorRepository } from "./creator.types.js";
+import type {
+  CreatorApplicationRecord,
+  CreatorRepository,
+} from "./creator.types.js";
 
 const owner: ActorContext = {
   employeeId: "E100",
@@ -10,6 +13,29 @@ const owner: ActorContext = {
   primaryDepartmentId: "dept-platform",
   sessionId: "session-E100",
 };
+
+const myApplications: readonly CreatorApplicationRecord[] = [
+  {
+    applicationId: "app-1",
+    name: "平台流程自动化",
+    status: "published",
+    categoryId: "cat-productivity",
+    tagIds: ["tag-ai"],
+    publishedAt: "2026-08-01T00:00:00.000Z",
+    ratingAverage: 4.5,
+    likeCount: 4,
+  },
+  {
+    applicationId: "app-2",
+    name: "草稿应用",
+    status: "draft",
+    categoryId: "",
+    tagIds: [],
+    publishedAt: null,
+    ratingAverage: null,
+    likeCount: 0,
+  },
+];
 
 class MemoryCreatorRepository implements CreatorRepository {
   async findTeam(applicationId: string) {
@@ -40,6 +66,9 @@ class MemoryCreatorRepository implements CreatorRepository {
       reviewCount: 2,
     };
   }
+  async listByEmployee(employeeId: string) {
+    return employeeId === "E100" ? myApplications : [];
+  }
 }
 
 const allowAll = async (): Promise<AuthorizationDecision> => ({
@@ -69,5 +98,41 @@ describe("CreatorService", () => {
     await expect(
       service.getApplicationSummary({ ...owner, employeeId: "E999" }, "app-1"),
     ).rejects.toThrow("CREATOR_ACCESS_FORBIDDEN");
+  });
+
+  it("lists owned and maintained applications with pagination envelope", async () => {
+    const service = new CreatorService(new MemoryCreatorRepository(), {
+      authorize: allowAll,
+    });
+    const result = await service.listMyApplications(owner);
+
+    expect(result.page).toBe(1);
+    expect(result.total).toBe(2);
+    expect(result.pageSize).toBe(2);
+    expect(result.items).toEqual(myApplications);
+  });
+
+  it("returns an empty page when the actor has no applications", async () => {
+    const service = new CreatorService(new MemoryCreatorRepository(), {
+      authorize: allowAll,
+    });
+    const result = await service.listMyApplications({
+      ...owner,
+      employeeId: "E999",
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.page).toBe(1);
+    expect(result.pageSize).toBe(20);
+    expect(result.total).toBe(0);
+  });
+
+  it("rejects listing when authorization is denied", async () => {
+    const service = new CreatorService(new MemoryCreatorRepository(), {
+      authorize: async () => ({ allowed: false, reasonCode: "DENY_TEST" }),
+    });
+    await expect(service.listMyApplications(owner)).rejects.toThrow(
+      "NOT_AUTHORIZED",
+    );
   });
 });

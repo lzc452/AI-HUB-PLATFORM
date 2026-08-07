@@ -15,7 +15,7 @@ import {
 import { IdentityService } from "../identity/identity.service.js";
 import { CREATOR_SERVICE } from "./creator.tokens.js";
 import { CreatorService } from "./creator.service.js";
-import { CreatorSummaryDto } from "./creator.dto.js";
+import { CreatorApplicationListDto, CreatorSummaryDto } from "./creator.dto.js";
 import {
   ApiIdentityHeaders,
   ApiProblemResponses,
@@ -28,6 +28,36 @@ export class CreatorController {
     @Inject(CREATOR_SERVICE) private readonly creator: CreatorService,
     @Inject(IdentityService) private readonly identity: IdentityService,
   ) {}
+
+  @Get()
+  @ApiOperation({
+    summary: "我的应用列表",
+    description:
+      "返回当前用户拥有或维护的应用列表，本期整页返回并预留分页结构。",
+  })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({
+    description: "我的应用列表",
+    type: CreatorApplicationListDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async listMyApplications(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    if (employeeId === undefined || sessionId === undefined) {
+      throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
+    }
+    try {
+      return await this.creator.listMyApplications(
+        await this.identity.getActorContext(employeeId, sessionId),
+      );
+    } catch (error) {
+      throw new BadRequestException(
+        error instanceof Error ? error.message : "CREATOR_REQUEST_FAILED",
+      );
+    }
+  }
 
   @Get(":applicationId/summary")
   @ApiOperation({
