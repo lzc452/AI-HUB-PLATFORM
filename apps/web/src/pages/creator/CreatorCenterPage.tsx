@@ -9,7 +9,6 @@ import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
 import { KpiCard } from "../../components/common/KpiCard";
-import { PageHeader } from "../../components/common/PageHeader";
 import {
   useCreatorApplications,
   useCreatorSummary,
@@ -52,10 +51,6 @@ export default function CreatorCenterPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="统一查看应用发布状态、运营指标与使用趋势，管理您创作的 AI 应用。"
-        title="创作者中心"
-      />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-6">
           <CreatorWelcomeBanner />

@@ -9,6 +9,7 @@ export type MarketplaceSortMode =
 export interface MarketplaceHeroProps {
   onPageChange: (page: number) => void;
   onSortChange: (sort: MarketplaceSortMode) => void;
+  total: number;
   page: number;
   pageCount: number;
   sortMode: MarketplaceSortMode;
@@ -25,10 +26,12 @@ const sortTabs: ReadonlyArray<{ label: string; value: MarketplaceSortMode }> = [
 export function MarketplaceHero({
   onPageChange,
   onSortChange,
+  total,
   page,
   pageCount,
   sortMode,
 }: MarketplaceHeroProps) {
+  const totalText = total ? `共 ${total} 个应用 · 第 ${page} / ${pageCount} 页` : "";
   const canPrev = page > 1;
   const canNext = page < pageCount;
 
@@ -59,11 +62,13 @@ export function MarketplaceHero({
           );
         })}
       </div>
+      
       <div
         aria-label="分页导航"
         className="flex shrink-0 items-center gap-1"
         role="group"
       >
+        <span className="text-xs text-[#595959] mr-2">{totalText}</span>
         <button
           aria-label="上一页"
           className={`flex h-8 w-8 items-center justify-center rounded-md border border-[#d9d9d9] bg-white text-[#595959] transition-all duration-200 hover:border-[#1677ff] hover:text-[#1677ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[#d9d9d9] disabled:hover:text-[#595959] ${

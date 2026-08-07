@@ -1,7 +1,6 @@
 import { Button, Descriptions, Spin, Tag, Typography } from "antd";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
-import { PageHeader } from "../../components/common/PageHeader";
 import { useAuth } from "../../modules/auth/useAuth";
 import { useActor } from "../../modules/auth/useIdentity";
 
@@ -13,10 +12,6 @@ export default function SecurityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="当前登录身份、角色与部门授权来自内部身份 API；会话可在此处退出。"
-        title="系统安全"
-      />
       {isPending ? <Spin aria-label="身份信息加载中" /> : null}
       {isError ? (
         <ErrorBlock

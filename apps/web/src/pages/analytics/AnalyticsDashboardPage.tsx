@@ -1,6 +1,5 @@
 import { Alert } from "antd";
 
-import { PageHeader } from "../../components/common/PageHeader";
 import type { DashboardKey } from "../../modules/analytics/analytics.client";
 import { DashboardCard } from "./DashboardCard";
 
@@ -59,10 +58,6 @@ const fixedAnalyticsDashboards: ReadonlyArray<{
 export default function AnalyticsDashboardPage() {
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="指标可由保留的原始事件重建；看板输出按权限过滤，不暴露个人访问名单。"
-        title="数据看板"
-      />
       <Alert
         description="每个指标声明其来源事件、公式、时间范围、权限、受众规则与重算方式。"
         showIcon

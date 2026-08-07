@@ -11,7 +11,7 @@ import { AppCard } from "./AppCard";
 import { MarketplaceFilters } from "./MarketplaceFilters";
 import { MarketplaceHero, type MarketplaceSortMode } from "./MarketplaceHero";
 
-const { Paragraph, Text } = Typography;
+const { Paragraph } = Typography;
 
 const PAGE_SIZE = 6;
 
@@ -110,74 +110,67 @@ export default function MarketplacePage() {
         />
       </section>
 
-      <MarketplaceHero
-        onPageChange={setPage}
-        onSortChange={setSortMode}
-        page={page}
-        pageCount={pageCount}
-        sortMode={sortMode}
-      />
+      <div className='bg-white p-2 lg:p-4 rounded-xl space-y-4'>
+        <MarketplaceFilters
+          categoryId={categoryId}
+          categoryOptions={categoryOptions}
+          channel={channel}
+          departmentId={departmentId}
+          departmentOptions={(departments.data ?? []).map((item) => ({
+            label: item.name,
+            value: item.departmentId,
+          }))}
+          onCategoryChange={setCategoryId}
+          onChannelChange={setChannel}
+          onDepartmentChange={setDepartmentId}
+          onReset={resetFilters}
+          onTagChange={setTagIds}
+          tagIds={tagIds}
+          tagOptions={tagOptions}
+        />
 
-      <MarketplaceFilters
-        categoryId={categoryId}
-        categoryOptions={categoryOptions}
-        channel={channel}
-        departmentId={departmentId}
-        departmentOptions={(departments.data ?? []).map((item) => ({
-          label: item.name,
-          value: item.departmentId,
-        }))}
-        onCategoryChange={setCategoryId}
-        onChannelChange={setChannel}
-        onDepartmentChange={setDepartmentId}
-        onReset={resetFilters}
-        onTagChange={setTagIds}
-        tagIds={tagIds}
-        tagOptions={tagOptions}
-      />
+        <MarketplaceHero
+          onPageChange={setPage}
+          onSortChange={setSortMode}
+          total={total}
+          page={page}
+          pageCount={pageCount}
+          sortMode={sortMode}
+        />
 
-      <section aria-labelledby="market-results-heading" className="space-y-4">
-        <div className="flex items-baseline justify-between">
-          <Text strong id="market-results-heading">
-            全部应用
-          </Text>
-          {data ? (
-            <Text type="secondary" className="text-xs">
-              共 {total} 个应用 · 第 {page} / {pageCount} 页
-            </Text>
+        <section aria-labelledby="market-results-heading" className="space-y-4">
+          {isPending ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <SkeletonCard count={6} />
+            </div>
           ) : null}
-        </div>
-        {isPending ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <SkeletonCard count={6} />
-          </div>
-        ) : null}
-        {isError ? (
-          <Alert
-            action={
-              <Button onClick={() => void refetch()} size="small">
-                重试
-              </Button>
-            }
-            description={error.message}
-            showIcon
-            title="应用列表加载失败"
-            type="error"
-          />
-        ) : null}
-        {data && sortedItems.length === 0 ? (
-          <EmptyBlock description="没有符合条件的已发布应用" />
-        ) : null}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {sortedItems.map((entry) => (
-            <AppCard
-              departmentName={departmentNames.get(entry.departmentId)}
-              entry={entry}
-              key={entry.applicationId}
+          {isError ? (
+            <Alert
+              action={
+                <Button onClick={() => void refetch()} size="small">
+                  重试
+                </Button>
+              }
+              description={error.message}
+              showIcon
+              title="应用列表加载失败"
+              type="error"
             />
-          ))}
-        </div>
-      </section>
+          ) : null}
+          {data && sortedItems.length === 0 ? (
+            <EmptyBlock description="没有符合条件的已发布应用" />
+          ) : null}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {sortedItems.map((entry) => (
+              <AppCard
+                departmentName={departmentNames.get(entry.departmentId)}
+                entry={entry}
+                key={entry.applicationId}
+              />
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

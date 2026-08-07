@@ -1,7 +1,6 @@
 import { Spin, Table, Tag, Typography } from "antd";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
-import { PageHeader } from "../../components/common/PageHeader";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 
 const { Title } = Typography;
@@ -26,10 +25,6 @@ export default function OrganizationPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="员工与部门数据来自内部身份 API，当前为只读视图。"
-        title="组织管理"
-      />
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
       {firstError ? (
         <ErrorBlock

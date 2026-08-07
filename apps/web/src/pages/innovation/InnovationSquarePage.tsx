@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
-import { PageHeader } from "../../components/common/PageHeader";
 import { demandStatusText } from "../../modules/innovation/demandMeta";
 import { useDemandList } from "../../modules/innovation/useDemand";
 
@@ -16,10 +15,6 @@ export default function InnovationSquarePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="结构化需求与受众治理，支持匿名展示、讨论、认领和可审计进展。"
-        title="创新广场"
-      />
       <section aria-labelledby="innovation-demand-list" className="space-y-4">
         <Title id="innovation-demand-list" level={2} className="!mb-0">
           可见需求

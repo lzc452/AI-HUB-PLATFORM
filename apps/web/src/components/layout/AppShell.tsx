@@ -34,11 +34,9 @@ function useIsMobile(): boolean {
 function Announcement() {
   return (
     <div aria-label="平台公告" className="border-t border-[#f0f0f0] px-4 py-3">
-      <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-[#595959]">
+      <p className="mb-1 flex items-center text-xs font-semibold text-[#595959]">
         <SoundOutlined aria-hidden="true" className="text-[#fa8c16]" />
-        平台公告
       </p>
-      <p className="m-0 truncate text-xs text-[#8c8c8c]">暂无公告</p>
     </div>
   );
 }
@@ -121,11 +119,11 @@ export function AppShell() {
         )}
         <Content
           id="main-content"
-          className="min-h-0 p-6"
+          className="min-h-0 p-4"
           style={{ background: "#f5f5f5", overflowY: "auto" }}
           tabIndex={-1}
         >
-          <Breadcrumbs />
+          {/* <Breadcrumbs /> */}
           <Suspense fallback={<Spin aria-label="页面加载中" />}>
             <Outlet />
           </Suspense>

@@ -6,7 +6,6 @@ import { useParams } from "react-router-dom";
 import { z } from "zod";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
-import { PageHeader } from "../../components/common/PageHeader";
 import { SkeletonDetail } from "../../components/common/SkeletonDetail";
 import {
   demandStatusColor,
@@ -69,10 +68,6 @@ export default function InnovationDemandDetailPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description={`${data.demandId} · 需求身份在匿名展示时保留在受控审计记录中。`}
-        title={data.title}
-      />
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="rounded-md border border-solid border-[#d9d9d9] bg-white p-5 lg:col-span-2">
           <Title level={2} className="!mb-3">

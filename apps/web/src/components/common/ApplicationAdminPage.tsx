@@ -1,7 +1,6 @@
 import { Alert } from "antd";
 import { NavLink, useParams } from "react-router-dom";
 
-import { PageHeader } from "./PageHeader";
 
 export function ApplicationNavigation() {
   const { applicationId = "app-001" } = useParams();
@@ -49,7 +48,6 @@ export function ApplicationAdminPage({
 }: ApplicationAdminPageProps) {
   return (
     <div className="space-y-6">
-      <PageHeader description={description} title={title} />
       <ApplicationNavigation />
       <Alert
         description="数据已通过内部 API 接入；当前界面不提供写操作。"

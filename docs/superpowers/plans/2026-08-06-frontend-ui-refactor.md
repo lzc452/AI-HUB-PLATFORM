@@ -205,7 +205,6 @@
 ### Task 6: 通用组件
 
 **文件?**
-- 创建? `apps/web/src/components/common/PageHeader.tsx`
 - 创建? `apps/web/src/components/common/ErrorBlock.tsx`
 - 创建? `apps/web/src/components/common/EmptyBlock.tsx`
 - 创建? `apps/web/src/components/common/ForbiddenBlock.tsx`
@@ -219,7 +218,6 @@
 
 **接口?**
 - Produces（全部命名导出）：
-  - `PageHeader({ title, description?, actions?, breadcrumb? })`：`title: string`；`description?: ReactNode`；`actions?: ReactNode`；`breadcrumb?: readonly string[]`（缺省用 `useBreadcrumbs()` 但**不渲染**，因为 AppShell 已集中渲染面包屑——本组件只渲染标题+描述+操作，`aria-labelledby` 与 h1）。
   - `ErrorBlock({ title?, description, onRetry? })`：Alert type="error" + 可选重试按钮。
   - `EmptyBlock({ description, action? })`：antd Empty + 可选操作。
   - `ForbiddenBlock({ description? })`：antd `Result status="403"` 标题"没有访问权限"，副文案默认"您没有访问此页面的权限"，按钮"返回首页"→ `/marketplace`。
@@ -255,11 +253,11 @@
 - 测试? `apps/web/src/App.test.tsx`（应用路由/生命周期断言）
 
 **接口?**
-- 消费? `PageHeader`（Task 6）、`ErrorBlock`、`EmptyBlock`。
-- 产出? `ApplicationAdminPage` 新 props 不变（`{ title, description, children }`），内部改为 `PageHeader` + 中文页签 + 只读提示；页签 label：应用详情/版本管理/审核工作台/交付配置。
+- 消费? `ErrorBlock`、`EmptyBlock`。
+- 产出? `ApplicationAdminPage` 新 props 不变（`{ title, description, children }`），内部改为中文页签 + 只读提示；页签 label：应用详情/版本管理/审核工作台/交付配置。
 
 **步骤?**
-- [ ] `ApplicationAdminPage.tsx`：`title`/`description` 由页面传入中文；页头用 `PageHeader`；`ApplicationNavigation` 文案改为：应用详情/版本管理/审核工作台/交付配置（路径不变）；只读 Alert 文案：title "只读预览"，description 保留"数据已通过内部 API 接入；当前界面不提供写操作。"；页签激活态沿用 antd 样式。
+- [ ] `ApplicationAdminPage.tsx`：`title`/`description` 由页面传入中文；`ApplicationNavigation` 文案改为：应用详情/版本管理/审核工作台/交付配置（路径不变）；只读 Alert 文案：title "只读预览"，description 保留"数据已通过内部 API 接入；当前界面不提供写操作。"；页签激活态沿用 antd 样式。
 - [ ] `ApplicationsPage.tsx`：title "应用管理"、description "统一管理应用发布、版本、审核与交付配置。"；正文保持现有查询表单/详情卡片，但卡片标题与文案中文化（"查看应用详情"等），输入框 aria-label 保持"应用 ID"。
 - [ ] `ApplicationDetailsPage.tsx`：title "应用详情"；生命周期状态标签改为：草稿/审核中/已通过/已上架/已驳回/已下架/已归档（`statusLabel` 同步）；"Published version"→"当前版本"；"Current state"→"当前状态"；错误/加载用 `ErrorBlock`/`Spin`。
 - [ ] `ApplicationVersionsPage.tsx`：title "版本管理"；"Version history"→"版本历史"；"Published"→"当前版本"；scan 标签保持中文（校验通过/校验失败/校验中）；页尾说明中文化。
@@ -285,13 +283,13 @@
 - 测试? `apps/web/src/App.test.tsx`（创新页断言）、`apps/web/src/phase6.test.tsx`
 
 **接口?**
-- 消费? `PageHeader`、`KpiCard`、`StatCard`、`ErrorBlock`、`EmptyBlock`。
+- 消费? `KpiCard`、`StatCard`、`ErrorBlock`、`EmptyBlock`。
 
 **步骤?**
-- [ ] `InnovationSquarePage.tsx`：页头改 `PageHeader`（title "创新广场"，description 保留"结构化需求与受众治理，支持匿名展示、讨论、认领和可审计进展。"）；需求卡片保持，搜索/加载/错误/空状态改用统一组件（错误 `ErrorBlock` + `refetch`，空 `EmptyBlock description="当前受众范围内没有可见需求"`）；`useDemandList` 结果需带 `refetch`（现有 hook 已有）。
-- [ ] `InnovationDemandDetailPage.tsx`：页头改 `PageHeader`（title 为需求标题或"创新需求详情"）；加载中 `SkeletonDetail`；错误 `ErrorBlock`；卡片布局微调（统一圆角/边框/间距），文案保持。
-- [ ] `CreatorCenterPage.tsx`：页头 `PageHeader`（title "创作者中心"）；3 个统计卡改用 `StatCard`/`KpiCard`（交付/点赞/评分）；版本差异与自动校验报告区块保持内容、换统一卡片样式。
-- [ ] `AnalyticsDashboardPage.tsx`：页头 `PageHeader`（title "数据看板"，description 中文化："指标可由保留的原始事件重建；看板输出按权限过滤，不暴露个人访问名单。"）；9 张卡片标题中文化：平台总览/市场采用分析/应用组合分析/创新需求漏斗/审核治理/部门采用/风险治理/系统运行/集成质量（`dashboardKey` 不变，仅 title/description 文案）；Alert 文案中文化。
+- [ ] `InnovationSquarePage.tsx`：需求卡片保持，搜索/加载/错误/空状态改用统一组件（错误 `ErrorBlock` + `refetch`，空 `EmptyBlock description="当前受众范围内没有可见需求"`）；`useDemandList` 结果需带 `refetch`（现有 hook 已有）。
+- [ ] `InnovationDemandDetailPage.tsx`：加载中 `SkeletonDetail`；错误 `ErrorBlock`；卡片布局微调（统一圆角/边框/间距），文案保持。
+- [ ] `CreatorCenterPage.tsx`：3 个统计卡改用 `StatCard`/`KpiCard`（交付/点赞/评分）；版本差异与自动校验报告区块保持内容、换统一卡片样式。
+- [ ] `AnalyticsDashboardPage.tsx`：9 张卡片标题中文化：平台总览/市场采用分析/应用组合分析/创新需求漏斗/审核治理/部门采用/风险治理/系统运行/集成质量（`dashboardKey` 不变，仅 title/description 文案）；Alert 文案中文化。
 - [ ] 提交：`style(web): localize innovation, creator and analytics pages`
 
 **测试?**
@@ -316,13 +314,13 @@
 
 **接口?**
 - 产出? `last-viewed.ts` 追加 `rememberLastViewedApplicationId(id: string): void`（sessionStorage 写入，try/catch 容错）。
-- 消费? `PageHeader`、`ErrorBlock`、`EmptyBlock`、`ConfirmModal`、`rememberLastViewedApplicationId`。
+- 消费? `ErrorBlock`、`EmptyBlock`、`ConfirmModal`、`rememberLastViewedApplicationId`。
 
 **步骤?**
-- [ ] `OrganizationPage.tsx`：title "组织管理"、description "员工与部门数据来自内部身份 API，当前为只读视图。"；页头 `PageHeader`；两张表卡片化保持；错误 `ErrorBlock`。
-- [ ] `SecurityPage.tsx`：title "系统安全"、description "当前登录身份、角色与部门授权来自内部身份 API；会话可在此处退出。"；页头 `PageHeader`；退出登录按钮保留（可用 `ConfirmModal`）。
-- [ ] `NotificationsPage.tsx`：页头 `PageHeader`（title "站内通知"）；列表卡片化（统一圆角/边框/间距）；空状态改 `EmptyBlock description="暂无通知"`；错误 `ErrorBlock`；加载 `Spin`。不新增"全部标记已读"等未实现能力。
-- [ ] `MarketplaceDetailPage.tsx`：挂载时 `rememberLastViewedApplicationId(applicationId)`（`useEffect`）；页头 `PageHeader`（title 应用名 + 面包屑由 AppShell 承担）；加载 `SkeletonDetail`；错误 `ErrorBlock`（404 语义用 `NotFoundBlock`）；"开始使用"主按钮：`type="primary"`，`disabled` + `title="交付动作接口待接入"`（按渠道文案可保留在交付卡片）；点赞/评分区保留。
+- [ ] `OrganizationPage.tsx`：title "组织管理"、description "员工与部门数据来自内部身份 API，当前为只读视图。"；两张表卡片化保持；错误 `ErrorBlock`。
+- [ ] `SecurityPage.tsx`：title "系统安全"、description "当前登录身份、角色与部门授权来自内部身份 API；会话可在此处退出。"；退出登录按钮保留（可用 `ConfirmModal`）。
+- [ ] `NotificationsPage.tsx`：列表卡片化（统一圆角/边框/间距）；空状态改 `EmptyBlock description="暂无通知"`；错误 `ErrorBlock`；加载 `Spin`。不新增"全部标记已读"等未实现能力。
+- [ ] `MarketplaceDetailPage.tsx`：挂载时 `rememberLastViewedApplicationId(applicationId)`（`useEffect`）；加载 `SkeletonDetail`；错误 `ErrorBlock`（404 语义用 `NotFoundBlock`）；"开始使用"主按钮：`type="primary"`，`disabled` + `title="交付动作接口待接入"`（按渠道文案可保留在交付卡片）；点赞/评分区保留。
 - [ ] `LoginPage.tsx`：独立居中卡片布局（antd `Card`，`max-w-md` 居中，上下留白）；顶部 Logo 图标 + "AI 应用市场"（`AppstoreOutlined`）+ 副标题"企业内部 AI 应用共享平台"；标题 h1 "员工登录"；表单字段 label "员工工号"/"密码"（占位符"工号 / 邮箱"）；登录按钮 loading；分隔线（antd `Divider plain` "或"）；"钉钉扫码登录"按钮（`type="default"`，点击 `message.info("钉钉登录暂未配置，请联系管理员")`）；底部 Text "首次使用？请联系管理员开通账号"；现有 `zod` 校验与错误 Alert 保留。
 - [ ] 提交：`style(web): localize remaining pages and rebuild login layout`
 
@@ -344,7 +342,7 @@
 - 测试? 新增 `apps/web/src/assistant.test.tsx` 或在 `App.test.tsx` 加断言
 
 **接口?**
-- 消费? `ROUTES.assistant`、`PageHeader`。
+- 消费? `ROUTES.assistant`。
 - 产出? 默认导出 `AssistantPage`。
 
 **步骤?**
@@ -352,7 +350,6 @@
   - 空状态：居中 `RobotOutlined`（紫色 `#722ed1`）+ 标题 "AI 助手" + 副文案"我可以帮助您搜索和推荐合适的应用" + 3 个示例问题快捷按钮（"有什么适合数据分析的应用？"、"帮我找协作办公类应用"、"推荐最近上架的应用"），点击后填入输入框并发送。
   - 消息列表：用户消息右对齐（蓝色气泡 `#e6f4ff`/`#1677ff`），AI 消息左对齐（灰底，`RobotOutlined` 紫色标识）；消息仅存组件本地 state（不持久化）。
   - 输入区：`Input.TextArea`（Enter 发送、Shift+Enter 换行）+ 发送按钮（`SendOutlined` 或"发送"），发送后追加用户消息，并追加 AI 回复 Alert："AI 助手暂时不可用，请稍后重试"（降级提示，`type="warning"`）。
-  - 页头用 `PageHeader`（title "AI 助手"）。
 - [ ] `router/index.tsx`：`const AssistantPage = lazy(() => import("../pages/assistant/AssistantPage"));`，注册 `{ element: <AssistantPage />, path: ROUTES.assistant }`。
 - [ ] 提交：`feat(web): add assistant page skeleton`
 

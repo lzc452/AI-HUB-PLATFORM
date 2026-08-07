@@ -2,8 +2,6 @@ import { RobotOutlined, SendOutlined } from "@ant-design/icons";
 import { Alert, Button, Input, Typography } from "antd";
 import { useState } from "react";
 
-import { PageHeader } from "../../components/common/PageHeader";
-
 const { Text, Title } = Typography;
 
 interface ChatMessage {
@@ -35,10 +33,6 @@ export default function AssistantPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="我可以帮助您搜索和推荐合适的应用"
-        title="AI 助手"
-      />
       <section
         aria-label="AI 助手对话"
         className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-6"

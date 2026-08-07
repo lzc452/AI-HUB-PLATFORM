@@ -2,7 +2,6 @@ import { Button, Spin, Tag, Typography } from "antd";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
-import { PageHeader } from "../../components/common/PageHeader";
 import {
   useMarkNotificationRead,
   useNotifications,
@@ -24,10 +23,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        description="业务通知保留在站内；钉钉投递失败会进入可重试状态。"
-        title="站内通知"
-      />
       {isPending ? <Spin aria-label="通知加载中" /> : null}
       {isError ? (
         <ErrorBlock

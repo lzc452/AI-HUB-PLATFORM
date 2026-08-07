@@ -1246,7 +1246,6 @@
 | AppShell | 整体布局壳（Header + Sidebar + Content） | 全局 |
 | Header | 顶部导航栏 | 全局 |
 | Sidebar | 左侧菜单栏 | 全局（除登录页） |
-| PageHeader | 页面标题 + 面包屑 + 操作按钮 | 各页面顶部 |
 | KpiCard | 指标卡片（图标 + 数值 + 标题 + 趋势） | 看板、创作者中心 |
 | StatCard | 统计卡片（图标 + 数值 + 标题） | 看板 |
 | SkeletonCard | 卡片骨架屏 | 列表加载中 |
