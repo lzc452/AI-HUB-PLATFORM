@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import type { CreatorApplicationRecord } from "./creator.types.js";
 
 /** 版本差异。 */
 export class CreatorVersionDiffDto {
@@ -74,4 +75,79 @@ export class CreatorSummaryDto {
     type: () => CreatorAggregateMetricsDto,
   })
   metrics!: CreatorAggregateMetricsDto;
+}
+
+/** 我的应用列表条目。 */
+export class CreatorApplicationItemDto {
+  @ApiProperty({ type: String, description: "应用 ID", example: "app-1" })
+  applicationId!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "应用名称",
+    example: "智能考勤助手",
+  })
+  name!: string;
+
+  @ApiProperty({
+    description: "应用状态",
+    enum: [
+      "draft",
+      "in_review",
+      "approved",
+      "published",
+      "withdrawn",
+      "archived",
+    ],
+  })
+  status!: CreatorApplicationRecord["status"];
+
+  @ApiProperty({
+    type: String,
+    description: "分类 ID",
+    example: "productivity",
+  })
+  categoryId!: string;
+
+  @ApiProperty({ description: "标签 ID 列表", type: [String] })
+  tagIds!: string[];
+
+  @ApiPropertyOptional({
+    description: "发布时间（ISO 8601，未发布为 null）",
+    type: String,
+    format: "date-time",
+    nullable: true,
+    example: "2026-08-01T00:00:00.000Z",
+  })
+  publishedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: "平均评分",
+    type: Number,
+    nullable: true,
+    example: 4.5,
+  })
+  ratingAverage?: number | null;
+
+  @ApiProperty({ type: Number, description: "点赞数", example: 5 })
+  likeCount!: number;
+}
+
+/** 我的应用列表结果。 */
+export class CreatorApplicationListDto {
+  @ApiProperty({
+    description: "应用列表",
+    type: () => CreatorApplicationItemDto,
+    isArray: true,
+  })
+  items!: CreatorApplicationItemDto[];
+
+  @ApiProperty({ type: Number, description: "当前页码", example: 1 })
+  page!: number;
+
+  @ApiProperty({ type: Number, description: "每页数量", example: 20 })
+  pageSize!: number;
+
+  @ApiProperty({ type: Number, description: "符合条件的总数", example: 2 })
+  total!: number;
 }

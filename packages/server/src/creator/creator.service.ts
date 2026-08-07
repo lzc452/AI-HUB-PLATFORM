@@ -1,8 +1,12 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type {
+  CreatorApplicationListResult,
   CreatorAuthorizationPort,
   CreatorRepository,
 } from "./creator.types.js";
+
+/** 我的应用列表默认分页大小（本期整页返回，仅预留分页结构）。 */
+const DEFAULT_PAGE_SIZE = 20;
 
 export class CreatorService {
   constructor(
@@ -31,5 +35,23 @@ export class CreatorService {
       this.repository.getAggregateMetrics(applicationId),
     ]);
     return { versionDiff, validationReport, metrics };
+  }
+
+  async listMyApplications(
+    actor: ActorContext,
+  ): Promise<CreatorApplicationListResult> {
+    const decision = await this.authorization.authorize({
+      actor,
+      action: "read",
+      resourceType: "creator",
+    });
+    if (!decision.allowed) throw new Error("NOT_AUTHORIZED");
+    const items = await this.repository.listByEmployee(actor.employeeId);
+    return {
+      items,
+      page: 1,
+      pageSize: items.length > 0 ? items.length : DEFAULT_PAGE_SIZE,
+      total: items.length,
+    };
   }
 }

@@ -1,4 +1,28 @@
-import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  ApplicationStatus,
+  AuthorizationDecision,
+} from "@ai-hub/contracts";
+
+/** 创作者视角的应用记录。 */
+export interface CreatorApplicationRecord {
+  applicationId: string;
+  name: string;
+  status: ApplicationStatus;
+  categoryId: string;
+  tagIds: readonly string[];
+  publishedAt: string | null;
+  ratingAverage: number | null;
+  likeCount: number;
+}
+
+/** 我的应用列表结果（预留分页结构）。 */
+export interface CreatorApplicationListResult {
+  items: readonly CreatorApplicationRecord[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
 
 export interface CreatorRepository {
   findTeam(applicationId: string): Promise<{
@@ -22,6 +46,9 @@ export interface CreatorRepository {
     ratingAverage: number | null;
     reviewCount: number;
   }>;
+  listByEmployee(
+    employeeId: string,
+  ): Promise<readonly CreatorApplicationRecord[]>;
 }
 
 export interface CreatorAuthorizationPort {

@@ -54,12 +54,8 @@ describe("Phase 4 market shell", () => {
     expect(screen.getByText("热门应用")).toBeInTheDocument();
     expect((await screen.findAllByText("已审核")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("平台助手")).length).toBeGreaterThan(0);
-    expect(
-      screen.getByRole("button", { name: "上一页" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "下一页" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "上一页" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "下一页" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "收起菜单" }),
     ).toBeInTheDocument();

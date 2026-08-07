@@ -1,8 +1,4 @@
-import {
-  LeftOutlined,
-  RightOutlined,
-  SoundOutlined,
-} from "@ant-design/icons";
+import { LeftOutlined, RightOutlined, SoundOutlined } from "@ant-design/icons";
 import { Drawer, Layout, Spin } from "antd";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
