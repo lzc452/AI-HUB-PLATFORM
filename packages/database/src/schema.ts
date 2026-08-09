@@ -358,6 +358,12 @@ export interface AiDemandLikesTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface AiDemandCommentLikesTable {
+  comment_id: string;
+  employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface AiDemandReportsTable {
   report_id: Generated<string>;
   demand_id: string;
@@ -508,6 +514,7 @@ export interface DatabaseSchema {
   ai_demand_collaborators: AiDemandCollaboratorsTable;
   ai_demand_comments: AiDemandCommentsTable;
   ai_demand_likes: AiDemandLikesTable;
+  ai_demand_comment_likes: AiDemandCommentLikesTable;
   ai_demand_reports: AiDemandReportsTable;
   ai_demand_progress_updates: AiDemandProgressUpdatesTable;
   ai_demand_pilots: AiDemandPilotsTable;

@@ -11,6 +11,8 @@ import type { ApplicationRepository } from "../application/application.types.js"
 export interface DemandEntry {
   demandId: string;
   requesterEmployeeId: string | null;
+  requesterDepartmentId?: string | null;
+  requesterDisplayName?: string | null;
   title: string;
   problemStatement: string;
   desiredOutcome: string;
@@ -23,6 +25,7 @@ export interface DemandEntry {
   reviewReason: string | null;
   likeCount: number;
   commentCount: number;
+  likedByCurrentActor?: boolean;
   businessValue?: number | null;
   implementationCost?: number | null;
   riskLevel?: number | null;
@@ -30,6 +33,7 @@ export interface DemandEntry {
   priorityScore: number | null;
   priorityExplanation: string | null;
   ownerEmployeeId: string | null;
+  ownerDisplayName?: string | null;
   primarySolutionApplicationId: string | null;
   version: number;
   createdAt: Date;
@@ -75,7 +79,9 @@ export interface DemandRepository {
     actor: ActorContext;
     status?: DemandStatus;
     query?: string;
-    sortByPriority?: boolean;
+    requesterDepartmentId?: string;
+    audienceType?: CreateDemandInput["audienceType"];
+    sort?: "recent" | "priority" | "hot";
   }): Promise<readonly DemandEntry[]>;
   findVisible(
     actor: ActorContext,
@@ -112,9 +118,20 @@ export interface DemandRepository {
     role: DemandCollaboratorRole,
     expectedVersion: number,
   ): Promise<DemandCollaboratorRecord>;
+  updateCollaboratorRole(
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRole,
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord>;
   listCollaborators(
     demandId: string,
   ): Promise<readonly DemandCollaboratorRecord[]>;
+  removeCollaborator(
+    demandId: string,
+    employeeId: string,
+    expectedVersion: number,
+  ): Promise<void>;
   setPriority(
     demandId: string,
     input: {
@@ -172,14 +189,29 @@ export interface DemandRepository {
   listApplicationLinks(
     demandId: string,
   ): Promise<readonly DemandApplicationLinkRecord[]>;
+  unlinkApplication(
+    demandId: string,
+    applicationId: string,
+    expectedVersion: number,
+  ): Promise<void>;
   hasLike(demandId: string, employeeId: string): Promise<boolean>;
   addLike(demandId: string, employeeId: string): Promise<void>;
   removeLike(demandId: string, employeeId: string): Promise<void>;
+  hasCommentLike(commentId: string, employeeId: string): Promise<boolean>;
+  addCommentLike(commentId: string, employeeId: string): Promise<void>;
+  removeCommentLike(commentId: string, employeeId: string): Promise<void>;
   findComment(commentId: string): Promise<DemandCommentRecord | null>;
+  findReport(reportId: string): Promise<DemandReportRecord | null>;
   createComment(
-    input: Omit<DemandCommentRecord, "commentId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      DemandCommentRecord,
+      "commentId" | "createdAt" | "updatedAt" | "authorEmployeeId"
+    > & { authorEmployeeId: string },
   ): Promise<DemandCommentRecord>;
-  listComments(demandId: string): Promise<readonly DemandCommentRecord[]>;
+  listComments(
+    demandId: string,
+    actor?: ActorContext,
+  ): Promise<readonly DemandCommentRecord[]>;
   setCommentHidden(commentId: string, hiddenAt: Date | null): Promise<void>;
   createReport(
     input: Omit<DemandReportRecord, "reportId" | "createdAt">,
@@ -189,6 +221,8 @@ export interface DemandRepository {
     status: DemandReportRecord["status"],
     employeeId: string,
   ): Promise<DemandReportRecord>;
+  listPilots(demandId: string): Promise<readonly DemandPilotRecord[]>;
+  listReports(demandId: string): Promise<readonly DemandReportRecord[]>;
   recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -249,9 +283,13 @@ export interface DemandCommentRecord {
   commentId: string;
   demandId: string;
   parentCommentId: string | null;
-  authorEmployeeId: string;
+  authorEmployeeId: string | null;
+  authorDisplayName?: string | null;
+  authorDepartmentId?: string | null;
   body: string;
   displayAnonymously: boolean;
+  likeCount?: number;
+  likedByCurrentActor?: boolean;
   hiddenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

@@ -37,6 +37,8 @@ export interface DemandPriorityInput {
 export interface DemandEntry {
   demandId: string;
   requesterEmployeeId: string | null;
+  requesterDepartmentId?: string | null;
+  requesterDisplayName?: string | null;
   title: string;
   problemStatement: string;
   desiredOutcome: string;
@@ -44,9 +46,12 @@ export interface DemandEntry {
   reviewReason: string | null;
   audienceType: DemandAudienceType;
   audienceDepartmentId: string | null;
+  audienceEmployeeId?: string | null;
+  includeChildren?: boolean;
   displayAnonymously: boolean;
   likeCount: number;
   commentCount: number;
+  likedByCurrentActor?: boolean;
   businessValue?: number | null;
   implementationCost?: number | null;
   riskLevel?: number | null;
@@ -54,6 +59,7 @@ export interface DemandEntry {
   priorityScore: number | null;
   priorityExplanation: string | null;
   ownerEmployeeId: string | null;
+  ownerDisplayName?: string | null;
   primarySolutionApplicationId: string | null;
   version: number;
   createdAt: string;
@@ -64,6 +70,9 @@ export interface DemandListQuery {
   actor: ActorContext;
   status?: DemandStatus;
   query?: string;
+  requesterDepartmentId?: string;
+  audienceType?: DemandAudienceType;
+  sort?: "recent" | "priority" | "hot";
   page: number;
   pageSize: number;
 }

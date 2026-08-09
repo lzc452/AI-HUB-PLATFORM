@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Headers,
@@ -34,6 +35,7 @@ import {
   DemandClaimRequestDto,
   DemandCollaboratorDto,
   DemandCollaboratorRequestDto,
+  DemandCollaboratorRoleUpdateRequestDto,
   DemandCommentDto,
   DemandCommentRequestDto,
   DemandCreateApplicationRequestDto,
@@ -235,6 +237,59 @@ export class DemandController {
     );
   }
 
+  @Patch(":demandId/collaborators/:collaboratorEmployeeId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_COLLABORATE)
+  @ApiOperation({ summary: "调整协作成员角色" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "collaboratorEmployeeId", description: "协作人员工工号" })
+  @ApiBody({ type: DemandCollaboratorRoleUpdateRequestDto })
+  @ApiOkResponse({ description: "更新后的协作成员记录", type: DemandCollaboratorDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  updateCollaboratorRole(
+    @Param("demandId") demandId: string,
+    @Param("collaboratorEmployeeId") collaboratorEmployeeId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: DemandCollaboratorRoleUpdateRequestDto,
+  ) {
+    return this.call(async () =>
+      this.demands.updateCollaboratorRole(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        collaboratorEmployeeId,
+        body.role,
+        body.expectedVersion,
+      ),
+    );
+  }
+
+  @Delete(":demandId/collaborators/:collaboratorEmployeeId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_COLLABORATE)
+  @ApiOperation({ summary: "移除协作成员" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "collaboratorEmployeeId", description: "协作人员工工号" })
+  @ApiQuery({ name: "expectedVersion", required: true })
+  @ApiOkResponse({ description: "协作成员已移除" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  removeCollaborator(
+    @Param("demandId") demandId: string,
+    @Param("collaboratorEmployeeId") collaboratorEmployeeId: string,
+    @Query("expectedVersion") expectedVersion: string | undefined,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.removeCollaborator(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        collaboratorEmployeeId,
+        this.parsePositive(expectedVersion, 0),
+      ),
+    );
+  }
+
   @Post(":demandId/priority")
   @RequiresPermissions(PERMISSIONS.DEMAND_PRIORITIZE)
   @ApiOperation({ summary: "设置需求优先级" })
@@ -361,6 +416,23 @@ export class DemandController {
             : { endsAt: new Date(body.endsAt) }),
         },
       ),
+    );
+  }
+
+  @Get(":demandId/pilots")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
+  @ApiOperation({ summary: "试点列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({ description: "试点列表", type: DemandPilotDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403, 404])
+  listPilots(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listPilots(await this.actor(employeeId, sessionId), demandId),
     );
   }
 
@@ -509,6 +581,32 @@ export class DemandController {
     );
   }
 
+  @Delete(":demandId/applications/:applicationId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION)
+  @ApiOperation({ summary: "解除需求与应用关联" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiQuery({ name: "expectedVersion", required: true })
+  @ApiOkResponse({ description: "关联已解除" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  unlinkApplication(
+    @Param("demandId") demandId: string,
+    @Param("applicationId") applicationId: string,
+    @Query("expectedVersion") expectedVersion: string | undefined,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.unlinkApplication(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        applicationId,
+        this.parsePositive(expectedVersion, 0),
+      ),
+    );
+  }
+
   @Get()
   @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({
@@ -549,7 +647,7 @@ export class DemandController {
     name: "sort",
     description: "排序方式",
     required: false,
-    enum: ["recent", "priority"],
+    enum: ["recent", "priority", "hot"],
   })
   @ApiOkResponse({ description: "需求列表结果", type: DemandListResultDto })
   @ApiProblemResponses([400, 401, 403])
@@ -560,7 +658,9 @@ export class DemandController {
     @Query("query") query?: string,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
-    @Query("sort") sort?: "recent" | "priority",
+    @Query("requesterDepartmentId") requesterDepartmentId?: string,
+    @Query("audienceType") audienceType?: "all" | "department" | "employee",
+    @Query("sort") sort?: "recent" | "priority" | "hot",
   ) {
     const parsedPage = this.parsePositive(page, 1);
     const parsedPageSize = this.parsePositive(pageSize, 20);
@@ -568,6 +668,8 @@ export class DemandController {
       this.demands.list(await this.actor(employeeId, sessionId), {
         ...(status === undefined ? {} : { status }),
         ...(query === undefined ? {} : { query }),
+        ...(requesterDepartmentId === undefined ? {} : { requesterDepartmentId }),
+        ...(audienceType === undefined ? {} : { audienceType }),
         ...(sort === undefined ? {} : { sort }),
         page: parsedPage,
         pageSize: parsedPageSize,
@@ -658,6 +760,29 @@ export class DemandController {
     );
   }
 
+  @Post(":demandId/comments/:commentId/like")
+  @RequiresPermissions(PERMISSIONS.DEMAND_INTERACT)
+  @ApiOperation({ summary: "评论点赞或取消点赞" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "commentId", description: "评论 ID" })
+  @ApiCreatedResponse({ description: "评论点赞后的状态", type: LikeResultDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  likeComment(
+    @Param("demandId") demandId: string,
+    @Param("commentId") commentId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.toggleCommentLike(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        commentId,
+      ),
+    );
+  }
+
   @Post(":demandId/reports")
   @RequiresPermissions(PERMISSIONS.DEMAND_INTERACT)
   @ApiOperation({ summary: "举报需求或评论" })
@@ -680,6 +805,23 @@ export class DemandController {
     );
   }
 
+  @Get(":demandId/reports")
+  @RequiresPermissions(PERMISSIONS.DEMAND_MODERATE)
+  @ApiOperation({ summary: "需求举报列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({ description: "举报记录列表", type: DemandReportDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403, 404])
+  listReports(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listReports(await this.actor(employeeId, sessionId), demandId),
+    );
+  }
+
   @Post(":demandId/reports/:reportId/resolve")
   @RequiresPermissions(PERMISSIONS.DEMAND_MODERATE)
   @ApiOperation({ summary: "处理需求举报" })
@@ -693,6 +835,7 @@ export class DemandController {
   })
   @ApiProblemResponses([400, 401, 403, 404])
   resolveReport(
+    @Param("demandId") demandId: string,
     @Param("reportId") reportId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -701,6 +844,7 @@ export class DemandController {
     return this.call(async () =>
       this.demands.resolveReport(
         await this.actor(employeeId, sessionId),
+        demandId,
         reportId,
         body.status,
       ),
@@ -719,6 +863,7 @@ export class DemandController {
   @ApiOkResponse({ description: "作者员工工号", type: EmployeeIdResultDto })
   @ApiProblemResponses([400, 401, 403, 404])
   anonymousAuthor(
+    @Param("demandId") demandId: string,
     @Param("commentId") commentId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
@@ -726,6 +871,7 @@ export class DemandController {
     return this.call(async () => ({
       employeeId: await this.demands.lookupAnonymousAuthor(
         await this.actor(employeeId, sessionId),
+        demandId,
         commentId,
       ),
     }));

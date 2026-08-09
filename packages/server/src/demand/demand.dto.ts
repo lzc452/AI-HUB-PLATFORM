@@ -130,6 +130,15 @@ export class DemandCollaboratorRequestDto {
   expectedVersion!: number;
 }
 
+/** 调整协作成员角色请求。 */
+export class DemandCollaboratorRoleUpdateRequestDto {
+  @ApiProperty({ description: "协作角色", enum: COLLABORATOR_ROLE })
+  role!: (typeof COLLABORATOR_ROLE)[number];
+
+  @ApiProperty({ type: Number, description: "期望版本号（乐观锁）", example: 1 })
+  expectedVersion!: number;
+}
+
 /** 设置需求优先级请求。 */
 export class DemandPriorityRequestDto {
   @ApiProperty({
@@ -381,6 +390,12 @@ export class DemandEntryDto {
   })
   requesterEmployeeId?: string | null;
 
+  @ApiPropertyOptional({ type: String, description: "发起人主部门 ID", nullable: true })
+  requesterDepartmentId?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "发起人展示名称", nullable: true })
+  requesterDisplayName?: string | null;
+
   @ApiProperty({
     type: String,
     description: "需求标题",
@@ -446,6 +461,9 @@ export class DemandEntryDto {
   @ApiProperty({ type: Number, description: "评论数", example: 3 })
   commentCount!: number;
 
+  @ApiProperty({ type: Boolean, description: "当前用户是否已点赞" })
+  likedByCurrentActor!: boolean;
+
   @ApiPropertyOptional({
     description: "业务价值（1-5）",
     type: Number,
@@ -495,6 +513,9 @@ export class DemandEntryDto {
     example: "DEMO-INNOVATION",
   })
   ownerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "负责人展示名称", nullable: true })
+  ownerDisplayName?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -716,12 +737,19 @@ export class DemandCommentDto {
   })
   parentCommentId?: string | null;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     description: "作者员工工号",
     example: "DEMO-EMPLOYEE",
+    nullable: true,
   })
-  authorEmployeeId!: string;
+  authorEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "作者展示名称", nullable: true })
+  authorDisplayName?: string | null;
+
+  @ApiPropertyOptional({ type: String, description: "作者主部门 ID", nullable: true })
+  authorDepartmentId?: string | null;
 
   @ApiProperty({
     type: String,
@@ -732,6 +760,12 @@ export class DemandCommentDto {
 
   @ApiProperty({ type: Boolean, description: "是否匿名展示", example: false })
   displayAnonymously!: boolean;
+
+  @ApiProperty({ type: Number, description: "评论点赞数", example: 3 })
+  likeCount!: number;
+
+  @ApiProperty({ type: Boolean, description: "当前用户是否已点赞" })
+  likedByCurrentActor!: boolean;
 
   @ApiPropertyOptional({
     description: "隐藏时间（ISO 8601），未隐藏为 null",

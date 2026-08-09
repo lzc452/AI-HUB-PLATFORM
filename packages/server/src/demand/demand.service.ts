@@ -233,6 +233,42 @@ export class DemandService {
     return this.repository.listCollaborators(demandId);
   }
 
+  async updateCollaboratorRole(
+    actor: ActorContext,
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRecord["role"],
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord> {
+    await this.assertAllowed(actor, "collaborate", demandId);
+    const current = await this.requireDemand(demandId);
+    if (current.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("DEMAND_OWNER_REQUIRED");
+    }
+    if (current.ownerEmployeeId === employeeId || role === "owner") {
+      throw new Error("DEMAND_COLLABORATOR_ROLE_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const collaborator = await repository.updateCollaboratorRole(
+        demandId,
+        employeeId,
+        role,
+        expectedVersion,
+      );
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.collaborator.role.updated",
+        details: { employeeId, role },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.collaborator.role.updated",
+      });
+      return collaborator;
+    });
+  }
+
   async setPriority(
     actor: ActorContext,
     demandId: string,
@@ -248,16 +284,19 @@ export class DemandService {
         throw new Error("DEMAND_PRIORITY_INVALID");
       }
     }
-    const score =
-      input.businessValue * 3 +
-      input.adminPriority * 2 -
-      input.implementationCost * 2 -
-      input.riskLevel * 2;
+    const score = Number(
+      (
+        input.businessValue * 0.4 +
+        input.adminPriority * 0.3 +
+        (6 - input.implementationCost) * 0.15 +
+        (6 - input.riskLevel) * 0.15
+      ).toFixed(1),
+    );
     const explanation =
-      `businessValue=${input.businessValue}*3 + ` +
-      `adminPriority=${input.adminPriority}*2 - ` +
-      `implementationCost=${input.implementationCost}*2 - ` +
-      `riskLevel=${input.riskLevel}*2 = ${score}`;
+      `0.40*businessValue=${input.businessValue} + ` +
+      `0.30*adminPriority=${input.adminPriority} + ` +
+      `0.15*(6-implementationCost=${input.implementationCost}) + ` +
+      `0.15*(6-riskLevel=${input.riskLevel}) = ${score}`;
     return this.repository.withTransaction(async (repository) => {
       const prioritized = await repository.setPriority(
         demandId,
@@ -612,24 +651,26 @@ export class DemandService {
       query?: string;
       page: number;
       pageSize: number;
-      sort?: "recent" | "priority";
+      requesterDepartmentId?: string;
+      audienceType?: DemandEntry["audienceType"];
+      sort?: "recent" | "priority" | "hot";
     },
   ): Promise<DemandListResult> {
     if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
       throw new Error("DEMAND_PAGINATION_INVALID");
     }
     await this.assertAllowed(actor, "read");
-    if (
-      input.sort === "priority" &&
-      !hasPermission(actor, PERMISSIONS.DEMAND_PRIORITIZE)
-    ) {
-      throw new Error("DEMAND_PRIORITY_FORBIDDEN");
-    }
     const visible = await this.repository.listVisible({
       actor,
       ...(input.status === undefined ? {} : { status: input.status }),
       ...(input.query === undefined ? {} : { query: input.query }),
-      ...(input.sort === "priority" ? { sortByPriority: true } : {}),
+      ...(input.requesterDepartmentId === undefined
+        ? {}
+        : { requesterDepartmentId: input.requesterDepartmentId }),
+      ...(input.audienceType === undefined
+        ? {}
+        : { audienceType: input.audienceType }),
+      ...(input.sort === undefined ? {} : { sort: input.sort }),
     });
     const start = (input.page - 1) * input.pageSize;
     return {
@@ -706,6 +747,44 @@ export class DemandService {
     return result;
   }
 
+  async toggleCommentLike(
+    actor: ActorContext,
+    demandId: string,
+    commentId: string,
+  ): Promise<{ liked: boolean }> {
+    await this.assertAllowed(actor, "interact", demandId);
+    await this.getDetail(actor, demandId);
+    const comment = await this.repository.findComment(commentId);
+    if (comment === null || comment.demandId !== demandId) {
+      throw new Error("DEMAND_COMMENT_NOT_FOUND");
+    }
+    if (comment.hiddenAt !== null) {
+      throw new Error("DEMAND_COMMENT_HIDDEN");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const currentlyLiked = await repository.hasCommentLike(
+        commentId,
+        actor.employeeId,
+      );
+      if (currentlyLiked) {
+        await repository.removeCommentLike(commentId, actor.employeeId);
+      } else {
+        await repository.addCommentLike(commentId, actor.employeeId);
+      }
+      const eventType = currentlyLiked
+        ? "demand.comment.unliked"
+        : "demand.comment.liked";
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType,
+        details: { commentId },
+      });
+      await repository.emitOutbox({ demandId, eventType });
+      return { liked: !currentlyLiked };
+    });
+  }
+
   async addComment(
     actor: ActorContext,
     input: {
@@ -765,7 +844,7 @@ export class DemandService {
         employeeId: demand.audienceEmployeeId ?? null,
       },
     });
-    return comment;
+    return this.projectComment(actor, comment);
   }
 
   async listComments(
@@ -773,7 +852,7 @@ export class DemandService {
     demandId: string,
   ): Promise<readonly DemandCommentRecord[]> {
     await this.getDetail(actor, demandId);
-    const comments = await this.repository.listComments(demandId);
+    const comments = await this.repository.listComments(demandId, actor);
     return comments
       .filter((comment) => comment.hiddenAt === null)
       .map((comment) => this.projectComment(actor, comment));
@@ -830,12 +909,18 @@ export class DemandService {
 
   async resolveReport(
     actor: ActorContext,
+    demandId: string,
     reportId: string,
     status: DemandReportRecord["status"],
   ): Promise<DemandReportRecord> {
     await this.assertAllowed(actor, "moderate");
     if (!hasPermission(actor, PERMISSIONS.DEMAND_MODERATE)) {
       throw new Error("DEMAND_MODERATION_FORBIDDEN");
+    }
+    const existing = await this.repository.findReport(reportId);
+    if (existing === null) throw new Error("DEMAND_REPORT_NOT_FOUND");
+    if (existing.demandId !== demandId) {
+      throw new Error("DEMAND_RESOURCE_MISMATCH");
     }
     return this.repository.withTransaction(async (repository) => {
       const report = await repository.resolveReport(
@@ -866,13 +951,97 @@ export class DemandService {
     });
   }
 
+  async listPilots(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandPilotRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listPilots(demandId);
+  }
+
+  async listReports(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandReportRecord[]> {
+    await this.assertAllowed(actor, "moderate", demandId);
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_MODERATE)) {
+      throw new Error("DEMAND_MODERATION_FORBIDDEN");
+    }
+    await this.requireDemand(demandId);
+    return this.repository.listReports(demandId);
+  }
+
+  async removeCollaborator(
+    actor: ActorContext,
+    demandId: string,
+    employeeId: string,
+    expectedVersion: number,
+  ): Promise<void> {
+    await this.assertAllowed(actor, "collaborate", demandId);
+    const current = await this.requireDemand(demandId);
+    if (current.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("DEMAND_OWNER_REQUIRED");
+    }
+    if (current.ownerEmployeeId === employeeId) {
+      throw new Error("DEMAND_OWNER_COLLABORATOR_PROTECTED");
+    }
+    await this.repository.withTransaction(async (repository) => {
+      await repository.removeCollaborator(demandId, employeeId, expectedVersion);
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.collaborator.removed",
+        details: { employeeId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.collaborator.removed",
+      });
+    });
+  }
+
+  async unlinkApplication(
+    actor: ActorContext,
+    demandId: string,
+    applicationId: string,
+    expectedVersion: number,
+  ): Promise<void> {
+    await this.assertAllowed(actor, "associate_application", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertProgressActor(actor, current);
+    await this.repository.withTransaction(async (repository) => {
+      await repository.unlinkApplication(
+        demandId,
+        applicationId,
+        expectedVersion,
+      );
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.application.unlinked",
+        details: { applicationId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.application.unlinked",
+      });
+    });
+  }
+
   async lookupAnonymousAuthor(
     actor: ActorContext,
+    demandId: string,
     commentId: string,
   ): Promise<string> {
     await this.assertAllowed(actor, "anonymous_audit");
     const comment = await this.repository.findComment(commentId);
     if (comment === null) throw new Error("DEMAND_COMMENT_NOT_FOUND");
+    if (comment.demandId !== demandId) {
+      throw new Error("DEMAND_RESOURCE_MISMATCH");
+    }
+    if (comment.authorEmployeeId === null) {
+      throw new Error("DEMAND_COMMENT_NOT_FOUND");
+    }
     await this.repository.recordAudit({
       demandId: comment.demandId,
       actorEmployeeId: actor.employeeId,
@@ -890,7 +1059,12 @@ export class DemandService {
     ) {
       return demand;
     }
-    return { ...demand, requesterEmployeeId: null };
+    return {
+      ...demand,
+      requesterEmployeeId: null,
+      requesterDisplayName: null,
+      requesterDepartmentId: null,
+    };
   }
 
   private projectComment(
@@ -904,7 +1078,12 @@ export class DemandService {
     ) {
       return comment;
     }
-    return { ...comment, authorEmployeeId: "" };
+    return {
+      ...comment,
+      authorEmployeeId: null,
+      authorDisplayName: "匿名用户",
+      authorDepartmentId: null,
+    };
   }
 
   private normalizeInput(

@@ -23,3 +23,10 @@ export const demandStatusColor: Record<DemandStatus, string> = {
   published: "blue",
   rejected: "error",
 };
+
+export const demandAudienceText: Record<"all" | "department" | "employee", string> = {
+  all: "全员可见",
+  department: "部门可见",
+  employee: "指定员工",
+};
+

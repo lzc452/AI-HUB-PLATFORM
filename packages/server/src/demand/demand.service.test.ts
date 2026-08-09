@@ -45,6 +45,30 @@ function makeService(repository: DemandRepository) {
   return new DemandService(repository, { authorize: allowAll });
 }
 
+function baseDemand(demandId: string): DemandEntry {
+  return {
+    demandId,
+    requesterEmployeeId: "E100",
+    title: "协同知识助手",
+    problemStatement: "团队需要统一、可追溯的内部知识查询能力。",
+    desiredOutcome: "员工能在一分钟内获得经过审核的答案。",
+    status: "published",
+    audienceType: "all",
+    audienceDepartmentId: null,
+    displayAnonymously: false,
+    reviewReason: null,
+    likeCount: 0,
+    commentCount: 0,
+    priorityScore: null,
+    priorityExplanation: null,
+    ownerEmployeeId: null,
+    primarySolutionApplicationId: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
 describe("DemandService submission lifecycle", () => {
   it("creates a normalized draft and rejects incomplete structured input", async () => {
     const repository = {
@@ -171,6 +195,325 @@ describe("DemandService submission lifecycle", () => {
   });
 });
 
+describe("DemandService innovation extension", () => {
+  it("calculates the normalized one-to-five priority score", async () => {
+    const demand = baseDemand("demand-normalized-priority");
+    const operator: ActorContext = {
+      ...requester,
+      permissions: [
+        ...(requester.permissions ?? []),
+        PERMISSIONS.DEMAND_PRIORITIZE,
+      ],
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findById: async () => demand,
+      setPriority: async (
+        _demandId: string,
+        input: Parameters<DemandRepository["setPriority"]>[1],
+        _expectedVersion: number,
+        score: number,
+        explanation: string,
+      ) => ({
+        ...demand,
+        ...input,
+        priorityScore: score,
+        priorityExplanation: explanation,
+      }),
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).setPriority(operator, demand.demandId, 1, {
+        businessValue: 5,
+        adminPriority: 4,
+        implementationCost: 2,
+        riskLevel: 1,
+      }),
+    ).resolves.toMatchObject({ priorityScore: 4.6 });
+  });
+
+  it("allows read users to sort the visible list by priority", async () => {
+    const demand = baseDemand("demand-priority-list");
+    const repository = {
+      listVisible: async () => [demand],
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).list(requester, {
+        page: 1,
+        pageSize: 6,
+        sort: "priority",
+      }),
+    ).resolves.toMatchObject({ total: 1 });
+  });
+
+  it("toggles a comment like and records the interaction", async () => {
+    const demand = baseDemand("demand-comment-like");
+    let liked = false;
+    const events: string[] = [];
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findVisible: async () => demand,
+      findComment: async () => ({
+        commentId: "comment-1",
+        demandId: demand.demandId,
+        parentCommentId: null,
+        authorEmployeeId: "E200",
+        body: "请补充试点范围。",
+        displayAnonymously: false,
+        hiddenAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      hasCommentLike: async () => liked,
+      addCommentLike: async () => {
+        liked = true;
+      },
+      removeCommentLike: async () => {
+        liked = false;
+      },
+      recordAudit: async ({ eventType }: { eventType: string }) => {
+        events.push(eventType);
+      },
+      emitOutbox: async ({ eventType }: { eventType: string }) => {
+        events.push(eventType);
+      },
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.toggleCommentLike(requester, demand.demandId, "comment-1"),
+    ).resolves.toEqual({ liked: true });
+    expect(events).toEqual([
+      "demand.comment.liked",
+      "demand.comment.liked",
+    ]);
+  });
+
+  it("masks anonymous requester display information for other readers", async () => {
+    const demand = {
+      ...baseDemand("demand-anonymous-projection"),
+      displayAnonymously: true,
+      requesterEmployeeId: "E200",
+      requesterDisplayName: "匿名发起人",
+      requesterDepartmentId: "dept-ops",
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findVisible: async () => demand,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).getDetail(requester, demand.demandId),
+    ).resolves.toMatchObject({
+      requesterEmployeeId: null,
+      requesterDisplayName: null,
+      requesterDepartmentId: null,
+    });
+  });
+
+  it("rejects likes on a hidden comment before recording an interaction", async () => {
+    const demand = baseDemand("demand-hidden-comment");
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findVisible: async () => demand,
+      findComment: async () => ({
+        commentId: "comment-hidden",
+        demandId: demand.demandId,
+        parentCommentId: null,
+        authorEmployeeId: "E200",
+        body: "已隐藏的内容。",
+        displayAnonymously: false,
+        hiddenAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      hasCommentLike: async () => false,
+      addCommentLike: async () => undefined,
+      removeCommentLike: async () => undefined,
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).toggleCommentLike(
+        requester,
+        demand.demandId,
+        "comment-hidden",
+      ),
+    ).rejects.toThrow("DEMAND_COMMENT_HIDDEN");
+  });
+
+  it("does not remove the demand owner from collaborators", async () => {
+    const demand = { ...baseDemand("demand-owner-removal"), ownerEmployeeId: "E100" };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findById: async () => demand,
+      removeCollaborator: async () => undefined,
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).removeCollaborator(
+        requester,
+        demand.demandId,
+        "E100",
+        1,
+      ),
+    ).rejects.toThrow("DEMAND_OWNER_COLLABORATOR_PROTECTED");
+  });
+
+  it("updates a collaborator role with optimistic versioning and audit events", async () => {
+    const demand = {
+      ...baseDemand("demand-collaborator-role"),
+      ownerEmployeeId: requester.employeeId,
+      version: 7,
+    };
+    const events: string[] = [];
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findById: async () => demand,
+      updateCollaboratorRole: async (
+        _demandId: string,
+        employeeId: string,
+        role: DemandCollaboratorRecord["role"],
+        expectedVersion: number,
+      ) => {
+        if (expectedVersion !== demand.version) throw new Error("DEMAND_CONFLICT");
+        demand.version += 1;
+        return {
+          demandId: demand.demandId,
+          employeeId,
+          role,
+          createdAt: new Date(),
+        };
+      },
+      recordAudit: async ({ eventType }: { eventType: string }) => {
+        events.push(eventType);
+      },
+      emitOutbox: async ({ eventType }: { eventType: string }) => {
+        events.push(eventType);
+      },
+    } as unknown as DemandRepository;
+    const service = makeService(repository);
+
+    await expect(
+      service.updateCollaboratorRole(
+        requester,
+        demand.demandId,
+        "E200",
+        "operator",
+        7,
+      ),
+    ).resolves.toMatchObject({ employeeId: "E200", role: "operator" });
+    expect(events).toEqual([
+      "demand.collaborator.role.updated",
+      "demand.collaborator.role.updated",
+    ]);
+    await expect(
+      service.updateCollaboratorRole(
+        requester,
+        demand.demandId,
+        "E200",
+        "collaborator",
+        7,
+      ),
+    ).rejects.toThrow("DEMAND_CONFLICT");
+  });
+
+  it("rejects resolving a report through a different demand URL", async () => {
+    const moderator: ActorContext = {
+      ...requester,
+      permissions: [...(requester.permissions ?? []), PERMISSIONS.DEMAND_MODERATE],
+    };
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository as DemandRepository),
+      findReport: async () => ({
+        reportId: "report-1",
+        demandId: "demand-b",
+        commentId: null,
+        reporterEmployeeId: "E200",
+        reason: "需要处理",
+        status: "open" as const,
+        resolvedByEmployeeId: null,
+        resolvedAt: null,
+        createdAt: new Date(),
+      }),
+      resolveReport: async () => ({
+        reportId: "report-1",
+        demandId: "demand-b",
+        commentId: null,
+        reporterEmployeeId: "E200",
+        reason: "需要处理",
+        status: "dismissed" as const,
+        resolvedByEmployeeId: "E100",
+        resolvedAt: new Date(),
+        createdAt: new Date(),
+      }),
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).resolveReport(
+        moderator,
+        "demand-a",
+        "report-1",
+        "dismissed",
+      ),
+    ).rejects.toThrow("DEMAND_RESOURCE_MISMATCH");
+  });
+
+  it("rejects anonymous-author lookup through a different demand URL", async () => {
+    const auditor: ActorContext = {
+      ...requester,
+      permissions: [
+        ...(requester.permissions ?? []),
+        PERMISSIONS.DEMAND_ANONYMOUS_AUDIT,
+      ],
+    };
+    const repository = {
+      findComment: async () => ({
+        commentId: "comment-cross-demand",
+        demandId: "demand-b",
+        parentCommentId: null,
+        authorEmployeeId: "E200",
+        body: "匿名评论。",
+        displayAnonymously: true,
+        hiddenAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      recordAudit: async () => undefined,
+    } as unknown as DemandRepository;
+
+    await expect(
+      makeService(repository).lookupAnonymousAuthor(
+        auditor,
+        "demand-a",
+        "comment-cross-demand",
+      ),
+    ).rejects.toThrow("DEMAND_RESOURCE_MISMATCH");
+  });
+});
+
 describe("DemandService innovation-square interactions", () => {
   it("filters by repository audience, masks anonymous identity, and toggles likes idempotently", async () => {
     const demand = {
@@ -288,7 +631,7 @@ describe("DemandService innovation-square interactions", () => {
       }),
     ).rejects.toThrow("DEMAND_COMMENT_DEPTH_EXCEEDED");
     await expect(
-      service.lookupAnonymousAuthor(reviewer, "comment-1"),
+      service.lookupAnonymousAuthor(reviewer, "demand-public", "comment-1"),
     ).resolves.toBe("E100");
     expect(audits).toContain("demand.anonymous_identity.viewed");
   });
@@ -330,6 +673,17 @@ describe("DemandService innovation-square interactions", () => {
         resolvedAt: new Date(),
         createdAt: new Date(),
       }),
+      findReport: async () => ({
+        reportId: "report-1",
+        demandId: "demand-public",
+        commentId: "comment-1",
+        reporterEmployeeId: "E100",
+        reason: "Needs review",
+        status: "open" as const,
+        resolvedByEmployeeId: null,
+        resolvedAt: null,
+        createdAt: new Date(),
+      }),
       setCommentHidden: async (_commentId: string, value: Date | null) => {
         hiddenAt = value;
       },
@@ -338,9 +692,9 @@ describe("DemandService innovation-square interactions", () => {
     } as unknown as DemandRepository;
     const service = new DemandService(repository, { authorize: allowAll });
 
-    await service.resolveReport(operator, "report-1", "hidden");
+    await service.resolveReport(operator, "demand-public", "report-1", "hidden");
     expect(hiddenAt).toBeInstanceOf(Date);
-    await service.resolveReport(operator, "report-1", "restored");
+    await service.resolveReport(operator, "demand-public", "report-1", "restored");
     expect(hiddenAt).toBeNull();
   });
 });
@@ -568,7 +922,7 @@ describe("DemandService explainable priority", () => {
         riskLevel: 1,
         adminPriority: 4,
       }),
-    ).resolves.toMatchObject({ priorityScore: 17 });
+    ).resolves.toMatchObject({ priorityScore: 4.6 });
     expect(demand.priorityExplanation).toContain("businessValue=5");
     await expect(
       service.setPriority(requester, demand.demandId, 2, {

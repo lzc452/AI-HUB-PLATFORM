@@ -17,8 +17,17 @@ import type {
 type DemandRow = Selectable<DatabaseSchema["ai_demands"]> & {
   like_count: number | string;
   comment_count: number | string;
+  requester_department_id?: string | null;
+  requester_display_name?: string | null;
+  owner_display_name?: string | null;
+  liked_by_current_actor?: boolean;
 };
-type CommentRow = Selectable<DatabaseSchema["ai_demand_comments"]>;
+type CommentRow = Selectable<DatabaseSchema["ai_demand_comments"]> & {
+  author_display_name?: string | null;
+  author_department_id?: string | null;
+  like_count?: number | string;
+  liked_by_current_actor?: boolean;
+};
 type ReportRow = Selectable<DatabaseSchema["ai_demand_reports"]>;
 type ProgressRow = Selectable<DatabaseSchema["ai_demand_progress_updates"]>;
 type PilotRow = Selectable<DatabaseSchema["ai_demand_pilots"]>;
@@ -110,9 +119,13 @@ export class KyselyDemandRepository implements DemandRepository {
     actor: Parameters<DemandRepository["listVisible"]>[0]["actor"];
     status?: DemandEntry["status"];
     query?: string;
-    sortByPriority?: boolean;
+    requesterDepartmentId?: string;
+    audienceType?: CreateDemandInput["audienceType"];
+    sort?: "recent" | "priority" | "hot";
   }): Promise<readonly DemandEntry[]> {
-    let query = this.selectDemand().where(this.audiencePredicate(input.actor));
+    let query = this.selectDemand(input.actor).where(
+      this.audiencePredicate(input.actor),
+    );
     if (input.status !== undefined) {
       query = query.where("ai_demands.status", "=", input.status);
     }
@@ -126,11 +139,32 @@ export class KyselyDemandRepository implements DemandRepository {
         )`,
       );
     }
-    const ordered = input.sortByPriority
-      ? query.orderBy(sql`ai_demands.priority_score desc nulls last`)
-      : query.orderBy("ai_demands.created_at", "desc");
+    if (input.requesterDepartmentId !== undefined) {
+      query = query.where(
+        sql`(
+          select primary_department_id from employees requester
+          where requester.employee_id = ai_demands.requester_employee_id
+        )`,
+        "=",
+        input.requesterDepartmentId,
+      );
+    }
+    if (input.audienceType !== undefined) {
+      query = query.where("ai_demands.audience_type", "=", input.audienceType);
+    }
+    const ordered =
+      input.sort === "priority"
+        ? query.orderBy(sql`ai_demands.priority_score desc nulls last`)
+        : input.sort === "hot"
+          ? query.orderBy(
+              sql`(
+                (select count(*) from ai_demand_likes l where l.demand_id = ai_demands.demand_id)
+                + 2 * (select count(*) from ai_demand_comments c where c.demand_id = ai_demands.demand_id and c.hidden_at is null)
+              ) desc`,
+            )
+          : query.orderBy("ai_demands.updated_at", "desc");
     const rows = await ordered
-      .orderBy("ai_demands.created_at", "desc")
+      .orderBy("ai_demands.updated_at", "desc")
       .orderBy("ai_demands.demand_id", "asc")
       .execute();
     return rows.map((row) => this.mapRow(row));
@@ -140,7 +174,7 @@ export class KyselyDemandRepository implements DemandRepository {
     actor: Parameters<DemandRepository["findVisible"]>[0],
     demandId: string,
   ): Promise<DemandEntry | null> {
-    const row = await this.selectDemand()
+    const row = await this.selectDemand(actor)
       .where(this.audiencePredicate(actor))
       .where("ai_demands.demand_id", "=", demandId)
       .executeTakeFirst();
@@ -498,6 +532,33 @@ export class KyselyDemandRepository implements DemandRepository {
     }));
   }
 
+  async unlinkApplication(
+    demandId: string,
+    applicationId: string,
+    expectedVersion: number,
+  ): Promise<void> {
+    const demand = await this.db
+      .updateTable("ai_demands")
+      .set({
+        primary_solution_application_id: sql`case when primary_solution_application_id = ${applicationId}::uuid then null else primary_solution_application_id end`,
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returning("demand_id")
+      .executeTakeFirst();
+    if (demand === undefined) throw new Error("DEMAND_CONFLICT");
+    const result = await this.db
+      .deleteFrom("ai_demand_applications")
+      .where("demand_id", "=", demandId)
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    if (Number(result.numDeletedRows) !== 1) {
+      throw new Error("DEMAND_APPLICATION_LINK_NOT_FOUND");
+    }
+  }
+
   async claimOwner(
     demandId: string,
     employeeId: string,
@@ -577,7 +638,62 @@ export class KyselyDemandRepository implements DemandRepository {
       employeeId: row.employee_id,
       role: row.role,
       createdAt: row.created_at,
-    }));
+      }));
+  }
+
+  async updateCollaboratorRole(
+    demandId: string,
+    employeeId: string,
+    role: DemandCollaboratorRecord["role"],
+    expectedVersion: number,
+  ): Promise<DemandCollaboratorRecord> {
+    const demand = await this.db
+      .updateTable("ai_demands")
+      .set({ version: sql`version + 1`, updated_at: new Date() })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returning("demand_id")
+      .executeTakeFirst();
+    if (demand === undefined) throw new Error("DEMAND_CONFLICT");
+    const collaborator = await this.db
+      .updateTable("ai_demand_collaborators")
+      .set({ role })
+      .where("demand_id", "=", demandId)
+      .where("employee_id", "=", employeeId)
+      .returningAll()
+      .executeTakeFirst();
+    if (collaborator === undefined) {
+      throw new Error("DEMAND_COLLABORATOR_NOT_FOUND");
+    }
+    return {
+      demandId: collaborator.demand_id,
+      employeeId: collaborator.employee_id,
+      role: collaborator.role,
+      createdAt: collaborator.created_at,
+    };
+  }
+
+  async removeCollaborator(
+    demandId: string,
+    employeeId: string,
+    expectedVersion: number,
+  ): Promise<void> {
+    const demand = await this.db
+      .updateTable("ai_demands")
+      .set({ version: sql`version + 1`, updated_at: new Date() })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returning("demand_id")
+      .executeTakeFirst();
+    if (demand === undefined) throw new Error("DEMAND_CONFLICT");
+    const result = await this.db
+      .deleteFrom("ai_demand_collaborators")
+      .where("demand_id", "=", demandId)
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    if (Number(result.numDeletedRows) !== 1) {
+      throw new Error("DEMAND_COLLABORATOR_NOT_FOUND");
+    }
   }
 
   async hasLike(demandId: string, employeeId: string): Promise<boolean> {
@@ -606,6 +722,32 @@ export class KyselyDemandRepository implements DemandRepository {
       .execute();
   }
 
+  async hasCommentLike(commentId: string, employeeId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("ai_demand_comment_likes")
+      .select("comment_id")
+      .where("comment_id", "=", commentId)
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row !== undefined;
+  }
+
+  async addCommentLike(commentId: string, employeeId: string): Promise<void> {
+    await this.db
+      .insertInto("ai_demand_comment_likes")
+      .values({ comment_id: commentId, employee_id: employeeId })
+      .onConflict((oc) => oc.columns(["comment_id", "employee_id"]).doNothing())
+      .execute();
+  }
+
+  async removeCommentLike(commentId: string, employeeId: string): Promise<void> {
+    await this.db
+      .deleteFrom("ai_demand_comment_likes")
+      .where("comment_id", "=", commentId)
+      .where("employee_id", "=", employeeId)
+      .execute();
+  }
+
   async findComment(commentId: string): Promise<DemandCommentRecord | null> {
     const row = await this.db
       .selectFrom("ai_demand_comments")
@@ -616,7 +758,10 @@ export class KyselyDemandRepository implements DemandRepository {
   }
 
   async createComment(
-    input: Omit<DemandCommentRecord, "commentId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      DemandCommentRecord,
+      "commentId" | "createdAt" | "updatedAt" | "authorEmployeeId"
+    > & { authorEmployeeId: string },
   ): Promise<DemandCommentRecord> {
     const row = await this.db
       .insertInto("ai_demand_comments")
@@ -630,17 +775,39 @@ export class KyselyDemandRepository implements DemandRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.mapComment(row);
+    const comment = this.mapComment(row);
+    const projected = await this.listComments(input.demandId);
+    return projected.find((item) => item.commentId === comment.commentId) ?? comment;
   }
 
   async listComments(
     demandId: string,
+    actor?: Parameters<DemandRepository["findVisible"]>[0],
   ): Promise<readonly DemandCommentRecord[]> {
     const rows = await this.db
       .selectFrom("ai_demand_comments")
-      .selectAll()
+      .innerJoin(
+        "employees as comment_author",
+        "comment_author.employee_id",
+        "ai_demand_comments.author_employee_id",
+      )
+      .selectAll("ai_demand_comments")
+      .select([
+        "comment_author.display_name as author_display_name",
+        "comment_author.primary_department_id as author_department_id",
+        sql<number>`(
+          select count(*)::int from ai_demand_comment_likes comment_like
+          where comment_like.comment_id = ai_demand_comments.comment_id
+        )`.as("like_count"),
+        sql<boolean>`exists (
+          select 1 from ai_demand_comment_likes current_actor_like
+          where current_actor_like.comment_id = ai_demand_comments.comment_id
+            and current_actor_like.employee_id = ${actor?.employeeId ?? ""}
+        )`.as("liked_by_current_actor"),
+      ])
       .where("demand_id", "=", demandId)
-      .orderBy("created_at", "asc")
+      .orderBy("ai_demand_comments.parent_comment_id", "asc")
+      .orderBy("ai_demand_comments.created_at", "asc")
       .execute();
     return rows.map((row) => this.mapComment(row));
   }
@@ -697,6 +864,35 @@ export class KyselyDemandRepository implements DemandRepository {
     return this.mapReport(row);
   }
 
+  async findReport(reportId: string): Promise<DemandReportRecord | null> {
+    const row = await this.db
+      .selectFrom("ai_demand_reports")
+      .selectAll()
+      .where("report_id", "=", reportId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapReport(row);
+  }
+
+  async listPilots(demandId: string): Promise<readonly DemandPilotRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_pilots")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "desc")
+      .execute();
+    return rows.map((row) => this.mapPilot(row));
+  }
+
+  async listReports(demandId: string): Promise<readonly DemandReportRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_reports")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "desc")
+      .execute();
+    return rows.map((row) => this.mapReport(row));
+  }
+
   async recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -737,11 +933,25 @@ export class KyselyDemandRepository implements DemandRepository {
       .execute();
   }
 
-  private selectDemand() {
+  private selectDemand(
+    actor?: Parameters<DemandRepository["findVisible"]>[0],
+  ) {
     return this.db
       .selectFrom("ai_demands")
       .selectAll("ai_demands")
       .select([
+        sql<string | null>`(
+          select primary_department_id from employees requester
+          where requester.employee_id = ai_demands.requester_employee_id
+        )`.as("requester_department_id"),
+        sql<string | null>`(
+          select display_name from employees requester
+          where requester.employee_id = ai_demands.requester_employee_id
+        )`.as("requester_display_name"),
+        sql<string | null>`(
+          select display_name from employees owner
+          where owner.employee_id = ai_demands.owner_employee_id
+        )`.as("owner_display_name"),
         sql<number>`(
           select count(*)::int from ai_demand_likes l
           where l.demand_id = ai_demands.demand_id
@@ -750,6 +960,11 @@ export class KyselyDemandRepository implements DemandRepository {
           select count(*)::int from ai_demand_comments c
           where c.demand_id = ai_demands.demand_id and c.hidden_at is null
         )`.as("comment_count"),
+        sql<boolean>`exists (
+          select 1 from ai_demand_likes current_actor_like
+          where current_actor_like.demand_id = ai_demands.demand_id
+            and current_actor_like.employee_id = ${actor?.employeeId ?? ""}
+        )`.as("liked_by_current_actor"),
       ]);
   }
 
@@ -800,6 +1015,8 @@ export class KyselyDemandRepository implements DemandRepository {
     return {
       demandId: row.demand_id,
       requesterEmployeeId: row.requester_employee_id,
+      requesterDepartmentId: row.requester_department_id ?? null,
+      requesterDisplayName: row.requester_display_name ?? null,
       title: row.title,
       problemStatement: row.problem_statement,
       desiredOutcome: row.desired_outcome,
@@ -820,6 +1037,8 @@ export class KyselyDemandRepository implements DemandRepository {
         row.priority_score === null ? null : Number(row.priority_score),
       priorityExplanation: row.priority_explanation,
       ownerEmployeeId: row.owner_employee_id,
+      ownerDisplayName: row.owner_display_name ?? null,
+      likedByCurrentActor: row.liked_by_current_actor ?? false,
       primarySolutionApplicationId: row.primary_solution_application_id,
       version: row.version,
       createdAt: row.created_at,
@@ -833,8 +1052,12 @@ export class KyselyDemandRepository implements DemandRepository {
       demandId: row.demand_id,
       parentCommentId: row.parent_comment_id,
       authorEmployeeId: row.author_employee_id,
+      authorDisplayName: row.author_display_name ?? null,
+      authorDepartmentId: row.author_department_id ?? null,
       body: row.body,
       displayAnonymously: row.display_anonymously,
+      likeCount: Number(row.like_count ?? 0),
+      likedByCurrentActor: row.liked_by_current_actor ?? false,
       hiddenAt: row.hidden_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

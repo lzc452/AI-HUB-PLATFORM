@@ -189,7 +189,7 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
               icon={<UserOutlined aria-hidden="true" />}
               type="text"
             >
-              <span>{actor?.employeeId ?? "未登录"}</span>
+              <span className="hidden sm:inline">{actor?.employeeId ?? "未登录"}</span>
               <DownOutlined aria-hidden="true" />
             </Button>
           </Dropdown>

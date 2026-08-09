@@ -76,6 +76,16 @@ ul, ol {
   transition: transform 0.2s ease;
 }
 
+@media (max-width: 767px) {
+  .innovation-governance-drawer .ant-drawer-content-wrapper {
+    width: 100% !important;
+  }
+
+  .innovation-governance-drawer .ant-drawer-body {
+    padding: 16px;
+  }
+}
+
 .skip-link:focus-visible {
   transform: translateY(0);
 }

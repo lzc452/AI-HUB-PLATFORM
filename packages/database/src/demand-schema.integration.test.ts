@@ -28,6 +28,7 @@ describe("Phase 5 demand schema", () => {
           'ai_demands',
           'ai_demand_collaborators',
           'ai_demand_comments',
+          'ai_demand_comment_likes',
           'ai_demand_likes',
           'ai_demand_reports',
           'ai_demand_progress_updates',
@@ -41,6 +42,7 @@ describe("Phase 5 demand schema", () => {
       "ai_demand_applications",
       "ai_demand_audit_events",
       "ai_demand_collaborators",
+      "ai_demand_comment_likes",
       "ai_demand_comments",
       "ai_demand_likes",
       "ai_demand_pilots",
@@ -68,6 +70,8 @@ describe("Phase 5 demand schema", () => {
           'ai_demands_status_check',
           'ai_demands_audience_check',
           'ai_demands_priority_range_check',
+          'ai_demands_priority_score_range_check',
+          'ai_demand_comment_likes_pk',
           'ai_demand_collaborators_pk',
           'ai_demand_applications_pk'
         )
@@ -77,8 +81,10 @@ describe("Phase 5 demand schema", () => {
     expect(constraints.rows.map((row) => row.constraint_name)).toEqual([
       "ai_demand_applications_pk",
       "ai_demand_collaborators_pk",
+      "ai_demand_comment_likes_pk",
       "ai_demands_audience_check",
       "ai_demands_priority_range_check",
+      "ai_demands_priority_score_range_check",
       "ai_demands_status_check",
     ]);
 
@@ -109,9 +115,7 @@ describe("Phase 5 demand schema", () => {
     `.execute(db);
 
     expect(triggers.rows.map((row) => row.trigger_name).sort()).toEqual([
-      "ai_demand_applications_no_delete",
       "ai_demand_audit_events_no_delete",
-      "ai_demand_collaborators_no_delete",
       "ai_demand_comments_no_delete",
       "ai_demand_pilots_no_delete",
       "ai_demand_progress_updates_no_delete",

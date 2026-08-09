@@ -505,7 +505,7 @@
           {
             id: "ui",
             name: "UI 设计",
-            progress: 90,
+            progress: 100,
             goal: "Web 壳、核心页面、组件与交互状态",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
@@ -513,12 +513,14 @@
               "按 frontend-ui-design.md 完成管理后台布局重构与全页面中文换壳",
               "前端 actor 恢复、路由守卫、权限菜单过滤、面包屑和管理页标题已完成",
               "运行时错误反馈已迁移为 antd message.error，warning/success 反馈已统一",
+              "innovationDetail 页面 UI 设计已定稿，采用需求说明与讨论区 60/40 分栏",
+              "innovation 页面 UI 设计已定稿，采用结构化双列需求发现布局",
             ],
           },
           {
             id: "dev",
             name: "开发",
-            progress: 90,
+            progress: 100,
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
@@ -534,7 +536,7 @@
           {
             id: "test",
             name: "测试",
-            progress: 90,
+            progress: 96,
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
@@ -971,6 +973,56 @@
         ],
         tasks: [
           {
+            id: "t-025",
+            phase: "dev",
+            status: "已完成",
+            title: "Innovation 广场与需求详情全栈实现",
+            owner: "Codex",
+            start: "2026-08-10",
+            end: "2026-08-10",
+            progress:
+              "完成 migration 0014、需求列表筛选/排序、需求与评论互动、完整治理 API，以及 /innovation 与 /innovation/:demandId 页面、发起需求抽屉和治理抽屉；协作者角色调整与匿名追溯均接入权限、审计和 Outbox。",
+            problem:
+              "数据库/API 真实集成测试需要 Testcontainers/PostgreSQL 运行时，当前环境无法建立容器；浏览器 QA 使用临时本地演示数据源完成视觉与交互验收。",
+            solution:
+              "通过 server 126/126、Web 50/50、仓库级 typecheck/lint/build，并在 1672×941、768×1024、390×844 视口验证筛选、详情互动、抽屉和响应式堆叠。",
+            skip: "真实 PostgreSQL 集成与端到端数据流待具备容器运行时后复验。",
+          },
+          {
+            id: "t-024",
+            phase: "ui",
+            status: "已完成",
+            title: "innovation 页面 UI 设计定稿",
+            owner: "Codex",
+            start: "2026-08-09",
+            end: "2026-08-09",
+            progress:
+              "延续 innovationDetail 与应用市场既有蓝白视觉，完成三版 innovation 浏览页探索并选定结构化双列发现方案；最终设计图保存至 packages/ui/src/innovation.png。",
+            problem:
+              "页面需同时承载需求发现、筛选排序、价值判断与详情跳转，且不能因信息密度过高退化为管理表格。",
+            solution:
+              "采用浅蓝标题区、完整筛选条和两列宽卡片，将状态、部门、问题描述、价值/成本/风险、优先级、点赞与讨论数集中到单个可点击需求条目中。",
+            skip:
+              "本次仅完成 UI 设计图，尚未实现前端页面、筛选交互、发起需求流程、响应式状态或自动化测试。",
+          },
+          {
+            id: "t-023",
+            phase: "ui",
+            status: "已完成",
+            title: "innovationDetail 页面 UI 设计定稿",
+            owner: "Codex",
+            start: "2026-08-09",
+            end: "2026-08-09",
+            progress:
+              "基于应用市场、应用详情、创作者中心和登录页既有视觉生成三版 innovationDetail 方案，选定讨论协作型 60/40 分栏布局并完成定向修订；最终设计图保存至 packages/ui/src/innovationDetail.png。",
+            problem:
+              "初版讨论输入框包含 @ 人员功能，且点赞按钮未处于标题区最右侧，不符合当前功能范围和标题区左右布局要求。",
+            solution:
+              "移除讨论区全部 @ 入口；标题、状态和副文保持左对齐，更多操作置于点赞按钮左侧，点赞按钮固定为标题区最右侧主操作。",
+            skip:
+              "本次仅完成 UI 设计图，未实现前端代码、讨论区 @ 功能、交互状态或自动化测试。",
+          },
+          {
             id: "t-022",
             phase: "dev",
             status: "已完成",
@@ -1322,6 +1374,24 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-10",
+            phase: "dev",
+            title: "Innovation 全栈实现与多视口验收完成",
+            body: "完成 /innovation 与 /innovation/:demandId 的列表筛选、需求详情、评论互动、发起需求抽屉和五组治理抽屉；后端迁移 0014 与协作者角色调整、匿名审计、评论点赞 API 已接入。Web 50/50、server 126/126、typecheck/lint/build 通过；数据库/API 需要容器运行时的集成套件仍待环境恢复后复验。",
+          },
+          {
+            date: "2026-08-09",
+            phase: "ui",
+            title: "innovation 页面 UI 设计定稿",
+            body: "在结构化双列发现、高密度优先级列表和阶段泳道三版方案中选定方案 1；最终页面以双列宽卡片呈现需求状态、价值评估、优先级与互动数据，并归档至 packages/ui/src/innovation.png。",
+          },
+          {
+            date: "2026-08-09",
+            phase: "ui",
+            title: "innovationDetail 页面 UI 设计定稿",
+            body: "选定协作并行方案并按反馈修订：项目名称与状态位于标题区左侧，点赞按钮固定在最右侧；讨论输入区移除 @ 人员入口。最终设计图归档至 packages/ui/src/innovationDetail.png，暂未进入代码实现。",
+          },
           {
             date: "2026-08-09",
             phase: "ui",
