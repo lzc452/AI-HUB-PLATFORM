@@ -489,7 +489,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-06",
+        updatedAt: "2026-08-09",
         phases: [
           {
             id: "product",
@@ -505,19 +505,20 @@
           {
             id: "ui",
             name: "UI 设计",
-            progress: 86,
+            progress: 90,
             goal: "Web 壳、核心页面、组件与交互状态",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
               "五层架构已设计：pages/components/modules/router/shared",
               "按 frontend-ui-design.md 完成管理后台布局重构与全页面中文换壳",
               "前端 actor 恢复、路由守卫、权限菜单过滤、面包屑和管理页标题已完成",
+              "运行时错误反馈已迁移为 antd message.error，warning/success 反馈已统一",
             ],
           },
           {
             id: "dev",
             name: "开发",
-            progress: 88,
+            progress: 90,
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
@@ -527,17 +528,19 @@
               "权限统一改造已完成：补齐路由/API 权限矩阵、全局 PermissionGuard、会话边界，并将演示账号改为 employee + 专业角色组合",
               "API Swagger 完整文档已接入（/internal/docs，开发/测试默认开启）",
               "外部集成均为 fake/unavailable adapter",
+              "前端查询错误与 mutation 反馈已接入共享 Message 模块",
             ],
           },
           {
             id: "test",
             name: "测试",
-            progress: 86,
+            progress: 90,
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
               "server 106 tests, API 31 tests, DB 28 tests 通过",
               "Web 全量 43 tests 通过（含权限恢复、菜单过滤、路由守卫、角色切换和页面回归）",
+              "Web 全量 47 tests 通过（单 worker，含 Message 错误/警告/成功反馈）",
               "E2E/Playwright 尚未建立",
               "数据库 seed 2 tests、真实登录 API 6 tests 通过（本地 PostgreSQL）",
               "demo-business seed 集成 2 tests、Swagger 文档真实 e2e 2 tests 通过",
@@ -1319,6 +1322,18 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-09",
+            phase: "ui",
+            title: "前端运行时错误反馈迁移为 Message",
+            body: "扫描 apps/web 中的错误 Alert、ErrorBlock 和 mutation 反馈，将页面级错误迁移为 antd message.error，助手降级使用 message.warning，登录、下架、归档、点赞、评分、评论和通知已读补充 message.success；保留字段校验、空状态、业务状态标签和只读说明。",
+          },
+          {
+            date: "2026-08-09",
+            phase: "test",
+            title: "Message 反馈迁移验证完成",
+            body: "共享 Message 行为测试 4/4 通过，前端单 worker 全量测试 47/47 通过，typecheck、lint 和生产构建通过；并行测试存在超时/共享状态波动，单 worker 验证作为最终证据。",
+          },
           {
             date: "2026-08-08",
             phase: "test",

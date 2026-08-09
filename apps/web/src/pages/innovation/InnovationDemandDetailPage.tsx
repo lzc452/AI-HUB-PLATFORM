@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LikeOutlined } from "@ant-design/icons";
-import { Alert, Button, Form, Input, Tag, Typography } from "antd";
+import { Button, Form, Input, Tag, Typography } from "antd";
 import { Controller, useForm } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import { z } from "zod";
@@ -156,15 +156,6 @@ export default function InnovationDemandDetailPage() {
             发表讨论
           </Button>
         </form>
-        {addComment.isError ? (
-          <Alert
-            className="!mt-3"
-            description="讨论提交失败，请稍后重试。"
-            showIcon
-            title="提交失败"
-            type="error"
-          />
-        ) : null}
       </section>
     </div>
   );

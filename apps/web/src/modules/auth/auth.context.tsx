@@ -21,6 +21,7 @@ import {
   subscribeSession,
   type AuthSession,
 } from "./session.store";
+import { showSuccessMessage } from "../../shared/ui/message";
 
 function sessionKey(session: Pick<AuthSession, "employeeId" | "sessionId">) {
   return `${session.employeeId}:${session.sessionId}`;
@@ -174,6 +175,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setActor(response.actor);
         setSession(nextSession);
         setIsLoading(false);
+        showSuccessMessage("登录成功");
         return true;
       } catch (cause) {
         if (requestVersion === requestVersionRef.current) {

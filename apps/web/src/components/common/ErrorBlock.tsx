@@ -1,4 +1,4 @@
-import { Alert, Button } from "antd";
+import { MessageError } from "../../shared/ui/message";
 
 export interface ErrorBlockProps {
   description: string;
@@ -6,25 +6,10 @@ export interface ErrorBlockProps {
   title?: string;
 }
 
-/** 错误状态块：Alert type="error" + 可选重试按钮。 */
+/** 兼容旧调用方的错误提示入口，不在页面布局中占位。 */
 export function ErrorBlock({
   description,
-  onRetry,
   title = "加载失败",
 }: ErrorBlockProps) {
-  return (
-    <Alert
-      action={
-        onRetry ? (
-          <Button onClick={onRetry} size="small">
-            重试
-          </Button>
-        ) : undefined
-      }
-      description={description}
-      showIcon
-      title={title}
-      type="error"
-    />
-  );
+  return <MessageError cause={description} title={title} />;
 }

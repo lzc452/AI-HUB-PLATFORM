@@ -1,8 +1,9 @@
 import type { ApplicationStatus } from "@ai-hub/contracts";
-import { Alert, Spin, Tag, Typography } from "antd";
+import { Spin, Tag, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { MessageError } from "../../shared/ui/message";
 import {
   useApplication,
   usePublishedVersion,
@@ -51,14 +52,7 @@ export default function ApplicationDetailsPage() {
           ))}
         </div>
         {isPending ? <Spin aria-label="应用数据加载中" /> : null}
-        {isError ? (
-          <Alert
-            description={error.message}
-            showIcon
-            title="应用数据加载失败"
-            type="error"
-          />
-        ) : null}
+        <MessageError active={isError} cause={error} title="应用数据加载失败" />
         {data ? (
           <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">

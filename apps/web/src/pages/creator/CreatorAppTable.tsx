@@ -1,5 +1,5 @@
 import { LikeOutlined, PlusOutlined, StarFilled } from "@ant-design/icons";
-import { Alert, Button, Select, Skeleton, Table, Tag, Typography } from "antd";
+import { Button, Select, Skeleton, Table, Tag, Typography } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import type {
   CreatorApplicationRecord,
 } from "../../modules/application/application.client";
 import { useWithdrawApplication } from "../../modules/application/useApplication";
+import { MessageError } from "../../shared/ui/message";
 import {
   formatCount,
   iconGradient,
@@ -28,7 +29,6 @@ export interface CreatorAppTableProps {
   error: Error | null;
   isError: boolean;
   isPending: boolean;
-  refetch: () => unknown;
 }
 
 function formatDate(value: string | null): string {
@@ -41,7 +41,6 @@ export function CreatorAppTable({
   error,
   isError,
   isPending,
-  refetch,
 }: CreatorAppTableProps) {
   const navigate = useNavigate();
   const withdraw = useWithdrawApplication();
@@ -316,19 +315,7 @@ export function CreatorAppTable({
       </div>
 
       {isPending ? <Skeleton active paragraph={{ rows: 6 }} /> : null}
-      {isError ? (
-        <Alert
-          action={
-            <Button onClick={() => void refetch()} size="small">
-              重试
-            </Button>
-          }
-          description={error?.message}
-          showIcon
-          title="应用列表加载失败"
-          type="error"
-        />
-      ) : null}
+      <MessageError active={isError} cause={error} title="应用列表加载失败" />
       {data && items.length === 0 ? (
         <EmptyBlock
           action={

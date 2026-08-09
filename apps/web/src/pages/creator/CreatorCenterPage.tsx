@@ -4,7 +4,7 @@ import {
   LikeOutlined,
   StarFilled,
 } from "@ant-design/icons";
-import { Alert, Button, Skeleton, Tag, Typography } from "antd";
+import { Skeleton, Tag, Typography } from "antd";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
@@ -14,6 +14,7 @@ import {
   useCreatorSummary,
 } from "../../modules/application/useApplication";
 import { formatCount } from "../../modules/marketplace/catalogMeta";
+import { MessageError } from "../../shared/ui/message";
 import { CreatorAppTable } from "./CreatorAppTable";
 import { CreatorSidebar } from "./CreatorSidebar";
 import { CreatorTrendChart } from "./CreatorTrendChart";
@@ -106,7 +107,6 @@ export default function CreatorCenterPage() {
               error={applications.error}
               isError={applications.isError}
               isPending={applications.isPending}
-              refetch={() => void applications.refetch()}
             />
 
             <CreatorTrendChart />
@@ -114,19 +114,11 @@ export default function CreatorCenterPage() {
             {applicationId && summary.isPending ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : null}
-            {applicationId && summary.isError ? (
-              <Alert
-                action={
-                  <Button onClick={() => void summary.refetch()} size="small">
-                    重试
-                  </Button>
-                }
-                description={summary.error.message}
-                showIcon
-                title="创作者数据加载失败"
-                type="error"
-              />
-            ) : null}
+            <MessageError
+              active={Boolean(applicationId && summary.isError)}
+              cause={summary.error}
+              title="创作者数据加载失败"
+            />
             {applicationId && summary.data ? (
               <div className="grid gap-4 md:grid-cols-2">
                 <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">

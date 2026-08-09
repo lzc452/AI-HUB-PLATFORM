@@ -1,7 +1,7 @@
 import { Spin, Table, Tag, Typography } from "antd";
 
-import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
+import { MessageError } from "../../shared/ui/message";
 
 const { Title } = Typography;
 
@@ -29,16 +29,11 @@ export default function OrganizationPage() {
         组织管理
       </Title>
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
-      {firstError ? (
-        <ErrorBlock
-          description={firstError.message}
-          onRetry={() => {
-            void employees.refetch();
-            void departments.refetch();
-          }}
-          title="组织数据加载失败"
-        />
-      ) : null}
+      <MessageError
+        active={Boolean(firstError)}
+        cause={firstError}
+        title="组织数据加载失败"
+      />
       <div className="grid gap-4 lg:grid-cols-2">
         {employees.data ? (
           <section

@@ -1,12 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { Alert, Button, Checkbox, Form, Input, message } from "antd";
+import { Button, Checkbox, Form, Input, message } from "antd";
 import { Controller, useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { useAuth } from "../../modules/auth/useAuth";
 import { ROUTES } from "../../router/routes";
+import { MessageError } from "../../shared/ui/message";
 // Vite 方式引入右侧背景图（由构建器处理为资源 URL）
 import loginBgUrl from "../../../assets/login_bg.png";
 
@@ -128,15 +129,7 @@ export default function LoginPage() {
                 统一访问企业内部 AI 应用、创新需求与创作者中心
               </p>
 
-              {error ? (
-                <Alert
-                  className="!mb-4"
-                  description={error}
-                  showIcon
-                  title="登录失败"
-                  type="error"
-                />
-              ) : null}
+              <MessageError active={Boolean(error)} cause={error} title="登录失败" />
 
               <form aria-label="登录表单" noValidate onSubmit={onSubmit}>
                 {/* component={false} 仅提供 vertical 布局上下文，避免嵌套 form */}

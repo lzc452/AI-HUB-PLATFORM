@@ -1,7 +1,8 @@
-import { Alert, Empty, Spin, Tag, Typography } from "antd";
+import { Empty, Spin, Tag, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { MessageError } from "../../shared/ui/message";
 import type { ReviewRecord } from "../../modules/application/application.client";
 import { useApplicationReviews } from "../../modules/application/useApplication";
 
@@ -31,14 +32,7 @@ export default function ApplicationReviewPage() {
           审核记录
         </Title>
         {isPending ? <Spin aria-label="审核记录加载中" /> : null}
-        {isError ? (
-          <Alert
-            description={error.message}
-            showIcon
-            title="审核记录加载失败"
-            type="error"
-          />
-        ) : null}
+        <MessageError active={isError} cause={error} title="审核记录加载失败" />
         {data && data.length === 0 ? (
           <Empty description="暂无审核记录" />
         ) : null}

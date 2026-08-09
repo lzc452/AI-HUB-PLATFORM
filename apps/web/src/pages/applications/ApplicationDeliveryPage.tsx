@@ -1,8 +1,9 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
-import { Alert, Empty, Spin, Tag, Typography } from "antd";
+import { Empty, Spin, Tag, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { MessageError } from "../../shared/ui/message";
 import { useApplicationDeliveries } from "../../modules/application/useApplication";
 
 const { Text, Title } = Typography;
@@ -29,14 +30,7 @@ export default function ApplicationDeliveryPage() {
           交付渠道
         </Title>
         {isPending ? <Spin aria-label="交付配置加载中" /> : null}
-        {isError ? (
-          <Alert
-            description={error.message}
-            showIcon
-            title="交付配置加载失败"
-            type="error"
-          />
-        ) : null}
+        <MessageError active={isError} cause={error} title="交付配置加载失败" />
         {data && data.length === 0 ? (
           <Empty description="暂无交付渠道配置" />
         ) : null}

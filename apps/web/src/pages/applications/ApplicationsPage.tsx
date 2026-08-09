@@ -1,8 +1,9 @@
-import { Alert, Empty, Input, Spin, Tag, Typography } from "antd";
+import { Empty, Input, Spin, Tag, Typography } from "antd";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { MessageError } from "../../shared/ui/message";
 import { useApplication } from "../../modules/application/useApplication";
 
 const { Text, Title } = Typography;
@@ -32,14 +33,11 @@ export default function ApplicationsPage() {
           placeholder="输入应用 ID 查看管理信息"
         />
         {isFetching ? <Spin aria-label="应用信息加载中" /> : null}
-        {isError ? (
-          <Alert
-            description={error.message}
-            showIcon
-            title="应用信息加载失败"
-            type="error"
-          />
-        ) : null}
+        <MessageError
+          active={isError}
+          cause={error}
+          title="应用信息加载失败"
+        />
         {!lookupId ? (
           <Empty description="输入应用 ID 查看应用管理信息" />
         ) : null}

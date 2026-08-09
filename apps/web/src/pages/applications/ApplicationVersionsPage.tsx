@@ -1,7 +1,8 @@
-import { Alert, Empty, Spin, Tag, Typography } from "antd";
+import { Empty, Spin, Tag, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { MessageError } from "../../shared/ui/message";
 import type { ApplicationVersionRecord } from "../../modules/application/application.client";
 import {
   useApplicationVersions,
@@ -35,14 +36,7 @@ export default function ApplicationVersionsPage() {
           版本历史
         </Title>
         {isPending ? <Spin aria-label="版本记录加载中" /> : null}
-        {isError ? (
-          <Alert
-            description={error.message}
-            showIcon
-            title="版本记录加载失败"
-            type="error"
-          />
-        ) : null}
+        <MessageError active={isError} cause={error} title="版本记录加载失败" />
         {data && data.length === 0 ? (
           <Empty description="暂无版本记录" />
         ) : null}

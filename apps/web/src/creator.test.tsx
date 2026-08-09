@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { Modal } from "antd";
+import { Modal, message } from "antd";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -102,6 +102,7 @@ describe("创作者中心页面", () => {
     // 清理 Modal.confirm 遗留的独立根节点，避免用例间相互污染。
     vi.useRealTimers();
     Modal.destroyAll();
+    message.destroy();
   });
 
   it("渲染页面标题与欢迎横幅文案", () => {
@@ -149,7 +150,7 @@ describe("创作者中心页面", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("加载失败时显示错误提示与重试按钮", () => {
+  it("加载失败时使用 Message 提示且不渲染布局重试按钮", async () => {
     state.creatorApplications = {
       data: undefined,
       error: new Error("网络异常"),
@@ -161,8 +162,12 @@ describe("创作者中心页面", () => {
 
     renderPage();
 
-    expect(screen.getByText("应用列表加载失败")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /重\s*试/ })).toBeInTheDocument();
+    expect(
+      await screen.findByText("应用列表加载失败：网络异常"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /重\s*试/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("下架已发布应用需经确认框二次确认，取消后不触发下架", async () => {

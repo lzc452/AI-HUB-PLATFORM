@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  showErrorMessage,
+  showSuccessMessage,
+} from "../../shared/ui/message";
+import {
   addDemandComment,
   getDemand,
   likeDemand,
@@ -35,7 +39,11 @@ export function useLikeDemand(demandId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => likeDemand(demandId as string),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
+    onError: (error) => showErrorMessage(error, "需求点赞失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["demands"] });
+      showSuccessMessage("需求点赞成功");
+    },
   });
 }
 
@@ -43,6 +51,10 @@ export function useAddDemandComment(demandId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: string) => addDemandComment(demandId as string, body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["demands"] }),
+    onError: (error) => showErrorMessage(error, "讨论提交失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["demands"] });
+      showSuccessMessage("讨论已提交");
+    },
   });
 }

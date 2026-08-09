@@ -61,6 +61,6 @@ describe("authentication", () => {
     });
     fireEvent.submit(screen.getByRole("form", { name: "登录表单" }));
 
-    expect(await screen.findByText("工号或密码错误")).toBeInTheDocument();
+    expect(await screen.findByText(/工号或密码错误/)).toBeInTheDocument();
   });
 });

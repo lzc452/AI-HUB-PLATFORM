@@ -1,7 +1,7 @@
 import { Button, Spin, Tag, Typography } from "antd";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
-import { ErrorBlock } from "../../components/common/ErrorBlock";
+import { MessageError } from "../../shared/ui/message";
 import {
   useMarkNotificationRead,
   useNotifications,
@@ -18,7 +18,7 @@ function formatCreatedAt(timestamp: string) {
 }
 
 export default function NotificationsPage() {
-  const { data, error, isError, isPending, refetch } = useNotifications();
+  const { data, error, isError, isPending } = useNotifications();
   const markRead = useMarkNotificationRead();
 
   return (
@@ -27,13 +27,11 @@ export default function NotificationsPage() {
         站内通知
       </Title>
       {isPending ? <Spin aria-label="通知加载中" /> : null}
-      {isError ? (
-        <ErrorBlock
-          description={error.message}
-          onRetry={() => void refetch()}
-          title="通知加载失败"
-        />
-      ) : null}
+      <MessageError
+        active={isError}
+        cause={error}
+        title="通知加载失败"
+      />
       {data && data.length === 0 ? <EmptyBlock description="暂无通知" /> : null}
       {data && data.length > 0 ? (
         <ul className="m-0 list-none space-y-3 p-0" aria-label="通知列表">

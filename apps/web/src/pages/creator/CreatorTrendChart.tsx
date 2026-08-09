@@ -1,8 +1,9 @@
-import { Alert, Button, Skeleton, Typography } from "antd";
+import { Skeleton, Typography } from "antd";
 import { lazy, Suspense, useMemo } from "react";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { useDashboard } from "../../modules/analytics/useAnalytics";
+import { MessageError } from "../../shared/ui/message";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
@@ -17,8 +18,7 @@ function prefersReducedMotion(): boolean {
 
 /** 本月应用使用趋势折线图：数据源为 application 仪表盘，按日聚合。 */
 export function CreatorTrendChart() {
-  const { data, error, isError, isPending, refetch } =
-    useDashboard("application");
+  const { data, error, isError, isPending } = useDashboard("application");
 
   const { days, values, total } = useMemo(() => {
     const byDay = new Map<string, number>();
@@ -49,19 +49,7 @@ export function CreatorTrendChart() {
         ) : null}
       </div>
       {isPending ? <Skeleton active paragraph={{ rows: 4 }} /> : null}
-      {isError ? (
-        <Alert
-          action={
-            <Button onClick={() => void refetch()} size="small">
-              重试
-            </Button>
-          }
-          description={error.message}
-          showIcon
-          title="趋势数据加载失败"
-          type="error"
-        />
-      ) : null}
+      <MessageError active={isError} cause={error} title="趋势数据加载失败" />
       {data && days.length === 0 ? (
         <EmptyBlock description="本月暂无应用使用数据" />
       ) : null}

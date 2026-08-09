@@ -67,9 +67,6 @@ export default function MarketplaceDetailPage() {
     <div className="space-y-4">
       <MarketplaceDetailHeader
         entry={data}
-        interactionError={
-          Boolean(toggleLike.isError) || Boolean(rateApplication.isError)
-        }
         likePending={toggleLike.isPending}
         onLike={() => toggleLike.mutate()}
         onRate={(stars) => rateApplication.mutate(stars)}

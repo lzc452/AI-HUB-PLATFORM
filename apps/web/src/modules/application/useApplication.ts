@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
 
 import {
   archiveApplication,
@@ -12,6 +11,10 @@ import {
   getPublishedVersion,
   withdrawApplication,
 } from "./application.client";
+import {
+  showErrorMessage,
+  showSuccessMessage,
+} from "../../shared/ui/message";
 
 export function useApplication(applicationId: string | undefined) {
   return useQuery({
@@ -80,17 +83,15 @@ function useInvalidateApplicationCaches() {
   };
 }
 
-/** 统一提示 mutation 失败原因，避免操作静默失败。 */
-function notifyMutationError(error: unknown): void {
-  void message.error(error instanceof Error ? error.message : "操作失败");
-}
-
 export function useWithdrawApplication() {
   const invalidateCaches = useInvalidateApplicationCaches();
   return useMutation({
     mutationFn: (applicationId: string) => withdrawApplication(applicationId),
-    onError: notifyMutationError,
-    onSuccess: invalidateCaches,
+    onError: (error) => showErrorMessage(error, "应用下架失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("应用已下架");
+    },
   });
 }
 
@@ -98,7 +99,10 @@ export function useArchiveApplication() {
   const invalidateCaches = useInvalidateApplicationCaches();
   return useMutation({
     mutationFn: (applicationId: string) => archiveApplication(applicationId),
-    onError: notifyMutationError,
-    onSuccess: invalidateCaches,
+    onError: (error) => showErrorMessage(error, "应用归档失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("应用已归档");
+    },
   });
 }

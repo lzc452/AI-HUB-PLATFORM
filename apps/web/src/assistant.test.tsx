@@ -17,7 +17,7 @@ describe("assistant page", () => {
     expect(screen.getByText("有什么适合数据分析的应用？")).toBeInTheDocument();
   });
 
-  it("shows the degradation alert after sending a question", async () => {
+  it("shows a warning Message after sending a question", async () => {
     render(<App />);
 
     fireEvent.click(await screen.findByText("有什么适合数据分析的应用？"));

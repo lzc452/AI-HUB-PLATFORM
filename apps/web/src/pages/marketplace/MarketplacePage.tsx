@@ -1,9 +1,10 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
-import { Alert, Button, Typography } from "antd";
+import { Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
+import { MessageError } from "../../shared/ui/message";
 import { SkeletonCard } from "../../components/common/SkeletonCard";
 import { useDepartments } from "../../modules/auth/useIdentity";
 import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
@@ -32,7 +33,7 @@ export default function MarketplacePage() {
 
   const serverSort = sortMode === "rating" ? "popular" : sortMode;
 
-  const { data, error, isError, isPending, refetch } = useCatalogSearch({
+  const { data, error, isError, isPending } = useCatalogSearch({
     categoryId,
     page,
     pageSize: PAGE_SIZE,
@@ -143,19 +144,11 @@ export default function MarketplacePage() {
                   <SkeletonCard count={6} />
                 </div>
               ) : null}
-              {isError ? (
-                <Alert
-                  action={
-                    <Button onClick={() => void refetch()} size="small">
-                      重试
-                    </Button>
-                  }
-                  description={error.message}
-                  showIcon
-                  title="应用列表加载失败"
-                  type="error"
-                />
-              ) : null}
+              <MessageError
+                active={isError}
+                cause={error}
+                title="应用列表加载失败"
+              />
               {data && sortedItems.length === 0 ? (
                 <EmptyBlock description="没有符合条件的已发布应用" />
               ) : null}

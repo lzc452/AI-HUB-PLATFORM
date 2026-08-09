@@ -1,9 +1,10 @@
-import { Alert, Spin } from "antd";
+import { Spin } from "antd";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { ForbiddenBlock } from "../components/common/ForbiddenBlock";
 import { useAuth } from "../modules/auth/useAuth";
 import type { PermissionRequirement } from "../modules/auth/roles";
+import { MessageError } from "../shared/ui/message";
 import { ROUTES } from "./routes";
 
 export function RequireAuth() {
@@ -20,11 +21,10 @@ export function RequireAuth() {
   }
   if (!actor) {
     return (
-      <Alert
-        message="无法恢复当前身份"
-        description={error ?? "请刷新页面或重新登录后重试"}
-        type="error"
-        showIcon
+      <MessageError
+        active
+        cause={error}
+        title="无法恢复当前身份"
       />
     );
   }

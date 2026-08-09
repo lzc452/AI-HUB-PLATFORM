@@ -1,6 +1,6 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
-import { Alert, Button, Rate, Tag, Tooltip, Typography } from "antd";
+import { Button, Rate, Tag, Tooltip, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import {
@@ -18,7 +18,6 @@ const { Text, Title } = Typography;
 
 export interface MarketplaceDetailHeaderProps {
   entry: CatalogEntry;
-  interactionError: boolean;
   onLike: () => void;
   onRate: (stars: number) => void;
   ratingDisabled: boolean;
@@ -29,7 +28,6 @@ export interface MarketplaceDetailHeaderProps {
 /** 顶部 Header 区：图标 + 应用名 + 信任标签 + 元信息行 + 立即使用/收藏。 */
 export function MarketplaceDetailHeader({
   entry,
-  interactionError,
   likePending,
   onLike,
   onRate,
@@ -152,14 +150,6 @@ export function MarketplaceDetailHeader({
             {...(ratingPending ? { value: 0 } : {})}
           />
         </span>
-        {interactionError ? (
-          <Alert
-            className="!mb-0"
-            message="互动操作失败，请稍后重试"
-            showIcon
-            type="error"
-          />
-        ) : null}
       </section>
     </header>
   );

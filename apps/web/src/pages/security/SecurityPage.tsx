@@ -1,13 +1,13 @@
 import { Button, Descriptions, Spin, Tag, Typography } from "antd";
 
-import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { useAuth } from "../../modules/auth/useAuth";
 import { useActor } from "../../modules/auth/useIdentity";
+import { MessageError } from "../../shared/ui/message";
 
 const { Text, Title } = Typography;
 
 export default function SecurityPage() {
-  const { data, error, isError, isPending, refetch } = useActor();
+  const { data, error, isError, isPending } = useActor();
   const { logout } = useAuth();
 
   return (
@@ -16,13 +16,7 @@ export default function SecurityPage() {
         系统安全
       </Title>
       {isPending ? <Spin aria-label="身份信息加载中" /> : null}
-      {isError ? (
-        <ErrorBlock
-          description={error.message}
-          onRetry={() => void refetch()}
-          title="身份信息加载失败"
-        />
-      ) : null}
+      <MessageError active={isError} cause={error} title="身份信息加载失败" />
       {data ? (
         <section
           aria-labelledby="actor-heading"

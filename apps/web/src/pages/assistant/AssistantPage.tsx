@@ -1,6 +1,8 @@
 import { RobotOutlined, SendOutlined } from "@ant-design/icons";
-import { Alert, Button, Input, Typography } from "antd";
+import { Button, Input, Typography } from "antd";
 import { useState } from "react";
+
+import { MessageWarning } from "../../shared/ui/message";
 
 const { Text, Title } = Typography;
 
@@ -81,17 +83,12 @@ export default function AssistantPage() {
                 </div>
               </li>
             ))}
-            {degraded ? (
-              <li>
-                <Alert
-                  message="AI 助手暂时不可用，请稍后重试"
-                  showIcon
-                  type="warning"
-                />
-              </li>
-            ) : null}
           </ul>
         )}
+        <MessageWarning
+          active={degraded}
+          content="AI 助手暂时不可用，请稍后重试"
+        />
         <div className="mt-6 flex items-start gap-2">
           <Input.TextArea
             aria-label="问题输入"

@@ -3,15 +3,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
-import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { demandStatusText } from "../../modules/innovation/demandMeta";
 import { useDemandList } from "../../modules/innovation/useDemand";
+import { MessageError } from "../../shared/ui/message";
 
 const { Paragraph, Title } = Typography;
 
 export default function InnovationSquarePage() {
   const [query, setQuery] = useState("");
-  const { data, error, isError, isPending, refetch } = useDemandList(query);
+  const { data, error, isError, isPending } = useDemandList(query);
 
   return (
     <div className="space-y-4">
@@ -30,13 +30,7 @@ export default function InnovationSquarePage() {
           placeholder="搜索需求标题或描述"
         />
         {isPending ? <Spin aria-label="需求列表加载中" /> : null}
-        {isError ? (
-          <ErrorBlock
-            description={error.message}
-            onRetry={() => void refetch()}
-            title="需求列表加载失败"
-          />
-        ) : null}
+        <MessageError active={isError} cause={error} title="需求列表加载失败" />
         {data && data.items.length === 0 ? (
           <EmptyBlock description="当前受众范围内没有可见需求" />
         ) : null}
