@@ -7,6 +7,7 @@ import type {
   AnalyticsExportRow,
 } from "./export.types.js";
 import { exportMetricKeys } from "./dashboard-metrics.js";
+import { hasPermission, PERMISSIONS } from "@ai-hub/contracts";
 
 export class KyselyAnalyticsExportRepository
   implements AnalyticsExportRepository
@@ -26,8 +27,9 @@ export class KyselyAnalyticsExportRepository
   async readVisibleRows(
     input: AnalyticsExportReadInput,
   ): Promise<readonly AnalyticsExportRow[]> {
-    const unrestricted = ["analytics_operator", "super_admin"].some((role) =>
-      input.actor.roleCodes.includes(role),
+    const unrestricted = hasPermission(
+      input.actor,
+      PERMISSIONS.ANALYTICS_SCOPE_ALL,
     );
     let query = this.db
       .selectFrom("analytics_daily_aggregates")

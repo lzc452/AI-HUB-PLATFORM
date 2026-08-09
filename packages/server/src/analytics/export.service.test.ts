@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
 import { AnalyticsExportService } from "./export.service.js";
 import type {
   AnalyticsExportRepository,
@@ -9,6 +9,22 @@ import type {
 const actor = (roles: readonly string[]): ActorContext => ({
   employeeId: "employee-1",
   roleCodes: roles,
+  permissions: roles.flatMap((role) =>
+    role === "analytics_exporter"
+      ? [
+          PERMISSIONS.ANALYTICS_EXPORT,
+          PERMISSIONS.ANALYTICS_PLATFORM_READ,
+          PERMISSIONS.ANALYTICS_MARKET_READ,
+          PERMISSIONS.ANALYTICS_APPLICATION_READ,
+          PERMISSIONS.ANALYTICS_INNOVATION_READ,
+          PERMISSIONS.ANALYTICS_REVIEW_READ,
+          PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
+          PERMISSIONS.ANALYTICS_RISK_READ,
+          PERMISSIONS.ANALYTICS_RUNTIME_READ,
+          PERMISSIONS.ANALYTICS_INTEGRATION_READ,
+        ]
+      : [],
+  ),
   departmentIds: ["department-1"],
   primaryDepartmentId: "department-1",
   sessionId: "session-1",
@@ -96,6 +112,27 @@ describe("AnalyticsExportService", () => {
       }),
     ).rejects.toThrow("ANALYTICS_EXPORT_RANGE_INVALID");
     expect(readCount).toBe(0);
+  });
+
+  it("requires the target dashboard permission in addition to export permission", async () => {
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => operation(repository),
+      readVisibleRows: async () => [],
+      findExportJob: async () => null,
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
+    };
+    const exportOnly = {
+      ...actor(["custom_exporter"]),
+      permissions: [PERMISSIONS.ANALYTICS_EXPORT],
+    };
+    await expect(
+      new AnalyticsExportService(repository).run(exportOnly, {
+        target: "platform",
+        from: "2026-08-03",
+        to: "2026-08-04",
+      }),
+    ).rejects.toThrow("ANALYTICS_EXPORT_FORBIDDEN");
   });
 
   it("audits a successful download separately", async () => {

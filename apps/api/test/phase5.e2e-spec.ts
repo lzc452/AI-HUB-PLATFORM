@@ -36,7 +36,21 @@ const identityRepository = {
       {
         roleCode: employeeId === "E900" ? "demand_reviewer" : "employee",
         permissions:
-          employeeId === "E900" ? ["demand.review"] : ["demand.create"],
+          employeeId === "E900"
+            ? [
+                "demand.review",
+                "demand.read",
+                "demand.prioritize",
+                "demand.progress",
+                "demand.merge",
+                "demand.associate_application",
+              ]
+            : [
+                "demand.create",
+                "demand.submit",
+                "demand.claim",
+                "demand.collaborate",
+              ],
       },
     ];
   },

@@ -4,6 +4,7 @@ import type {
   AuthorizationRequest,
   EmployeeId,
 } from "@ai-hub/contracts";
+import { hasPermission } from "@ai-hub/contracts";
 import { PasswordService } from "./password.service.js";
 import type {
   CreateEmployeeInput,
@@ -43,6 +44,7 @@ export class IdentityService {
         status: input.status ?? "pending_binding",
         passwordHash,
       });
+      await repository.assignRole(input.employeeId, "employee");
       await repository.recordAudit({
         actorEmployeeId: null,
         eventType: "identity.employee.created",
@@ -131,6 +133,26 @@ export class IdentityService {
       }
       return revoked;
     });
+  }
+
+  /** 仅撤销当前调用者自己的会话，避免 logout 接口被用来注销他人会话。 */
+  async logout(actor: ActorContext): Promise<boolean> {
+    return this.revokeSessionForActor(actor, actor.sessionId);
+  }
+
+  async revokeSessionForActor(
+    actor: ActorContext,
+    sessionId: string,
+    reason = "logout",
+  ): Promise<boolean> {
+    if (sessionId !== actor.sessionId) {
+      return false;
+    }
+    const session = await this.repository.findSession(sessionId);
+    if (session === null || session.employeeId !== actor.employeeId) {
+      return false;
+    }
+    return this.revokeSession(sessionId, reason);
   }
 
   async requestPasswordReset(employeeId: EmployeeId): Promise<{
@@ -238,6 +260,7 @@ export class IdentityService {
             });
             createdEmployees += 1;
           }
+          await repository.assignRole(employee.employeeId, "employee");
           await repository.bindDingTalkUser(
             employee.employeeId,
             employee.dingtalkUserId,
@@ -320,7 +343,16 @@ export class IdentityService {
 
     return {
       employeeId,
-      roleCodes: roles.map((role) => role.roleCode),
+      roleCodes: roles
+        .map((role) => role.roleCode)
+        .sort((left, right) => {
+          if (left === "employee") return right === "employee" ? 0 : -1;
+          if (right === "employee") return 1;
+          return left.localeCompare(right);
+        }),
+      permissions: [
+        ...new Set(roles.flatMap((role) => role.permissions)),
+      ].sort(),
       departmentIds,
       primaryDepartmentId: employee.primaryDepartmentId,
       sessionId,
@@ -337,17 +369,19 @@ export class IdentityService {
     const roleRecords = await this.repository.listEmployeeRoles(
       request.actor.employeeId,
     );
-    const roles = new Set(request.actor.roleCodes);
-    if (roles.has("super_admin")) {
-      return { allowed: true, reasonCode: "ALLOW_SUPER_ADMIN" };
+    const persistedPermissions = [
+      ...(request.actor.permissions ?? []),
+      ...roleRecords.flatMap((role) => role.permissions),
+    ];
+    if (persistedPermissions.includes("*")) {
+      return { allowed: true, reasonCode: "ALLOW_ROLE_PERMISSION" };
     }
-
-    const permission = `${request.resourceType}.${request.action}`;
+    const permission =
+      request.permission ?? `${request.resourceType}.${request.action}`;
     if (
-      roleRecords.some((role) =>
-        role.permissions.some(
-          (candidate) => candidate === "*" || candidate === permission,
-        ),
+      hasPermission(
+        { permissions: [...new Set(persistedPermissions)] },
+        permission,
       )
     ) {
       return { allowed: true, reasonCode: "ALLOW_ROLE_PERMISSION" };

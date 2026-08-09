@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { listNotifications, markNotificationRead } from "./notification.client";
 
-export function useNotifications() {
+export function useNotifications(options?: { enabled?: boolean }) {
   return useQuery({
+    enabled: options?.enabled ?? true,
     queryFn: listNotifications,
     queryKey: ["notifications"],
   });

@@ -1,7 +1,14 @@
-import { Alert } from "antd";
+import { Alert, Typography } from "antd";
 
-import type { DashboardKey } from "../../modules/analytics/analytics.client";
+import {
+  DASHBOARD_PERMISSIONS,
+  type DashboardKey,
+} from "../../modules/analytics/analytics.client";
+import { hasPermission } from "../../modules/auth/roles";
+import { useAuth } from "../../modules/auth/useAuth";
 import { DashboardCard } from "./DashboardCard";
+
+const { Title } = Typography;
 
 const fixedAnalyticsDashboards: ReadonlyArray<{
   dashboardKey: DashboardKey;
@@ -56,10 +63,18 @@ const fixedAnalyticsDashboards: ReadonlyArray<{
 ];
 
 export default function AnalyticsDashboardPage() {
+  const { actor } = useAuth();
+  const visibleDashboards = fixedAnalyticsDashboards.filter((dashboard) =>
+    hasPermission(actor, DASHBOARD_PERMISSIONS[dashboard.dashboardKey]),
+  );
+
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        数据看板
+      </Title>
       <Alert
-        description="每个指标声明其来源事件、公式、时间范围、权限、受众规则与重算方式。"
+        description="每个指标声明其来源事件、公式、时间范围、权限、受众规则与重算方式；指标可由保留的原始事件重建。"
         showIcon
         title="只读聚合边界"
         type="info"
@@ -68,7 +83,7 @@ export default function AnalyticsDashboardPage() {
         aria-label="固定数据看板"
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
       >
-        {fixedAnalyticsDashboards.map((dashboard) => (
+        {visibleDashboards.map((dashboard) => (
           <DashboardCard
             dashboardKey={dashboard.dashboardKey}
             description={dashboard.description}

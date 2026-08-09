@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto";
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import type {
   AnalyticsExportRepository,
   AnalyticsExportRequest,
@@ -8,15 +12,23 @@ import type {
 import type { AnalyticsBehaviorEventRecorder } from "./analytics.types.js";
 import { assertAnalyticsRange } from "./range.js";
 
-const EXPORT_ROLES = [
-  "analytics_exporter",
-  "analytics_operator",
-  "super_admin",
-];
-
 function canExport(actor: ActorContext): boolean {
-  return EXPORT_ROLES.some((role) => actor.roleCodes.includes(role));
+  return hasPermission(actor, PERMISSIONS.ANALYTICS_EXPORT);
 }
+
+const targetPermissions: Readonly<
+  Record<AnalyticsExportRequest["target"], string>
+> = {
+  platform: PERMISSIONS.ANALYTICS_PLATFORM_READ,
+  market: PERMISSIONS.ANALYTICS_MARKET_READ,
+  application: PERMISSIONS.ANALYTICS_APPLICATION_READ,
+  innovation: PERMISSIONS.ANALYTICS_INNOVATION_READ,
+  review: PERMISSIONS.ANALYTICS_REVIEW_READ,
+  department: PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
+  risk: PERMISSIONS.ANALYTICS_RISK_READ,
+  runtime: PERMISSIONS.ANALYTICS_RUNTIME_READ,
+  integration: PERMISSIONS.ANALYTICS_INTEGRATION_READ,
+};
 
 export class AnalyticsExportService {
   constructor(
@@ -28,7 +40,10 @@ export class AnalyticsExportService {
     actor: ActorContext,
     request: AnalyticsExportRequest,
   ): Promise<AnalyticsExportResult> {
-    if (!canExport(actor)) {
+    if (
+      !canExport(actor) ||
+      !hasPermission(actor, targetPermissions[request.target])
+    ) {
       await this.recordLifecycle(actor, "", "denied", {
         reason: "ANALYTICS_EXPORT_FORBIDDEN",
         target: request.target,
@@ -97,7 +112,7 @@ export class AnalyticsExportService {
           requester:
             row.displayAnonymously === true
               ? "Anonymous"
-              : actor.roleCodes.includes("analytics_identity_export")
+              : hasPermission(actor, PERMISSIONS.ANALYTICS_IDENTITY_EXPORT)
                 ? (row.requesterEmployeeId ?? null)
                 : "Redacted",
         })),
@@ -158,9 +173,7 @@ export class AnalyticsExportService {
       throw new Error("ANALYTICS_EXPORT_FORBIDDEN");
     }
     const job = await this.repository.findExportJob(exportId);
-    const operator = ["analytics_operator", "super_admin"].some((role) =>
-      actor.roleCodes.includes(role),
-    );
+    const operator = hasPermission(actor, PERMISSIONS.ANALYTICS_EXPORT_MANAGE);
     if (
       job === null ||
       (!operator && job.requestedByEmployeeId !== actor.employeeId)

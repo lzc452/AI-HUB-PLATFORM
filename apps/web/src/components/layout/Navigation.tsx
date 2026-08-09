@@ -16,25 +16,23 @@ import { Link, useLocation } from "react-router-dom";
 import { readLastViewedApplicationId } from "../../modules/application/last-viewed";
 import { useAuth } from "../../modules/auth/useAuth";
 import {
-  canSeeMenu,
-  ROLE_APP_ADMIN,
-  ROLE_INNOVATION_ADMIN,
-  ROLE_ORG_ADMIN,
-  ROLE_SUPER_ADMIN,
+  canAccess,
+  ROUTE_ACCESS,
+  type PermissionRequirement,
 } from "../../modules/auth/roles";
 import { ROUTES } from "../../router/routes";
 
 interface SidebarMenuItem {
-  allowedRoles?: readonly string[];
   icon: React.ReactNode;
   key: string;
   label: string;
   path?: string | undefined;
+  requiredPermissions?: PermissionRequirement;
 }
 
-/** 侧边栏主导航：按角色过滤、按当前路径高亮。 */
+/** 侧边栏主导航：路由和菜单共用权限配置。 */
 export function Navigation() {
-  const { actor } = useAuth();
+  const { actor, isLoading } = useAuth();
   const location = useLocation();
   const lastApplicationId = readLastViewedApplicationId();
   const reviewPath = lastApplicationId
@@ -48,68 +46,70 @@ export function Navigation() {
         key: "marketplace",
         label: "应用市场",
         path: ROUTES.marketplace,
+        requiredPermissions: ROUTE_ACCESS.marketplace,
       },
       {
         icon: <ExperimentOutlined aria-hidden="true" />,
         key: "innovation",
         label: "创新广场",
         path: ROUTES.innovation,
+        requiredPermissions: ROUTE_ACCESS.innovation,
       },
       {
-        allowedRoles: [ROLE_APP_ADMIN, ROLE_SUPER_ADMIN],
         icon: <AppstoreAddOutlined aria-hidden="true" />,
         key: "applications",
         label: "应用管理",
         path: ROUTES.applications,
+        requiredPermissions: ROUTE_ACCESS.applications,
       },
       {
-        allowedRoles: [ROLE_APP_ADMIN, ROLE_SUPER_ADMIN],
         icon: <CheckCircleOutlined aria-hidden="true" />,
         key: "review",
         label: "审核工作台",
         path: reviewPath,
+        requiredPermissions: ROUTE_ACCESS.applicationReview,
       },
       {
-        allowedRoles: [
-          ROLE_APP_ADMIN,
-          ROLE_ORG_ADMIN,
-          ROLE_SUPER_ADMIN,
-          ROLE_INNOVATION_ADMIN,
-        ],
         icon: <DashboardOutlined aria-hidden="true" />,
         key: "analytics",
         label: "数据看板",
         path: ROUTES.analytics,
+        requiredPermissions: ROUTE_ACCESS.analytics,
       },
       {
-        allowedRoles: [ROLE_ORG_ADMIN, ROLE_SUPER_ADMIN],
         icon: <TeamOutlined aria-hidden="true" />,
         key: "organization",
         label: "组织管理",
         path: ROUTES.organization,
+        requiredPermissions: ROUTE_ACCESS.organization,
       },
       {
-        allowedRoles: [ROLE_SUPER_ADMIN],
         icon: <SafetyCertificateOutlined aria-hidden="true" />,
         key: "security",
         label: "系统安全",
         path: ROUTES.security,
+        requiredPermissions: ROUTE_ACCESS.security,
       },
       {
         icon: <RobotOutlined aria-hidden="true" />,
         key: "assistant",
         label: "AI 助手",
         path: ROUTES.assistant,
+        requiredPermissions: ROUTE_ACCESS.assistant,
       },
       {
         icon: <BellOutlined aria-hidden="true" />,
         key: "notifications",
         label: "站内通知",
         path: ROUTES.notifications,
+        requiredPermissions: ROUTE_ACCESS.notifications,
       },
     ];
-    return items.filter((item) => canSeeMenu(actor, item.allowedRoles ?? []));
-  }, [actor, reviewPath]);
+    if (isLoading || !actor) {
+      return [];
+    }
+    return items.filter((item) => canAccess(actor, item.requiredPermissions));
+  }, [actor, isLoading, reviewPath]);
 
   const selectedKey = useMemo(() => {
     const { pathname } = location;

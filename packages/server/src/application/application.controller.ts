@@ -20,7 +20,11 @@ import {
   ApiParam,
   ApiTags,
 } from "@nestjs/swagger";
-import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
 import { ApplicationService } from "./application.service.js";
@@ -45,6 +49,7 @@ import {
 
 @ApiTags("应用")
 @Controller("/internal/applications")
+@Authenticated()
 export class ApplicationController {
   constructor(
     @Inject(APPLICATION_SERVICE)
@@ -53,6 +58,7 @@ export class ApplicationController {
   ) {}
 
   @Post()
+  @RequiresPermissions(PERMISSIONS.APPLICATION_CREATE)
   @ApiOperation({ summary: "创建应用" })
   @ApiIdentityHeaders()
   @ApiBody({ type: CreateApplicationRequestDto })
@@ -72,6 +78,7 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/versions")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
   @ApiOperation({ summary: "创建应用版本" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -97,6 +104,7 @@ export class ApplicationController {
   }
 
   @Put(":applicationId/deliveries/:channel")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
   @HttpCode(200)
   @ApiOperation({ summary: "配置交付渠道" })
   @ApiIdentityHeaders()
@@ -126,6 +134,7 @@ export class ApplicationController {
   }
 
   @Post("versions/:applicationVersionId/submit-review")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
   @HttpCode(200)
   @ApiOperation({ summary: "提交版本评审" })
   @ApiIdentityHeaders()
@@ -146,6 +155,7 @@ export class ApplicationController {
   }
 
   @Post("versions/:applicationVersionId/review")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
   @HttpCode(200)
   @ApiOperation({ summary: "评审版本" })
   @ApiIdentityHeaders()
@@ -170,6 +180,7 @@ export class ApplicationController {
   }
 
   @Post("versions/:applicationVersionId/claim-review")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
   @HttpCode(200)
   @ApiOperation({ summary: "认领评审" })
   @ApiIdentityHeaders()
@@ -190,6 +201,7 @@ export class ApplicationController {
   }
 
   @Post("versions/:applicationVersionId/release-review")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
   @HttpCode(200)
   @ApiOperation({ summary: "释放评审认领" })
   @ApiIdentityHeaders()
@@ -210,6 +222,7 @@ export class ApplicationController {
   }
 
   @Get("versions/:applicationVersionId/review-queue")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
   @ApiOperation({ summary: "评审队列详情" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
@@ -228,6 +241,7 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/publish")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_PUBLISH)
   @HttpCode(200)
   @ApiOperation({ summary: "发布应用" })
   @ApiIdentityHeaders()
@@ -251,6 +265,7 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/withdraw")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_PUBLISH)
   @HttpCode(200)
   @ApiOperation({ summary: "撤回应用" })
   @ApiIdentityHeaders()
@@ -274,6 +289,7 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/rollback")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_PUBLISH)
   @HttpCode(200)
   @ApiOperation({ summary: "回滚应用版本" })
   @ApiIdentityHeaders()
@@ -297,6 +313,7 @@ export class ApplicationController {
   }
 
   @Post(":applicationId/archive")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_PUBLISH)
   @HttpCode(200)
   @ApiOperation({ summary: "归档应用" })
   @ApiIdentityHeaders()
@@ -317,6 +334,7 @@ export class ApplicationController {
   }
 
   @Get(":applicationId")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "应用详情" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -334,6 +352,7 @@ export class ApplicationController {
   }
 
   @Get(":applicationId/versions")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "应用版本列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -348,11 +367,12 @@ export class ApplicationController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
-    return this.applications.listVersions(applicationId);
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.applications.listVersions(applicationId, actor);
   }
 
   @Get(":applicationId/deliveries")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "交付渠道列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -367,11 +387,12 @@ export class ApplicationController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
-    return this.applications.listDeliveries(applicationId);
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.applications.listDeliveries(applicationId, actor);
   }
 
   @Get(":applicationId/reviews")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "评审记录列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -386,11 +407,12 @@ export class ApplicationController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
-    await this.requireActor(employeeId, sessionId, "read");
-    return this.applications.listReviews(applicationId);
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.applications.listReviews(applicationId, actor);
   }
 
   @Get(":applicationId/published-version")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "当前发布版本" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })

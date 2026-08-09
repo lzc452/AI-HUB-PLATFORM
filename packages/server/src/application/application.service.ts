@@ -1,4 +1,8 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import type {
   ApplicationAuthorizationPort,
   ApplicationRepository,
@@ -470,6 +474,7 @@ export class ApplicationService {
   ): Promise<ApplicationRecord> {
     const application = await this.requireApplication(applicationId);
     if (actor !== undefined) {
+      this.assertApplicationReadable(actor, application);
       await this.analyticsEvents?.record(actor, {
         eventName: "application_viewed",
         aggregateType: "application",
@@ -483,15 +488,27 @@ export class ApplicationService {
     return application;
   }
 
-  listVersions(applicationId: string) {
+  async listVersions(applicationId: string, actor?: ActorContext) {
+    const application = await this.requireApplication(applicationId);
+    if (actor !== undefined) {
+      this.assertApplicationReadable(actor, application);
+    }
     return this.repository.listVersions(applicationId);
   }
 
-  listDeliveries(applicationId: string) {
+  async listDeliveries(applicationId: string, actor?: ActorContext) {
+    const application = await this.requireApplication(applicationId);
+    if (actor !== undefined) {
+      this.assertApplicationReadable(actor, application);
+    }
     return this.repository.listDeliveries(applicationId);
   }
 
-  listReviews(applicationId: string) {
+  async listReviews(applicationId: string, actor?: ActorContext) {
+    const application = await this.requireApplication(applicationId);
+    if (actor !== undefined) {
+      this.assertApplicationReadable(actor, application);
+    }
     return this.repository.listReviews(applicationId);
   }
 
@@ -522,6 +539,9 @@ export class ApplicationService {
     actor?: ActorContext,
   ): Promise<ApplicationVersionRecord> {
     const application = await this.requireApplication(applicationId);
+    if (actor !== undefined) {
+      this.assertApplicationReadable(actor, application);
+    }
     if (application.currentVersionId === null) {
       throw new Error("PUBLISHED_VERSION_NOT_FOUND");
     }
@@ -587,6 +607,20 @@ export class ApplicationService {
       resourceType: "application",
     });
     if (!decision.allowed) throw new Error("NOT_AUTHORIZED");
+  }
+
+  private assertApplicationReadable(
+    actor: ActorContext,
+    application: ApplicationRecord,
+  ): void {
+    if (
+      application.ownerEmployeeId === actor.employeeId ||
+      application.maintainerEmployeeId === actor.employeeId ||
+      hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
+      return;
+    }
+    throw new Error("APPLICATION_ACCESS_FORBIDDEN");
   }
 
   private async requireApplication(

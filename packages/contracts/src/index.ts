@@ -12,7 +12,14 @@ export type {
   DepartmentSummary,
   EmployeeId,
   EmployeeSummary,
+  PermissionCode,
   ResourceId,
+} from "./identity.js";
+export {
+  PERMISSIONS,
+  hasAllPermissions,
+  hasAnyPermission,
+  hasPermission,
 } from "./identity.js";
 export type {
   ApplicationId,

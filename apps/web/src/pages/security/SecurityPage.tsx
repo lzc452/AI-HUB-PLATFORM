@@ -12,6 +12,9 @@ export default function SecurityPage() {
 
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        系统安全
+      </Title>
       {isPending ? <Spin aria-label="身份信息加载中" /> : null}
       {isError ? (
         <ErrorBlock

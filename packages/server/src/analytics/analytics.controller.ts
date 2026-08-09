@@ -19,7 +19,11 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
-import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { AnalyticsDashboardService } from "./dashboard.service.js";
 import type { DashboardKey } from "./dashboard.types.js";
@@ -45,6 +49,7 @@ import {
 
 @ApiTags("分析")
 @Controller("/internal/analytics")
+@Authenticated()
 export class AnalyticsController {
   constructor(
     @Inject(ANALYTICS_DASHBOARD_SERVICE)
@@ -57,6 +62,19 @@ export class AnalyticsController {
   ) {}
 
   @Get("dashboards/:dashboardKey")
+  @RequiresPermissions({
+    anyOf: [
+      PERMISSIONS.ANALYTICS_PLATFORM_READ,
+      PERMISSIONS.ANALYTICS_MARKET_READ,
+      PERMISSIONS.ANALYTICS_APPLICATION_READ,
+      PERMISSIONS.ANALYTICS_INNOVATION_READ,
+      PERMISSIONS.ANALYTICS_REVIEW_READ,
+      PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
+      PERMISSIONS.ANALYTICS_RISK_READ,
+      PERMISSIONS.ANALYTICS_RUNTIME_READ,
+      PERMISSIONS.ANALYTICS_INTEGRATION_READ,
+    ],
+  })
   @ApiOperation({
     summary: "分析看板",
     description: "读取指定看板在时间范围内的日聚合指标。",
@@ -117,6 +135,20 @@ export class AnalyticsController {
   }
 
   @Post("exports")
+  @RequiresPermissions({
+    allOf: [PERMISSIONS.ANALYTICS_EXPORT],
+    anyOf: [
+      PERMISSIONS.ANALYTICS_PLATFORM_READ,
+      PERMISSIONS.ANALYTICS_MARKET_READ,
+      PERMISSIONS.ANALYTICS_APPLICATION_READ,
+      PERMISSIONS.ANALYTICS_INNOVATION_READ,
+      PERMISSIONS.ANALYTICS_REVIEW_READ,
+      PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
+      PERMISSIONS.ANALYTICS_RISK_READ,
+      PERMISSIONS.ANALYTICS_RUNTIME_READ,
+      PERMISSIONS.ANALYTICS_INTEGRATION_READ,
+    ],
+  })
   @ApiOperation({ summary: "创建分析导出" })
   @ApiIdentityHeaders()
   @ApiBody({ type: AnalyticsExportRequestDto })
@@ -136,6 +168,7 @@ export class AnalyticsController {
   }
 
   @Post("exports/:exportId/download")
+  @RequiresPermissions(PERMISSIONS.ANALYTICS_EXPORT)
   @ApiOperation({ summary: "标记导出已下载" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "exportId", description: "导出任务 ID" })
@@ -159,6 +192,7 @@ export class AnalyticsController {
   }
 
   @Post("assistant")
+  @RequiresPermissions(PERMISSIONS.ANALYTICS_ASSISTANT_USE)
   @ApiOperation({ summary: "分析助手问答" })
   @ApiIdentityHeaders()
   @ApiBody({ type: AnalyticsAssistantRequestDto })
@@ -187,14 +221,7 @@ export class AnalyticsController {
     if (employeeId === undefined || sessionId === undefined) {
       throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
     }
-    const actor = await this.identity.getActorContext(employeeId, sessionId);
-    const decision = await this.identity.authorize({
-      actor,
-      action: "read",
-      resourceType: "analytics",
-    });
-    if (!decision.allowed) throw new ForbiddenException("NOT_AUTHORIZED");
-    return actor;
+    return this.identity.getActorContext(employeeId, sessionId);
   }
 
   private async call<T>(operation: () => Promise<T>): Promise<T> {

@@ -121,7 +121,7 @@ describe("App", () => {
     ).not.toThrow();
   });
 
-  it("renders a skip link and accessible primary navigation", () => {
+  it("renders a skip link and accessible primary navigation", async () => {
     render(<App />);
 
     expect(screen.getByRole("link", { name: "跳到主要内容" })).toHaveAttribute(
@@ -135,10 +135,10 @@ describe("App", () => {
       name: "主导航",
     });
     expect(
-      within(primaryNavigation).getByRole("link", { name: /应用市场/ }),
+      await within(primaryNavigation).findByRole("link", { name: /应用市场/ }),
     ).toBeInTheDocument();
     expect(
-      within(primaryNavigation).getByRole("link", { name: /创新广场/ }),
+      await within(primaryNavigation).findByRole("link", { name: /创新广场/ }),
     ).toBeInTheDocument();
   });
 
@@ -199,7 +199,7 @@ describe("App", () => {
   it("navigates to the innovation square demand page", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /创新广场/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /创新广场/ }));
 
     expect(
       await screen.findByRole("heading", { name: "创新广场" }),
@@ -213,12 +213,12 @@ describe("App", () => {
   it("exposes organization and security administration routes", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /组织管理/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /组织管理/ }));
     expect(
       await screen.findByRole("heading", { name: "组织管理" }),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("link", { name: /系统安全/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /系统安全/ }));
     expect(
       await screen.findByRole("heading", { name: "系统安全" }),
     ).toBeInTheDocument();
@@ -227,7 +227,7 @@ describe("App", () => {
   it("exposes the application administration navigation", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /应用管理/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /应用管理/ }));
 
     expect(
       await screen.findByRole("heading", { name: "应用管理" }),

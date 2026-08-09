@@ -26,12 +26,12 @@ export class LoginRequestDto {
 
 /** 注销请求。 */
 export class LogoutRequestDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: String,
     description: "会话 ID",
     example: "00000000-0000-0000-0000-000000000000",
   })
-  sessionId!: string;
+  sessionId?: string;
 }
 
 /** 撤销员工会话请求。 */
@@ -55,6 +55,9 @@ export class ActorContextDto {
 
   @ApiProperty({ description: "角色编码列表", type: [String] })
   roleCodes!: string[];
+
+  @ApiProperty({ description: "聚合后的权限编码列表", type: [String] })
+  permissions!: string[];
 
   @ApiProperty({ description: "所属部门 ID 列表", type: [String] })
   departmentIds!: string[];

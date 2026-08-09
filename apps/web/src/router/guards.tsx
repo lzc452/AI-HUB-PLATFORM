@@ -1,17 +1,52 @@
+import { Alert, Spin } from "antd";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { ForbiddenBlock } from "../components/common/ForbiddenBlock";
 import { useAuth } from "../modules/auth/useAuth";
+import type { PermissionRequirement } from "../modules/auth/roles";
 import { ROUTES } from "./routes";
 
 export function RequireAuth() {
-  const { isAuthenticated } = useAuth();
+  const { actor, error, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
+  if (isLoading) {
+    return <Spin aria-label="正在恢复会话" />;
+  }
   if (!isAuthenticated) {
     return (
       <Navigate replace state={{ from: location.pathname }} to={ROUTES.login} />
     );
   }
+  if (!actor) {
+    return (
+      <Alert
+        message="无法恢复当前身份"
+        description={error ?? "请刷新页面或重新登录后重试"}
+        type="error"
+        showIcon
+      />
+    );
+  }
 
   return <Outlet />;
+}
+
+export interface RequirePermissionProps {
+  children: React.ReactNode;
+  requirement: PermissionRequirement;
+}
+
+export function RequirePermission({
+  children,
+  requirement,
+}: RequirePermissionProps) {
+  const { actor, canAccess, isLoading } = useAuth();
+  if (isLoading || !actor) {
+    return null;
+  }
+  if (!canAccess(requirement)) {
+    return <ForbiddenBlock />;
+  }
+  return children;
 }

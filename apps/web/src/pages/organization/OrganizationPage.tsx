@@ -25,6 +25,9 @@ export default function OrganizationPage() {
 
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        组织管理
+      </Title>
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
       {firstError ? (
         <ErrorBlock

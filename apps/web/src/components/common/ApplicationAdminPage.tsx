@@ -1,6 +1,7 @@
-import { Alert } from "antd";
+import { Alert, Typography } from "antd";
 import { NavLink, useParams } from "react-router-dom";
 
+const { Text, Title } = Typography;
 
 export function ApplicationNavigation() {
   const { applicationId = "app-001" } = useParams();
@@ -48,6 +49,10 @@ export function ApplicationAdminPage({
 }: ApplicationAdminPageProps) {
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        {title}
+      </Title>
+      <Text type="secondary">{description}</Text>
       <ApplicationNavigation />
       <Alert
         description="数据已通过内部 API 接入；当前界面不提供写操作。"

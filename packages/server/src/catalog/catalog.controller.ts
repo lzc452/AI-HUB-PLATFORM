@@ -21,6 +21,11 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
 import { CatalogService } from "./catalog.service.js";
@@ -38,6 +43,7 @@ import {
 
 @ApiTags("市场目录")
 @Controller("/internal/catalog")
+@Authenticated()
 export class CatalogController {
   constructor(
     @Inject(CATALOG_SERVICE) private readonly catalog: CatalogService,
@@ -45,6 +51,7 @@ export class CatalogController {
   ) {}
 
   @Get()
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({
     summary: "目录列表",
     description: "按条件搜索已发布应用目录。",
@@ -100,6 +107,7 @@ export class CatalogController {
   }
 
   @Get(":applicationId")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({ summary: "目录条目详情" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -119,6 +127,7 @@ export class CatalogController {
   }
 
   @Post(":applicationId/actions")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({
     summary: "记录目录行为",
     description: "记录网页跳转、包下载或二维码展示等行为。",

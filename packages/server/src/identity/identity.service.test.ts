@@ -217,7 +217,7 @@ describe("IdentityService", () => {
 
     expect(result.actor).toMatchObject({
       employeeId: "E001",
-      roleCodes: ["organization_admin"],
+      roleCodes: ["employee", "organization_admin"],
       departmentIds: ["dept-a"],
       primaryDepartmentId: "dept-a",
       sessionId: "session-1",
@@ -256,6 +256,7 @@ describe("IdentityService", () => {
         actor: {
           employeeId: "E003",
           roleCodes: ["catalog_editor"],
+          permissions: ["catalog.publish"],
           departmentIds: ["dept-a"],
           primaryDepartmentId: "dept-a",
           sessionId: "session-1",
@@ -285,6 +286,7 @@ describe("IdentityService", () => {
         actor: {
           employeeId: "E004",
           roleCodes: ["catalog_editor"],
+          permissions: ["catalog.publish"],
           departmentIds: ["dept-a"],
           primaryDepartmentId: "dept-a",
           sessionId: "session-1",
@@ -307,6 +309,7 @@ describe("IdentityService", () => {
         actor: {
           employeeId: "E001",
           roleCodes: ["employee"],
+          permissions: [],
           departmentIds: ["dept-a"],
           primaryDepartmentId: "dept-a",
           sessionId: "session-1",
@@ -321,7 +324,7 @@ describe("IdentityService", () => {
     });
   });
 
-  it("allows super admins without consulting resource existence", async () => {
+  it("allows wildcard permissions without consulting resource existence", async () => {
     const service = new IdentityService(new MemoryIdentityRepository());
 
     await expect(
@@ -329,6 +332,7 @@ describe("IdentityService", () => {
         actor: {
           employeeId: "E010",
           roleCodes: ["super_admin"],
+          permissions: ["*"],
           departmentIds: [],
           primaryDepartmentId: "dept-a",
           sessionId: "session-10",
@@ -339,7 +343,7 @@ describe("IdentityService", () => {
       }),
     ).resolves.toEqual({
       allowed: true,
-      reasonCode: "ALLOW_SUPER_ADMIN",
+      reasonCode: "ALLOW_ROLE_PERMISSION",
     });
   });
 
@@ -364,6 +368,66 @@ describe("IdentityService", () => {
     await expect(
       service.getActorContext("E005", "expired-session"),
     ).rejects.toThrow("SESSION_INVALID");
+  });
+
+  it("only logs out the session belonging to the current actor", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E011",
+      displayName: "Owner",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    await repository.createEmployee({
+      employeeId: "E012",
+      displayName: "Other",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    repository.sessions.push(
+      {
+        sessionId: "owner-session",
+        employeeId: "E011",
+        deviceLabel: "browser",
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+      },
+      {
+        sessionId: "other-session",
+        employeeId: "E012",
+        deviceLabel: "browser",
+        expiresAt: new Date(Date.now() + 60_000),
+        revokedAt: null,
+      },
+    );
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.logout({
+        employeeId: "E011",
+        roleCodes: ["employee"],
+        permissions: [],
+        departmentIds: ["dept-a"],
+        primaryDepartmentId: "dept-a",
+        sessionId: "owner-session",
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      service.revokeSessionForActor(
+        {
+          employeeId: "E011",
+          roleCodes: ["employee"],
+          permissions: [],
+          departmentIds: ["dept-a"],
+          primaryDepartmentId: "dept-a",
+          sessionId: "owner-session",
+        },
+        "other-session",
+      ),
+    ).resolves.toBe(false);
+    expect(repository.sessions[1]?.revokedAt).toBeNull();
   });
 
   it("creates and consumes a password reset challenge while revoking sessions", async () => {

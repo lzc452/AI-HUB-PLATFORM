@@ -51,6 +51,9 @@ export default function CreatorCenterPage() {
 
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        创作者中心
+      </Title>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <CreatorWelcomeBanner />
@@ -70,7 +73,10 @@ export default function CreatorCenterPage() {
                 />
                 <KpiCard
                   icon={
-                    <LikeOutlined aria-hidden="true" className="text-[#52c41a]" />
+                    <LikeOutlined
+                      aria-hidden="true"
+                      className="text-[#52c41a]"
+                    />
                   }
                   label="累计点赞"
                   value={formatCount(totalLikes)}

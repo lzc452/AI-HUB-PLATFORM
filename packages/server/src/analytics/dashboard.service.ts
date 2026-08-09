@@ -1,4 +1,8 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import { metricDefinitions } from "./metric-dictionary.js";
 import type {
   AnalyticsDashboardRepository,
@@ -8,44 +12,16 @@ import type {
 import { dashboardMetricKeys } from "./dashboard-metrics.js";
 import { assertAnalyticsRange } from "./range.js";
 
-const dashboardRoles: Readonly<Record<DashboardKey, readonly string[]>> = {
-  platform: ["analytics_operator", "analytics_platform_reader", "super_admin"],
-  market: ["analytics_operator", "analytics_market_reader", "super_admin"],
-  application: [
-    "analytics_operator",
-    "analytics_application_reader",
-    "super_admin",
-  ],
-  innovation: [
-    "analytics_operator",
-    "analytics_innovation_reader",
-    "demand_operator",
-    "super_admin",
-  ],
-  review: [
-    "analytics_operator",
-    "analytics_review_reader",
-    "demand_reviewer",
-    "super_admin",
-  ],
-  department: [
-    "analytics_operator",
-    "analytics_department_reader",
-    "department_lead",
-    "super_admin",
-  ],
-  risk: [
-    "analytics_operator",
-    "analytics_risk_reader",
-    "risk_operator",
-    "super_admin",
-  ],
-  runtime: ["analytics_operator", "analytics_runtime_reader", "super_admin"],
-  integration: [
-    "analytics_operator",
-    "analytics_integration_reader",
-    "super_admin",
-  ],
+const dashboardPermissions: Readonly<Record<DashboardKey, string>> = {
+  platform: PERMISSIONS.ANALYTICS_PLATFORM_READ,
+  market: PERMISSIONS.ANALYTICS_MARKET_READ,
+  application: PERMISSIONS.ANALYTICS_APPLICATION_READ,
+  innovation: PERMISSIONS.ANALYTICS_INNOVATION_READ,
+  review: PERMISSIONS.ANALYTICS_REVIEW_READ,
+  department: PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
+  risk: PERMISSIONS.ANALYTICS_RISK_READ,
+  runtime: PERMISSIONS.ANALYTICS_RUNTIME_READ,
+  integration: PERMISSIONS.ANALYTICS_INTEGRATION_READ,
 };
 
 export class AnalyticsDashboardService {
@@ -61,14 +37,12 @@ export class AnalyticsDashboardService {
     from: string,
     to: string,
   ): Promise<DashboardResult> {
-    const roles = dashboardRoles[dashboardKey];
-    if (!roles.some((role) => actor.roleCodes.includes(role))) {
+    const permission = dashboardPermissions[dashboardKey];
+    if (!hasPermission(actor, permission)) {
       throw new Error("ANALYTICS_DASHBOARD_FORBIDDEN");
     }
     assertAnalyticsRange(from, to);
-    const unrestricted = ["analytics_operator", "super_admin"].some((role) =>
-      actor.roleCodes.includes(role),
-    );
+    const unrestricted = hasPermission(actor, PERMISSIONS.ANALYTICS_SCOPE_ALL);
     return this.repository.withTransaction(async (repository) => {
       const metrics = dashboardMetricKeys[dashboardKey];
       const result = await repository.readDailyAggregates({

@@ -7,7 +7,7 @@ import {
   useNotifications,
 } from "../../modules/notification/useNotification";
 
-const { Paragraph, Text } = Typography;
+const { Paragraph, Text, Title } = Typography;
 
 function formatCreatedAt(timestamp: string) {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -23,6 +23,9 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        站内通知
+      </Title>
       {isPending ? <Spin aria-label="通知加载中" /> : null}
       {isError ? (
         <ErrorBlock

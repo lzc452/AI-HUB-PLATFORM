@@ -37,7 +37,11 @@ const identityRepository = {
     return [
       {
         roleCode: "analytics_operator",
-        permissions: ["analytics.read", "analytics.export"],
+        permissions: [
+          "analytics.platform.read",
+          "analytics.export",
+          "analytics.assistant.use",
+        ],
       },
     ];
   },

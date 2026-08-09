@@ -67,7 +67,7 @@ describe("real demo account login", () => {
   }, 60_000);
 
   it.each(DEMO_ACCOUNT_DEFINITIONS)(
-    "logs in $employeeId as $roleCode",
+    "logs in $employeeId as $roleCodes",
     async (account) => {
       const password =
         DEMO_PASSWORDS[account.employeeId as keyof typeof DEMO_PASSWORDS];
@@ -84,7 +84,7 @@ describe("real demo account login", () => {
 
       expect(result.actor).toMatchObject({
         employeeId: account.employeeId,
-        roleCodes: [account.roleCode],
+        roleCodes: account.roleCodes,
         primaryDepartmentId: account.primaryDepartmentId,
         sessionId: expect.any(String),
       });

@@ -12,6 +12,11 @@ import {
   ApiParam,
   ApiTags,
 } from "@nestjs/swagger";
+import { PERMISSIONS } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { CREATOR_SERVICE } from "./creator.tokens.js";
 import { CreatorService } from "./creator.service.js";
@@ -23,6 +28,7 @@ import {
 
 @ApiTags("创作者")
 @Controller("/internal/creator/applications")
+@Authenticated()
 export class CreatorController {
   constructor(
     @Inject(CREATOR_SERVICE) private readonly creator: CreatorService,
@@ -30,6 +36,7 @@ export class CreatorController {
   ) {}
 
   @Get()
+  @RequiresPermissions(PERMISSIONS.CREATOR_READ)
   @ApiOperation({
     summary: "我的应用列表",
     description:
@@ -60,6 +67,7 @@ export class CreatorController {
   }
 
   @Get(":applicationId/summary")
+  @RequiresPermissions(PERMISSIONS.CREATOR_READ)
   @ApiOperation({
     summary: "创作者应用摘要",
     description: "返回创作者视角的应用版本差异、校验报告与聚合指标。",

@@ -57,6 +57,18 @@ export { IdentityController } from "./identity/identity.controller.js";
 export { IdentityModule } from "./identity/identity.module.js";
 export { KyselyIdentityRepository } from "./identity/identity.repository.js";
 export { IdentityService } from "./identity/identity.service.js";
+export {
+  AUTHORIZATION_METADATA_KEY,
+  Authenticated,
+  CurrentActor,
+  Public,
+  RequiresPermissions,
+} from "./authorization/authorization.decorator.js";
+export type {
+  AuthorizedRequest,
+  AuthorizationMetadata,
+} from "./authorization/authorization.decorator.js";
+export { PermissionGuard } from "./authorization/permission.guard.js";
 export type {
   CreateEmployeeInput,
   DingTalkDirectoryPort,

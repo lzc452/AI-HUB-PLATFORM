@@ -1,4 +1,9 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+  type PermissionCode,
+} from "@ai-hub/contracts";
 import { OutboxStore, type DatabaseSchema } from "@ai-hub/database";
 import type { Kysely } from "kysely";
 import type {
@@ -23,18 +28,14 @@ export class KyselyAssistantAuditRepository
     const metric = metricDefinitions.find(
       (definition) => definition.metricKey === metricKey,
     );
-    const segment =
-      typeof metricKey === "string" ? metricKey.split(".")[0] : "";
-    const segmentRole = `analytics_${segment}_reader`;
+    const requiredPermission = metric?.requiredPermission as
+      | PermissionCode
+      | undefined;
     const allowed =
       metric !== undefined &&
-      [
-        "analytics_assistant_user",
-        "analytics_operator",
-        "super_admin",
-        segmentRole,
-        ...(segment === "innovation" ? ["demand_operator"] : []),
-      ].some((role) => actor.roleCodes.includes(role));
+      (hasPermission(actor, PERMISSIONS.ANALYTICS_ASSISTANT_USE) ||
+        (requiredPermission !== undefined &&
+          hasPermission(actor, requiredPermission)));
     return {
       allowed,
       reason: allowed

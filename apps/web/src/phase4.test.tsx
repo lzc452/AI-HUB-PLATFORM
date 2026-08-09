@@ -64,7 +64,7 @@ describe("Phase 4 market shell", () => {
   it("exposes notification and creator center routes", async () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole("link", { name: /站内通知/ }));
+    fireEvent.click(await screen.findByRole("link", { name: /站内通知/ }));
     expect(
       await screen.findByRole("heading", { name: "站内通知" }),
     ).toBeInTheDocument();

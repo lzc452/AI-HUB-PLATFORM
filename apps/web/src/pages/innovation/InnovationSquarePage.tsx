@@ -15,6 +15,10 @@ export default function InnovationSquarePage() {
 
   return (
     <div className="space-y-4">
+      <Title className="!mb-0" level={1}>
+        创新广场
+      </Title>
+      <Typography.Text type="secondary">结构化需求与受众治理</Typography.Text>
       <section aria-labelledby="innovation-demand-list" className="space-y-4">
         <Title id="innovation-demand-list" level={2} className="!mb-0">
           可见需求

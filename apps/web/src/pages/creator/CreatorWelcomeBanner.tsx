@@ -1,6 +1,4 @@
-import { BarChartOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Typography } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Typography } from "antd";
 
 import { useActor } from "../../modules/auth/useIdentity";
 
@@ -8,7 +6,6 @@ const { Paragraph, Text, Title } = Typography;
 
 /** 创作者中心欢迎横幅：类名与市场页横幅保持一致。 */
 export function CreatorWelcomeBanner() {
-  const navigate = useNavigate();
   const actor = useActor();
 
   return (

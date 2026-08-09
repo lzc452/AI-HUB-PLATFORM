@@ -16,6 +16,11 @@ import {
   ApiParam,
   ApiTags,
 } from "@nestjs/swagger";
+import { PERMISSIONS } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { NOTIFICATION_SERVICE } from "./notification.tokens.js";
 import { NotificationService } from "./notification.service.js";
@@ -30,6 +35,7 @@ import {
 
 @ApiTags("通知")
 @Controller("/internal/notifications")
+@Authenticated()
 export class NotificationController {
   constructor(
     @Inject(NOTIFICATION_SERVICE)
@@ -38,6 +44,7 @@ export class NotificationController {
   ) {}
 
   @Get()
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
   @ApiOperation({
     summary: "通知列表",
     description: "返回当前调用者收到的通知。",
@@ -59,6 +66,7 @@ export class NotificationController {
   }
 
   @Post(":notificationId/read")
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
   @ApiOperation({ summary: "标记通知已读" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "notificationId", description: "通知 ID" })
@@ -81,6 +89,7 @@ export class NotificationController {
   }
 
   @Post("retry")
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_DELIVER)
   @ApiOperation({ summary: "重试通知投递" })
   @ApiIdentityHeaders()
   @ApiBody({ type: RetryNotificationRequestDto })

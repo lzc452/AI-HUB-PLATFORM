@@ -8,9 +8,11 @@ import {
 
 import { ObservabilityMetrics } from "./metrics.js";
 import { OBSERVABILITY_METRICS } from "./tokens.js";
+import { Public } from "../../authorization/authorization.decorator.js";
 
 @ApiTags("指标")
 @Controller("internal/metrics")
+@Public()
 export class MetricsController {
   public constructor(
     @Inject(OBSERVABILITY_METRICS)

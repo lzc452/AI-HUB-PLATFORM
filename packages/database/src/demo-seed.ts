@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { DatabaseSchema } from "./schema.js";
+import { SYSTEM_ROLE_DEFINITIONS } from "./authorization/system-roles.js";
 
 export interface DemoDepartmentDefinition {
   departmentId: string;
@@ -17,7 +18,7 @@ export interface DemoAccountDefinition {
   employeeId: string;
   displayName: string;
   primaryDepartmentId: string;
-  roleCode: string;
+  roleCodes: readonly string[];
 }
 
 export interface SeedDemoAccountsResult {
@@ -53,41 +54,7 @@ export const DEMO_DEPARTMENT_DEFINITIONS: readonly DemoDepartmentDefinition[] =
   ]);
 
 export const DEMO_ROLE_DEFINITIONS: readonly DemoRoleDefinition[] =
-  Object.freeze([
-    {
-      roleCode: "application_admin",
-      name: "应用管理员",
-      permissions: [
-        "application.create",
-        "application.read",
-        "application.update",
-        "application.review",
-        "application.publish",
-        "creator.read",
-      ],
-    },
-    {
-      roleCode: "demand_operator",
-      name: "创新运营管理员",
-      permissions: [
-        "demand.create",
-        "demand.read",
-        "demand.update",
-        "demand.submit",
-        "demand.review",
-        "demand.claim",
-        "demand.collaborate",
-        "demand.prioritize",
-        "demand.progress",
-        "demand.merge",
-        "demand.associate_application",
-        "demand.interact",
-        "demand.moderate",
-        "demand.anonymous_audit",
-        "analytics.read",
-      ],
-    },
-  ]);
+  SYSTEM_ROLE_DEFINITIONS;
 
 export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] =
   Object.freeze([
@@ -95,31 +62,31 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] =
       employeeId: "DEMO-EMPLOYEE",
       displayName: "演示普通员工",
       primaryDepartmentId: "demo-rnd",
-      roleCode: "employee",
+      roleCodes: ["employee"],
     },
     {
       employeeId: "DEMO-APP-ADMIN",
       displayName: "演示应用管理员",
       primaryDepartmentId: "demo-rnd",
-      roleCode: "application_admin",
+      roleCodes: ["employee", "application_admin"],
     },
     {
       employeeId: "DEMO-INNOVATION",
       displayName: "演示创新运营管理员",
       primaryDepartmentId: "demo-innovation",
-      roleCode: "demand_operator",
+      roleCodes: ["employee", "demand_operator"],
     },
     {
       employeeId: "DEMO-ORG-ADMIN",
       displayName: "演示组织管理员",
       primaryDepartmentId: "demo-admin",
-      roleCode: "organization_admin",
+      roleCodes: ["employee", "organization_admin"],
     },
     {
       employeeId: "DEMO-SUPER-ADMIN",
       displayName: "演示超级管理员",
       primaryDepartmentId: "demo-admin",
-      roleCode: "super_admin",
+      roleCodes: ["employee", "super_admin"],
     },
   ]);
 
@@ -214,16 +181,18 @@ export async function seedDemoAccounts(
         )
         .execute();
 
-      await transaction
-        .insertInto("employee_roles")
-        .values({
-          employee_id: account.employeeId,
-          role_code: account.roleCode,
-        })
-        .onConflict((oc) =>
-          oc.columns(["employee_id", "role_code"]).doNothing(),
-        )
-        .execute();
+      for (const roleCode of account.roleCodes) {
+        await transaction
+          .insertInto("employee_roles")
+          .values({
+            employee_id: account.employeeId,
+            role_code: roleCode,
+          })
+          .onConflict((oc) =>
+            oc.columns(["employee_id", "role_code"]).doNothing(),
+          )
+          .execute();
+      }
     }
   });
 
@@ -232,6 +201,9 @@ export async function seedDemoAccounts(
     roles: DEMO_ROLE_DEFINITIONS.length,
     employees: DEMO_ACCOUNT_DEFINITIONS.length,
     memberships: DEMO_ACCOUNT_DEFINITIONS.length,
-    roleAssignments: DEMO_ACCOUNT_DEFINITIONS.length,
+    roleAssignments: DEMO_ACCOUNT_DEFINITIONS.reduce(
+      (total, account) => total + account.roleCodes.length,
+      0,
+    ),
   };
 }

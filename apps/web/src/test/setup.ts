@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, configure } from "@testing-library/react";
-import { afterEach, beforeEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 import { setSession } from "../modules/auth/session.store";
 
@@ -33,8 +33,30 @@ Object.defineProperty(globalThis.window, "matchMedia", {
 
 beforeEach(() => {
   setSession({ employeeId: "E0001", sessionId: "test-session" });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.includes("/internal/identity/actor")) {
+        return Response.json({
+          employeeId: "E0001",
+          roleCodes: ["employee", "super_admin"],
+          permissions: ["*"],
+          departmentIds: ["dept-1"],
+          primaryDepartmentId: "dept-1",
+          sessionId: "test-session",
+        });
+      }
+      if (path.includes("/internal/notifications")) {
+        return Response.json([]);
+      }
+      return Response.json({}, { status: 404 });
+    }),
+  );
 });
 
 afterEach(() => {
   cleanup();
+  setSession(null);
+  vi.unstubAllGlobals();
 });

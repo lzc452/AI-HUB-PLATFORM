@@ -28,6 +28,13 @@ const reviewer: ActorContext = {
   primaryDepartmentId: "dept-review",
   sessionId: "session-reviewer",
 };
+const outsider: ActorContext = {
+  employeeId: "E300",
+  roleCodes: ["employee"],
+  departmentIds: ["dept-other"],
+  primaryDepartmentId: "dept-other",
+  sessionId: "session-outsider",
+};
 
 class MemoryApplicationRepository implements ApplicationRepository {
   applications = new Map<string, ApplicationRecord>();
@@ -265,6 +272,38 @@ describe("ApplicationService", () => {
       maintainerEmployeeId: "E200",
       departmentId: "dept-platform",
     });
+  });
+
+  it("limits application reads to owner, maintainer, or application managers", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: reviewer.employeeId,
+    } as never);
+
+    await expect(
+      service.getApplication(application.applicationId, outsider),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    await expect(
+      service.listVersions(application.applicationId, outsider),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    await expect(
+      service.listDeliveries(application.applicationId, outsider),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    await expect(
+      service.listReviews(application.applicationId, outsider),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+
+    await expect(
+      service.getApplication(application.applicationId, reviewer),
+    ).resolves.toMatchObject({ applicationId: application.applicationId });
+    await expect(
+      service.getApplication(application.applicationId, {
+        ...outsider,
+        permissions: ["application.manage"],
+      }),
+    ).resolves.toMatchObject({ applicationId: application.applicationId });
   });
 
   it("does not create a version from rejected artifact verification", async () => {

@@ -15,4 +15,9 @@ export type {
   SeedDemoAccountsResult,
 } from "./demo-seed.js";
 export { seedDemoBusinessData } from "./demo-business-seed.js";
+export {
+  SYSTEM_ROLE_DEFINITIONS,
+  SYSTEM_ROLE_PERMISSION_MAP,
+} from "./authorization/system-roles.js";
+export type { SystemRoleDefinition } from "./authorization/system-roles.js";
 export type { SeedDemoBusinessResult } from "./demo-business-seed.js";

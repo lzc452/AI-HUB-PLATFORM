@@ -1,4 +1,4 @@
-import { LeftOutlined, RightOutlined, SoundOutlined } from "@ant-design/icons";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 import { Drawer, Layout, Spin } from "antd";
 import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
@@ -28,17 +28,6 @@ function useIsMobile(): boolean {
   }, []);
 
   return isMobile;
-}
-
-/** 侧边栏底部公告区：无公告 API，默认展示"暂无公告"。 */
-function Announcement() {
-  return (
-    <div aria-label="平台公告" className="border-t border-[#f0f0f0] px-4 py-3">
-      <p className="mb-1 flex items-center text-xs font-semibold text-[#595959]">
-        <SoundOutlined aria-hidden="true" className="text-[#fa8c16]" />
-      </p>
-    </div>
-  );
 }
 
 export function AppShell() {
@@ -124,7 +113,7 @@ export function AppShell() {
           style={{ background: "#f5f5f5", overflowY: "auto" }}
           tabIndex={-1}
         >
-          {/* <Breadcrumbs /> */}
+          <Breadcrumbs />
           <Suspense fallback={<Spin aria-label="页面加载中" />}>
             <Outlet />
           </Suspense>

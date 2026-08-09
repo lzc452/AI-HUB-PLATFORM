@@ -6,7 +6,8 @@ import {
 } from "react-router-dom";
 
 import { AppShell } from "../components/layout/AppShell";
-import { RequireAuth } from "./guards";
+import { RequireAuth, RequirePermission } from "./guards";
+import { ROUTE_ACCESS } from "../modules/auth/roles";
 import { ROUTES } from "./routes";
 
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
@@ -69,63 +70,127 @@ export function createRouter() {
               path: ROUTES.home,
             },
             {
-              element: <MarketplacePage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.marketplace}>
+                  <MarketplacePage />
+                </RequirePermission>
+              ),
               path: ROUTES.marketplace,
             },
             {
-              element: <MarketplaceDetailPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.marketplaceDetail}>
+                  <MarketplaceDetailPage />
+                </RequirePermission>
+              ),
               path: ROUTES.marketplaceDetail,
             },
             {
-              element: <NotificationsPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.notifications}>
+                  <NotificationsPage />
+                </RequirePermission>
+              ),
               path: ROUTES.notifications,
             },
             {
-              element: <CreatorCenterPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.creator}>
+                  <CreatorCenterPage />
+                </RequirePermission>
+              ),
               path: ROUTES.creator,
             },
             {
-              element: <ApplicationsPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.applications}>
+                  <ApplicationsPage />
+                </RequirePermission>
+              ),
               path: ROUTES.applications,
             },
             {
-              element: <ApplicationDetailsPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.applicationDetail}>
+                  <ApplicationDetailsPage />
+                </RequirePermission>
+              ),
               path: ROUTES.applicationDetail,
             },
             {
-              element: <ApplicationVersionsPage />,
+              element: (
+                <RequirePermission
+                  requirement={ROUTE_ACCESS.applicationVersions}
+                >
+                  <ApplicationVersionsPage />
+                </RequirePermission>
+              ),
               path: ROUTES.applicationVersions,
             },
             {
-              element: <ApplicationReviewPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.applicationReview}>
+                  <ApplicationReviewPage />
+                </RequirePermission>
+              ),
               path: ROUTES.applicationReview,
             },
             {
-              element: <ApplicationDeliveryPage />,
+              element: (
+                <RequirePermission
+                  requirement={ROUTE_ACCESS.applicationDelivery}
+                >
+                  <ApplicationDeliveryPage />
+                </RequirePermission>
+              ),
               path: ROUTES.applicationDelivery,
             },
             {
-              element: <InnovationSquarePage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.innovation}>
+                  <InnovationSquarePage />
+                </RequirePermission>
+              ),
               path: ROUTES.innovation,
             },
             {
-              element: <InnovationDemandDetailPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.innovationDetail}>
+                  <InnovationDemandDetailPage />
+                </RequirePermission>
+              ),
               path: ROUTES.innovationDetail,
             },
             {
-              element: <AnalyticsDashboardPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.analytics}>
+                  <AnalyticsDashboardPage />
+                </RequirePermission>
+              ),
               path: ROUTES.analytics,
             },
             {
-              element: <OrganizationPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.organization}>
+                  <OrganizationPage />
+                </RequirePermission>
+              ),
               path: ROUTES.organization,
             },
             {
-              element: <SecurityPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.security}>
+                  <SecurityPage />
+                </RequirePermission>
+              ),
               path: ROUTES.security,
             },
             {
-              element: <AssistantPage />,
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.assistant}>
+                  <AssistantPage />
+                </RequirePermission>
+              ),
               path: ROUTES.assistant,
             },
           ],

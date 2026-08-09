@@ -3,14 +3,19 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   HttpCode,
   Inject,
   Param,
   Post,
-  ForbiddenException,
   UnauthorizedException,
 } from "@nestjs/common";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  CurrentActor,
+  Public,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import {
   ApiBody,
   ApiCreatedResponse,
@@ -39,12 +44,14 @@ import {
 
 @ApiTags("身份与组织")
 @Controller("/internal/identity")
+@Authenticated()
 export class IdentityController {
   constructor(
     @Inject(IdentityService) private readonly identity: IdentityService,
   ) {}
 
   @Get("/employees")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_READ)
   @ApiOperation({ summary: "员工列表" })
   @ApiIdentityHeaders()
   @ApiOkResponse({
@@ -53,15 +60,12 @@ export class IdentityController {
     isArray: true,
   })
   @ApiProblemResponses([400, 401, 403])
-  async listEmployees(
-    @Headers("x-employee-id") employeeId: string | undefined,
-    @Headers("x-session-id") sessionId: string | undefined,
-  ) {
-    await this.requirePermission(employeeId, sessionId, "read");
+  async listEmployees() {
     return this.identity.listEmployees();
   }
 
   @Get("/departments")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_READ)
   @ApiOperation({ summary: "部门列表" })
   @ApiIdentityHeaders()
   @ApiOkResponse({
@@ -70,15 +74,12 @@ export class IdentityController {
     isArray: true,
   })
   @ApiProblemResponses([400, 401, 403])
-  async listDepartments(
-    @Headers("x-employee-id") employeeId: string | undefined,
-    @Headers("x-session-id") sessionId: string | undefined,
-  ) {
-    await this.requirePermission(employeeId, sessionId, "read");
+  async listDepartments() {
     return this.identity.listDepartments();
   }
 
   @Get("/employees/:employeeId/roles")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_READ)
   @ApiOperation({ summary: "员工角色列表" })
   @ApiIdentityHeaders()
   @ApiParam({
@@ -92,16 +93,12 @@ export class IdentityController {
     isArray: true,
   })
   @ApiProblemResponses([400, 401, 403])
-  async listEmployeeRoles(
-    @Param("employeeId") employeeId: string,
-    @Headers("x-employee-id") actorEmployeeId: string | undefined,
-    @Headers("x-session-id") sessionId: string | undefined,
-  ) {
-    await this.requirePermission(actorEmployeeId, sessionId, "read");
+  async listEmployeeRoles(@Param("employeeId") employeeId: string) {
     return this.identity.listEmployeeRoles(employeeId);
   }
 
   @Post("/employees/:employeeId/revoke-sessions")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SESSION_MANAGE)
   @HttpCode(200)
   @ApiOperation({ summary: "撤销员工会话" })
   @ApiIdentityHeaders()
@@ -115,16 +112,11 @@ export class IdentityController {
   @ApiProblemResponses([400, 401, 403])
   async revokeEmployeeSessions(
     @Param("employeeId") employeeId: string,
-    @Headers("x-actor-id") actorEmployeeId: string | undefined,
-    @Headers("x-session-id") sessionId: string | undefined,
+    @CurrentActor() actor: ActorContext,
     @Body() body: RevokeSessionsRequestDto,
   ) {
-    if (actorEmployeeId === undefined) {
-      throw new BadRequestException("ACTOR_ID_REQUIRED");
-    }
-    await this.requirePermission(actorEmployeeId, sessionId, "manage");
     const revoked = await this.identity.revokeEmployeeSessions(
-      actorEmployeeId,
+      actor.employeeId,
       employeeId,
       body.reason ?? "admin_action",
     );
@@ -132,34 +124,35 @@ export class IdentityController {
   }
 
   @Get("/actor")
+  @Authenticated()
   @ApiOperation({ summary: "获取调用者上下文" })
   @ApiIdentityHeaders()
   @ApiOkResponse({ description: "调用者上下文", type: ActorContextDto })
   @ApiProblemResponses([400, 401, 403])
-  getActor(
-    @Headers("x-employee-id") employeeId: string | undefined,
-    @Headers("x-session-id") sessionId: string | undefined,
-  ) {
-    if (employeeId === undefined || sessionId === undefined) {
-      throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
-    }
-    return this.identity.getActorContext(employeeId, sessionId);
+  getActor(@CurrentActor() actor: ActorContext) {
+    return actor;
   }
 
   @Post("/logout")
+  @Authenticated()
   @HttpCode(204)
   @ApiOperation({ summary: "注销会话" })
+  @ApiIdentityHeaders()
   @ApiBody({ type: LogoutRequestDto })
   @ApiResponse({ status: 204, description: "注销成功" })
-  @ApiProblemResponses([400])
-  async logout(@Body() body: LogoutRequestDto): Promise<void> {
-    if (body.sessionId === undefined) {
-      throw new BadRequestException("SESSION_ID_REQUIRED");
+  @ApiProblemResponses([400, 401, 403])
+  async logout(
+    @CurrentActor() actor: ActorContext,
+    @Body() body?: LogoutRequestDto,
+  ): Promise<void> {
+    if (body?.sessionId !== undefined && body.sessionId !== actor.sessionId) {
+      throw new BadRequestException("SESSION_ID_MISMATCH");
     }
-    await this.identity.revokeSession(body.sessionId);
+    await this.identity.logout(actor);
   }
 
   @Post("/login/password")
+  @Public()
   @ApiOperation({
     summary: "密码登录",
     description: "使用员工工号与密码登录并创建会话。",
@@ -183,24 +176,5 @@ export class IdentityController {
         }
         throw error;
       });
-  }
-
-  private async requirePermission(
-    employeeId: string | undefined,
-    sessionId: string | undefined,
-    action: "read" | "manage",
-  ): Promise<void> {
-    if (employeeId === undefined || sessionId === undefined) {
-      throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
-    }
-    const actor = await this.identity.getActorContext(employeeId, sessionId);
-    const decision = await this.identity.authorize({
-      actor,
-      action,
-      resourceType: "identity",
-    });
-    if (!decision.allowed) {
-      throw new ForbiddenException("NOT_AUTHORIZED");
-    }
   }
 }

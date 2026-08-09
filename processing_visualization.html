@@ -505,24 +505,26 @@
           {
             id: "ui",
             name: "UI 设计",
-            progress: 80,
+            progress: 86,
             goal: "Web 壳、核心页面、组件与交互状态",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
               "五层架构已设计：pages/components/modules/router/shared",
               "按 frontend-ui-design.md 完成管理后台布局重构与全页面中文换壳",
+              "前端 actor 恢复、路由守卫、权限菜单过滤、面包屑和管理页标题已完成",
             ],
           },
           {
             id: "dev",
             name: "开发",
-            progress: 80,
+            progress: 88,
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
               "前端全部为静态壳体，API 零集成",
               "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
               "新增业务演示数据 seed（应用/需求/互动/通知/分析）与 init:dev、init:production 统一入口",
+              "权限统一改造已完成：补齐路由/API 权限矩阵、全局 PermissionGuard、会话边界，并将演示账号改为 employee + 专业角色组合",
               "API Swagger 完整文档已接入（/internal/docs，开发/测试默认开启）",
               "外部集成均为 fake/unavailable adapter",
             ],
@@ -530,15 +532,16 @@
           {
             id: "test",
             name: "测试",
-            progress: 70,
+            progress: 86,
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
               "server 106 tests, API 31 tests, DB 28 tests 通过",
-              "Web 25 tests 通过（含静态壳体验证）",
+              "Web 全量 43 tests 通过（含权限恢复、菜单过滤、路由守卫、角色切换和页面回归）",
               "E2E/Playwright 尚未建立",
               "数据库 seed 2 tests、真实登录 API 6 tests 通过（本地 PostgreSQL）",
               "demo-business seed 集成 2 tests、Swagger 文档真实 e2e 2 tests 通过",
+              "权限矩阵定向验证：server 117/117、API 关键 10/10、DB registry/seed 3/3；数据库集成仍需 Docker runtime",
             ],
           },
           {
@@ -867,7 +870,7 @@
             id: "p7",
             name: "Phase 7：生产安全、部署与运维",
             target: "第 8 月",
-            status: "进行中",
+            status: "已完成",
             progress: 85,
             summary:
               "已建立 Phase 7 基线、计划、台账和 ADR 0008；生产双机 Compose、安全边界、PostgreSQL/WAL、对象存储恢复、监控告警、不可变发布、回滚和演练契约已完成，必要 API/Worker/Web 回归通过，Standards 复审无 remaining actionable findings；Spec 仍有 SSRF 出口适配器、角色/fencing、可执行恢复、真实供应链制品和认证 ActorContext 传递缺口，且真实生产证据未完成。",
@@ -965,6 +968,23 @@
         ],
         tasks: [
           {
+            id: "t-022",
+            phase: "dev",
+            status: "已完成",
+            title: "统一权限矩阵与演示账号角色组合",
+            owner: "Codex",
+            start: "2026-08-08",
+            end: "2026-08-08",
+            progress:
+              "新增 docs/access-control-matrix.md，逐一覆盖 apps/web 页面路由、左侧菜单、权限码和 packages/server controller endpoint；demo-seed 改为 employee + 专业角色的 roleCodes 数组并保持幂等角色关联。前后端权限守卫、会话恢复、缓存边界和 AI 助手权限入口已完成；审计后同步修正静态角色列与迁移旧权限别名展开规则。",
+            problem:
+              "现有前端以 roleCodes 控制菜单，刷新时 actor 尚未恢复会放开全部菜单；切换账号时空 allowedRoles 会导致 Marketplace 菜单为空。",
+            solution:
+              "固定目标权限码、系统角色和资源级条件的完整矩阵，让 seed、contracts、server Guard 和前端路由共同引用同一权限模型；切换账号时清理用户级缓存，菜单与路由统一复用 assistant 权限；0013 迁移将 marketplace/identity/analytics 旧别名规范化，同时保留未知 custom permission；新建 local/DingTalk 员工自动补齐 employee 基础角色。",
+            skip:
+              "数据库集成测试仍需可用的 Docker/testcontainers runtime；本地可运行的 server、API、Web、typecheck、lint 和定向迁移验证已完成。",
+          },
+          {
             id: "t-020",
             phase: "product",
             status: "已完成",
@@ -983,7 +1003,7 @@
           {
             id: "t-016",
             phase: "ops",
-            status: "杩涜涓?",
+            status: "进行中",
             title: "GitHub repository and cross-device governance",
             owner: "Codex",
             start: "2026-08-05",
@@ -1299,6 +1319,24 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-08",
+            phase: "test",
+            title: "前端权限回归与全量 Web 门禁收口",
+            body: "恢复面包屑和页面标题，补齐分析看板重建边界文案并清理未使用代码；Web 全量 10 个测试文件、43 个测试通过，lint、typecheck、生产构建和格式检查通过。",
+          },
+          {
+            date: "2026-08-08",
+            phase: "test",
+            title: "权限矩阵与旧别名迁移审计收口",
+            body: "逐一对照 controller metadata、system role registry、demo seed 与 access-control-matrix：修正 application create/review 的角色列、明确 owner 条件必须先通过 Guard；0013 迁移扩展到 custom role 的已知旧别名并将 analytics.read 展开为全部分段权限。database typecheck/lint、Prettier 与 diff check 通过；真实数据库集成仍需 Docker runtime。",
+          },
+          {
+            date: "2026-08-08",
+            phase: "test",
+            title: "应用资源边界与角色切换回归补齐",
+            body: "应用详情、版本、交付和评审读取统一校验 owner/maintainer 或 application.manage；普通员工越权读取被拒绝，维护者保持只读。新增退出后切换角色菜单恢复回归用例；server 应用服务 10/10、Web 全量 43/43 通过。",
+          },
           {
             date: "2026-08-06",
             phase: "product",

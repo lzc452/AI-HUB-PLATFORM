@@ -1,5 +1,6 @@
 import { createDatabase } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import {
   HealthModule,
   ApplicationModule,
@@ -20,6 +21,7 @@ import {
   IdentityModule,
   ObservabilityMetrics,
   ObservabilityModule,
+  PermissionGuard,
   type DatabaseHealthCheck,
   type ObservabilityModuleOptions,
   type IdentityService,
@@ -75,6 +77,7 @@ export class ApiModule {
     const metrics = observability.metrics ?? new ObservabilityMetrics();
     return {
       module: ApiModule,
+      providers: [{ provide: APP_GUARD, useClass: PermissionGuard }],
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
         IdentityModule.register(databaseUrl),
@@ -102,6 +105,7 @@ export class ApiModule {
     };
     return {
       module: ApiModule,
+      providers: [{ provide: APP_GUARD, useClass: PermissionGuard }],
       imports: [
         ObservabilityModule.register({ ...options.observability, metrics }),
         ...(options.identity === undefined

@@ -21,7 +21,11 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
-import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { DEMAND_SERVICE } from "./demand.tokens.js";
 import { DemandService } from "./demand.service.js";
@@ -63,6 +67,7 @@ import {
 
 @ApiTags("需求")
 @Controller("/internal/demands")
+@Authenticated()
 export class DemandController {
   constructor(
     @Inject(DEMAND_SERVICE) private readonly demands: DemandService,
@@ -70,6 +75,7 @@ export class DemandController {
   ) {}
 
   @Post()
+  @RequiresPermissions(PERMISSIONS.DEMAND_CREATE)
   @ApiOperation({ summary: "创建需求草稿" })
   @ApiIdentityHeaders()
   @ApiBody({ type: DemandDraftRequestDto })
@@ -86,6 +92,7 @@ export class DemandController {
   }
 
   @Patch(":demandId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_UPDATE)
   @ApiOperation({ summary: "保存需求草稿" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -110,6 +117,7 @@ export class DemandController {
   }
 
   @Post(":demandId/submit-review")
+  @RequiresPermissions(PERMISSIONS.DEMAND_SUBMIT)
   @ApiOperation({ summary: "提交需求评审" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -129,6 +137,7 @@ export class DemandController {
   }
 
   @Post(":demandId/review")
+  @RequiresPermissions(PERMISSIONS.DEMAND_REVIEW)
   @ApiOperation({ summary: "评审需求" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -152,6 +161,7 @@ export class DemandController {
   }
 
   @Post(":demandId/claim")
+  @RequiresPermissions(PERMISSIONS.DEMAND_CLAIM)
   @ApiOperation({ summary: "认领需求" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -174,6 +184,7 @@ export class DemandController {
   }
 
   @Post(":demandId/collaborators")
+  @RequiresPermissions(PERMISSIONS.DEMAND_COLLABORATE)
   @ApiOperation({ summary: "添加协作成员" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -201,6 +212,7 @@ export class DemandController {
   }
 
   @Get(":demandId/collaborators")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({ summary: "协作成员列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -224,6 +236,7 @@ export class DemandController {
   }
 
   @Post(":demandId/priority")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PRIORITIZE)
   @ApiOperation({ summary: "设置需求优先级" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -248,6 +261,7 @@ export class DemandController {
   }
 
   @Post(":demandId/status")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PROGRESS)
   @ApiOperation({ summary: "推进需求状态" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -272,6 +286,7 @@ export class DemandController {
   }
 
   @Post(":demandId/progress")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PROGRESS)
   @ApiOperation({ summary: "新增进度更新" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -294,6 +309,7 @@ export class DemandController {
   }
 
   @Get(":demandId/progress")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({ summary: "进度更新列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -317,6 +333,7 @@ export class DemandController {
   }
 
   @Post(":demandId/pilots")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PROGRESS)
   @ApiOperation({ summary: "创建试点" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -348,6 +365,7 @@ export class DemandController {
   }
 
   @Patch(":demandId/pilots/:pilotId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PROGRESS)
   @ApiOperation({ summary: "更新试点" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -379,6 +397,7 @@ export class DemandController {
   }
 
   @Post(":demandId/merge")
+  @RequiresPermissions(PERMISSIONS.DEMAND_MERGE)
   @ApiOperation({
     summary: "合并需求",
     description: "将当前需求合并到目标需求。",
@@ -409,6 +428,7 @@ export class DemandController {
   }
 
   @Post(":demandId/applications")
+  @RequiresPermissions(PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION)
   @ApiOperation({ summary: "关联应用到需求" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -437,6 +457,7 @@ export class DemandController {
   }
 
   @Post(":demandId/applications/from-demand")
+  @RequiresPermissions(PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION)
   @ApiOperation({
     summary: "从需求创建应用",
     description: "为需求创建新应用并建立关联。",
@@ -465,6 +486,7 @@ export class DemandController {
   }
 
   @Get(":demandId/applications")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({ summary: "需求关联应用列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -488,6 +510,7 @@ export class DemandController {
   }
 
   @Get()
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({
     summary: "需求列表",
     description: "按状态、关键词与分页查询可见需求。",
@@ -553,6 +576,7 @@ export class DemandController {
   }
 
   @Get(":demandId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({ summary: "需求详情" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -569,6 +593,7 @@ export class DemandController {
   }
 
   @Post(":demandId/like")
+  @RequiresPermissions(PERMISSIONS.DEMAND_INTERACT)
   @ApiOperation({ summary: "点赞/取消点赞" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -588,6 +613,7 @@ export class DemandController {
   }
 
   @Get(":demandId/comments")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
   @ApiOperation({ summary: "需求评论列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -611,6 +637,7 @@ export class DemandController {
   }
 
   @Post(":demandId/comments")
+  @RequiresPermissions(PERMISSIONS.DEMAND_INTERACT)
   @ApiOperation({ summary: "发表评论" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -632,6 +659,7 @@ export class DemandController {
   }
 
   @Post(":demandId/reports")
+  @RequiresPermissions(PERMISSIONS.DEMAND_INTERACT)
   @ApiOperation({ summary: "举报需求或评论" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -653,6 +681,7 @@ export class DemandController {
   }
 
   @Post(":demandId/reports/:reportId/resolve")
+  @RequiresPermissions(PERMISSIONS.DEMAND_MODERATE)
   @ApiOperation({ summary: "处理需求举报" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
@@ -679,6 +708,7 @@ export class DemandController {
   }
 
   @Get(":demandId/comments/:commentId/anonymous-author")
+  @RequiresPermissions(PERMISSIONS.DEMAND_ANONYMOUS_AUDIT)
   @ApiOperation({
     summary: "查询匿名评论作者",
     description: "需要匿名审计权限。",

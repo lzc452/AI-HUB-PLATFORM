@@ -1,8 +1,10 @@
-import type {
-  ActorContext,
-  DemandApplicationRole,
-  DemandPriorityInput,
-  DemandStatus,
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+  type DemandApplicationRole,
+  type DemandPriorityInput,
+  type DemandStatus,
 } from "@ai-hub/contracts";
 import type {
   DemandAuthorizationPort,
@@ -124,11 +126,7 @@ export class DemandService {
     reason?: string,
   ): Promise<DemandEntry> {
     await this.assertAllowed(actor, "review", demandId);
-    if (
-      !actor.roleCodes.some((role) =>
-        ["demand_reviewer", "demand_operator", "super_admin"].includes(role),
-      )
-    ) {
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_REVIEW)) {
       throw new Error("DEMAND_REVIEW_FORBIDDEN");
     }
     const current = await this.requireDemand(demandId);
@@ -242,11 +240,7 @@ export class DemandService {
     input: DemandPriorityInput,
   ): Promise<DemandEntry> {
     await this.assertAllowed(actor, "prioritize", demandId);
-    if (
-      !actor.roleCodes.some((role) =>
-        ["demand_operator", "super_admin"].includes(role),
-      )
-    ) {
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_PRIORITIZE)) {
       throw new Error("DEMAND_PRIORITY_FORBIDDEN");
     }
     for (const value of Object.values(input)) {
@@ -627,9 +621,7 @@ export class DemandService {
     await this.assertAllowed(actor, "read");
     if (
       input.sort === "priority" &&
-      !actor.roleCodes.some((role) =>
-        ["demand_operator", "super_admin"].includes(role),
-      )
+      !hasPermission(actor, PERMISSIONS.DEMAND_PRIORITIZE)
     ) {
       throw new Error("DEMAND_PRIORITY_FORBIDDEN");
     }
@@ -842,11 +834,7 @@ export class DemandService {
     status: DemandReportRecord["status"],
   ): Promise<DemandReportRecord> {
     await this.assertAllowed(actor, "moderate");
-    if (
-      !actor.roleCodes.some((role) =>
-        ["demand_moderator", "demand_operator", "super_admin"].includes(role),
-      )
-    ) {
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_MODERATE)) {
       throw new Error("DEMAND_MODERATION_FORBIDDEN");
     }
     return this.repository.withTransaction(async (repository) => {
@@ -898,7 +886,7 @@ export class DemandService {
     if (
       !demand.displayAnonymously ||
       demand.requesterEmployeeId === actor.employeeId ||
-      actor.roleCodes.includes("super_admin")
+      hasPermission(actor, PERMISSIONS.DEMAND_ANONYMOUS_AUDIT)
     ) {
       return demand;
     }
@@ -912,7 +900,7 @@ export class DemandService {
     if (
       !comment.displayAnonymously ||
       comment.authorEmployeeId === actor.employeeId ||
-      actor.roleCodes.includes("super_admin")
+      hasPermission(actor, PERMISSIONS.DEMAND_ANONYMOUS_AUDIT)
     ) {
       return comment;
     }
@@ -1019,9 +1007,7 @@ export class DemandService {
   private assertProgressActor(actor: ActorContext, demand: DemandEntry): void {
     if (
       demand.ownerEmployeeId !== actor.employeeId &&
-      !actor.roleCodes.some((role) =>
-        ["demand_operator", "super_admin"].includes(role),
-      )
+      !hasPermission(actor, PERMISSIONS.DEMAND_PROGRESS)
     ) {
       throw new Error("DEMAND_PROGRESS_FORBIDDEN");
     }

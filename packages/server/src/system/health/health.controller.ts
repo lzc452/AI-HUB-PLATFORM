@@ -8,9 +8,11 @@ import {
 
 import { HealthReader } from "./health.reader.js";
 import { HealthSnapshotDto } from "./health.dto.js";
+import { Public } from "../../authorization/authorization.decorator.js";
 
 @ApiTags("健康检查")
 @Controller("internal/health")
+@Public()
 export class HealthController {
   constructor(
     @Inject(HealthReader) private readonly healthReader: HealthReader,

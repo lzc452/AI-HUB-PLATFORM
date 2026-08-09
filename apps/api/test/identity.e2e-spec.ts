@@ -50,7 +50,12 @@ class ApiIdentityRepository implements IdentityRepository {
     return [
       {
         roleCode: "organization_admin",
-        permissions: ["identity.read", "identity.manage"],
+        permissions: [
+          "identity.employee.read",
+          "identity.department.read",
+          "identity.role.read",
+          "identity.session.manage",
+        ],
       },
     ];
   }
@@ -145,6 +150,8 @@ describe("identity endpoints", () => {
 
     await request(app.getHttpServer())
       .post("/internal/identity/logout")
+      .set("x-employee-id", "E001")
+      .set("x-session-id", "session-1")
       .send({ sessionId: "session-1" })
       .expect(204);
 
@@ -157,14 +164,19 @@ describe("identity endpoints", () => {
         expect(body).toEqual([
           {
             roleCode: "organization_admin",
-            permissions: ["identity.read", "identity.manage"],
+            permissions: [
+              "identity.employee.read",
+              "identity.department.read",
+              "identity.role.read",
+              "identity.session.manage",
+            ],
           },
         ]);
       });
 
     await request(app.getHttpServer())
       .post("/internal/identity/employees/E001/revoke-sessions")
-      .set("x-actor-id", "E001")
+      .set("x-employee-id", "E001")
       .set("x-session-id", "session-1")
       .send({ reason: "admin_action" })
       .expect(200)

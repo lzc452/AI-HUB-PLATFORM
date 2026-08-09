@@ -16,6 +16,11 @@ import {
   ApiParam,
   ApiTags,
 } from "@nestjs/swagger";
+import { PERMISSIONS } from "@ai-hub/contracts";
+import {
+  Authenticated,
+  RequiresPermissions,
+} from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { INTERACTION_SERVICE } from "./interaction.tokens.js";
 import { InteractionService } from "./interaction.service.js";
@@ -36,6 +41,7 @@ import {
 
 @ApiTags("互动")
 @Controller("/internal/applications/:applicationId/interactions")
+@Authenticated()
 export class InteractionController {
   constructor(
     @Inject(INTERACTION_SERVICE)
@@ -44,6 +50,7 @@ export class InteractionController {
   ) {}
 
   @Post("like")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({ summary: "点赞/取消点赞" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -63,6 +70,7 @@ export class InteractionController {
   }
 
   @Post("rating")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({ summary: "提交或更新评分" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -84,6 +92,7 @@ export class InteractionController {
   }
 
   @Post("comments")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({
     summary: "官方回复评论",
     description: "仅应用所有者或维护者可回复。",
@@ -108,6 +117,7 @@ export class InteractionController {
   }
 
   @Post("comments/:commentId/reports")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({ summary: "举报评论" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -132,6 +142,7 @@ export class InteractionController {
   }
 
   @Post("reports/:reportId/resolve")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_MODERATE)
   @ApiOperation({ summary: "处理举报" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -159,6 +170,7 @@ export class InteractionController {
   }
 
   @Get("comments/:commentId/anonymous-author")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_ANONYMOUS_AUDIT)
   @ApiOperation({
     summary: "查询匿名评论作者",
     description: "需要匿名审计权限。",

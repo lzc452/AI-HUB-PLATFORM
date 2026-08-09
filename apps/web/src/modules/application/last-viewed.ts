@@ -18,3 +18,11 @@ export function rememberLastViewedApplicationId(id: string): void {
     // sessionStorage 不可用时仅忽略
   }
 }
+
+export function clearLastViewedApplicationId(): void {
+  try {
+    globalThis.sessionStorage?.removeItem(LAST_VIEWED_APPLICATION_KEY);
+  } catch {
+    // sessionStorage 不可用时无需额外处理。
+  }
+}

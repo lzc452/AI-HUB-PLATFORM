@@ -19,6 +19,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { readLastViewedApplicationId } from "../../modules/application/last-viewed";
 import { useAuth } from "../../modules/auth/useAuth";
+import { ROUTE_ACCESS } from "../../modules/auth/roles";
 import {
   readSearchQuery,
   searchPath,
@@ -35,8 +36,8 @@ export interface HeaderProps {
 }
 
 export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
-  const { actor, logout } = useAuth();
-  const notifications = useNotifications();
+  const { actor, canAccess, logout } = useAuth();
+  const notifications = useNotifications({ enabled: actor !== null });
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,9 +47,10 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const unreadCount = unread.length;
   const recentUnread = unread.slice(0, 5);
   const lastApplicationId = readLastViewedApplicationId();
-  const creatorPath = lastApplicationId
-    ? `/creator/${lastApplicationId}`
-    : undefined;
+  const creatorPath =
+    canAccess(ROUTE_ACCESS.creator) && lastApplicationId
+      ? `/creator/${lastApplicationId}`
+      : undefined;
 
   const handleLogout = () => {
     Modal.confirm({
@@ -150,10 +152,14 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
           <Dropdown
             menu={{
               items: [
-                {
-                  key: "my-apps",
-                  label: <Link to={ROUTES.applications}>我的应用</Link>,
-                },
+                ...(canAccess(ROUTE_ACCESS.applications)
+                  ? [
+                      {
+                        key: "my-apps",
+                        label: <Link to={ROUTES.applications}>我的应用</Link>,
+                      },
+                    ]
+                  : []),
                 ...(creatorPath
                   ? [
                       {

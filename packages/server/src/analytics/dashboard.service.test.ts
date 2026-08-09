@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ActorContext } from "@ai-hub/contracts";
+import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
 import { AnalyticsDashboardService } from "./dashboard.service.js";
 import type {
   AnalyticsDashboardRepository,
@@ -9,6 +9,18 @@ import type {
 const actor = (roleCodes: readonly string[]): ActorContext => ({
   employeeId: "employee-1",
   roleCodes,
+  permissions: roleCodes.flatMap((role) => {
+    if (role === "analytics_operator") {
+      return [
+        PERMISSIONS.ANALYTICS_PLATFORM_READ,
+        PERMISSIONS.ANALYTICS_SCOPE_ALL,
+      ];
+    }
+    if (role === "analytics_department_reader") {
+      return [PERMISSIONS.ANALYTICS_DEPARTMENT_READ];
+    }
+    return [];
+  }),
   departmentIds: ["department-1"],
   primaryDepartmentId: "department-1",
   sessionId: "session-1",

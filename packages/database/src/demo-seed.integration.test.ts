@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { createDatabase, runMigrations } from "./index.js";
-import { DEMO_ACCOUNT_DEFINITIONS, seedDemoAccounts } from "./demo-seed.js";
+import {
+  DEMO_ACCOUNT_DEFINITIONS,
+  DEMO_ROLE_DEFINITIONS,
+  seedDemoAccounts,
+} from "./demo-seed.js";
 
 describe("demo account seed", () => {
   let db: ReturnType<typeof createDatabase>;
@@ -34,10 +38,10 @@ describe("demo account seed", () => {
 
     expect(result).toEqual({
       departments: 4,
-      roles: 2,
+      roles: DEMO_ROLE_DEFINITIONS.length,
       employees: 5,
       memberships: 5,
-      roleAssignments: 5,
+      roleAssignments: 9,
     });
 
     const departments = await db
@@ -96,12 +100,21 @@ describe("demo account seed", () => {
       .select(["employee_id", "role_code"])
       .where("employee_id", "like", "DEMO-%")
       .orderBy("employee_id")
+      .orderBy("role_code")
       .execute();
     expect(relationships).toEqual(
-      sortedDemoAccounts.map((account) => ({
-        employee_id: account.employeeId,
-        role_code: account.roleCode,
-      })),
+      sortedDemoAccounts
+        .flatMap((account) =>
+          account.roleCodes.map((roleCode) => ({
+            employee_id: account.employeeId,
+            role_code: roleCode,
+          })),
+        )
+        .sort(
+          (left, right) =>
+            left.employee_id.localeCompare(right.employee_id) ||
+            left.role_code.localeCompare(right.role_code),
+        ),
     );
   });
 

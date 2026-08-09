@@ -4,6 +4,7 @@ import type {
   AuthorizationDecision,
   DemandStatus,
 } from "@ai-hub/contracts";
+import { PERMISSIONS } from "@ai-hub/contracts";
 import { DemandService } from "./demand.service.js";
 import type {
   DemandCommentRecord,
@@ -15,6 +16,13 @@ import type {
 const requester: ActorContext = {
   employeeId: "E100",
   roleCodes: ["employee"],
+  permissions: [
+    PERMISSIONS.DEMAND_CREATE,
+    PERMISSIONS.DEMAND_READ,
+    PERMISSIONS.DEMAND_UPDATE,
+    PERMISSIONS.DEMAND_SUBMIT,
+    PERMISSIONS.DEMAND_INTERACT,
+  ],
   departmentIds: ["dept-rnd"],
   primaryDepartmentId: "dept-rnd",
   sessionId: "session-requester",
@@ -22,6 +30,7 @@ const requester: ActorContext = {
 const reviewer: ActorContext = {
   employeeId: "E900",
   roleCodes: ["demand_reviewer"],
+  permissions: [PERMISSIONS.DEMAND_READ, PERMISSIONS.DEMAND_REVIEW],
   departmentIds: ["dept-ops"],
   primaryDepartmentId: "dept-ops",
   sessionId: "session-reviewer",
@@ -288,6 +297,22 @@ describe("DemandService innovation-square interactions", () => {
     const operator: ActorContext = {
       ...reviewer,
       roleCodes: ["demand_operator"],
+      permissions: [
+        PERMISSIONS.DEMAND_CREATE,
+        PERMISSIONS.DEMAND_READ,
+        PERMISSIONS.DEMAND_UPDATE,
+        PERMISSIONS.DEMAND_SUBMIT,
+        PERMISSIONS.DEMAND_REVIEW,
+        PERMISSIONS.DEMAND_CLAIM,
+        PERMISSIONS.DEMAND_COLLABORATE,
+        PERMISSIONS.DEMAND_PRIORITIZE,
+        PERMISSIONS.DEMAND_PROGRESS,
+        PERMISSIONS.DEMAND_MERGE,
+        PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION,
+        PERMISSIONS.DEMAND_INTERACT,
+        PERMISSIONS.DEMAND_MODERATE,
+        PERMISSIONS.DEMAND_ANONYMOUS_AUDIT,
+      ],
     };
     let hiddenAt: Date | null = null;
     const repository = {
@@ -494,6 +519,14 @@ describe("DemandService explainable priority", () => {
     const operator: ActorContext = {
       ...reviewer,
       roleCodes: ["demand_operator"],
+      permissions: [
+        PERMISSIONS.APPLICATION_CREATE,
+        PERMISSIONS.DEMAND_READ,
+        PERMISSIONS.DEMAND_PRIORITIZE,
+        PERMISSIONS.DEMAND_PROGRESS,
+        PERMISSIONS.DEMAND_MERGE,
+        PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION,
+      ],
     };
     const repository = {
       withTransaction: async <T>(
@@ -574,6 +607,12 @@ describe("DemandService progress and pilot lifecycle", () => {
     const operator: ActorContext = {
       ...reviewer,
       roleCodes: ["demand_operator"],
+      permissions: [
+        PERMISSIONS.DEMAND_READ,
+        PERMISSIONS.DEMAND_PROGRESS,
+        PERMISSIONS.DEMAND_MERGE,
+        PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION,
+      ],
     };
     const repository = {
       withTransaction: async <T>(
@@ -671,6 +710,12 @@ describe("DemandService merge and application links", () => {
     const operator: ActorContext = {
       ...reviewer,
       roleCodes: ["demand_operator"],
+      permissions: [
+        PERMISSIONS.DEMAND_READ,
+        PERMISSIONS.DEMAND_PROGRESS,
+        PERMISSIONS.DEMAND_MERGE,
+        PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION,
+      ],
     };
     const repository = {
       withTransaction: async <T>(
@@ -739,6 +784,12 @@ describe("DemandService merge and application links", () => {
     const operator: ActorContext = {
       ...reviewer,
       roleCodes: ["demand_operator"],
+      permissions: [
+        PERMISSIONS.DEMAND_READ,
+        PERMISSIONS.DEMAND_PROGRESS,
+        PERMISSIONS.DEMAND_MERGE,
+        PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION,
+      ],
     };
     const demand: DemandEntry = {
       demandId: "demand-bridge",
