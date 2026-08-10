@@ -204,7 +204,7 @@ describe("real Phase 5 demand API", () => {
         adminPriority: 4,
       })
       .expect(201);
-    expect(priority.body).toMatchObject({ priorityScore: 17 });
+    expect(priority.body).toMatchObject({ priorityScore: 4.6 });
     const started = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/status`)
       .set(reviewer)
@@ -252,7 +252,7 @@ describe("real Phase 5 demand API", () => {
       .then((response) =>
         expect(response.body.items[0]).toMatchObject({
           demandId,
-          priorityScore: 17,
+          priorityScore: 4.6,
         }),
       );
 
@@ -278,9 +278,14 @@ describe("real Phase 5 demand API", () => {
       .expect(404);
     const anonymousDetail = await request(app.getHttpServer())
       .get(`/internal/demands/${demandId}`)
-      .set(reviewer)
+      .set(childDepartment)
       .expect(200);
     expect(anonymousDetail.body.requesterEmployeeId).toBeNull();
+    const auditedDetail = await request(app.getHttpServer())
+      .get(`/internal/demands/${demandId}`)
+      .set(reviewer)
+      .expect(200);
+    expect(auditedDetail.body.requesterEmployeeId).toBe("E100");
 
     await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/like`)

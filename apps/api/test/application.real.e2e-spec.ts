@@ -180,7 +180,7 @@ describe("real application lifecycle API", () => {
       .expect(200);
     const reviewQueue = await request(app.getHttpServer())
       .get(`/internal/applications/versions/${firstVersionId}/review-queue`)
-      .set(ownerHeaders)
+      .set(reviewerHeaders)
       .expect(200);
     expect(reviewQueue.body).toMatchObject({
       status: "available",

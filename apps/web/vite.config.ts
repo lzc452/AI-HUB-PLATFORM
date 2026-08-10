@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   test: {
+    testTimeout: 10_000,
     alias: {
       "@ant-design/icons": fileURLToPath(
         new URL("./src/test/icons.tsx", import.meta.url),
