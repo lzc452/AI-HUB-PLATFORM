@@ -1,5 +1,4 @@
 import {
-  AppstoreOutlined,
   BellOutlined,
   DownOutlined,
   MenuUnfoldOutlined,
@@ -13,7 +12,6 @@ import {
   Layout,
   Modal,
   Popover,
-  Typography,
 } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -26,9 +24,9 @@ import {
 } from "../../modules/marketplace/search.store";
 import { useNotifications } from "../../modules/notification/useNotification";
 import { ROUTES } from "../../router/routes";
+import logoUrl from "../../../assets/logo.png";
 
 const { Header: LayoutHeader } = Layout;
-const { Text } = Typography;
 
 export interface HeaderProps {
   onMenuClick?: () => void;
@@ -90,13 +88,7 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
           className="flex shrink-0 items-center gap-2 text-[#1f1f1f]"
           to={ROUTES.marketplace}
         >
-          <AppstoreOutlined
-            aria-hidden="true"
-            className="text-lg text-[#1677ff]"
-          />
-          <Text strong className="!text-base">
-            AI 应用市场
-          </Text>
+          <img alt="AI应用共享平台" className="h-8 w-auto" src={logoUrl} />
         </Link>
 
         <div className="flex flex-1 justify-center">

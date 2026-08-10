@@ -9,8 +9,10 @@ import { z } from "zod";
 import { useAuth } from "../../modules/auth/useAuth";
 import { ROUTES } from "../../router/routes";
 import { MessageError } from "../../shared/ui/message";
+import loginBgVideoUrl from "../../../assets/login_bg.mp4";
 // Vite 方式引入右侧背景图（由构建器处理为资源 URL）
 import loginBgUrl from "../../../assets/login_bg.png";
+import logoUrl from "../../../assets/logo.png";
 
 const loginSchema = z.object({
   employeeId: z.string().min(1, "请输入工号或邮箱"),
@@ -18,42 +20,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
-
-/** 平台 Logo：蓝色渐变圆角方块内的抽象 AI 节点图形（内联 SVG） */
-function BrandLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="36"
-      viewBox="0 0 36 36"
-      width="36"
-    >
-      <defs>
-        <linearGradient id="brand-logo-bg" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#3d6bff" />
-          <stop offset="100%" stopColor="#7c9bff" />
-        </linearGradient>
-      </defs>
-      <rect fill="url(#brand-logo-bg)" height="36" rx="10" width="36" />
-      {/* 抽象 AI 节点连线 */}
-      <path
-        d="M10.5 24.5 18 9.5l7.5 15"
-        stroke="#ffffff"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2.4"
-      />
-      <path
-        d="M13.8 19.5h8.4"
-        stroke="#ffffff"
-        strokeLinecap="round"
-        strokeWidth="2.4"
-      />
-      <circle cx="18" cy="25.5" fill="#ffffff" r="2" />
-    </svg>
-  );
-}
 
 /** 钉钉小 Logo：蓝色圆形底 + 白色钉钉风格符号（内联 SVG） */
 function DingTalkLogo() {
@@ -111,21 +77,24 @@ export default function LoginPage() {
 
   return (
     // 严格一屏：h-screen + overflow-hidden，任何分辨率下都不出现滚动条
-    <div
-      className="flex h-screen flex-col items-center overflow-hidden px-4 py-4 !pb-0 lg:px-8"
-      style={{
-        background:
-          "linear-gradient(135deg, #f3f5f9 0%, #eef2f9 55%, #e9f0fb 100%)",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="relative flex h-screen flex-col items-center overflow-hidden px-4 py-4 !pb-0 lg:px-8 box-border">
+      {/* 全屏视频背景：自动播放、循环、静音、仅展示 */}
+      <video
+        autoPlay
+        className="absolute inset-0 h-full w-full object-cover"
+        loop
+        muted
+        playsInline
+        src={loginBgVideoUrl}
+      />
+
       {/* 居中悬浮卡片容器：圆角 + 阴影，高度自适应且不超过视口 */}
-      <div className="flex min-h-0 w-full max-w-[1200px] flex-1 overflow-hidden rounded-2xl bg-white shadow-[0_28px_80px_rgba(23,58,138,0.18)]">
+      <div className="relative z-10 flex min-h-0 w-full max-w-[1200px] flex-1 overflow-hidden rounded-2xl bg-white/60 shadow-[0_28px_80px_rgba(23,58,138,0.18)]">
         {/* 左侧表单区 */}
-        <div className="flex w-full min-w-0 flex-col overflow-hidden bg-white lg:w-[46%] lg:min-w-[440px] lg:max-w-[600px]">
+        <div className="flex w-full min-w-0 flex-col overflow-hidden lg:w-[46%] lg:min-w-[440px] lg:max-w-[600px]">
           {/* 品牌区 */}
           <div className="flex items-center gap-3 px-8 pt-6 lg:px-12">
-            <BrandLogo />
+            <img alt="AI应用共享平台" className="h-9 w-auto" src={logoUrl} />
             <span className="text-xl font-bold text-black">
               AI应用共享平台
             </span>
@@ -137,9 +106,9 @@ export default function LoginPage() {
               <h1 className="mb-2 text-3xl font-bold leading-tight text-gray-900 lg:text-4xl">
                 欢迎登录
               </h1>
-              <p className="mb-6 text-sm text-gray-500">
+              {/* <p className="mb-6 text-sm text-gray-500">
                 统一访问企业内部 AI 应用、创新需求与创作者中心
-              </p>
+              </p> */}
 
               <MessageError active={Boolean(error)} cause={error} title="登录失败" />
 
@@ -259,18 +228,12 @@ export default function LoginPage() {
       </div>
 
       {/* 底部信息栏（悬浮卡片下方） */}
-      <footer className="flex shrink-0 items-center justify-center gap-4 py-3">
-        <span
-          aria-hidden="true"
-          className="hidden w-16 border-t border-dashed border-gray-300 sm:block"
-        />
-        <span className="text-xs text-gray-500">
+      <footer className="relative z-10 flex shrink-0 items-center justify-center gap-4 py-1">
+        <span>--------</span>
+        <span className="text-xs">
           企业内网访问 · 安全登录 · 支持账号密码与钉钉 SSO
         </span>
-        <span
-          aria-hidden="true"
-          className="hidden w-16 border-t border-dashed border-gray-300 sm:block"
-        />
+        <span>--------</span>
       </footer>
     </div>
   );
