@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import type { DatabaseSchema } from "../schema.js";
+export { cleanDemoData } from "./cleanup.js";
 import { cleanDemoData } from "./cleanup.js";
 import {
   buildIdentityFixture,
