@@ -15,6 +15,8 @@ const schema = z.object({
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).default(1000),
   WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
   ENABLE_API_DOCS: booleanFromEnv,
+  DEMO_DATA_ENABLED: booleanFromEnv,
+  DEMO_MODE: booleanFromEnv,
   LOGIN_ENCRYPTION_PRIVATE_KEY_FILE: z.string().optional(),
   DINGTALK_SSO_ENABLED: z.enum(["true", "false"]).default("false"),
   DINGTALK_CLIENT_ID: z.string().optional(),
@@ -32,6 +34,8 @@ export interface RuntimeConfig {
   outboxPollIntervalMs: number;
   workerMetricsPort: number;
   enableApiDocs: boolean;
+  demoDataEnabled: boolean;
+  demoMode: boolean;
   loginEncryptionPrivateKey: string | undefined;
   dingtalkSsoEnabled: boolean;
   dingtalkClientId: string | undefined;
@@ -127,6 +131,8 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     outboxPollIntervalMs: value.OUTBOX_POLL_INTERVAL_MS,
     workerMetricsPort: value.WORKER_METRICS_PORT,
     enableApiDocs: value.ENABLE_API_DOCS,
+    demoDataEnabled: value.DEMO_DATA_ENABLED,
+    demoMode: value.DEMO_MODE,
     loginEncryptionPrivateKey,
     dingtalkSsoEnabled,
     dingtalkClientId: value.DINGTALK_CLIENT_ID,
