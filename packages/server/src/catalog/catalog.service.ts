@@ -75,6 +75,35 @@ export class CatalogService {
     }
   }
 
+  async getRiskDescription(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<{ riskDescription: string }> {
+    await this.getDetail(actor, applicationId);
+    const description = await this.repository.getRiskDescription(applicationId);
+    return {
+      riskDescription:
+        description !== null && description.trim().length > 0
+          ? description
+          : "该应用暂未提供风险说明。请根据实际业务需求评估使用风险，如有疑问请联系应用负责人。",
+    };
+  }
+
+  async saveRiskDescription(
+    actor: ActorContext,
+    applicationId: string,
+    description: string,
+  ): Promise<void> {
+    await this.getDetail(actor, applicationId);
+    if (!description || description.trim().length === 0) {
+      throw new Error("RISK_DESCRIPTION_REQUIRED");
+    }
+    await this.repository.upsertRiskDescription(
+      applicationId,
+      description.trim(),
+    );
+  }
+
   private async query(input: CatalogSearchInput): Promise<CatalogListResult> {
     if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
       throw new Error("CATALOG_PAGINATION_INVALID");

@@ -127,6 +127,50 @@ class MemoryInteractionRepository implements InteractionRepository {
   async recordAudit(input: { eventType: string }) {
     this.audits.push(input.eventType);
   }
+
+  async listRatings(input: { applicationId: string; page: number; pageSize: number }) {
+    const filtered = this.ratings.filter(
+      (r) => r.applicationId === input.applicationId,
+    );
+    const paged = filtered.slice(
+      (input.page - 1) * input.pageSize,
+      input.page * input.pageSize,
+    );
+    return { items: paged, total: filtered.length };
+  }
+
+  async listComments(input: { applicationId: string; page: number; pageSize: number }) {
+    const roots = this.comments.filter(
+      (c) =>
+        c.applicationId === input.applicationId &&
+        c.parentCommentId === null,
+    );
+    const paged = roots.slice(
+      (input.page - 1) * input.pageSize,
+      input.page * input.pageSize,
+    );
+    const rootIds = new Set(paged.map((c) => c.commentId));
+    const replies = this.comments.filter((c) =>
+      rootIds.has(c.parentCommentId ?? ""),
+    );
+    return { items: [...paged, ...replies], total: roots.length };
+  }
+
+  async hideComment(commentId: string) {
+    const comment = this.comments.find((c) => c.commentId === commentId);
+    if (comment === undefined) throw new Error("COMMENT_NOT_FOUND");
+    const updated = { ...comment, hiddenAt: new Date() };
+    this.comments[this.comments.indexOf(comment)] = updated;
+    return updated;
+  }
+
+  async restoreComment(commentId: string) {
+    const comment = this.comments.find((c) => c.commentId === commentId);
+    if (comment === undefined) throw new Error("COMMENT_NOT_FOUND");
+    const updated = { ...comment, hiddenAt: null };
+    this.comments[this.comments.indexOf(comment)] = updated;
+    return updated;
+  }
 }
 
 const allowAll = async (): Promise<AuthorizationDecision> => ({

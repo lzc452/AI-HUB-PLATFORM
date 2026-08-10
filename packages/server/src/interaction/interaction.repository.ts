@@ -171,6 +171,93 @@ export class KyselyInteractionRepository implements InteractionRepository {
     return this.mapReport(row);
   }
 
+  async listRatings(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ items: readonly RatingRecord[]; total: number }> {
+    const baseQuery = this.db
+      .selectFrom("application_ratings")
+      .selectAll()
+      .where("application_id", "=", input.applicationId);
+
+    const countResult = await baseQuery
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .executeTakeFirstOrThrow();
+
+    const rows = await baseQuery
+      .offset((input.page - 1) * input.pageSize)
+      .limit(input.pageSize)
+      .orderBy("created_at", "desc")
+      .execute();
+
+    return {
+      items: rows.map((r) => this.mapRating(r)),
+      total: countResult.total,
+    };
+  }
+
+  async listComments(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ items: readonly CommentRecord[]; total: number }> {
+    const baseQuery = this.db
+      .selectFrom("application_comments")
+      .selectAll()
+      .where("application_id", "=", input.applicationId)
+      .where("parent_comment_id", "is", null);
+
+    const countResult = await baseQuery
+      .select((eb) => eb.fn.countAll<number>().as("total"))
+      .executeTakeFirstOrThrow();
+
+    const rootRows = await baseQuery
+      .offset((input.page - 1) * input.pageSize)
+      .limit(input.pageSize)
+      .orderBy("created_at", "desc")
+      .execute();
+
+    const rootComments = rootRows.map((r) => this.mapComment(r));
+
+    const rootIds = rootComments.map((c) => c.commentId);
+    let replyRows: Selectable<DatabaseSchema["application_comments"]>[] = [];
+    if (rootIds.length > 0) {
+      replyRows = await this.db
+        .selectFrom("application_comments")
+        .selectAll()
+        .where("parent_comment_id", "in", rootIds)
+        .orderBy("created_at", "asc")
+        .execute();
+    }
+    const replies = replyRows.map((r) => this.mapComment(r));
+
+    return {
+      items: [...rootComments, ...replies],
+      total: countResult.total,
+    };
+  }
+
+  async hideComment(commentId: string): Promise<CommentRecord> {
+    const row = await this.db
+      .updateTable("application_comments")
+      .set({ hidden_at: new Date() })
+      .where("comment_id", "=", commentId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapComment(row);
+  }
+
+  async restoreComment(commentId: string): Promise<CommentRecord> {
+    const row = await this.db
+      .updateTable("application_comments")
+      .set({ hidden_at: null })
+      .where("comment_id", "=", commentId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapComment(row);
+  }
+
   async recordAudit(input: {
     applicationId: string;
     actorEmployeeId: string;

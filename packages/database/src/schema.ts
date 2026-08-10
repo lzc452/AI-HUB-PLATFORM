@@ -221,6 +221,7 @@ export interface ApplicationCatalogMetadataTable {
   health_status: "unknown" | "healthy" | "degraded" | "failed";
   deprecated_reason: string | null;
   replacement_application_id: string | null;
+  risk_description: string | null;
 }
 
 export interface ApplicationCatalogLabelsTable {

@@ -214,3 +214,21 @@ export class ReportRecordDto {
   })
   createdAt!: string;
 }
+
+/** 分页评分列表。 */
+export class PaginatedRatingsDto {
+  @ApiProperty({ description: "评分列表", type: [RatingRecordDto] })
+  items!: RatingRecordDto[];
+
+  @ApiProperty({ type: Number, description: "总数" })
+  total!: number;
+}
+
+/** 分页评论列表。 */
+export class PaginatedCommentsDto {
+  @ApiProperty({ description: "评论列表（含回复）", type: [CommentRecordDto] })
+  items!: CommentRecordDto[];
+
+  @ApiProperty({ type: Number, description: "根评论总数" })
+  total!: number;
+}

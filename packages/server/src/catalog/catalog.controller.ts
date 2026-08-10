@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   ForbiddenException,
   Get,
@@ -8,7 +9,7 @@ import {
   NotFoundException,
   Param,
   Post,
-  Body,
+  Put,
   Query,
 } from "@nestjs/common";
 import {
@@ -27,6 +28,9 @@ import {
   RequiresPermissions,
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
+import { APPLICATION_SERVICE } from "../application/application.tokens.js";
+import { ApplicationService } from "../application/application.service.js";
+import { ApplicationVersionDto } from "../application/application.dto.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import type { CatalogSearchInput } from "./catalog.types.js";
@@ -34,6 +38,8 @@ import {
   CatalogActionRequestDto,
   CatalogEntryDto,
   CatalogListResultDto,
+  RiskDescriptionDto,
+  SaveRiskDescriptionRequestDto,
 } from "./catalog.dto.js";
 import { RecordActionResultDto } from "../system/http/simple-results.dto.js";
 import {
@@ -48,6 +54,8 @@ export class CatalogController {
   constructor(
     @Inject(CATALOG_SERVICE) private readonly catalog: CatalogService,
     @Inject(IdentityService) private readonly identity: IdentityService,
+    @Inject(APPLICATION_SERVICE)
+    private readonly applications: ApplicationService,
   ) {}
 
   @Get()
@@ -152,9 +160,83 @@ export class CatalogController {
     });
   }
 
+  @Get(":applicationId/versions")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "应用版本历史" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "版本列表",
+    type: ApplicationVersionDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async listVersions(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () => {
+      await this.catalog.getDetail(
+        await this.requireActor(employeeId, sessionId),
+        applicationId,
+      );
+      return this.applications.listVersions(applicationId);
+    });
+  }
+
+  @Get(":applicationId/risk")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "风险说明" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "风险说明", type: RiskDescriptionDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getRiskDescription(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.catalog.getRiskDescription(
+        await this.requireActor(employeeId, sessionId),
+        applicationId,
+      ),
+    );
+  }
+
+  @Put(":applicationId/risk")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @ApiOperation({ summary: "更新风险说明" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: SaveRiskDescriptionRequestDto })
+  @ApiOkResponse({ type: RiskDescriptionDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async saveRiskDescription(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: SaveRiskDescriptionRequestDto,
+  ) {
+    return this.call(async () => {
+      await this.catalog.saveRiskDescription(
+        await this.requireActor(employeeId, sessionId, "update", "application"),
+        applicationId,
+        body.riskDescription,
+      );
+      return this.catalog.getRiskDescription(
+        await this.requireActor(employeeId, sessionId),
+        applicationId,
+      );
+    });
+  }
+
   private async requireActor(
     employeeId: string | undefined,
     sessionId: string | undefined,
+    action: string = "read",
+    resourceType: string = "catalog",
   ): Promise<ActorContext> {
     if (employeeId === undefined || sessionId === undefined) {
       throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
@@ -162,8 +244,8 @@ export class CatalogController {
     const actor = await this.identity.getActorContext(employeeId, sessionId);
     const decision = await this.identity.authorize({
       actor,
-      action: "read",
-      resourceType: "catalog",
+      action,
+      resourceType,
     });
     if (!decision.allowed) throw new ForbiddenException("NOT_AUTHORIZED");
     return actor;

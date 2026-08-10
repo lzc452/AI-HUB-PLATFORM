@@ -33,3 +33,16 @@ export interface ApplicationOwnershipInput {
   maintainerEmployeeId: string;
   departmentId: string;
 }
+
+export interface ApplicationVersion {
+  applicationVersionId: string;
+  applicationId: string;
+  version: string;
+  changelog: string;
+  artifactKey: string;
+  artifactSha256: string;
+  artifactSignature: string;
+  scanStatus: ApplicationVersionScanStatus;
+  createdByEmployeeId: string;
+  createdAt: string;
+}

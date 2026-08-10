@@ -1,7 +1,10 @@
 import { createDatabase } from "@ai-hub/database";
-import { Module, type DynamicModule } from "@nestjs/common";
+import { Module, type DynamicModule, type Provider } from "@nestjs/common";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
+import { ApplicationModule } from "../application/application.module.js";
+import { APPLICATION_SERVICE } from "../application/application.tokens.js";
+import type { ApplicationService } from "../application/application.service.js";
 import { CatalogController } from "./catalog.controller.js";
 import { KyselyCatalogRepository } from "./catalog.repository.js";
 import { CatalogService } from "./catalog.service.js";
@@ -14,7 +17,10 @@ export class CatalogModule {
   static register(databaseUrl: string): DynamicModule {
     return {
       module: CatalogModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [
+        IdentityModule.register(databaseUrl),
+        ApplicationModule.registerService(databaseUrl),
+      ],
       controllers: [CatalogController],
       providers: [
         {
@@ -37,14 +43,19 @@ export class CatalogModule {
   static forTest(
     catalog: CatalogService,
     identity: IdentityService,
+    application?: ApplicationService,
   ): DynamicModule {
+    const providers: Provider[] = [
+      { provide: CATALOG_SERVICE, useValue: catalog },
+      { provide: IdentityService, useValue: identity },
+    ];
+    if (application) {
+      providers.push({ provide: APPLICATION_SERVICE, useValue: application });
+    }
     return {
       module: CatalogModule,
       controllers: [CatalogController],
-      providers: [
-        { provide: CATALOG_SERVICE, useValue: catalog },
-        { provide: IdentityService, useValue: identity },
-      ],
+      providers,
       exports: [CATALOG_SERVICE],
     };
   }

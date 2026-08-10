@@ -75,6 +75,18 @@ export interface InteractionRepository {
     status: ReportRecord["status"],
     employeeId: string,
   ): Promise<ReportRecord>;
+  listRatings(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ items: readonly RatingRecord[]; total: number }>;
+  listComments(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ items: readonly CommentRecord[]; total: number }>;
+  hideComment(commentId: string): Promise<CommentRecord>;
+  restoreComment(commentId: string): Promise<CommentRecord>;
   recordAudit(input: {
     applicationId: string;
     actorEmployeeId: string;

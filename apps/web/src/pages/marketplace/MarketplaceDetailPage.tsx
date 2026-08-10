@@ -1,4 +1,4 @@
-import { Alert, Card, Skeleton } from "antd";
+import { Card, Skeleton } from "antd";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
@@ -6,11 +6,26 @@ import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
 import { rememberLastViewedApplicationId } from "../../modules/application/last-viewed";
-import { useRateApplication, useToggleLike } from "../../modules/interaction/useInteraction";
-import { useCatalogEntry } from "../../modules/marketplace/useCatalog";
+import {
+  useComments,
+  useHideComment,
+  useRateApplication,
+  useRatings,
+  useRestoreComment,
+  useToggleLike,
+} from "../../modules/interaction/useInteraction";
+import {
+  useCatalogEntry,
+  useRiskDescription,
+  useSaveRiskDescription,
+  useVersions,
+} from "../../modules/marketplace/useCatalog";
 import { ApiError } from "../../shared/api/client";
 import { MarketplaceDetailDescription } from "./detail/MarketplaceDetailDescription";
 import { MarketplaceDetailHeader } from "./detail/MarketplaceDetailHeader";
+import { MarketplaceDetailHistory } from "./detail/MarketplaceDetailHistory";
+import { MarketplaceDetailReviews } from "./detail/MarketplaceDetailReviews";
+import { MarketplaceDetailRisk } from "./detail/MarketplaceDetailRisk";
 import {
   MarketplaceDetailTabs,
   useDetailTabParam,
@@ -41,6 +56,33 @@ export default function MarketplaceDetailPage() {
   const toggleLike = useToggleLike(applicationId);
   const rateApplication = useRateApplication(applicationId);
   const { activeTab, setTab } = useDetailTabParam();
+
+  // Tab-specific data hooks — only fetch when tab is active
+  const versions = useVersions(
+    activeTab === "history" ? applicationId : undefined,
+  );
+  const risk = useRiskDescription(
+    activeTab === "risk" ? applicationId : undefined,
+  );
+  const saveRisk = useSaveRiskDescription(
+    activeTab === "risk" ? applicationId : undefined,
+  );
+  const ratings = useRatings(
+    activeTab === "reviews" ? applicationId : undefined,
+    1,
+    10,
+  );
+  const comments = useComments(
+    activeTab === "reviews" ? applicationId : undefined,
+    1,
+    10,
+  );
+  const hideComment = useHideComment(
+    activeTab === "reviews" ? applicationId : undefined,
+  );
+  const restoreComment = useRestoreComment(
+    activeTab === "reviews" ? applicationId : undefined,
+  );
 
   useEffect(() => {
     if (applicationId) {
@@ -74,14 +116,34 @@ export default function MarketplaceDetailPage() {
         ratingPending={rateApplication.isPending}
       />
       <MarketplaceDetailTabs activeTab={activeTab} onTabChange={setTab} />
-      {activeTab === "description" ? (
+
+      {activeTab === "description" && (
         <MarketplaceDetailDescription entry={data} />
-      ) : (
-        <Alert
-          showIcon
-          className="rounded-2xl"
-          message={`${activeTab === "history" ? "版本历史" : activeTab === "reviews" ? "评价管理" : "风险说明"} 模块接口待接入`}
-          type="info"
+      )}
+      {activeTab === "history" && (
+        <MarketplaceDetailHistory
+          isPending={versions.isPending}
+          versions={versions.data}
+        />
+      )}
+      {activeTab === "reviews" && (
+        <MarketplaceDetailReviews
+          comments={comments.data}
+          commentsPending={comments.isPending}
+          isModerator={false}
+          onHideComment={(id) => hideComment.mutate(id)}
+          onRestoreComment={(id) => restoreComment.mutate(id)}
+          ratings={ratings.data}
+          ratingsPending={ratings.isPending}
+        />
+      )}
+      {activeTab === "risk" && (
+        <MarketplaceDetailRisk
+          isOwner={false}
+          isPending={risk.isPending}
+          onSave={(desc) => saveRisk.mutate(desc)}
+          risk={risk.data}
+          savePending={saveRisk.isPending}
         />
       )}
     </div>

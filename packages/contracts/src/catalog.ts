@@ -35,3 +35,11 @@ export interface CatalogEntry {
   deprecatedReason: string | null;
   replacementApplicationId: string | null;
 }
+
+export interface RiskDescription {
+  riskDescription: string;
+}
+
+export interface SaveRiskDescriptionInput {
+  riskDescription: string;
+}

@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Get,
+  Query,
   Body,
 } from "@nestjs/common";
 import {
@@ -14,6 +15,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
 import { PERMISSIONS } from "@ai-hub/contracts";
@@ -27,6 +29,8 @@ import { InteractionService } from "./interaction.service.js";
 import {
   CommentRecordDto,
   CommentRequestDto,
+  PaginatedCommentsDto,
+  PaginatedRatingsDto,
   RatingRecordDto,
   RatingRequestDto,
   ReportRecordDto,
@@ -191,6 +195,126 @@ export class InteractionController {
         commentId,
       ),
     );
+  }
+
+  @Get("ratings")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
+  @ApiOperation({ summary: "查询应用评分列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiQuery({ name: "page", type: Number, required: false })
+  @ApiQuery({ name: "pageSize", type: Number, required: false })
+  @ApiOkResponse({
+    description: "分页评分列表",
+    type: PaginatedRatingsDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  listRatings(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    const p = this.parsePositive(page, 1);
+    const ps = this.parsePositive(pageSize, 20);
+    return this.call(async () =>
+      this.interactions.listRatings(
+        await this.actor(employeeId, sessionId),
+        applicationId,
+        p,
+        ps,
+      ),
+    );
+  }
+
+  @Get("comments")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
+  @ApiOperation({ summary: "查询应用评论列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiQuery({ name: "page", type: Number, required: false })
+  @ApiQuery({ name: "pageSize", type: Number, required: false })
+  @ApiOkResponse({
+    description: "分页评论列表（含回复）",
+    type: PaginatedCommentsDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  listComments(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    const p = this.parsePositive(page, 1);
+    const ps = this.parsePositive(pageSize, 20);
+    return this.call(async () =>
+      this.interactions.listComments(
+        await this.actor(employeeId, sessionId),
+        applicationId,
+        p,
+        ps,
+      ),
+    );
+  }
+
+  @Post("comments/:commentId/hide")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_MODERATE)
+  @ApiOperation({ summary: "隐藏评论" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "commentId", description: "评论 ID" })
+  @ApiCreatedResponse({
+    description: "隐藏后的评论记录",
+    type: CommentRecordDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  hideComment(
+    @Param("applicationId") applicationId: string,
+    @Param("commentId") commentId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.interactions.hideComment(
+        await this.actor(employeeId, sessionId),
+        applicationId,
+        commentId,
+      ),
+    );
+  }
+
+  @Post("comments/:commentId/restore")
+  @RequiresPermissions(PERMISSIONS.INTERACTION_MODERATE)
+  @ApiOperation({ summary: "恢复评论" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "commentId", description: "评论 ID" })
+  @ApiCreatedResponse({
+    description: "恢复后的评论记录",
+    type: CommentRecordDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  restoreComment(
+    @Param("applicationId") applicationId: string,
+    @Param("commentId") commentId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.interactions.restoreComment(
+        await this.actor(employeeId, sessionId),
+        applicationId,
+        commentId,
+      ),
+    );
+  }
+
+  private parsePositive(raw: string | undefined, fallback: number): number {
+    if (raw === undefined) return fallback;
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
   }
 
   private async actor(

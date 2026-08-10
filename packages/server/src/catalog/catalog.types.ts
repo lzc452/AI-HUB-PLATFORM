@@ -62,4 +62,9 @@ export interface CatalogRepository {
     actionType: CatalogDeliveryAction;
     channel?: string | null;
   }): Promise<void>;
+  getRiskDescription(applicationId: string): Promise<string | null>;
+  upsertRiskDescription(
+    applicationId: string,
+    description: string,
+  ): Promise<void>;
 }

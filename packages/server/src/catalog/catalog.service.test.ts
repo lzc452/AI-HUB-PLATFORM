@@ -102,6 +102,14 @@ class MemoryCatalogRepository implements CatalogRepository {
   async recordDeliveryAction(input: { actionType: string }) {
     this.recordedActions.push(input.actionType);
   }
+
+  async getRiskDescription(): Promise<string | null> {
+    return null;
+  }
+
+  async upsertRiskDescription(): Promise<void> {
+    // no-op in memory repository
+  }
 }
 
 describe("CatalogService", () => {

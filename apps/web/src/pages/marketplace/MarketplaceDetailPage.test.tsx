@@ -65,6 +65,12 @@ const { catalogEntryState, recommendedState } = vi.hoisted(() => {
 vi.mock("../../modules/marketplace/useCatalog", () => ({
   useCatalogEntry: () => catalogEntryState,
   useCatalogSearch: () => recommendedState,
+  useVersions: () => ({ data: [], isPending: false }),
+  useRiskDescription: () => ({ data: undefined, isPending: false }),
+  useSaveRiskDescription: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+  }),
 }));
 
 vi.mock("../../modules/auth/useIdentity", () => ({
@@ -87,6 +93,10 @@ vi.mock("../../modules/interaction/useInteraction", () => ({
     isPending: false,
     mutate: vi.fn(),
   }),
+  useRatings: () => ({ data: { items: [], total: 0 }, isPending: false }),
+  useComments: () => ({ data: { items: [], total: 0 }, isPending: false }),
+  useHideComment: () => ({ isPending: false, mutate: vi.fn() }),
+  useRestoreComment: () => ({ isPending: false, mutate: vi.fn() }),
 }));
 
 function mockEntry(): CatalogEntry {
@@ -150,14 +160,14 @@ describe("MarketplaceDetailPage", () => {
     }
   });
 
-  it("switches to a placeholder tab and syncs the URL", async () => {
+  it("switches tabs and syncs the URL", async () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: "OCR 票据识别" });
     fireEvent.click(screen.getByRole("tab", { name: "版本历史" }));
 
     expect(
-      await screen.findByText("版本历史 模块接口待接入"),
+      await screen.findByText("暂无版本记录"),
     ).toBeInTheDocument();
     expect(globalThis.window.location.search).toContain("tab=history");
 

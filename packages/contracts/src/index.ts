@@ -24,6 +24,7 @@ export {
 export type {
   ApplicationId,
   ApplicationStatus,
+  ApplicationVersion,
   ApplicationVersionId,
   ApplicationVersionInput,
   ApplicationVersionScanStatus,
@@ -35,11 +36,21 @@ export type {
 } from "./application.js";
 export type {
   CatalogEntry,
+  CatalogHealthStatus,
   CatalogQuery,
   CatalogSort,
+  RiskDescription,
+  SaveRiskDescriptionInput,
   TrustLabel,
 } from "./catalog.js";
-export type { CommentInput, RatingInput, ReportStatus } from "./interaction.js";
+export type {
+  CommentInput,
+  CommentOutput,
+  PaginatedResult,
+  RatingInput,
+  RatingOutput,
+  ReportStatus,
+} from "./interaction.js";
 export type {
   NotificationDeliveryStatus,
   NotificationInput,

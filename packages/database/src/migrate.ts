@@ -14,6 +14,7 @@ import * as requestReplayNonces from "./migrations/0012_request_replay_nonces.js
 import * as unifiedAuthorization from "./migrations/0013_unified_authorization.js";
 import * as demandCommentLikesAndPriority from "./migrations/0014_demand_comment_likes_and_priority.js";
 import * as loginSecurityAndDingTalkSso from "./migrations/0015_login_security_and_dingtalk_sso.js";
+import * as applicationRiskDescription from "./migrations/0016_application_risk_description.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -32,6 +33,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0013_unified_authorization": unifiedAuthorization,
   "0014_demand_comment_likes_and_priority": demandCommentLikesAndPriority,
   "0015_login_security_and_dingtalk_sso": loginSecurityAndDingTalkSso,
+  "0016_application_risk_description": applicationRiskDescription,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

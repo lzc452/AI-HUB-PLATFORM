@@ -206,4 +206,24 @@ export class KyselyCatalogRepository implements CatalogRepository {
       })
       .execute();
   }
+
+  async getRiskDescription(applicationId: string): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("application_catalog_metadata")
+      .select("risk_description")
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    return row?.risk_description ?? null;
+  }
+
+  async upsertRiskDescription(
+    applicationId: string,
+    description: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable("application_catalog_metadata")
+      .set({ risk_description: description })
+      .where("application_id", "=", applicationId)
+      .execute();
+  }
 }

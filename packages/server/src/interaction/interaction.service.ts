@@ -184,6 +184,86 @@ export class InteractionService {
     return comment.authorEmployeeId;
   }
 
+  async listRatings(
+    actor: ActorContext,
+    applicationId: string,
+    page: number,
+    pageSize: number,
+  ) {
+    await this.assertAllowed(actor, "interact");
+    await this.requireApplication(applicationId);
+    if (page < 1 || pageSize < 1 || pageSize > 100) {
+      throw new Error("INTERACTION_PAGINATION_INVALID");
+    }
+    return this.repository.listRatings({ applicationId, page, pageSize });
+  }
+
+  async listComments(
+    actor: ActorContext,
+    applicationId: string,
+    page: number,
+    pageSize: number,
+  ) {
+    await this.assertAllowed(actor, "interact");
+    await this.requireApplication(applicationId);
+    if (page < 1 || pageSize < 1 || pageSize > 100) {
+      throw new Error("INTERACTION_PAGINATION_INVALID");
+    }
+    return this.repository.listComments({ applicationId, page, pageSize });
+  }
+
+  async hideComment(
+    actor: ActorContext,
+    applicationId: string,
+    commentId: string,
+  ) {
+    await this.assertAllowed(actor, "moderate");
+    const comment = await this.repository.findComment(commentId);
+    if (comment === null || comment.applicationId !== applicationId) {
+      throw new Error("COMMENT_NOT_FOUND");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const updated = await repository.hideComment(commentId);
+      await repository.recordAudit({
+        applicationId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "interaction.comment.hidden",
+        details: { commentId },
+      });
+      await repository.emitOutbox?.({
+        applicationId,
+        eventType: "interaction.comment.hidden",
+      });
+      return updated;
+    });
+  }
+
+  async restoreComment(
+    actor: ActorContext,
+    applicationId: string,
+    commentId: string,
+  ) {
+    await this.assertAllowed(actor, "moderate");
+    const comment = await this.repository.findComment(commentId);
+    if (comment === null || comment.applicationId !== applicationId) {
+      throw new Error("COMMENT_NOT_FOUND");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const updated = await repository.restoreComment(commentId);
+      await repository.recordAudit({
+        applicationId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "interaction.comment.restored",
+        details: { commentId },
+      });
+      await repository.emitOutbox?.({
+        applicationId,
+        eventType: "interaction.comment.restored",
+      });
+      return updated;
+    });
+  }
+
   private async requireApplication(applicationId: string) {
     const application = await this.repository.findApplication(applicationId);
     if (application === null) throw new Error("APPLICATION_NOT_FOUND");

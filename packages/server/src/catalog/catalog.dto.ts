@@ -136,3 +136,15 @@ export class CatalogListResultDto {
   @ApiProperty({ type: Number, description: "每页数量", example: 20 })
   pageSize!: number;
 }
+
+/** 风险说明响应。 */
+export class RiskDescriptionDto {
+  @ApiProperty({ type: String, description: "风险说明内容" })
+  riskDescription!: string;
+}
+
+/** 保存风险说明请求。 */
+export class SaveRiskDescriptionRequestDto {
+  @ApiProperty({ type: String, description: "风险说明内容" })
+  riskDescription!: string;
+}
