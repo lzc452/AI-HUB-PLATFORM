@@ -31,8 +31,41 @@ async function bootstrap() {
   const metrics = new ObservabilityMetrics({
     collectOutboxCounts: createOutboxCountCollector(config.databaseUrl),
   });
+  const identityOptions: {
+    loginEncryptionPrivateKey?: string;
+    dingtalkSso?: {
+      clientId: string;
+      clientSecret: string;
+      corpId: string;
+      redirectUri: string;
+    };
+  } = {};
+  if (config.loginEncryptionPrivateKey !== undefined) {
+    identityOptions.loginEncryptionPrivateKey =
+      config.loginEncryptionPrivateKey;
+  }
+  if (
+    config.dingtalkSsoEnabled &&
+    config.dingtalkClientId !== undefined &&
+    config.dingtalkClientSecret !== undefined &&
+    config.dingtalkCorpId !== undefined &&
+    config.dingtalkRedirectUri !== undefined
+  ) {
+    identityOptions.dingtalkSso = {
+      clientId: config.dingtalkClientId,
+      clientSecret: config.dingtalkClientSecret,
+      corpId: config.dingtalkCorpId,
+      redirectUri: config.dingtalkRedirectUri,
+    };
+  }
+
   const app = await NestFactory.create(
-    ApiModule.register(config.databaseUrl, { logger, metrics }),
+    ApiModule.register(
+      config.databaseUrl,
+      { logger, metrics },
+      undefined,
+      identityOptions,
+    ),
     { logger: new PinoNestLogger(logger) },
   );
 

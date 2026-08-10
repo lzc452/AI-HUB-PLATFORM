@@ -61,6 +61,13 @@ export interface CreateEmployeeInput {
   passwordHash?: string | null;
 }
 
+export type Auditor = (input: {
+  actorEmployeeId: EmployeeId | null;
+  eventType: string;
+  subjectEmployeeId: EmployeeId | null;
+  details: unknown;
+}) => Promise<void>;
+
 export interface IdentityRepository {
   withTransaction<T>(
     operation: (repository: IdentityRepository) => Promise<T>,
@@ -69,6 +76,14 @@ export interface IdentityRepository {
   createEmployee(input: CreateEmployeeInput): Promise<void>;
   assignRole(employeeId: EmployeeId, roleCode: string): Promise<void>;
   findEmployee(employeeId: EmployeeId): Promise<EmployeeRecord | null>;
+  /** Lookup employee by standardized employee_number (already uppercase-trimmed). */
+  findEmployeeByEmployeeNumber(
+    employeeNumber: string,
+  ): Promise<EmployeeRecord | null>;
+  /** Find who a DingTalk user ID is bound to. */
+  findEmployeeByDingTalkUserId(
+    dingtalkUserId: string,
+  ): Promise<EmployeeRecord | null>;
   listEmployees(): Promise<readonly EmployeeSummary[]>;
   listDepartments(): Promise<readonly DepartmentSummary[]>;
   listEmployeeDepartmentIds(employeeId: EmployeeId): Promise<readonly string[]>;
@@ -110,6 +125,38 @@ export interface IdentityRepository {
     subjectEmployeeId: EmployeeId | null;
     details: unknown;
   }): Promise<void>;
+  // ── DingTalk SSO ───────────────────────────────────────────
+  createDingTalkSsoTransaction(input: {
+    stateHash: string;
+    browserContextBindingHash: string;
+    handoffTokenHash?: string;
+    returnTo: string;
+    expiresAt: Date;
+  }): Promise<DingTalkSsoTransactionRecord>;
+  findDingTalkSsoTransactionByStateHash(
+    stateHash: string,
+  ): Promise<DingTalkSsoTransactionRecord | null>;
+  findDingTalkSsoTransactionByHandoffHash(
+    handoffHash: string,
+  ): Promise<DingTalkSsoTransactionRecord | null>;
+  updateDingTalkSsoTransactionAfterCallback(
+    transactionId: string,
+    dingtalkUserId: string,
+  ): Promise<void>;
+  consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean>;
+  activateEmployee(employeeId: EmployeeId): Promise<void>;
+}
+
+export interface DingTalkSsoTransactionRecord {
+  transactionId: string;
+  stateHash: string;
+  browserContextBindingHash: string;
+  handoffTokenHash: string | null;
+  returnTo: string;
+  dingtalkUserId: string | null;
+  employeeId: string | null;
+  expiresAt: Date;
+  consumedAt: Date | null;
 }
 
 export interface LoginResult {

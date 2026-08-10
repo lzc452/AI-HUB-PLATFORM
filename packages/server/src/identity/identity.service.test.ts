@@ -4,6 +4,7 @@ import { IdentityService } from "./identity.service.js";
 import { PasswordService } from "./password.service.js";
 import type {
   CreateEmployeeInput,
+  DingTalkSsoTransactionRecord,
   EmployeeRecord,
   IdentityRepository,
   RoleRecord,
@@ -18,6 +19,7 @@ class MemoryIdentityRepository implements IdentityRepository {
   readonly sessions: SessionRecord[] = [];
   readonly passwordResetChallenges: PasswordResetChallengeRecord[] = [];
   readonly dingtalkBindings = new Map<EmployeeId, string>();
+  readonly ssoTransactions: DingTalkSsoTransactionRecord[] = [];
 
   async withTransaction<T>(
     operation: (repository: IdentityRepository) => Promise<T>,
@@ -49,6 +51,24 @@ class MemoryIdentityRepository implements IdentityRepository {
   }
 
   async findEmployee(employeeId: EmployeeId): Promise<EmployeeRecord | null> {
+    return this.employees.get(employeeId) ?? null;
+  }
+
+  async findEmployeeByEmployeeNumber(
+    employeeNumber: string,
+  ): Promise<EmployeeRecord | null> {
+    return (
+      [...this.employees.values()].find(
+        (e) => e.employeeId === employeeNumber,
+      ) ?? null
+    );
+  }
+
+  async findEmployeeByDingTalkUserId(
+    dingtalkUserId: string,
+  ): Promise<EmployeeRecord | null> {
+    const employeeId = this.dingtalkBindings.get(dingtalkUserId);
+    if (employeeId === undefined) return null;
     return this.employees.get(employeeId) ?? null;
   }
 
@@ -138,7 +158,7 @@ class MemoryIdentityRepository implements IdentityRepository {
     employeeId: EmployeeId,
     dingtalkUserId: string,
   ): Promise<void> {
-    this.dingtalkBindings.set(employeeId, dingtalkUserId);
+    this.dingtalkBindings.set(dingtalkUserId, employeeId);
   }
 
   async createDingTalkSyncRun(): Promise<string> {
@@ -187,6 +207,87 @@ class MemoryIdentityRepository implements IdentityRepository {
 
   async recordAudit(input: { eventType: string }): Promise<void> {
     this.audits.push(input.eventType);
+  }
+
+  // ── SSO stubs ───────────────────────────────────────────────
+
+  async createDingTalkSsoTransaction(input: {
+    stateHash: string;
+    browserContextBindingHash: string;
+    handoffTokenHash?: string;
+    returnTo: string;
+    expiresAt: Date;
+  }): Promise<DingTalkSsoTransactionRecord> {
+    const record: DingTalkSsoTransactionRecord = {
+      transactionId: `ssotx-${this.ssoTransactions.length + 1}`,
+      stateHash: input.stateHash,
+      browserContextBindingHash: input.browserContextBindingHash,
+      handoffTokenHash: input.handoffTokenHash ?? null,
+      returnTo: input.returnTo,
+      dingtalkUserId: null,
+      employeeId: null,
+      expiresAt: input.expiresAt,
+      consumedAt: null,
+    };
+    this.ssoTransactions.push(record);
+    return record;
+  }
+
+  async findDingTalkSsoTransactionByStateHash(
+    stateHash: string,
+  ): Promise<DingTalkSsoTransactionRecord | null> {
+    return (
+      this.ssoTransactions.find((tx) => tx.stateHash === stateHash) ?? null
+    );
+  }
+
+  async findDingTalkSsoTransactionByHandoffHash(
+    handoffHash: string,
+  ): Promise<DingTalkSsoTransactionRecord | null> {
+    return (
+      this.ssoTransactions.find(
+        (tx) => tx.handoffTokenHash === handoffHash,
+      ) ?? null
+    );
+  }
+
+  async updateDingTalkSsoTransactionAfterCallback(
+    transactionId: string,
+    dingtalkUserId: string,
+  ): Promise<void> {
+    const tx = this.ssoTransactions.find(
+      (t) => t.transactionId === transactionId,
+    );
+    if (tx !== undefined) {
+      tx.dingtalkUserId = dingtalkUserId;
+    }
+  }
+
+  async consumeDingTalkSsoTransaction(
+    transactionId: string,
+  ): Promise<boolean> {
+    const tx = this.ssoTransactions.find(
+      (t) => t.transactionId === transactionId,
+    );
+    if (
+      tx === undefined ||
+      tx.consumedAt !== null ||
+      tx.expiresAt.getTime() <= Date.now()
+    ) {
+      return false;
+    }
+    tx.consumedAt = new Date();
+    return true;
+  }
+
+  async activateEmployee(employeeId: EmployeeId): Promise<void> {
+    const employee = this.employees.get(employeeId);
+    if (employee !== undefined && employee.status === "pending_binding") {
+      this.employees.set(employeeId, {
+        ...employee,
+        status: "active",
+      });
+    }
   }
 }
 

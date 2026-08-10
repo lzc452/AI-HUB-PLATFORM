@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, Checkbox, Form, Input, message } from "antd";
+import { Button, Checkbox, Form, Input } from "antd";
 import { Controller, useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
@@ -75,11 +76,22 @@ function DingTalkLogo() {
 }
 
 export default function LoginPage() {
-  const { error, isLoading, login } = useAuth();
+  const { error, isLoading, login, startDingTalkLogin, completeDingTalkLogin } =
+    useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from =
     (location.state as { from?: string } | null)?.from ?? ROUTES.marketplace;
+
+  // Handle DingTalk SSO callback on mount.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.has("code") && params.has("state")) {
+      completeDingTalkLogin().then((succeeded) => {
+        if (succeeded) navigate(from, { replace: true });
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     control,
@@ -211,7 +223,7 @@ export default function LoginPage() {
                   block
                   className="!mt-3"
                   onClick={() => {
-                    void message.info("钉钉登录即将开放，敬请期待");
+                    void startDingTalkLogin(from);
                   }}
                   style={{
                     borderColor: "var(--color-primary, #1677ff)",

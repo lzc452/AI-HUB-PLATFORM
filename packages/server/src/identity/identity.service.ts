@@ -3,6 +3,7 @@ import type {
   AuthorizationDecision,
   AuthorizationRequest,
   EmployeeId,
+  EncryptedLoginEnvelope,
 } from "@ai-hub/contracts";
 import { hasPermission } from "@ai-hub/contracts";
 import { PasswordService } from "./password.service.js";
@@ -14,6 +15,11 @@ import type {
   LoginResult,
   AudienceEvaluator,
 } from "./identity.types.js";
+import type {
+  ChallengeContext,
+  LoginEncryptionService,
+} from "./login-encryption.service.js";
+import type { LoginChallengeStore } from "./login-challenge.store.js";
 import { createHash, randomBytes } from "crypto";
 
 const sessionTtlMs = 1000 * 60 * 60 * 24 * 14;
@@ -26,6 +32,8 @@ export class IdentityService {
     private readonly audienceEvaluator: AudienceEvaluator = (request) =>
       request.audience?.departmentId === undefined ||
       request.actor.departmentIds.includes(request.audience.departmentId),
+    private readonly encryption?: LoginEncryptionService,
+    private readonly challengeStore?: LoginChallengeStore,
   ) {}
 
   async createLocalEmployee(
@@ -400,5 +408,57 @@ export class IdentityService {
 
   listEmployeeRoles(employeeId: EmployeeId) {
     return this.repository.listEmployeeRoles(employeeId);
+  }
+
+  // ── Login encryption ───────────────────────────────────────
+
+  /** Generate an encryption challenge (public JWK + nonce). */
+  generateChallenge(): ChallengeContext {
+    if (this.encryption === undefined) {
+      throw new Error("LOGIN_METHOD_UNAVAILABLE");
+    }
+    return this.encryption.createChallenge();
+  }
+
+  /** Login with an encrypted envelope. */
+  async loginWithEncryptedPassword(
+    envelope: EncryptedLoginEnvelope,
+  ): Promise<LoginResult> {
+    if (
+      this.encryption === undefined ||
+      this.challengeStore === undefined
+    ) {
+      throw new Error("LOGIN_METHOD_UNAVAILABLE");
+    }
+
+    // Consume the nonce (replay protection).
+    const nonceHash = createHash("sha256")
+      .update(envelope.nonce)
+      .digest("hex");
+    const consumed = await this.challengeStore.consume(
+      nonceHash,
+      new Date(Date.now() + 5 * 60 * 1000),
+    );
+    if (!consumed) {
+      throw new Error("LOGIN_REPLAY_DETECTED");
+    }
+
+    const payload = await this.encryption.decryptEnvelope(
+      envelope,
+      envelope.nonce,
+    );
+
+    return this.loginWithPassword({
+      employeeId: payload.employeeId,
+      password: payload.password,
+      deviceLabel: payload.deviceLabel,
+    });
+  }
+
+  // ── DingTalk SSO helpers ───────────────────────────────────
+
+  /** Standardize an employee number for lookup: trim + uppercase. */
+  standardizeEmployeeNumber(raw: string): string {
+    return raw.trim().toUpperCase();
   }
 }

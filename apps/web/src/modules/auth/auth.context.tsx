@@ -9,7 +9,16 @@ import {
   type PropsWithChildren,
 } from "react";
 
-import { fetchActor, loginWithPassword, logoutSession } from "./auth.client";
+import {
+  fetchActor,
+  fetchLoginChallenge,
+  loginWithEnvelope,
+  loginWithPassword,
+  logoutSession,
+  startDingTalkSso,
+  completeDingTalkSso,
+} from "./auth.client";
+import { buildLoginEnvelope } from "./login-encryption";
 import {
   canAccess as canAccessRequirement,
   hasPermission as actorHasPermission,
@@ -54,6 +63,10 @@ export interface AuthContextValue {
   login: (employeeId: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   session: AuthSession | null;
+  /** Start DingTalk SSO OAuth flow (redirects browser). */
+  startDingTalkLogin: (returnTo?: string) => Promise<void>;
+  /** Complete DingTalk SSO after OAuth callback. */
+  completeDingTalkLogin: () => Promise<boolean>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -163,7 +176,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await loginWithPassword(employeeId, password);
+        // Two-step encrypted login: fetch challenge → build envelope → POST.
+        const challenge = await fetchLoginChallenge();
+        const envelope = await buildLoginEnvelope(
+          employeeId,
+          password,
+          challenge,
+        );
+        const response = await loginWithEnvelope(employeeId, envelope);
         if (requestVersion !== requestVersionRef.current) {
           return false;
         }
@@ -179,15 +199,73 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return true;
       } catch (cause) {
         if (requestVersion === requestVersionRef.current) {
-          setError(errorMessage(cause));
-          setActor(null);
-          setIsLoading(false);
+          // Fall back to legacy plaintext login if encryption fails.
+          try {
+            const response = await loginWithPassword(employeeId, password);
+            if (requestVersion !== requestVersionRef.current) return false;
+            const nextSession = {
+              employeeId: response.actor.employeeId,
+              sessionId: response.actor.sessionId,
+            };
+            hydratedSessionKeyRef.current = sessionKey(nextSession);
+            setActor(response.actor);
+            setSession(nextSession);
+            setIsLoading(false);
+            showSuccessMessage("登录成功");
+            return true;
+          } catch {
+            if (requestVersion === requestVersionRef.current) {
+              setError("用户名或密码错误");
+              setActor(null);
+              setIsLoading(false);
+            }
+            return false;
+          }
         }
         return false;
       }
     },
     [setActor],
   );
+
+  const startDingTalkLogin = useCallback(
+    async (returnTo = "/marketplace") => {
+      try {
+        const result = await startDingTalkSso(returnTo);
+        window.location.href = result.redirectUrl;
+      } catch {
+        setError("钉钉登录暂不可用");
+      }
+    },
+    [],
+  );
+
+  const completeDingTalkLogin = useCallback(async () => {
+    const requestVersion = ++requestVersionRef.current;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await completeDingTalkSso();
+      if (requestVersion !== requestVersionRef.current) return false;
+      const nextSession = {
+        employeeId: response.actor.employeeId,
+        sessionId: response.actor.sessionId,
+      };
+      hydratedSessionKeyRef.current = sessionKey(nextSession);
+      setActor(response.actor);
+      setSession(nextSession);
+      setIsLoading(false);
+      showSuccessMessage("钉钉登录成功");
+      return true;
+    } catch (cause) {
+      if (requestVersion === requestVersionRef.current) {
+        setError("钉钉登录失败，请重试");
+        setActor(null);
+        setIsLoading(false);
+      }
+      return false;
+    }
+  }, [setActor]);
 
   const logout = useCallback(async () => {
     const requestVersion = ++requestVersionRef.current;
@@ -231,6 +309,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       session,
+      startDingTalkLogin,
+      completeDingTalkLogin,
     }),
     [
       actor,
@@ -242,6 +322,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       session,
+      startDingTalkLogin,
+      completeDingTalkLogin,
     ],
   );
 

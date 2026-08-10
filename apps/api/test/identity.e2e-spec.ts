@@ -105,6 +105,27 @@ class ApiIdentityRepository implements IdentityRepository {
     return true;
   }
   async recordAudit(): Promise<void> {}
+  // ── New methods ─────────────────────────────────────────────
+  async findEmployeeByEmployeeNumber() { return null; }
+  async findEmployeeByDingTalkUserId() { return null; }
+  async createDingTalkSsoTransaction() {
+    return {
+      transactionId: "sso-tx-1",
+      stateHash: "hash",
+      browserContextBindingHash: "hash",
+      handoffTokenHash: null,
+      returnTo: "/",
+      dingtalkUserId: null,
+      employeeId: null,
+      expiresAt: new Date("2099-01-01T00:00:00Z"),
+      consumedAt: null,
+    };
+  }
+  async findDingTalkSsoTransactionByStateHash() { return null; }
+  async findDingTalkSsoTransactionByHandoffHash() { return null; }
+  async updateDingTalkSsoTransactionAfterCallback(): Promise<void> {}
+  async consumeDingTalkSsoTransaction() { return true; }
+  async activateEmployee(): Promise<void> {}
 }
 
 describe("identity endpoints", () => {

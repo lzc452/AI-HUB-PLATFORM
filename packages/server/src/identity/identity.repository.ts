@@ -339,4 +339,157 @@ export class KyselyIdentityRepository implements IdentityRepository {
       })
       .execute();
   }
+
+  // ── employee_number / DingTalk SSO ─────────────────────────
+
+  async findEmployeeByEmployeeNumber(
+    employeeNumber: string,
+  ): Promise<EmployeeRecord | null> {
+    const row = await this.db
+      .selectFrom("employees")
+      .selectAll()
+      .where("employee_id", "=", employeeNumber)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      employeeId: row.employee_id,
+      displayName: row.display_name,
+      status: row.status,
+      primaryDepartmentId: row.primary_department_id,
+      passwordHash: row.password_hash,
+      passwordResetRequired: row.password_reset_required,
+    };
+  }
+
+  async findEmployeeByDingTalkUserId(
+    dingtalkUserId: string,
+  ): Promise<EmployeeRecord | null> {
+    const row = await this.db
+      .selectFrom("dingtalk_bindings")
+      .innerJoin(
+        "employees",
+        "employees.employee_id",
+        "dingtalk_bindings.employee_id",
+      )
+      .selectAll("employees")
+      .where("dingtalk_bindings.dingtalk_user_id", "=", dingtalkUserId)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      employeeId: row.employee_id,
+      displayName: row.display_name,
+      status: row.status,
+      primaryDepartmentId: row.primary_department_id,
+      passwordHash: row.password_hash,
+      passwordResetRequired: row.password_reset_required,
+    };
+  }
+
+  async createDingTalkSsoTransaction(input: {
+    stateHash: string;
+    browserContextBindingHash: string;
+    handoffTokenHash?: string;
+    returnTo: string;
+    expiresAt: Date;
+  }): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord> {
+    const row = await this.db
+      .insertInto("dingtalk_sso_transactions")
+      .values({
+        state_hash: input.stateHash,
+        browser_context_binding_hash: input.browserContextBindingHash,
+        handoff_token_hash: input.handoffTokenHash ?? null,
+        return_to: input.returnTo,
+        expires_at: input.expiresAt,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return {
+      transactionId: row.transaction_id,
+      stateHash: row.state_hash,
+      browserContextBindingHash: row.browser_context_binding_hash,
+      handoffTokenHash: row.handoff_token_hash,
+      returnTo: row.return_to,
+      dingtalkUserId: row.dingtalk_user_id,
+      employeeId: row.employee_id,
+      expiresAt: row.expires_at,
+      consumedAt: row.consumed_at,
+    };
+  }
+
+  async findDingTalkSsoTransactionByStateHash(
+    stateHash: string,
+  ): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord | null> {
+    const row = await this.db
+      .selectFrom("dingtalk_sso_transactions")
+      .selectAll()
+      .where("state_hash", "=", stateHash)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      transactionId: row.transaction_id,
+      stateHash: row.state_hash,
+      browserContextBindingHash: row.browser_context_binding_hash,
+      handoffTokenHash: row.handoff_token_hash,
+      returnTo: row.return_to,
+      dingtalkUserId: row.dingtalk_user_id,
+      employeeId: row.employee_id,
+      expiresAt: row.expires_at,
+      consumedAt: row.consumed_at,
+    };
+  }
+
+  async findDingTalkSsoTransactionByHandoffHash(
+    handoffHash: string,
+  ): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord | null> {
+    const row = await this.db
+      .selectFrom("dingtalk_sso_transactions")
+      .selectAll()
+      .where("handoff_token_hash", "=", handoffHash)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      transactionId: row.transaction_id,
+      stateHash: row.state_hash,
+      browserContextBindingHash: row.browser_context_binding_hash,
+      handoffTokenHash: row.handoff_token_hash,
+      returnTo: row.return_to,
+      dingtalkUserId: row.dingtalk_user_id,
+      employeeId: row.employee_id,
+      expiresAt: row.expires_at,
+      consumedAt: row.consumed_at,
+    };
+  }
+
+  async updateDingTalkSsoTransactionAfterCallback(
+    transactionId: string,
+    dingtalkUserId: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable("dingtalk_sso_transactions")
+      .set({ dingtalk_user_id: dingtalkUserId })
+      .where("transaction_id", "=", transactionId)
+      .execute();
+  }
+
+  async consumeDingTalkSsoTransaction(
+    transactionId: string,
+  ): Promise<boolean> {
+    const result = await this.db
+      .updateTable("dingtalk_sso_transactions")
+      .set({ consumed_at: new Date() })
+      .where("transaction_id", "=", transactionId)
+      .where("consumed_at", "is", null)
+      .where("expires_at", ">", new Date())
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) === 1;
+  }
+
+  async activateEmployee(employeeId: EmployeeId): Promise<void> {
+    await this.db
+      .updateTable("employees")
+      .set({ status: "active" })
+      .where("employee_id", "=", employeeId)
+      .where("status", "=", "pending_binding")
+      .execute();
+  }
 }
