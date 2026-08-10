@@ -22,7 +22,7 @@
  *   00000007    application_ratings      (10)
  *   00000008    application_comments     (20)
  *   00000009    application_reports      (5)
- *   0000000a    catalog_delivery_actions (20)
+ *   0000000a    catalog_delivery_actions (32)
  *   00000010    ai_demands               (18)
  *   00000011    ai_demand_comments       (15)
  *   00000012    ai_demand_reports        (5)
@@ -133,9 +133,9 @@ const APP_REPORTS = Object.freeze(
   Array.from({ length: 5 }, (_, i) => uuid("00000009", i + 1)),
 );
 
-/* Delivery actions (20) */
+/* Delivery actions (32) */
 const DELIVERY_ACTIONS = Object.freeze(
-  Array.from({ length: 20 }, (_, i) => uuid("0000000a", i + 1)),
+  Array.from({ length: 32 }, (_, i) => uuid("0000000a", i + 1)),
 );
 
 /**
@@ -335,7 +335,7 @@ export const IDS = Object.freeze({
   /** 5 application report UUIDs (index 0..4). */
   appReport: APP_REPORTS,
 
-  /** 20 delivery-action UUIDs (index 0..19). */
+  /** 32 delivery-action UUIDs (index 0..31). */
   deliveryAction: DELIVERY_ACTIONS,
 
   demand: Object.freeze({
