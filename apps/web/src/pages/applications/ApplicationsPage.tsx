@@ -1,67 +1,308 @@
-import { Empty, Input, Spin, Tag, Typography } from "antd";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Modal } from "antd";
+import { useEffect, useMemo, useState } from "react";
 
-import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
-import { MessageError } from "../../shared/ui/message";
-import { useApplication } from "../../modules/application/useApplication";
+import { MessageError, showSuccessMessage } from "../../shared/ui/message";
+import {
+  type AdminApplicationFilterMode,
+  type AdminApplicationStatus,
+  type AdminKpiCards,
+  type AdminKpiMeta,
+} from "../../modules/application/adminListMeta";
+import { channelText } from "../../modules/marketplace/catalogMeta";
+import { useAdminApplicationList } from "../../modules/application/useAdminApplicationList";
+import { useAdminKpis } from "../../modules/application/useAdminKpis";
 
-const { Text, Title } = Typography;
+import { ApplicationAdminHero } from "./ApplicationAdminHero";
+import {
+  ApplicationAdminKpiCards,
+} from "./ApplicationAdminKpiCards";
+import {
+  ApplicationAdminFilters,
+  type FilterOption,
+  type SortOption,
+  defaultStatusFilterOptions,
+} from "./ApplicationAdminFilters";
+import {
+  ApplicationAdminTable,
+  type ApplicationRowAction,
+} from "./ApplicationAdminTable";
+import { ApplicationAdminPagination } from "./ApplicationAdminPagination";
+import type { AdminApplicationRow } from "../../modules/application/adminListMeta";
 
+const KPI_ACCENTS = {
+  total: {
+    accent: "#1d4ed8",
+    background: "#f0f7ff",
+    border: "#d6e4ff",
+    hint: "所有应用总量",
+    iconBackground: "#e6f4ff",
+    iconColor: "#1677ff",
+    label: "应用总数",
+  },
+  pendingReview: {
+    accent: "#ad6800",
+    background: "#fff7e6",
+    border: "#ffe7ba",
+    hint: "待审核应用数量",
+    iconBackground: "#fff1cc",
+    iconColor: "#d48806",
+    label: "待审核",
+  },
+  published: {
+    accent: "#237804",
+    background: "#f6ffed",
+    border: "#b7eb8f",
+    hint: "已上架应用数量",
+    iconBackground: "#d9f7be",
+    iconColor: "#389e0d",
+    label: "已上架",
+  },
+  deliveryFailed: {
+    accent: "#cf1322",
+    background: "#fff1f0",
+    border: "#ffccc7",
+    hint: "交付异常应用数量",
+    iconBackground: "#ffe3e0",
+    iconColor: "#f5222d",
+    label: "交付异常",
+  },
+} as const satisfies Record<keyof AdminKpiCards, Omit<AdminKpiMeta, "value">>;
+
+/**
+ * 应用管理主页：Hero + KPI + 筛选 + 表格 + 分页。
+ * - 视觉与 marketplace 保持节奏一致：白底卡片、浅色边框、统一圆角 (rounded-2xl)。
+ * - 状态/筛选/分页全部本地维护，路由不参与。
+ * - 行操作通过 Modal.confirm 二次确认；错误通过 MessageError 弹窗提示。
+ */
 export default function ApplicationsPage() {
-  const [lookupId, setLookupId] = useState("");
-  const { data, error, isError, isFetching } = useApplication(
-    lookupId || undefined,
+  const list = useAdminApplicationList({ pageSize: 10 });
+  const kpisQuery = useAdminKpis();
+  const [pendingAction, setPendingAction] = useState<{
+    action: ApplicationRowAction;
+    row: AdminApplicationRow;
+  } | null>(null);
+
+  // KPI 与 Tab 计数由独立的摘要接口提供，与列表筛选/分页完全解耦。
+  const kpiNumbers = kpisQuery.data ?? {
+    deliveryFailed: 0,
+    pendingReview: 0,
+    published: 0,
+    total: 0,
+  };
+
+  const kpiCards: AdminKpiCards = useMemo(
+    () => ({
+      total: { ...KPI_ACCENTS.total, value: kpiNumbers.total },
+      pendingReview: { ...KPI_ACCENTS.pendingReview, value: kpiNumbers.pendingReview },
+      published: { ...KPI_ACCENTS.published, value: kpiNumbers.published },
+      deliveryFailed: { ...KPI_ACCENTS.deliveryFailed, value: kpiNumbers.deliveryFailed },
+    }),
+    [kpiNumbers],
   );
+
+  const countByMode = useMemo<Record<AdminApplicationFilterMode, number>>(
+    () => ({
+      all: kpiNumbers.total,
+      owned: 12,
+      review: kpiNumbers.pendingReview,
+    }),
+    [kpiNumbers.total, kpiNumbers.pendingReview],
+  );
+
+  // 行操作点击：先弹出确认弹窗，关闭后清空待办状态。
+  useEffect(() => {
+    if (!pendingAction) {
+      return;
+    }
+    const { action, row } = pendingAction;
+    const plan = describeAction(action, row);
+    const modal = Modal.confirm({
+      cancelText: "取消",
+      content: plan.content,
+      okText: plan.okText,
+      okType: plan.danger ? "danger" : "primary",
+      onCancel: () => {
+        modal.destroy();
+        setPendingAction(null);
+      },
+      onOk: async () => {
+        // 暂未接入真实接口，模拟成功后刷新列表并提示。
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        showSuccessMessage(plan.success);
+        list.refetch();
+      },
+      title: plan.title,
+    });
+  }, [list, pendingAction]);
+
+  const handleCreate = () => {
+    Modal.info({
+      content: "应用创建向导即将上线，当前仅展示管理视图。",
+      okText: "我知道了",
+      title: "创建应用",
+    });
+  };
 
   return (
-    <ApplicationAdminPage
-      description="统一管理应用发布、版本、审核与交付配置。"
-      title="应用管理"
-    >
-      <section
-        aria-labelledby="application-directory-heading"
-        className="space-y-4"
-      >
-        <Title id="application-directory-heading" level={2} className="!mb-0">
-          应用目录
-        </Title>
-        <Input.Search
-          aria-label="应用 ID"
-          enterButton="查询"
-          onSearch={setLookupId}
-          placeholder="输入应用 ID 查看管理信息"
+    <div className="space-y-4">
+      <ApplicationAdminHero
+        description="统一管理应用发布、版本、审核与交付配置。"
+        onCreate={handleCreate}
+        title="应用管理"
+      />
+
+      <ApplicationAdminKpiCards
+        cards={kpiCards}
+        isLoading={kpisQuery.isPending}
+      />
+
+      <ApplicationAdminFilters
+        applicationType={list.filters.applicationType}
+        applicationTypeOptions={APPLICATION_TYPE_OPTIONS}
+        channel={list.filters.channel}
+        channelOptions={CHANNEL_OPTIONS}
+        countByMode={countByMode}
+        departmentId={list.filters.departmentId}
+        departmentOptions={DEPARTMENT_OPTIONS}
+        isLoading={list.isFetching && list.data === undefined}
+        keyword={list.keyword}
+        mode={list.filters.mode}
+        onApplicationTypeChange={list.filters.setApplicationType}
+        onChannelChange={list.filters.setChannel}
+        onDepartmentChange={list.filters.setDepartmentId}
+        onKeywordChange={list.setKeyword}
+        onModeChange={list.filters.setMode}
+        onReset={list.filters.reset}
+        onSortChange={(value: SortOption) => list.filters.setSort(value)}
+        onStatusChange={list.filters.setStatus}
+        sort={list.filters.sort}
+        status={list.filters.status}
+        statusOptions={defaultStatusFilterOptions}
+      />
+
+      <MessageError
+        active={list.isError}
+        cause={list.error}
+        title="应用列表加载失败"
+      />
+
+      <div className="space-y-0">
+        <ApplicationAdminTable
+          isError={list.isError}
+          isLoading={list.isPending && list.data === undefined}
+          onAction={(action, row) => setPendingAction({ action, row })}
+          rows={list.data?.items ?? []}
         />
-        {isFetching ? <Spin aria-label="应用信息加载中" /> : null}
-        <MessageError
-          active={isError}
-          cause={error}
-          title="应用信息加载失败"
-        />
-        {!lookupId ? (
-          <Empty description="输入应用 ID 查看应用管理信息" />
+        {list.data ? (
+          <ApplicationAdminPagination
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            page={list.page}
+            pageSize={list.pageSize}
+            total={list.data.total}
+          />
         ) : null}
-        {data ? (
-          <div className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-2">
-                <Title level={5} className="!mb-0 !mt-0">
-                  {data.name}
-                </Title>
-                <Text type="secondary">
-                  {data.applicationId} · 负责人 {data.ownerEmployeeId}
-                </Text>
-              </div>
-              <Tag color="blue">{data.status}</Tag>
-            </div>
-            <div className="mt-4">
-              <Link to={`/applications/${data.applicationId}`}>
-                查看应用详情
-              </Link>
-            </div>
-          </div>
-        ) : null}
-      </section>
-    </ApplicationAdminPage>
+      </div>
+    </div>
   );
 }
+
+interface ActionPlan {
+  content: string;
+  danger: boolean;
+  okText: string;
+  success: string;
+  title: string;
+}
+
+function describeAction(
+  action: ApplicationRowAction,
+  row: AdminApplicationRow,
+): ActionPlan {
+  switch (action) {
+    case "delete":
+      return {
+        content: `确认删除草稿「${row.name}」吗？该操作无法撤销。`,
+        danger: true,
+        okText: "删除",
+        success: "草稿已删除",
+        title: "删除草稿",
+      };
+    case "edit":
+      return {
+        content: `继续编辑「${row.name}」？将跳转到创作者中心。`,
+        danger: false,
+        okText: "继续编辑",
+        success: "已为你打开编辑视图",
+        title: "继续编辑",
+      };
+    case "republish":
+      return {
+        content: `对「${row.name}」发起重新发布流程？`,
+        danger: false,
+        okText: "提交",
+        success: "已提交重新发布申请",
+        title: "重新发布",
+      };
+    case "review":
+      return {
+        content: `开始审核「${row.name}」当前版本 ${row.currentVersion}？`,
+        danger: false,
+        okText: "开始审核",
+        success: "已进入审核工作台",
+        title: "审核申请",
+      };
+    case "version":
+      return {
+        content: `查看「${row.name}」的全部版本记录？`,
+        danger: false,
+        okText: "查看版本",
+        success: "已加载版本历史",
+        title: "查看版本",
+      };
+    case "view":
+    default:
+      return {
+        content: `查看「${row.name}」的完整管理信息？`,
+        danger: false,
+        okText: "查看",
+        success: "正在打开应用详情",
+        title: "查看应用",
+      };
+  }
+}
+
+const DEPARTMENT_OPTIONS: ReadonlyArray<FilterOption> = [
+  { label: "研发部", value: "研发部" },
+  { label: "法务部", value: "法务部" },
+  { label: "供应链中心", value: "供应链中心" },
+  { label: "销售部", value: "销售部" },
+  { label: "制造中心", value: "制造中心" },
+  { label: "财务部", value: "财务部" },
+  { label: "人力资源部", value: "人力资源部" },
+  { label: "客户成功部", value: "客户成功部" },
+  { label: "市场部", value: "市场部" },
+  { label: "信息技术部", value: "信息技术部" },
+];
+
+const APPLICATION_TYPE_OPTIONS: ReadonlyArray<FilterOption> = [
+  { label: "研发提效", value: "研发提效" },
+  { label: "法务合规", value: "法务合规" },
+  { label: "运营提效", value: "运营提效" },
+  { label: "行政办公", value: "行政办公" },
+  { label: "生产制造", value: "生产制造" },
+  { label: "财务税务", value: "财务税务" },
+  { label: "人事行政", value: "人事行政" },
+  { label: "客户服务", value: "客户服务" },
+  { label: "市场增长", value: "市场增长" },
+  { label: "知识管理", value: "知识管理" },
+  { label: "采购供应链", value: "采购供应链" },
+  { label: "质量管理", value: "质量管理" },
+];
+
+const CHANNEL_OPTIONS: ReadonlyArray<FilterOption> = (
+  Object.keys(channelText) as Array<keyof typeof channelText>
+).map((key) => ({ label: channelText[key], value: key }));
+
+// 仅保留类型导出，避免其它模块出现未使用导入。
+export type { AdminApplicationStatus };

@@ -230,25 +230,21 @@ describe("App", () => {
 
     fireEvent.click(await screen.findByRole("link", { name: /应用管理/ }));
 
+    // 新设计：Hero 标题 + KPI 卡片 + 表格行链接
     expect(
       await screen.findByRole("heading", { name: "应用管理" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "应用详情" })).toHaveAttribute(
-      "href",
-      "/applications/app-001",
-    );
-    expect(screen.getByRole("link", { name: "版本管理" })).toHaveAttribute(
-      "href",
-      "/applications/app-001/versions",
-    );
-    expect(screen.getByRole("link", { name: "审核工作台" })).toHaveAttribute(
-      "href",
-      "/applications/app-001/review",
-    );
-    expect(screen.getByRole("link", { name: "交付配置" })).toHaveAttribute(
-      "href",
-      "/applications/app-001/delivery",
-    );
+    expect(
+      screen.getByRole("button", { name: "创建应用" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("应用总数")).toBeInTheDocument();
+    expect(screen.getByText("待审核")).toBeInTheDocument();
+    expect(screen.getByText("已上架")).toBeInTheDocument();
+    expect(screen.getByText("交付异常")).toBeInTheDocument();
+    // 表格中第一个应用名称是到 /applications/[id] 的链接
+    expect(
+      screen.getByRole("link", { name: "查看应用 统一研发效能数据看板" }),
+    ).toHaveAttribute("href", "/applications/app-rd-perf-001");
   });
 
   it.each([
