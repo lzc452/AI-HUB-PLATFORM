@@ -3,7 +3,10 @@ import "reflect-metadata";
 
 // 本地开发时加载根目录 .env；生产环境由 Docker Compose 注入，.env 不存在则跳过
 const envPath = "../../.env";
-if (existsSync(envPath)) process.loadEnvFile(envPath);
+const processWithEnvLoader = process as typeof process & {
+  loadEnvFile?: (path?: string) => void;
+};
+if (existsSync(envPath)) processWithEnvLoader.loadEnvFile?.(envPath);
 
 import { NestFactory } from "@nestjs/core";
 import { parseRuntimeConfig } from "@ai-hub/config";

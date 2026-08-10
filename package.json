@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "compat:node": "node --test scripts/check-web-tooling-node-compat.test.mjs",
     "dev:services": "docker compose -f compose.yaml -f compose.dev.yaml up -d --wait postgres garage clamav",
-    "dev:api": "pnpm --filter @ai-hub/api dev",
+    "dev:api": "pnpm migrate && pnpm --filter @ai-hub/api dev",
     "dev:web": "pnpm --filter @ai-hub/web dev",
     "dev:worker": "pnpm --filter @ai-hub/worker dev",
     "boundaries": "dependency-cruiser apps packages --config dependency-cruiser.cjs",

@@ -993,18 +993,19 @@
           {
             id: "t-026",
             phase: "dev",
-            status: "进行中",
+            status: "已完成",
             title: "普通员工登录后无可访问路由",
             owner: "Codex",
             start: "2026-08-10",
-            end: "",
+            end: "2026-08-10",
             progress:
-              "已复现 DEMO-EMPLOYEE 登录后权限菜单为空，并完成前端路由、登录 actor、角色注册表与真实 PostgreSQL 数据链路排查。",
+              "已执行 migration 0013/0014 并恢复 employee 的 12 项统一权限；DEMO-EMPLOYEE 可访问应用市场、创新广场和通知，越权访问组织管理仍返回 403/无权限页。",
             problem:
-              "运行库仅执行到 migration 0012，employee 角色仍保存旧权限 marketplace.read；当前前后端要求 catalog.read 等统一点号权限，导致所有基础路由被过滤且对应 API 被拒绝。",
+              "运行库仅执行到 migration 0012，employee 角色仍保存旧权限 marketplace.read；当前前后端要求 catalog.read 等统一点号权限。开发 API 启动流程未自动迁移，真实演示账号回归又未断言基础权限，导致版本错位未被及时发现。",
             solution:
-              "待确认采用启动前自动补齐 migration 的持久化方案，并用真实 demo 账号端到端回归基础路由与 API 权限。",
-            skip: "当前尚未实施修复或完成回归验证。",
+              "将 dev:api 改为 migration 成功后才启动 API，并新增失败短路测试；强化 demo 账号真实 PostgreSQL E2E，要求所有账号具备员工基础权限；同步当前开发库迁移并校正统一授权后的回归断言。",
+            skip:
+              "全量 pnpm build 的 Web 阶段受当前工具沙箱禁止 esbuild 子进程影响（spawn EPERM）；pnpm test、pnpm typecheck、pnpm lint 及真实浏览器/API 回归均已通过。",
           },
           {
             id: "t-025",
@@ -1419,6 +1420,12 @@
             phase: "dev",
             title: "普通员工无可访问路由缺陷进入修复",
             body: "真实数据库确认 DEMO-EMPLOYEE 的 employee 角色仍为旧权限 marketplace.read，且 migration 仅执行到 0012；当前路由与 API 已改用 catalog.read 等统一权限，权限版本错位是菜单为空和访问被拒绝的根因。",
+          },
+          {
+            date: "2026-08-10",
+            phase: "test",
+            title: "普通员工基础路由权限修复并完成回归",
+            body: "开发 API 启动已增加 migration 前置与失败短路，当前数据库完成 0013/0014；DEMO-EMPLOYEE 登录后恢复 12 项权限，应用市场、创新广场、通知页面可访问，组织管理仍正确拒绝。全量 pnpm test、typecheck、lint 通过，并新增真实 demo 账号基础权限断言。",
           },
           {
             date: "2026-08-10",

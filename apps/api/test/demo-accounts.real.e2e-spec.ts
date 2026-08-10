@@ -24,6 +24,12 @@ const DEMO_PASSWORDS = {
   "DEMO-SUPER-ADMIN": "Demo-SuperAdmin-2026!",
 } as const;
 
+const BASE_EMPLOYEE_PERMISSIONS = [
+  "catalog.read",
+  "demand.read",
+  "notification.read",
+] as const;
+
 describe("real demo account login", () => {
   let db: ReturnType<typeof createDatabase>;
   let stop: (() => Promise<void>) | undefined;
@@ -88,6 +94,9 @@ describe("real demo account login", () => {
         primaryDepartmentId: account.primaryDepartmentId,
         sessionId: expect.any(String),
       });
+      expect(result.actor.permissions).toEqual(
+        expect.arrayContaining([...BASE_EMPLOYEE_PERMISSIONS]),
+      );
       expect(result.session).toMatchObject({
         employeeId: account.employeeId,
         deviceLabel: "demo-test",
@@ -108,7 +117,12 @@ describe("real demo account login", () => {
         expect(body).toMatchObject({
           actor: {
             employeeId: "DEMO-ORG-ADMIN",
-            roleCodes: ["organization_admin"],
+            roleCodes: ["employee", "organization_admin"],
+            permissions: expect.arrayContaining([
+              ...BASE_EMPLOYEE_PERMISSIONS,
+              "identity.employee.read",
+              "identity.department.read",
+            ]),
             sessionId: expect.any(String),
           },
           session: {
