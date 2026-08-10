@@ -489,7 +489,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-09",
+        updatedAt: "2026-08-10",
         phases: [
           {
             id: "product",
@@ -515,6 +515,7 @@
               "运行时错误反馈已迁移为 antd message.error，warning/success 反馈已统一",
               "innovationDetail 页面 UI 设计已定稿，采用需求说明与讨论区 60/40 分栏",
               "innovation 页面 UI 设计已定稿，采用结构化双列需求发现布局",
+              "应用管理页面 UI 设计已定稿，采用治理指标、精确筛选与全宽应用表格布局",
             ],
           },
           {
@@ -973,6 +974,39 @@
         ],
         tasks: [
           {
+            id: "t-027",
+            phase: "ui",
+            status: "已完成",
+            title: "应用管理页面 UI 设计定稿",
+            owner: "Codex",
+            start: "2026-08-10",
+            end: "2026-08-10",
+            progress:
+              "完成应用管理路由职责梳理与治理总览方案设计；最终 16:9 UI 图保存至 packages/ui/src/applicationManagement.png，设计规范保存至 docs/superpowers/specs/2026-08-10-application-management-ui-design.md。",
+            problem:
+              "应用管理需要与创作者中心明确分工，同时在同一页面承载应用状态、版本、审核、负责人、交付渠道和快捷操作。",
+            solution:
+              "采用浅蓝标题区、四项治理指标、角色视图切换、完整筛选条和全宽应用表格；复用现有蓝白产品壳、状态标签与 16px/8px 圆角规则。",
+            skip:
+              "本次仅完成主页面 UI 图和路由设计规范，尚未实现应用管理页面改版、响应式列表或新增交互。",
+          },
+          {
+            id: "t-026",
+            phase: "dev",
+            status: "进行中",
+            title: "普通员工登录后无可访问路由",
+            owner: "Codex",
+            start: "2026-08-10",
+            end: "",
+            progress:
+              "已复现 DEMO-EMPLOYEE 登录后权限菜单为空，并完成前端路由、登录 actor、角色注册表与真实 PostgreSQL 数据链路排查。",
+            problem:
+              "运行库仅执行到 migration 0012，employee 角色仍保存旧权限 marketplace.read；当前前后端要求 catalog.read 等统一点号权限，导致所有基础路由被过滤且对应 API 被拒绝。",
+            solution:
+              "待确认采用启动前自动补齐 migration 的持久化方案，并用真实 demo 账号端到端回归基础路由与 API 权限。",
+            skip: "当前尚未实施修复或完成回归验证。",
+          },
+          {
             id: "t-025",
             phase: "dev",
             status: "已完成",
@@ -1374,6 +1408,18 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-10",
+            phase: "ui",
+            title: "应用管理页面 UI 设计定稿",
+            body: "确认采用治理总览工作台方案，保留 /applications、详情、版本、审核和交付五级路由职责；最终设计以四项概览指标、精确筛选和全宽应用表格区分于创作者中心，并归档至 packages/ui/src/applicationManagement.png。",
+          },
+          {
+            date: "2026-08-10",
+            phase: "dev",
+            title: "普通员工无可访问路由缺陷进入修复",
+            body: "真实数据库确认 DEMO-EMPLOYEE 的 employee 角色仍为旧权限 marketplace.read，且 migration 仅执行到 0012；当前路由与 API 已改用 catalog.read 等统一权限，权限版本错位是菜单为空和访问被拒绝的根因。",
+          },
           {
             date: "2026-08-10",
             phase: "dev",
