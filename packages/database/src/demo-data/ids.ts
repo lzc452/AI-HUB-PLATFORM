@@ -32,6 +32,8 @@
  *   00000021    ai_demand_audit_events   (10)
  *   00000030    notifications            (20)
  *   00000040    analytics_behavior_events(30)
+ *   00000041    analytics_audit_events     (6)
+ *   00000042    analytics_export_jobs      (3)
  *
  * ## Department / employee IDs
  *
@@ -230,6 +232,39 @@ const BEHAVIOR_EVENTS = Object.freeze(
   Array.from({ length: 30 }, (_, i) => uuid("00000040", i + 1)),
 );
 
+/* Analytics audit events (6) */
+const ANALYTICS_AUDIT_EVENTS = Object.freeze(
+  Array.from({ length: 6 }, (_, i) => uuid("00000041", i + 1)),
+);
+
+/* Analytics export jobs (3) */
+const ANALYTICS_EXPORT_JOBS = Object.freeze(
+  Array.from({ length: 3 }, (_, i) => uuid("00000042", i + 1)),
+);
+
+/** Analytics metric keys (12).  String keys used in daily aggregates. */
+const ANALYTICS_METRIC_KEYS = Object.freeze([
+  "app_views",
+  "app_likes",
+  "app_ratings",
+  "app_comments",
+  "app_delivery_actions",
+  "demand_created",
+  "demand_published",
+  "demand_completed",
+  "demand_likes",
+  "demand_comments",
+  "active_users",
+  "total_events",
+] as const);
+
+/** Analytics audience scope keys (3). */
+const ANALYTICS_SCOPE_KEYS = Object.freeze([
+  "global",
+  "department",
+  "employee",
+] as const);
+
 // ── catalog string IDs (non-UUID primary keys) ───────────────────────────────
 
 /** Catalog categories (5).  String PK — not UUIDs. */
@@ -380,6 +415,18 @@ export const IDS = Object.freeze({
 
   /** 30 behavior-event UUIDs (index 0..29). */
   behaviorEvent: BEHAVIOR_EVENTS,
+
+  /** 6 analytics audit-event UUIDs (index 0..5). */
+  analyticsAuditEvent: ANALYTICS_AUDIT_EVENTS,
+
+  /** 3 analytics export-job UUIDs (index 0..2). */
+  analyticsExportJob: ANALYTICS_EXPORT_JOBS,
+
+  /** 12 analytics metric keys. */
+  analyticsMetric: ANALYTICS_METRIC_KEYS,
+
+  /** 3 analytics audience scope keys. */
+  analyticsScope: ANALYTICS_SCOPE_KEYS,
 
   catalog: Object.freeze({
     category: CATEGORIES,

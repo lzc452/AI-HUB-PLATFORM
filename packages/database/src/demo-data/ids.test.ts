@@ -108,8 +108,8 @@ describe("IDS counts", () => {
     expect(IDS.appReport).toHaveLength(5);
   });
 
-  it("has 20 delivery actions", () => {
-    expect(IDS.deliveryAction).toHaveLength(20);
+  it("has 32 delivery actions", () => {
+    expect(IDS.deliveryAction).toHaveLength(32);
   });
 
   it("has 18 demands total", () => {
