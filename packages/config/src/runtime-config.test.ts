@@ -38,6 +38,8 @@ describe("parseRuntimeConfig", () => {
       outboxPollIntervalMs: 750,
       workerMetricsPort: 9465,
       enableApiDocs: true,
+      demoDataEnabled: false,
+      demoMode: false,
       loginEncryptionPrivateKey: undefined,
       dingtalkSsoEnabled: false,
       dingtalkClientId: undefined,

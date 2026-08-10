@@ -15,6 +15,7 @@ export type {
   SeedDemoAccountsResult,
 } from "./demo-seed.js";
 export { seedDemoBusinessData } from "./demo-business-seed.js";
+export { assertDemoDataSafety, resolveAnchorDate } from "./demo-data/demo-config.js";
 export {
   SYSTEM_ROLE_DEFINITIONS,
   SYSTEM_ROLE_PERMISSION_MAP,
