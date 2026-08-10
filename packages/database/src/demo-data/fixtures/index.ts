@@ -8,7 +8,7 @@ export { buildCatalogFixture } from "./catalog.fixture.js";
 export type { CatalogFixtureData } from "./catalog.fixture.js";
 
 export { buildApplicationInteractionFixture } from "./application-interaction.fixture.js";
-export type { ApplicationInteractionFixtureData as AppInteractionFixtureData } from "./application-interaction.fixture.js";
+export type { AppInteractionFixtureData } from "./application-interaction.fixture.js";
 
 export { buildDemandFixture } from "./demand.fixture.js";
 export type { DemandFixtureData } from "./demand.fixture.js";
