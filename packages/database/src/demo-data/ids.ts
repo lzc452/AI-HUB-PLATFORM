@@ -139,35 +139,40 @@ const DELIVERY_ACTIONS = Object.freeze(
 );
 
 /**
- * Demands — 18 total across 9 statuses (2 per status).
+ * Demands — 18 total across 9 statuses.
  * Sequential IDs 1..18 with zero gaps across statuses.
+ *
+ *   draft×3, pending_review×2, rejected×2, published×2,
+ *   in_progress×3, pilot×1, completed×2, closed×1, merged×2
  */
-const demandDraft = Object.freeze([uuid("00000010", 1), uuid("00000010", 2)]);
-const demandPendingReview = Object.freeze([
+const demandDraft = Object.freeze([
+  uuid("00000010", 1),
+  uuid("00000010", 2),
   uuid("00000010", 3),
+]);
+const demandPendingReview = Object.freeze([
   uuid("00000010", 4),
+  uuid("00000010", 5),
 ]);
 const demandRejected = Object.freeze([
-  uuid("00000010", 5),
   uuid("00000010", 6),
+  uuid("00000010", 7),
 ]);
 const demandPublished = Object.freeze([
-  uuid("00000010", 7),
   uuid("00000010", 8),
+  uuid("00000010", 9),
 ]);
 const demandInProgress = Object.freeze([
-  uuid("00000010", 9),
   uuid("00000010", 10),
+  uuid("00000010", 11),
+  uuid("00000010", 12),
 ]);
-const demandPilot = Object.freeze([uuid("00000010", 11), uuid("00000010", 12)]);
+const demandPilot = Object.freeze([uuid("00000010", 13)]);
 const demandCompleted = Object.freeze([
-  uuid("00000010", 13),
   uuid("00000010", 14),
-]);
-const demandClosed = Object.freeze([
   uuid("00000010", 15),
-  uuid("00000010", 16),
 ]);
+const demandClosed = Object.freeze([uuid("00000010", 16)]);
 const demandMerged = Object.freeze([
   uuid("00000010", 17),
   uuid("00000010", 18),

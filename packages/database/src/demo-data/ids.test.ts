@@ -116,24 +116,26 @@ describe("IDS counts", () => {
     expect(IDS.demand.all).toHaveLength(18);
   });
 
-  it("has 2 demands per status (9 statuses)", () => {
-    const statuses = [
-      "draft",
-      "pendingReview",
-      "rejected",
-      "published",
-      "inProgress",
-      "pilot",
-      "completed",
-      "closed",
-      "merged",
-    ] as const;
-    for (const status of statuses) {
+  it("has the correct number of demands per status", () => {
+    const expected: Record<string, number> = {
+      draft: 3,
+      pendingReview: 2,
+      rejected: 2,
+      published: 2,
+      inProgress: 3,
+      pilot: 1,
+      completed: 2,
+      closed: 1,
+      merged: 2,
+    };
+    for (const [status, count] of Object.entries(expected)) {
       expect(
-        IDS.demand[status],
-        `demand.${status} should have 2 entries`,
-      ).toHaveLength(2);
+        (IDS.demand as Record<string, readonly string[]>)[status],
+        `demand.${status} should have ${count} entries`,
+      ).toHaveLength(count);
     }
+    // Total should be 18
+    expect(IDS.demand.all).toHaveLength(18);
   });
 
   it("has 15 demand comments", () => {
@@ -319,11 +321,12 @@ describe("IDS sequential ordering", () => {
     const { all } = IDS.demand;
     let offset = 0;
     for (const status of expectedStatuses) {
+      const ids = (IDS.demand as Record<string, readonly string[]>)[status];
       expect(
-        all.slice(offset, offset + 2),
+        all.slice(offset, offset + ids.length),
         `demand.${status} slice mismatch`,
-      ).toEqual([...IDS.demand[status]]);
-      offset += 2;
+      ).toEqual([...ids]);
+      offset += ids.length;
     }
   });
 });
