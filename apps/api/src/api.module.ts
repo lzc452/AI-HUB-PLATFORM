@@ -73,6 +73,15 @@ export class ApiModule {
     databaseUrl: string,
     observability: ObservabilityModuleOptions = {},
     artifactVerification?: ArtifactVerificationPort,
+    identityOptions?: {
+      loginEncryptionPrivateKey?: string;
+      dingtalkSso?: {
+        clientId: string;
+        clientSecret: string;
+        corpId: string;
+        redirectUri: string;
+      };
+    },
   ): DynamicModule {
     const metrics = observability.metrics ?? new ObservabilityMetrics();
     return {
@@ -80,7 +89,7 @@ export class ApiModule {
       providers: [{ provide: APP_GUARD, useClass: PermissionGuard }],
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
-        IdentityModule.register(databaseUrl),
+        IdentityModule.register(databaseUrl, identityOptions),
         ApplicationModule.register(databaseUrl, artifactVerification),
         CatalogModule.register(databaseUrl),
         InteractionModule.register(databaseUrl),

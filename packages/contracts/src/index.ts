@@ -62,3 +62,16 @@ export type {
   DemandReportStatus,
   DemandStatus,
 } from "./demand.js";
+export type {
+  ChallengeResponse,
+  DingTalkSsoCompleteRequest,
+  DingTalkSsoStartResponse,
+  EncryptedLoginEnvelope,
+  JwkPublicKey,
+  LoginMethod,
+  LoginOptions,
+  LoginResponse,
+  LoginSession,
+  PasswordLoginRequest,
+} from "./login.js";
+export { DINGTALK_SSO_ERROR_CODES, LOGIN_ERROR_CODES } from "./login.js";

@@ -33,6 +33,7 @@ export interface EmployeesTable {
   primary_department_id: string;
   password_hash: string | null;
   password_reset_required: boolean;
+  employee_number: string | null;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
@@ -525,4 +526,18 @@ export interface DatabaseSchema {
   analytics_metric_definitions: AnalyticsMetricDefinitionsTable;
   analytics_audit_events: AnalyticsAuditEventsTable;
   analytics_export_jobs: AnalyticsExportJobsTable;
+  dingtalk_sso_transactions: DingTalkSsoTransactionsTable;
+}
+
+export interface DingTalkSsoTransactionsTable {
+  transaction_id: Generated<string>;
+  state_hash: string;
+  browser_context_binding_hash: string;
+  handoff_token_hash: string | null;
+  return_to: string;
+  dingtalk_user_id: string | null;
+  employee_id: string | null;
+  expires_at: Date;
+  consumed_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
 }
