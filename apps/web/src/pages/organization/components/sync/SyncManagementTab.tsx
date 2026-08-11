@@ -46,7 +46,7 @@ export function SyncManagementTab() {
   }
 
   return (
-    <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
+    <section className="space-y-2 rounded-xl bg-white p-2">
       <SyncFilterBar
         value={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}

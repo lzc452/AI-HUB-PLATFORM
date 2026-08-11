@@ -52,20 +52,19 @@ export function SyncTaskTable({ rows }: SyncTaskTableProps) {
       dataIndex: "taskName",
       render: (name: string, record: SyncTaskSummary) => (
         <div className="flex min-w-0 items-center gap-2">
-          <TaskObjectIcon object={record.object} />
           <Tooltip title={name}>
-            <span className="block max-w-[180px] truncate">{name}</span>
+            <span className="block max-w-[120px] truncate">{name}</span>
           </Tooltip>
         </div>
       ),
       title: "任务名称",
-      width: 220,
+      width: 120,
     },
     {
       dataIndex: "object",
       render: (object: SyncObject) => SYNC_OBJECT_META[object],
       title: "同步对象",
-      width: 100,
+      width: 80,
     },
     {
       dataIndex: "taskType",
@@ -83,18 +82,18 @@ export function SyncTaskTable({ rows }: SyncTaskTableProps) {
         );
       },
       title: "类型",
-      width: 90,
+      width: 60,
     },
     {
       dataIndex: "startedAt",
       ellipsis: true,
       title: "开始时间",
-      width: 170,
+      width: 100,
     },
     {
       dataIndex: "duration",
       title: "耗时",
-      width: 90,
+      width: 60,
     },
     {
       dataIndex: "status",
@@ -103,61 +102,63 @@ export function SyncTaskTable({ rows }: SyncTaskTableProps) {
         return <Tag color={meta.color}>{meta.text}</Tag>;
       },
       title: "状态",
-      width: 80,
+      width: 60,
     },
     {
       dataIndex: "resultSummary",
       ellipsis: true,
       title: "结果摘要",
-      width: 200,
+      width: 80,
     },
     {
       key: "action",
       render: (_value: unknown, record: SyncTaskSummary) => (
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <Button className="px-0" type="link">
+          <Button className="!px-0" type="link">
             查看日志
           </Button>
-          <Button className="px-0" type="link">
+          <Button className="!px-0" type="link">
             详情
           </Button>
           {record.status === "failed" ? (
-            <Button className="px-0" type="link">
+            <Button className="!px-0" type="link">
               重试
             </Button>
           ) : record.status === "pending" ? (
-            <Button className="px-0" type="link">
+            <Button className="!px-0" type="link">
               取消
             </Button>
           ) : null}
         </div>
       ),
       title: "操作",
-      width: 200,
+      width: 160,
     },
   ];
 
   return (
-    <Table<SyncTaskSummary>
-      className="org-table-compact"
-      columns={columns}
-      dataSource={rows}
-      pagination={{
-        pageSize: 10,
-        pageSizeOptions: [10, 20, 50],
-        showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`,
-      }}
-      locale={{
-        emptyText: (
-          <div className="py-8 text-[13px] text-[#595959]">
-            暂无匹配任务，请调整筛选条件
-          </div>
-        ),
-      }}
-      rowKey="taskId"
-      scroll={{ x: "max-content" }}
-      size="small"
-    />
+    <div className=" border border-solid border-[#d9d9d9] rounded-xl bg-white p-2">
+      <Table<SyncTaskSummary>
+        className="org-table-compact"
+        columns={columns}
+        dataSource={rows}
+        pagination={{
+          pageSize: 10,
+          pageSizeOptions: [10, 20, 50],
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
+        locale={{
+          emptyText: (
+            <div className="py-8 text-[13px] text-[#595959]">
+              暂无匹配任务，请调整筛选条件
+            </div>
+          ),
+        }}
+        rowKey="taskId"
+        scroll={{ x: "max-content" }}
+        size="small"
+      />
+    </div>
   );
 }

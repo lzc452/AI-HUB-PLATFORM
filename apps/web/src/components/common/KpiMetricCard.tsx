@@ -38,7 +38,7 @@ export function KpiMetricCard({
 
   return (
     <article
-      className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-3"
+      className="dashboard-panel dash-rise rounded-xl bg-white p-3"
       style={index !== undefined ? { animationDelay: `${index * 60}ms` } : undefined}
     >
       <div className="flex items-center gap-3">

@@ -69,7 +69,6 @@ const timeFilterOptions = [
   { label: "近7天", value: "7d" },
   { label: "近30天", value: "30d" },
   { label: "近90天", value: "90d" },
-  { label: "自定义", value: "custom" },
 ];
 
 export default function AnalyticsDashboardPage() {
@@ -108,7 +107,7 @@ export default function AnalyticsDashboardPage() {
 
   return (
     <ConfigProvider theme={dashboardTheme}>
-      <div className="space-y-4">
+      <div className="space-y-4 bg-white p-4 rounded-md">
         <Title className="!mb-0" level={1}>
           数据看板
         </Title>
@@ -121,23 +120,17 @@ export default function AnalyticsDashboardPage() {
           left: undefined,
           right: (
             <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-md border border-solid border-[#d9d9d9] bg-white p-0.5">
-                {timeFilterOptions.map((option) => (
-                  <button
+              {timeFilterOptions.map((option) => (
+                  <Button
                     aria-pressed={timeFilter === option.value}
-                    className={`dashboard-segment-button rounded px-3 py-1 text-sm transition-colors ${
-                      timeFilter === option.value
-                        ? "bg-[#0060f0] text-white"
-                        : "text-[#595959] hover:bg-[#f5f5f5]"
-                    }`}
+                    className="dashboard-segment-button rounded px-3 py-1 text-sm transition-colors"
                     key={option.value}
+                    type={timeFilter === option.value ? "primary" : "default"}
                     onClick={() => setTimeFilter(option.value)}
-                    type="button"
                   >
                     {option.label}
-                  </button>
+                  </Button>
                 ))}
-              </div>
               <Button icon={<DownloadOutlined aria-hidden="true" />}>
                 导出
               </Button>

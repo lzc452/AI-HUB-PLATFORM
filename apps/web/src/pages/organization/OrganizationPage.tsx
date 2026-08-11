@@ -57,7 +57,7 @@ export default function OrganizationPage() {
   }, [departmentRows.data]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4 bg-white p-4 rounded-md">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <OrganizationHeader />
         {activeTab === "roles" ? (

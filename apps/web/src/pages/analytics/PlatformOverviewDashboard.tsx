@@ -102,7 +102,7 @@ export function PlatformOverviewDashboard() {
         className="grid grid-cols-1 gap-3 xl:grid-cols-12"
       >
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4 xl:col-span-7"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4 xl:col-span-7"
           style={{ animationDelay: "300ms" }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -130,7 +130,7 @@ export function PlatformOverviewDashboard() {
         </div>
 
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4 xl:col-span-5"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4 xl:col-span-5"
           style={{ animationDelay: "360ms" }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -168,7 +168,7 @@ export function PlatformOverviewDashboard() {
         className="grid grid-cols-1 gap-3 xl:grid-cols-2"
       >
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4"
           style={{ animationDelay: "420ms" }}
         >
           <Title className="!m-0 mb-4" level={5}>
@@ -183,7 +183,7 @@ export function PlatformOverviewDashboard() {
         </div>
 
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4"
           style={{ animationDelay: "460ms" }}
         >
           <Title className="!m-0 mb-4" level={5}>
@@ -212,7 +212,7 @@ export function PlatformOverviewDashboard() {
         className="grid grid-cols-1 gap-3 xl:grid-cols-2"
       >
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4"
           style={{ animationDelay: "520ms" }}
         >
           <Title className="!m-0 mb-4" level={5}>
@@ -225,7 +225,7 @@ export function PlatformOverviewDashboard() {
         </div>
 
         <div
-          className="dashboard-panel dash-rise rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
+          className="dashboard-panel dash-rise rounded-xl  bg-white p-4"
           style={{ animationDelay: "560ms" }}
         >
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -250,7 +250,7 @@ function PlatformOverviewSkeleton() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
-            className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4"
+            className="rounded-xl  bg-white p-4"
             key={index}
           >
             <Skeleton active paragraph={{ rows: 2 }} title={false} />
@@ -258,18 +258,18 @@ function PlatformOverviewSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4 xl:col-span-7">
+        <div className="rounded-xl  bg-white p-4 xl:col-span-7">
           <Skeleton active paragraph={{ rows: 6 }} title />
         </div>
-        <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4 xl:col-span-5">
+        <div className="rounded-xl  bg-white p-4 xl:col-span-5">
           <Skeleton active paragraph={{ rows: 6 }} title />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
+        <div className="rounded-xl  bg-white p-4">
           <Skeleton active paragraph={{ rows: 6 }} title />
         </div>
-        <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
+        <div className="rounded-xl  bg-white p-4">
           <Skeleton active paragraph={{ rows: 6 }} title />
         </div>
       </div>
@@ -520,7 +520,6 @@ function DemandFunnelChart({
         ],
         tooltip: { trigger: "item" },
       }}
-      style={{ height: 160 }}
     />
   );
 }

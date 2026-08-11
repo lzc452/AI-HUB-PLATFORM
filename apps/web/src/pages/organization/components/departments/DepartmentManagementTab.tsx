@@ -30,24 +30,17 @@ export function DepartmentManagementTab() {
     return filterDepartmentRows(rows, filters);
   }, [rows, filters]);
 
-  if (isPending) {
+  if (isPending || error) {
     return (
-      <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-[13px] text-[#595959]">
-        部门数据加载中…
-      </section>
-    );
-  }
-
-  if (error) {
-    return (
-      <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-[13px] text-[#ff4d4f]">
-        部门数据加载失败：{error.message}
+      <section className="space-y-2 rounded-xl bg-white p-2 text-[13px] text-[#ff4d4f]">
+        {isPending && "部门数据加载中..."}
+        {error && `部门数据加载失败：${error.message}`}
       </section>
     );
   }
 
   return (
-    <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
+    <section className="space-y-2 rounded-xl bg-white p-2">
       <DepartmentFilterBar
         value={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
