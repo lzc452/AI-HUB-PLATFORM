@@ -197,7 +197,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setIsLoading(false);
         showSuccessMessage("登录成功");
         return true;
-      } catch (cause) {
+      } catch {
         if (requestVersion === requestVersionRef.current) {
           // Fall back to legacy plaintext login if encryption fails.
           try {
@@ -228,17 +228,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [setActor],
   );
 
-  const startDingTalkLogin = useCallback(
-    async (returnTo = "/marketplace") => {
-      try {
-        const result = await startDingTalkSso(returnTo);
-        window.location.href = result.redirectUrl;
-      } catch {
-        setError("钉钉登录暂不可用");
-      }
-    },
-    [],
-  );
+  const startDingTalkLogin = useCallback(async (returnTo = "/marketplace") => {
+    try {
+      const result = await startDingTalkSso(returnTo);
+      window.location.href = result.redirectUrl;
+    } catch {
+      setError("钉钉登录暂不可用");
+    }
+  }, []);
 
   const completeDingTalkLogin = useCallback(async () => {
     const requestVersion = ++requestVersionRef.current;
@@ -257,7 +254,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setIsLoading(false);
       showSuccessMessage("钉钉登录成功");
       return true;
-    } catch (cause) {
+    } catch {
       if (requestVersion === requestVersionRef.current) {
         setError("钉钉登录失败，请重试");
         setActor(null);

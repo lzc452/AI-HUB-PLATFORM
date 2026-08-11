@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { getDashboard, type DashboardKey } from "./analytics.client";
-import { useAuth } from "../auth/useAuth";
+import { useAuth } from "../auth";
 
 export function useDashboard(dashboardKey: DashboardKey) {
   const { session } = useAuth();

@@ -1,5 +1,4 @@
 import {
-  CalendarFilled,
   CheckCircleFilled,
   SyncOutlined,
   WarningFilled,
@@ -57,13 +56,21 @@ export function SyncStats({ stats = EMPTY_SYNC_STATS }: SyncStatsProps) {
       <KpiCard
         icon={<CheckCircleFilled className="text-lg text-[#52c41a]" />}
         label="成功率"
-        trend={<span className={successTrendClass}>较昨日 {formatTrend(stats.successRateTrend, "%")}</span>}
+        trend={
+          <span className={successTrendClass}>
+            较昨日 {formatTrend(stats.successRateTrend, "%")}
+          </span>
+        }
         value={stats.successRate}
       />
       <KpiCard
         icon={<WarningFilled className="text-lg text-[#fa8c16]" />}
         label="待处理异常"
-        trend={<span className={exceptionTrendClass}>较昨日 {formatTrend(stats.exceptionTrend)}</span>}
+        trend={
+          <span className={exceptionTrendClass}>
+            较昨日 {formatTrend(stats.exceptionTrend)}
+          </span>
+        }
         value={stats.pendingExceptionCount}
       />
     </section>

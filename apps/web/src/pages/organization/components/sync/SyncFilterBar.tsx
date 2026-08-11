@@ -1,9 +1,4 @@
-import {
-  CloudSyncOutlined,
-  DownloadOutlined,
-  RedoOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Select } from "antd";
 
 import {
@@ -62,10 +57,8 @@ export function SyncFilterBar({ value, onChange }: SyncFilterBarProps) {
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">
-          发起全量同步
-        </Button>
-        <Button  >重新执行失败任务</Button>
+        <Button type="primary">发起全量同步</Button>
+        <Button>重新执行失败任务</Button>
         <Button>导出日志</Button>
       </div>
     </div>

@@ -5,7 +5,7 @@ import {
   clearLastViewedApplicationId,
   readLastViewedApplicationId,
   rememberLastViewedApplicationId,
-} from "../application/last-viewed";
+} from "../application";
 import { clearSessionScopedState } from "../../providers";
 
 describe("会话边界缓存", () => {
