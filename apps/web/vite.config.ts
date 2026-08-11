@@ -16,6 +16,9 @@ export default defineConfig({
       "@ant-design/icons": fileURLToPath(
         new URL("./src/test/icons.tsx", import.meta.url),
       ),
+      "echarts-for-react": fileURLToPath(
+        new URL("./src/test/echarts.tsx", import.meta.url),
+      ),
     },
     environment: "./src/test/environment.ts",
     include: ["src/**/*.test.tsx"],

@@ -178,3 +178,38 @@ ol {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ===== 数据看板：面板悬浮态与入场动效 ===== */
+.dashboard-panel {
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.dashboard-panel:hover {
+  border-color: #bfbfbf;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+@keyframes dash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dash-rise {
+    animation: dash-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* 自定义分段筛选控件：激活态与键盘焦点 */
+.dashboard-segment-button:focus-visible {
+  outline: 2px solid #0060f0;
+  outline-offset: 2px;
+}

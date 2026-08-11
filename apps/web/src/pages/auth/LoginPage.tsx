@@ -57,7 +57,7 @@ export default function LoginPage() {
         if (succeeded) navigate(from, { replace: true });
       });
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line
 
   const {
     control,
