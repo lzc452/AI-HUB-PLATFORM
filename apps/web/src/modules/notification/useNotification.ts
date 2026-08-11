@@ -26,3 +26,19 @@ export function useMarkNotificationRead() {
     },
   });
 }
+
+export function useMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notificationIds: readonly string[]) => {
+      await Promise.all(
+        notificationIds.map((id) => markNotificationRead(id)),
+      );
+    },
+    onError: (error) => showErrorMessage(error, "全部标记已读失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      showSuccessMessage("全部通知已标记为已读");
+    },
+  });
+}

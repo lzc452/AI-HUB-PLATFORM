@@ -53,7 +53,6 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
       display_name: a.displayName,
       status: "active" as const,
       primary_department_id: a.primaryDepartmentId,
-      password_hash: "",
       password_reset_required: false,
       employee_number: null,
       created_at: daysAgo(anchor, 90),

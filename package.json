@@ -23,7 +23,7 @@
     "seed:demo-data": "tsx scripts/seed-demo-data.mts",
     "check:demo-data": "tsx scripts/check-demo-data.mts",
     "test:api-data": "vitest run --config apps/api/vitest.api-data.config.ts",
-    "init:dev": "pnpm migrate && pnpm seed:demo-accounts && pnpm seed:demo-data",
+    "init:dev": "pnpm migrate && pnpm seed:demo-data && pnpm seed:demo-accounts",
     "init:production": "pnpm migrate",
     "test": "node --test scripts/*.test.mjs && turbo run test --concurrency=1",
     "typecheck": "turbo run typecheck",
