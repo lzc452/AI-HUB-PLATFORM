@@ -1,0 +1,4 @@
+interface:
+  display_name: "设计图像素级前端还原"
+  short_description: "按项目架构将 packages/ui/src 设计图像素级还原为可复用前端组件"
+  default_prompt: "使用 $rebuild-ui-from-design 按原始视口高保真实现 packages/ui/src 中指定的设计图。"
