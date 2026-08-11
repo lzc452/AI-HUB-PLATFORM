@@ -1,9 +1,4 @@
-import {
-  PlusOutlined,
-  SearchOutlined,
-  SyncOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Select } from "antd";
 
 import {
@@ -67,11 +62,9 @@ export function DepartmentFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">
-          新建部门
-        </Button>
-        <Button >批量导入</Button>
-        <Button >发起同步</Button>
+        <Button type="primary">新建部门</Button>
+        <Button>批量导入</Button>
+        <Button>发起同步</Button>
       </div>
     </div>
   );

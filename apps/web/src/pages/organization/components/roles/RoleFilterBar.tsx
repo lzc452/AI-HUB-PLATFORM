@@ -1,9 +1,4 @@
-import {
-  FileTextOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  StopOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Select } from "antd";
 
 import {
@@ -68,10 +63,8 @@ export function RoleFilterBar({
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">
-          新建角色
-        </Button>
-        <Button >权限模板</Button>
+        <Button type="primary">新建角色</Button>
+        <Button>权限模板</Button>
         <Button
           danger
           disabled={selectedCount === 0}

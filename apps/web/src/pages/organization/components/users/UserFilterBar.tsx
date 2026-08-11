@@ -1,9 +1,4 @@
-import {
-  PlusOutlined,
-  SearchOutlined,
-  StopOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Select } from "antd";
 import type { ReactNode } from "react";
 
@@ -75,13 +70,9 @@ export function UserFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">
-          新建用户
-        </Button>
-        <Button >批量导入</Button>
-        <Button danger >
-          批量停用
-        </Button>
+        <Button type="primary">新建用户</Button>
+        <Button>批量导入</Button>
+        <Button danger>批量停用</Button>
       </div>
     </div>
   );
