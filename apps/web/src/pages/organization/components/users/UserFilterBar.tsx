@@ -33,7 +33,7 @@ export function UserFilterBar({
     <div className="flex flex-wrap items-center gap-2">
       <Input
         allowClear
-        className="w-[180px]"
+        className="!w-[180px]"
         onChange={(e) => onChange({ searchText: e.target.value })}
         placeholder="搜索工号 / 姓名"
         prefix={<SearchOutlined className="text-[#bfbfbf]" />}
@@ -75,11 +75,11 @@ export function UserFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button icon={<PlusOutlined />} type="primary">
+        <Button type="primary">
           新建用户
         </Button>
-        <Button icon={<UploadOutlined />}>批量导入</Button>
-        <Button danger icon={<StopOutlined />}>
+        <Button >批量导入</Button>
+        <Button danger >
           批量停用
         </Button>
       </div>

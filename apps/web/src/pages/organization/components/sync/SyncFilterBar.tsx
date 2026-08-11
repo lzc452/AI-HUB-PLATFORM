@@ -39,7 +39,7 @@ export function SyncFilterBar({ value, onChange }: SyncFilterBarProps) {
     <div className="flex flex-wrap items-center gap-2">
       <Input
         allowClear
-        className="w-[220px]"
+        className="!w-[180px]"
         onChange={(e) => onChange({ searchText: e.target.value })}
         placeholder="搜索任务名称/同步对象"
         prefix={<SearchOutlined className="text-[#bfbfbf]" />}
@@ -62,11 +62,11 @@ export function SyncFilterBar({ value, onChange }: SyncFilterBarProps) {
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button icon={<CloudSyncOutlined />} type="primary">
+        <Button type="primary">
           发起全量同步
         </Button>
-        <Button icon={<RedoOutlined />}>重新执行失败任务</Button>
-        <Button icon={<DownloadOutlined />}>导出日志</Button>
+        <Button  >重新执行失败任务</Button>
+        <Button>导出日志</Button>
       </div>
     </div>
   );

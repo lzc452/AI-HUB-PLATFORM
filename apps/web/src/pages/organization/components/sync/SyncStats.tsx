@@ -46,12 +46,12 @@ export function SyncStats({ stats = EMPTY_SYNC_STATS }: SyncStatsProps) {
   return (
     <section
       aria-label="同步统计"
-      className="grid grid-cols-2 gap-2 md:grid-cols-4"
+      className="grid grid-cols-2 gap-2 md:grid-cols-3"
     >
       <KpiCard
         icon={<SyncOutlined className="text-lg text-[#1677ff]" />}
         label="今日同步任务"
-        trend={<span className={positiveTrendClass}>较昨日 {formatTrend(stats.todayTaskTrend)}</span>}
+        trend={formatTrend(stats.todayTaskTrend)}
         value={stats.todayTaskCount}
       />
       <KpiCard
@@ -65,16 +65,6 @@ export function SyncStats({ stats = EMPTY_SYNC_STATS }: SyncStatsProps) {
         label="待处理异常"
         trend={<span className={exceptionTrendClass}>较昨日 {formatTrend(stats.exceptionTrend)}</span>}
         value={stats.pendingExceptionCount}
-      />
-      <KpiCard
-        icon={<CalendarFilled className="text-lg text-[#722ed1]" />}
-        label="最近全量同步"
-        trend={
-          <span className={positiveTrendClass}>
-            较昨日 09:40 提前 {stats.latestFullSyncTrendMinutes} 分钟
-          </span>
-        }
-        value={stats.latestFullSyncTime}
       />
     </section>
   );

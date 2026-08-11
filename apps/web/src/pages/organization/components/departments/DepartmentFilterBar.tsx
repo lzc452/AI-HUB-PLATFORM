@@ -44,7 +44,7 @@ export function DepartmentFilterBar({
     <div className="flex flex-wrap items-center gap-2">
       <Input
         allowClear
-        className="w-[180px]"
+        className="!w-[180px]"
         onChange={(e) => onChange({ searchText: e.target.value })}
         placeholder="搜索部门名称"
         prefix={<SearchOutlined className="text-[#bfbfbf]" />}
@@ -67,11 +67,11 @@ export function DepartmentFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button icon={<PlusOutlined />} type="primary">
+        <Button type="primary">
           新建部门
         </Button>
-        <Button icon={<UploadOutlined />}>批量导入</Button>
-        <Button icon={<SyncOutlined />}>发起同步</Button>
+        <Button >批量导入</Button>
+        <Button >发起同步</Button>
       </div>
     </div>
   );

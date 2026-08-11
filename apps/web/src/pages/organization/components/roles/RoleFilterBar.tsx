@@ -45,7 +45,7 @@ export function RoleFilterBar({
     <div className="flex flex-wrap items-center gap-2">
       <Input
         allowClear
-        className="w-[180px]"
+        className="!w-[180px]"
         onChange={(e) => onChange({ searchText: e.target.value })}
         placeholder="搜索角色名称"
         prefix={<SearchOutlined className="text-[#bfbfbf]" />}
@@ -68,14 +68,13 @@ export function RoleFilterBar({
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button icon={<PlusOutlined />} type="primary">
+        <Button type="primary">
           新建角色
         </Button>
-        <Button icon={<FileTextOutlined />}>权限模板</Button>
+        <Button >权限模板</Button>
         <Button
           danger
           disabled={selectedCount === 0}
-          icon={<StopOutlined />}
           title={selectedCount === 0 ? "请先勾选要禁用的角色" : undefined}
         >
           批量禁用 {selectedCount > 0 ? `(${selectedCount})` : ""}

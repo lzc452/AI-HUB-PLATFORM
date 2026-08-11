@@ -11,11 +11,11 @@ const { Title } = Typography;
  */
 export function OrganizationHeader() {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1677ff]">
-        <TeamOutlined className="text-2xl text-white" />
+    <div className="flex gap-3">
+      <div className="flex h-22 w-22 shrink-0 items-center justify-center rounded-xl bg-[#1677ff]">
+        <TeamOutlined className="text-2xl !text-white" style={{ fontSize: "54px" }} />
       </div>
-      <Title className="!mb-0" level={1}>
+      <Title className="!my-0" level={1}>
         组织管理
       </Title>
     </div>
