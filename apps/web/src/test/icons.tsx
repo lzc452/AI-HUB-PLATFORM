@@ -57,6 +57,7 @@ export const SoundOutlined = TestIcon;
 export const StarFilled = TestIcon;
 export const StarOutlined = TestIcon;
 export const StopOutlined = TestIcon;
+export const SyncOutlined = TestIcon;
 export const TagsFilled = TestIcon;
 export const TeamOutlined = TestIcon;
 export const ToolFilled = TestIcon;

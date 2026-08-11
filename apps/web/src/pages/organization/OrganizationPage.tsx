@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 import { OrganizationHeader } from "./components/OrganizationHeader";
 import { OrganizationStats } from "./components/OrganizationStats";
+import { DepartmentManagementTab } from "./components/departments/DepartmentManagementTab";
+import { DepartmentStats } from "./components/departments/DepartmentStats";
+import { useDepartmentRows } from "./components/departments/hooks/useDepartmentRows";
 import { RoleStats } from "./components/roles/RoleStats";
 import { RoleManagementTab } from "./components/roles/RoleManagementTab";
 import { useRoleRows } from "./components/roles/hooks/useRoleRows";
@@ -20,6 +23,7 @@ export default function OrganizationPage() {
   const employees = useEmployees();
   const departments = useDepartments();
   const roles = useRoleRows();
+  const departmentRows = useDepartmentRows();
 
   const isPendingUsers = employees.isPending || departments.isPending;
   const firstErrorUsers = employees.isError
@@ -36,12 +40,31 @@ export default function OrganizationPage() {
     return { active, departmentCount, total };
   }, [employees.data, departments.data]);
 
+  const departmentStats = useMemo(() => {
+    const rows = departmentRows.data ?? [];
+    const total = rows.length;
+    const active = rows.filter((d) => d.status === "active").length;
+    return {
+      active,
+      memberTotal: 1286,
+      syncRate: "98.6%",
+      total,
+    };
+  }, [departmentRows.data]);
+
   return (
     <div className="space-y-2">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <OrganizationHeader />
         {activeTab === "roles" ? (
           <RoleStats rows={roles.data ?? []} />
+        ) : activeTab === "departments" ? (
+          <DepartmentStats
+            active={departmentStats.active}
+            memberTotal={departmentStats.memberTotal}
+            syncRate={departmentStats.syncRate}
+            total={departmentStats.total}
+          />
         ) : (
           <OrganizationStats
             active={userStats.active}
@@ -67,11 +90,7 @@ export default function OrganizationPage() {
             label: "用户管理",
           },
           {
-            children: (
-              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-center text-[13px] text-[#595959]">
-                部门管理内容建设中
-              </div>
-            ),
+            children: <DepartmentManagementTab />,
             key: "departments",
             label: "部门管理",
           },
