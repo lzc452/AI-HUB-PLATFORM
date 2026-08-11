@@ -1407,8 +1407,31 @@
               "在 configureSwagger 前为控制器方法补齐缺失参数元数据，并为全部 ApiProperty 显式声明类型；seed 采用确定性 UUID 单事务幂等 upsert；生产 init:production 仅执行迁移。",
             skip: "业务演示数据仅在开发/测试环境写入，生产 Compose 不自动初始化；Swagger 生产启用时调用仍须满足 CSRF/防重放头。",
           },
+          {
+            id: "t-028",
+            phase: "dev",
+            status: "已完成",
+            title: "新增设计图像素级前端还原技能",
+            owner: "Codex",
+            start: "2026-08-11",
+            end: "2026-08-11",
+            progress:
+              "在 .codex/skills/rebuild-ui-from-design 创建 1 个主工作流和 4 个 references，覆盖 CodeGraph 架构影响、原图测量、components/common 公共组件、Ant Design/TailwindCSS、图标/SVG、2px/1px 视觉门槛与工程验证；skill-creator quick_validate.py 已通过。",
+            problem:
+              "当前会话中的只读前向测试 Agent 多次无返回，无法形成独立 Agent 的行为复测证据；隔离 worktree 的 pnpm 离线安装也受到注册表访问限制。",
+            solution:
+              "使用官方 init_skill.py 初始化，临时安装 PyYAML 后以 UTF-8 运行官方 quick_validate.py 并通过；同时完成 references 存在性、占位符扫描、git diff --check 和主工作流本地复核。",
+            skip:
+              "未执行真实浏览器截图差异回放；该技能已将原始视口截图、叠加对比、偏差矩阵和状态回归列为后续页面实现的强制门禁。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-11",
+            phase: "dev",
+            title: "新增设计图像素级前端还原技能",
+            body: "完成项目级 .codex/skills/rebuild-ui-from-design：主 SKILL.md 保持顺序化且短小，references 分层承载项目架构、设计测量、公共组件/图标和视觉验收规则；官方 quick_validate.py 通过。只读前向测试 Agent 在当前会话无返回，已作为验证缺口和环境问题记录，未宣称页面已完成像素级实现。",
+          },
           {
             date: "2026-08-10",
             phase: "ui",
