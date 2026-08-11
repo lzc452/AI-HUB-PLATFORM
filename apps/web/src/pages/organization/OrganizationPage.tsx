@@ -10,6 +10,9 @@ import { useDepartmentRows } from "./components/departments/hooks/useDepartmentR
 import { RoleStats } from "./components/roles/RoleStats";
 import { RoleManagementTab } from "./components/roles/RoleManagementTab";
 import { useRoleRows } from "./components/roles/hooks/useRoleRows";
+import { SyncStats } from "./components/sync/SyncStats";
+import { SyncManagementTab } from "./components/sync/SyncManagementTab";
+import { useSyncRows } from "./components/sync/hooks/useSyncRows";
 import { UserManagementTab } from "./components/users/UserManagementTab";
 
 /**
@@ -24,6 +27,7 @@ export default function OrganizationPage() {
   const departments = useDepartments();
   const roles = useRoleRows();
   const departmentRows = useDepartmentRows();
+  const syncRows = useSyncRows();
 
   const isPendingUsers = employees.isPending || departments.isPending;
   const firstErrorUsers = employees.isError
@@ -65,6 +69,8 @@ export default function OrganizationPage() {
             syncRate={departmentStats.syncRate}
             total={departmentStats.total}
           />
+        ) : activeTab === "sync" ? (
+          <SyncStats stats={syncRows.data?.stats} />
         ) : (
           <OrganizationStats
             active={userStats.active}
@@ -100,11 +106,7 @@ export default function OrganizationPage() {
             label: "角色管理",
           },
           {
-            children: (
-              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-center text-[13px] text-[#595959]">
-                同步状态内容建设中
-              </div>
-            ),
+            children: <SyncManagementTab />,
             key: "sync",
             label: "同步状态",
           },
