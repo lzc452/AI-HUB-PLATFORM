@@ -1,28 +1,34 @@
 import { Tabs } from "antd";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 import { OrganizationHeader } from "./components/OrganizationHeader";
 import { OrganizationStats } from "./components/OrganizationStats";
+import { RoleStats } from "./components/roles/RoleStats";
+import { RoleManagementTab } from "./components/roles/RoleManagementTab";
+import { useRoleRows } from "./components/roles/hooks/useRoleRows";
 import { UserManagementTab } from "./components/users/UserManagementTab";
 
 /**
  * 组织管理页容器：唯一的数据获取与统计计算位置。
- * 通过 props 向子组件单向下发（employees/departments 查询、stats），
- * 不持有任何 UI 态；筛选状态收敛在 UserManagementTab 内。
+ * 通过 props 向子组件单向下发数据；通过 activeTab 切换用户/部门/角色/同步状态的
+ * 内容区与对应 KPI 卡，保持各页签数据独立、来源单一。
  */
 export default function OrganizationPage() {
+  const [activeTab, setActiveTab] = useState("users");
+
   const employees = useEmployees();
   const departments = useDepartments();
+  const roles = useRoleRows();
 
-  const isPending = employees.isPending || departments.isPending;
-  const firstError = employees.isError
+  const isPendingUsers = employees.isPending || departments.isPending;
+  const firstErrorUsers = employees.isError
     ? employees.error
     : departments.isError
       ? departments.error
       : null;
 
-  const stats = useMemo(() => {
+  const userStats = useMemo(() => {
     const total = employees.data?.length ?? 0;
     const active =
       employees.data?.filter((e) => e.status === "active").length ?? 0;
@@ -31,26 +37,30 @@ export default function OrganizationPage() {
   }, [employees.data, departments.data]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div className="space-y-2">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <OrganizationHeader />
-        <OrganizationStats
-          active={stats.active}
-          departmentCount={stats.departmentCount}
-          total={stats.total}
-        />
+        {activeTab === "roles" ? (
+          <RoleStats rows={roles.data ?? []} />
+        ) : (
+          <OrganizationStats
+            active={userStats.active}
+            departmentCount={userStats.departmentCount}
+            total={userStats.total}
+          />
+        )}
       </div>
 
       <Tabs
-        defaultActiveKey="users"
+        activeKey={activeTab}
         items={[
           {
             children: (
               <UserManagementTab
                 departments={departments}
                 employees={employees}
-                firstError={firstError}
-                isPending={isPending}
+                firstError={firstErrorUsers}
+                isPending={isPendingUsers}
               />
             ),
             key: "users",
@@ -58,7 +68,7 @@ export default function OrganizationPage() {
           },
           {
             children: (
-              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-8 text-center text-[#595959]">
+              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-center text-[13px] text-[#595959]">
                 部门管理内容建设中
               </div>
             ),
@@ -66,17 +76,13 @@ export default function OrganizationPage() {
             label: "部门管理",
           },
           {
-            children: (
-              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-8 text-center text-[#595959]">
-                角色管理内容建设中
-              </div>
-            ),
+            children: <RoleManagementTab />,
             key: "roles",
             label: "角色管理",
           },
           {
             children: (
-              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-8 text-center text-[#595959]">
+              <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-center text-[13px] text-[#595959]">
                 同步状态内容建设中
               </div>
             ),
@@ -84,6 +90,7 @@ export default function OrganizationPage() {
             label: "同步状态",
           },
         ]}
+        onChange={setActiveTab}
       />
     </div>
   );

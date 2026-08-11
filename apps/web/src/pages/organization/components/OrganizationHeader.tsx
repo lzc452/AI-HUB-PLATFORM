@@ -3,12 +3,17 @@ import { Typography } from "antd";
 
 const { Title } = Typography;
 
-/** 页头：图标 + 标题。纯展示组件，无状态。 */
+/**
+ * 页头：图标 + 标题。纯展示组件，无状态。
+ *
+ * 设计图为实心人物图标，但 @ant-design/icons 未导出 TeamFilled；
+ * 按"没有的图标用相近已有图标代替"原则，使用 TeamOutlined 并以白色呈现。
+ */
 export function OrganizationHeader() {
   return (
     <div className="flex items-center gap-3">
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1677ff]">
-        <TeamOutlined className="text-xl text-white" />
+        <TeamOutlined className="text-2xl text-white" />
       </div>
       <Title className="!mb-0" level={1}>
         组织管理

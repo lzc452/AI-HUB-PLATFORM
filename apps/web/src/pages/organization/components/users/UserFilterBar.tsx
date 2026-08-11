@@ -7,7 +7,11 @@ import {
 import { Button, Input, Select } from "antd";
 import type { ReactNode } from "react";
 
-import { ROLE_OPTIONS, SOURCE_OPTIONS, type UserFilterValue } from "../constants";
+import {
+  ROLE_OPTIONS,
+  SOURCE_OPTIONS,
+  type UserFilterValue,
+} from "../constants";
 
 interface UserFilterBarProps {
   departmentOptions: { label: string; value: string }[];
@@ -26,10 +30,10 @@ export function UserFilterBar({
   onChange,
 }: UserFilterBarProps) {
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <Input
         allowClear
-        className="w-[200px]"
+        className="w-[180px]"
         onChange={(e) => onChange({ searchText: e.target.value })}
         placeholder="搜索工号 / 姓名"
         prefix={<SearchOutlined className="text-[#bfbfbf]" />}
@@ -40,7 +44,7 @@ export function UserFilterBar({
         onChange={(next) => onChange({ department: next })}
         options={departmentOptions}
         placeholder="全部部门"
-        style={{ width: 160 }}
+        style={{ width: 152 }}
         value={value.department}
       />
       <Select
@@ -48,7 +52,7 @@ export function UserFilterBar({
         onChange={(next) => onChange({ role: next })}
         options={ROLE_OPTIONS.map((role) => ({ label: role, value: role }))}
         placeholder="全部角色"
-        style={{ width: 160 }}
+        style={{ width: 152 }}
         value={value.role}
       />
       <Select
@@ -56,7 +60,7 @@ export function UserFilterBar({
         onChange={(next) => onChange({ status: next })}
         options={statusOptions}
         placeholder="全部状态"
-        style={{ width: 160 }}
+        style={{ width: 152 }}
         value={value.status}
       />
       <Select
@@ -67,7 +71,7 @@ export function UserFilterBar({
           value: source,
         }))}
         placeholder="全部来源"
-        style={{ width: 160 }}
+        style={{ width: 152 }}
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">

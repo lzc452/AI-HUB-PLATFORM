@@ -76,7 +76,7 @@ export function UserManagementTab({
   }, [rows, filters]);
 
   return (
-    <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
+    <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
       <MessageError
         active={Boolean(firstError)}

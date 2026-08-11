@@ -1,5 +1,5 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Avatar, Button, Dropdown, Table, Tag } from "antd";
+import { Avatar, Button, Dropdown, Table, Tag, Tooltip } from "antd";
 import type { EmployeeSummary } from "@ai-hub/contracts";
 
 import { STATUS_META, type UserTableRow } from "../constants";
@@ -13,17 +13,20 @@ export function UserTable({ rows }: UserTableProps) {
   const columns = [
     {
       dataIndex: "employeeId",
+      ellipsis: true,
       title: "工号",
       width: 90,
     },
     {
       dataIndex: "displayName",
       render: (name: string) => (
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Avatar className="bg-[#1677ff] text-xs" size="small">
             {name.charAt(0)}
           </Avatar>
-          <span>{name}</span>
+          <Tooltip title={name}>
+            <span className="block max-w-[80px] truncate">{name}</span>
+          </Tooltip>
         </div>
       ),
       title: "姓名",
@@ -31,13 +34,27 @@ export function UserTable({ rows }: UserTableProps) {
     },
     {
       dataIndex: "departmentName",
+      ellipsis: true,
       title: "部门",
       width: 160,
     },
     {
       dataIndex: "role",
+      render: (role: string) => (
+        <Tooltip title={role}>
+          <Tag
+            className="m-0 truncate"
+            style={{
+              maxWidth: 100,
+            }}
+            title={role}
+          >
+            {role}
+          </Tag>
+        </Tooltip>
+      ),
       title: "角色",
-      width: 120,
+      width: 110,
     },
     {
       dataIndex: "status",
@@ -46,25 +63,36 @@ export function UserTable({ rows }: UserTableProps) {
         return <Tag color={meta.color}>{meta.text}</Tag>;
       },
       title: "状态",
-      width: 90,
+      width: 86,
     },
     {
       dataIndex: "sourceText",
-      render: (text: string, record: UserTableRow) => (
-        <Tag color={record.sourceColor}>{text}</Tag>
+      render: (text: string) => (
+        <Tooltip title={text}>
+          <Tag
+            className="m-0 truncate"
+            style={{
+              maxWidth: 80,
+            }}
+            title={text}
+          >
+            {text}
+          </Tag>
+        </Tooltip>
       ),
       title: "来源",
-      width: 90,
+      width: 86,
     },
     {
       dataIndex: "lastLogin",
+      ellipsis: true,
       title: "最近登录",
-      width: 150,
+      width: 146,
     },
     {
       key: "action",
       render: () => (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 whitespace-nowrap">
           <Button className="px-0" type="link">
             编辑
           </Button>
@@ -93,6 +121,7 @@ export function UserTable({ rows }: UserTableProps) {
 
   return (
     <Table<UserTableRow>
+      className="org-table-compact"
       columns={columns}
       dataSource={rows}
       pagination={{
@@ -104,7 +133,7 @@ export function UserTable({ rows }: UserTableProps) {
       rowKey="employeeId"
       rowSelection={{ type: "checkbox" }}
       scroll={{ x: "max-content" }}
-      size="middle"
+      size="small"
     />
   );
 }

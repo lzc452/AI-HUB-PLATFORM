@@ -90,6 +90,26 @@ ul, ol {
   transform: translateY(0);
 }
 
+/* 组织管理页表格紧凑模式：行高约为 antd small 的一半，文本禁止换行，超出省略 */
+.org-table-compact .ant-table-thead > tr > th {
+  color: #5a5a5a;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.org-table-compact .ant-table-tbody > tr > td {
+  color: #1f1f1f;
+  font-size: 13px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.org-table-compact .ant-table-cell-ellipsis {
+  white-space: nowrap;
+}
+
 :focus-visible {
   outline: 2px solid #1677ff;
   outline-offset: 2px;
