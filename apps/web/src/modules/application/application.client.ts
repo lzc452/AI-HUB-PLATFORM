@@ -46,6 +46,26 @@ export interface ReviewRecord {
   createdAt: string;
 }
 
+export interface ReviewQueueRecord {
+  reviewQueueId: string;
+  applicationId: string;
+  applicationVersionId: string;
+  status: "available" | "claimed";
+  claimedByEmployeeId: string | null;
+  claimedAt: string | null;
+  slaDueAt: string;
+  createdAt: string;
+  slaStatus: "on_time" | "overdue";
+}
+
+export interface ApplicationWorkspace {
+  application: ApplicationRecord;
+  versions: ApplicationVersionRecord[];
+  deliveries: DeliveryRecord[];
+  reviews: ReviewRecord[];
+  reviewQueue: ReviewQueueRecord | null;
+}
+
 export interface CreatorApplicationRecord {
   applicationId: string;
   name: string;
@@ -92,6 +112,14 @@ export function getApplication(
   applicationId: string,
 ): Promise<ApplicationRecord> {
   return apiFetch<ApplicationRecord>(applicationsPath(applicationId));
+}
+
+export function getApplicationWorkspace(
+  applicationId: string,
+): Promise<ApplicationWorkspace> {
+  return apiFetch<ApplicationWorkspace>(
+    `${applicationsPath(applicationId)}/workspace`,
+  );
 }
 
 export function getApplicationVersions(

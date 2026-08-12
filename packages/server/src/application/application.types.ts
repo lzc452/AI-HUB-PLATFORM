@@ -76,6 +76,14 @@ export type ReviewQueueView = ReviewQueueRecord & {
   slaStatus: ReviewSlaStatus;
 };
 
+export interface ApplicationWorkspace {
+  application: ApplicationRecord;
+  versions: readonly ApplicationVersionRecord[];
+  deliveries: readonly DeliveryRecord[];
+  reviews: readonly ReviewRecord[];
+  reviewQueue: ReviewQueueRecord | null;
+}
+
 export interface ApplicationAuthorizationPort {
   authorize(request: AuthorizationRequest): Promise<AuthorizationDecision>;
 }

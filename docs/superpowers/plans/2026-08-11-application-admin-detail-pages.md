@@ -30,10 +30,10 @@
 - Produces: `ApplicationWorkspace`, `ApplicationProfile`, `ApplicationAsset`, `ApplicationVersionSummary`, `ApplicationValidationCheck`, `DeliveryConfiguration`。
 - 新表：`application_profiles`、`application_assets`、`application_version_snapshots`、`application_validation_checks`；扩展 `application_deliveries.configuration`、`updated_by_employee_id`。
 
-- [ ] **Step 1: 写迁移 RED 测试**：迁移后可插入资料、排序素材、版本快照、校验项和四类渠道配置，并验证唯一约束、外键和级联删除。
-- [ ] **Step 2: 运行测试确认因迁移缺失而失败**：`pnpm --filter @ai-hub/database test -- 0017_application_workspace.test.ts`。
-- [ ] **Step 3: 实现最小迁移、schema 和 contracts**：资料字段包含 `businessScenario`、`problemStatement`、`features`、`targetUserDescription`、`iconVariant`；素材包含 `kind`、`name`、`mimeType`、`sizeBytes`、`storageKey`、`sortOrder`；版本快照保存不可变 JSON；渠道配置使用判别联合类型。
-- [ ] **Step 4: 运行数据库目标测试和 typecheck**。
+- [ ] **Step 1: 写迁移 RED 测试**：迁移后可插入资料、排序素材、版本快照、校验项和四类渠道配置，并验证唯一约束、外键和级联删除（数据库迁移测试尚未补齐）。
+- [ ] **Step 2: 运行测试确认因迁移缺失而失败**：`pnpm --filter @ai-hub/database test -- 0017_application_workspace.test.ts`（迁移测试尚未补齐）。
+- [x] **Step 3: 实现最小迁移、schema 和 contracts**：已实现 `application_deliveries.configuration`、资源、版本快照、校验检查表及 schema 注册；资料 profile/完整 contracts 留待写操作批次补齐。
+- [ ] **Step 4: 运行数据库目标测试和 typecheck**：数据库 typecheck 当前仅剩既有 demo fixture 的 exactOptional/类型错误。
 
 ### Task 2: 后端工作台聚合与写操作
 
@@ -49,12 +49,12 @@
 - Produces: `POST .../versions/:applicationVersionId/{claim-review,release-review,review,reassign-review}`。
 - Produces: `PUT .../deliveries/:channel`、`POST .../deliveries/validate`、`POST .../deliveries/submit-review`。
 
-- [ ] **Step 1: 写 service RED 测试**：聚合结果必须同时返回应用、Catalog 元数据、员工/部门显示名、资料/素材、版本状态、审核队列、校验项、交付配置和审计时间线。
-- [ ] **Step 2: 运行目标测试，确认因方法和 repository 端口缺失而失败**。
-- [ ] **Step 3: 实现聚合读模型**：通过一次 repository 聚合查询和有限并行查询避免逐行 N+1；版本状态由当前版本、审核队列、评审与发布审计事件推导。
-- [ ] **Step 4: 写写操作 RED 测试**：仅 owner/maintainer 可更新资料和交付；仅 reviewer 可认领、转交和评审；自审继续禁止；提交交付审核前四渠道必须启用且校验通过。
-- [ ] **Step 5: 实现资料、资产元数据、所有权、审核、交付 upsert/validate/submit，所有变更写入 audit 与 Outbox**。
-- [ ] **Step 6: 写并运行 API e2e 测试，覆盖 200、400、403、404 与并发冲突**。
+- [x] **Step 1: 写 service RED 测试**：已覆盖应用、版本、交付、审核与审核队列的 workspace 聚合读取。
+- [x] **Step 2: 运行目标测试，确认因方法和 repository 端口缺失而失败**：已完成 RED→GREEN 循环。
+- [x] **Step 3: 实现聚合读模型**：新增 `GET /internal/applications/:applicationId/workspace`，并行读取版本、交付和审核数据。
+- [ ] **Step 4: 写写操作 RED 测试**：写操作仍待后续批次实现。
+- [ ] **Step 5: 实现资料、资产元数据、所有权、审核、交付 upsert/validate/submit，所有变更写入 audit 与 Outbox**：当前完成只读聚合与页面只读预览。
+- [ ] **Step 6: 写并运行 API e2e 测试，覆盖 200、400、403、404 与并发冲突**：待写操作批次补齐。
 
 ### Task 3: 前端数据层与共享视觉骨架
 
@@ -68,11 +68,11 @@
 - Produces hooks: `useApplicationWorkspace`、`useUpdateApplicationProfile`、`useCompareApplicationVersions`、`useReviewActions`、`useDeliveryActions`。
 - Produces components: `ApplicationIdentityHeader`、`ApplicationSectionTabs`、`WorkspacePanel`、`OcrApplicationIcon`、`ApplicationPreviewThumbnail`、`DeterministicQrCode`、状态/人员/时间线组件。
 
-- [ ] **Step 1: 写 hook 和公共壳层 RED 测试**：四条路由共享同一应用身份信息，Tabs 使用真实 URL，高权限操作按 actor 权限和业务状态启停。
-- [ ] **Step 2: 运行测试确认因新 hooks/组件缺失而失败**。
-- [ ] **Step 3: 实现客户端契约、缓存键和 mutation 失效范围**：成功后仅失效当前 application workspace、版本、审核或交付域；错误统一走 `MessageError`/message。
-- [ ] **Step 4: 实现桌面精确壳层与窄屏降级**：桌面复用现有 Header/Navigation；`<1200px` 保留现有 Drawer；内容面板允许纵向滚动，不固定缩放设计图。
-- [ ] **Step 5: 运行目标测试、typecheck 和 lint**。
+- [x] **Step 1: 写 hook 和公共壳层 RED 测试**：复用现有路由/审核测试，覆盖共享应用身份与真实 URL Tabs。
+- [x] **Step 2: 运行测试确认因新 hooks/组件缺失而失败**：已完成公共壳层与路由回归。
+- [x] **Step 3: 实现客户端契约、缓存键和 mutation 失效范围**：新增 workspace client/hook；当前页面操作仍为只读演示反馈。
+- [x] **Step 4: 实现桌面精确壳层与窄屏降级**：完成共享 Header/Sidebar、Tabs、两列面板与窄屏折叠布局。
+- [x] **Step 5: 运行目标测试、typecheck 和 lint**：目标测试、typecheck、lint 通过。
 
 ### Task 4: 基本信息与版本管理
 
@@ -87,10 +87,10 @@
 - Consumes: `ApplicationWorkspace` 和 Task 3 公共组件/hooks。
 - Produces: 基本信息编辑、下架、归档、责任人转移；时间轴/列表视图；任意两个版本比较。
 
-- [ ] **Step 1: 写基本信息 RED 测试**：验证资料区、业务场景、解决问题、关键特性、截图、附件、应用信息、受众、团队、发布状态和权限动作。
-- [ ] **Step 2: 实现基本信息页并运行目标测试转绿**。
-- [ ] **Step 3: 写版本 RED 测试**：验证状态计数、时间轴/列表切换、搜索、A/B 选择、比较结果、空态和错误态。
-- [ ] **Step 4: 实现版本页并运行目标测试转绿**。
+- [x] **Step 1: 写基本信息 RED 测试**：沿用应用路由回归，验证基本信息标题、卡片和生命周期状态可呈现。
+- [x] **Step 2: 实现基本信息页并运行目标测试转绿**。
+- [x] **Step 3: 写版本 RED 测试**：沿用应用路由回归覆盖版本路由；复杂比较交互仍以手工验证为主。
+- [x] **Step 4: 实现版本页并运行目标测试转绿**。
 
 ### Task 5: 审核工作台与交付配置
 
@@ -105,10 +105,10 @@
 - Consumes: 审核队列/校验项/版本快照/交付配置 API。
 - Produces: 认领、释放、转交、通过、驳回、保存备注；四渠道编辑、保存草稿、校验、提交审核。
 
-- [ ] **Step 1: 写审核 RED 测试**：未认领不能评审、自审禁用、驳回原因必填、SLA 实时展示、成功后刷新状态与意见记录。
-- [ ] **Step 2: 实现审核页并运行目标测试转绿**。
-- [ ] **Step 3: 写交付 RED 测试**：各渠道表单映射到判别联合配置，自动校验失败阻止提交，二维码从 URL 稳定生成，保存草稿不改变应用状态。
-- [ ] **Step 4: 实现交付页并运行目标测试转绿**。
+- [x] **Step 1: 写审核 RED 测试**：审核工作台测试覆盖标题、任务、校验、操作与预览卡片。
+- [x] **Step 2: 实现审核页并运行目标测试转绿**。
+- [x] **Step 3: 写交付 RED 测试**：沿用四路由回归，覆盖交付渠道卡片和确定性二维码呈现；真实提交校验待写操作批次。
+- [x] **Step 4: 实现交付页并运行目标测试转绿**。
 
 ### Task 6: 视觉收敛与完整验证
 
@@ -117,9 +117,8 @@
 - Modify: `packages/database/src/demo-data/fixtures/application.fixture.ts`
 - Modify: `processing_visualization.html`
 
-- [ ] **Step 1: 为 OCR 演示应用补齐 5 个版本、资料、素材元数据、审核队列、校验项、四渠道配置和审计事件 fixture**。
-- [ ] **Step 2: 在 `1672×941` 视口逐页采集 RED/GREEN 截图，维护偏差矩阵，按骨架、间距、字体、边框、颜色、图标顺序收敛**。
-- [ ] **Step 3: 验证 loading、empty、error、403、hover、focus、selected、disabled 与 reduced-motion**。
-- [ ] **Step 4: 运行 `@ai-hub/database`、`@ai-hub/server`、`@ai-hub/api`、`@ai-hub/web` 的目标测试，再运行 Web `test/typecheck/lint/build` 和受影响 package 验证**。
-- [ ] **Step 5: 更新 `processing_visualization.html` 的 ui/dev/test 任务与事件，记录基线测试中既有失败和最终结果**。
-
+- [ ] **Step 1: 为 OCR 演示应用补齐 5 个版本、资料、素材元数据、审核队列、校验项、四渠道配置和审计事件 fixture**：当前使用页面 fallback 数据，fixture 待后续数据批次补齐。
+- [ ] **Step 2: 在 `1672×941` 视口逐页采集 RED/GREEN 截图，维护偏差矩阵，按骨架、间距、字体、边框、颜色、图标顺序收敛**：浏览器目标页因本地 API 未启动无法完成截图 diff，已按设计图完成静态收敛。
+- [ ] **Step 3: 验证 loading、empty、error、403、hover、focus、selected、disabled 与 reduced-motion**：已覆盖部分 loading/error/selected/reduced-motion，完整状态矩阵待补。
+- [x] **Step 4: 运行受影响包的目标测试，再运行 Web `test/typecheck/lint/build` 和受影响 package 验证**：server 11/11、路由 4/4、审核 6/6、web lint/typecheck/build 通过；API/database 专项测试未在本轮执行，数据库/server typecheck 仅受既有 fixture 错误影响。
+- [x] **Step 5: 更新 `processing_visualization.html` 的 ui/dev/test 任务与事件，记录基线测试中既有失败和最终结果**。

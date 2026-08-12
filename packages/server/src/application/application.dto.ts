@@ -375,3 +375,21 @@ export class ReviewQueueDto {
   @ApiProperty({ description: "SLA 状态", enum: ["on_time", "overdue"] })
   slaStatus!: "on_time" | "overdue";
 }
+
+/** 应用管理四个工作台共用的聚合视图。 */
+export class ApplicationWorkspaceDto {
+  @ApiProperty({ type: ApplicationDto })
+  application!: ApplicationDto;
+
+  @ApiProperty({ type: ApplicationVersionDto, isArray: true })
+  versions!: ApplicationVersionDto[];
+
+  @ApiProperty({ type: DeliveryDto, isArray: true })
+  deliveries!: DeliveryDto[];
+
+  @ApiProperty({ type: ReviewDto, isArray: true })
+  reviews!: ReviewDto[];
+
+  @ApiProperty({ type: ReviewQueueDto, nullable: true })
+  reviewQueue!: ReviewQueueDto | null;
+}

@@ -146,8 +146,40 @@ export interface ApplicationDeliveriesTable {
   entry_url: string;
   min_client_version: string | null;
   enabled: boolean;
+  configuration: unknown;
+  updated_by_employee_id: string | null;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationAssetsTable {
+  asset_id: Generated<string>;
+  application_id: string;
+  application_version_id: string | null;
+  asset_type: "icon" | "screenshot" | "attachment";
+  name: string;
+  storage_key: string;
+  mime_type: string;
+  size_bytes: number;
+  sort_order: number;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationVersionSnapshotsTable {
+  snapshot_id: Generated<string>;
+  application_version_id: string;
+  payload: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationValidationChecksTable {
+  validation_check_id: Generated<string>;
+  application_version_id: string;
+  check_code: string;
+  label: string;
+  status: "passed" | "safe" | "warning" | "info" | "failed";
+  detail: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
 }
 
 export interface ApplicationReviewsTable {
@@ -497,6 +529,9 @@ export interface DatabaseSchema {
   applications: ApplicationsTable;
   application_versions: ApplicationVersionsTable;
   application_deliveries: ApplicationDeliveriesTable;
+  application_assets: ApplicationAssetsTable;
+  application_version_snapshots: ApplicationVersionSnapshotsTable;
+  application_validation_checks: ApplicationValidationChecksTable;
   application_reviews: ApplicationReviewsTable;
   application_review_queue: ApplicationReviewQueueTable;
   application_audit_events: ApplicationAuditEventsTable;

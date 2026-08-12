@@ -515,4 +515,48 @@ describe("ApplicationService", () => {
     ).resolves.toHaveLength(2);
     expect(repository.events).toContain("application.rolled_back");
   });
+
+  it("aggregates the application workspace for the four detail routes", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "OCR 票据识别",
+      summary: "统一处理企业票据",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com/ocr",
+      enabled: true,
+    });
+    await service.submitForReview(owner, version.applicationVersionId);
+
+    const workspace = await (
+      service as unknown as {
+        getWorkspace: (applicationId: string, actor?: ActorContext) => Promise<{
+          application: ApplicationRecord;
+          versions: ApplicationVersionRecord[];
+          deliveries: DeliveryRecord[];
+          reviews: ReviewRecord[];
+          reviewQueue: ReviewQueueRecord | null;
+        }>;
+      }
+    ).getWorkspace(application.applicationId, owner);
+
+    expect(workspace.application).toMatchObject({
+      applicationId: application.applicationId,
+      name: "OCR 票据识别",
+      status: "in_review",
+    });
+    expect(workspace.versions).toHaveLength(1);
+    expect(workspace.deliveries).toHaveLength(1);
+    expect(workspace.reviews).toHaveLength(0);
+    expect(workspace.reviewQueue).toMatchObject({
+      applicationVersionId: version.applicationVersionId,
+      status: "available",
+    });
+  });
 });

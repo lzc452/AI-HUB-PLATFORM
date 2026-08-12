@@ -31,6 +31,7 @@ import { ApplicationService } from "./application.service.js";
 import {
   ApplicationDto,
   ApplicationVersionDto,
+  ApplicationWorkspaceDto,
   ConfigureDeliveryRequestDto,
   CreateApplicationRequestDto,
   CreateVersionRequestDto,
@@ -349,6 +350,22 @@ export class ApplicationController {
     return this.call(() =>
       this.applications.getApplication(applicationId, actor),
     );
+  }
+
+  @Get(":applicationId/workspace")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
+  @ApiOperation({ summary: "应用管理工作台聚合数据" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "应用详情、版本、评审与交付聚合数据", type: ApplicationWorkspaceDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getWorkspace(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() => this.applications.getWorkspace(applicationId, actor));
   }
 
   @Get(":applicationId/versions")
