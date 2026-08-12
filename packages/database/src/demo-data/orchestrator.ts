@@ -395,7 +395,7 @@ export async function checkDemoDataset(
   const domains = options.domains ?? ALL_DOMAINS;
 
   const expectedCounts: Record<DemoDatasetDomain, number> = {
-    identity: 5, application: 20, catalog: 10, demand: 18, notification: 15, analytics: 30,
+    identity: 5, application: 20, catalog: 10, demand: 18, notification: 20, analytics: 30,
   };
 
   for (const domain of domains) {

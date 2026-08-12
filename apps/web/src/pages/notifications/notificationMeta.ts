@@ -1,9 +1,11 @@
 import {
+  BarChartOutlined,
   BulbOutlined,
   CheckCircleFilled,
   CommentOutlined,
   MessageOutlined,
   SoundOutlined,
+  StarFilled,
   WarningFilled,
 } from "@ant-design/icons";
 import type { ComponentType } from "react";
@@ -80,17 +82,79 @@ function applicationReviewRoute(aggregateId: string): string {
   return `/applications/${encodeURIComponent(aggregateId)}/review`;
 }
 
+/** 创新需求子类型 → 动词（用于动态标题）。 */
+const DEMAND_VERB: Readonly<Record<string, string>> = Object.freeze({
+  "demand.submitted": "已提交",
+  "demand.claimed": "已被认领",
+  "demand.collaborator_assigned": "已分配协作者",
+  "demand.progress_updated": "进度已更新",
+  "demand.pilot_started": "试点已启动",
+  "demand.closed": "已关闭",
+  "demand.merged": "已合并",
+});
+
 export function resolveNotificationMeta(
   record: NotificationRecord,
 ): NotificationMeta {
   const { aggregateId, eventType, message, createdAt } = record;
 
-  const commonActions = [
-    { label: "关闭", primary: false as const },
-  ];
+  const commonActions = [{ label: "关闭", primary: false as const }];
 
-  if (eventType.includes("application.published") || eventType.includes("review_approved")) {
+  // ── 数据洞察：分析导出 / 助手任务 ──────────────────────────────────────────
+  if (eventType.includes("analytics") || eventType.includes("export")) {
+    const isFailed =
+      eventType.endsWith(".failed") || eventType.includes("assistant.failed");
+    return {
+      actions: [
+        { label: "查看导出详情", primary: true },
+        ...(isFailed ? [{ label: "重试导出" }] : []),
+        ...commonActions,
+      ],
+      category: "数据洞察",
+      detailFields: [
+        { label: "任务编号", value: aggregateId },
+        { label: "状态", value: isFailed ? "失败" : "已完成" },
+        { label: "触发时间", value: formatDateTime(createdAt) },
+        {
+          label: "处理建议",
+          value: isFailed
+            ? "请检查导出范围与权限后重试；多次失败请联系管理员。"
+            : "导出文件已生成，可前往下载中心获取。",
+        },
+      ],
+      detailLead: message,
+      icon: BarChartOutlined,
+      iconBg: "#13c2c2",
+      iconColor: "#ffffff",
+      subtitle: message,
+      title: message.split("：")[0] ?? "数据分析通知",
+    };
+  }
+
+  // ── 审核相关：应用评审/发布/撤回等生命周期 ────────────────────────────────
+  if (
+    eventType.includes("review_requested") ||
+    eventType.includes("review_decided") ||
+    eventType.includes("review_approved") ||
+    eventType.includes("application.published") ||
+    eventType.includes("withdrawn")
+  ) {
     const appName = extractQuoted(message, "您的应用");
+    let title: string;
+    let lead: string;
+    if (eventType.includes("review_requested")) {
+      title = `应用「${appName}」待您审核`;
+      lead = `应用「${appName}」已提交评审，等待您完成审核。`;
+    } else if (eventType.includes("review_decided")) {
+      title = `应用「${appName}」评审结论已出`;
+      lead = `您提交的应用「${appName}」评审已结束，请查看结论。`;
+    } else if (eventType.includes("withdrawn")) {
+      title = `应用「${appName}」已撤回`;
+      lead = `应用「${appName}」已被作者撤回。`;
+    } else {
+      title = `您的应用「${appName}」审核已通过`;
+      lead = `您好！您提交的应用「${appName}」已通过平台审核，现已正式发布到应用市场。`;
+    }
     return {
       actions: [
         { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
@@ -106,18 +170,25 @@ export function resolveNotificationMeta(
         { label: "审核人员", value: "李小龙（审核部）" },
         { label: "审核意见", value: "功能完整，文档规范，符合平台安全标准，建议发布。" },
       ],
-      detailLead: `您好！您提交的应用「${appName}」已通过平台审核，现已正式发布到应用市场。`,
+      detailLead: lead,
       icon: CheckCircleFilled,
       iconBg: "#722ed1",
       iconColor: "#ffffff",
-      subtitle: `您的应用已成功通过审核，现已发布到应用市场。`,
-      title: `您的应用「${appName}」审核已通过`,
+      subtitle: lead,
+      title,
     };
   }
 
-  if (eventType.includes("reviewed") || eventType.includes("comment") || eventType.includes("reply")) {
+  // ── 评论互动：评论/回复/评分 ───────────────────────────────────────────────
+  if (
+    eventType.includes("reviewed") ||
+    eventType.includes("comment") ||
+    eventType.includes("reply") ||
+    eventType.includes("rating")
+  ) {
     const appName = extractQuoted(message, message.replace(/^评论回复：/, ""));
     const isReply = eventType.includes("reply") || message.startsWith("评论回复");
+    const isRating = eventType.includes("rating");
     return {
       actions: [
         { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
@@ -126,46 +197,75 @@ export function resolveNotificationMeta(
       category: "评论互动",
       detailFields: [
         { label: "应用名称", value: appName },
-        { label: "互动类型", value: isReply ? "评论回复" : "新评价" },
+        { label: "互动类型", value: isRating ? "新的评分" : isReply ? "评论回复" : "新评价" },
         { label: "发生时间", value: formatDateTime(createdAt) },
       ],
-      detailLead: isReply
-        ? `王芳 回复了您在应用「${appName}」下的评论，快去看看吧。`
-        : `用户“李小龙”给您的应用「${appName}」留下了评价和建议，快去看看吧。`,
-      icon: isReply ? CommentOutlined : MessageOutlined,
+      detailLead: isRating
+        ? `用户给您的应用「${appName}」留下了新的评分，快去看看吧。`
+        : isReply
+          ? `王芳 回复了您在应用「${appName}」下的评论，快去看看吧。`
+          : `用户“李小龙”给您的应用「${appName}」留下了评价和建议，快去看看吧。`,
+      icon: isRating ? StarFilled : isReply ? CommentOutlined : MessageOutlined,
       iconBg: "#52c41a",
       iconColor: "#ffffff",
-      subtitle: isReply
-        ? `王芳 回复了您在应用「${appName}」下的评论。`
-        : `用户“李小龙”给您的应用留下了评价和建议。`,
-      title: isReply ? `评论回复：${appName}` : `应用「${appName}」收到新的评价`,
+      subtitle: isRating
+        ? `用户给应用「${appName}」留下了新的评分。`
+        : isReply
+          ? `王芳 回复了您在应用「${appName}」下的评论。`
+          : `用户“李小龙”给您的应用留下了评价和建议。`,
+      title: isRating
+        ? `应用「${appName}」收到新的评分`
+        : isReply
+          ? `评论回复：${appName}`
+          : `应用「${appName}」收到新的评价`,
     };
   }
 
-  if (eventType.includes("scan") || eventType.includes("security")) {
+  // ── 安全告警：扫描/安全/举报 ──────────────────────────────────────────────
+  if (
+    eventType.includes("scan") ||
+    eventType.includes("security") ||
+    eventType.includes("report")
+  ) {
     const appName = extractQuoted(message, "指定应用");
+    const isReport = eventType.includes("report");
     return {
       actions: [
         { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
+        ...(isReport ? [{ label: "前往处理举报" }] : []),
         { label: "前往审核记录", to: applicationReviewRoute(aggregateId) },
         ...commonActions,
       ],
       category: "安全告警",
       detailFields: [
         { label: "应用名称", value: appName },
-        { label: "风险等级", value: "高风险" },
+        { label: "风险等级", value: isReport ? "需处理" : "高风险" },
         { label: "检测时间", value: formatDateTime(createdAt) },
-        { label: "处理建议", value: "请检查上传包中的可疑附件，必要时重新提交版本。" },
+        {
+          label: "处理建议",
+          value: isReport
+            ? "请核实举报内容并决定是否下架或隐藏该应用。"
+            : "请检查上传包中的可疑附件，必要时重新提交版本。",
+        },
       ],
-      detailLead: `在应用「${appName}」的上传包中检测到高风险文件，请及时处理。`,
+      detailLead: isReport
+        ? `应用「${appName}」收到用户举报，请尽快核实处理。`
+        : `在应用「${appName}」的上传包中检测到高风险文件，请及时处理。`,
       icon: WarningFilled,
       iconBg: "#f5222d",
       iconColor: "#ffffff",
-      subtitle: `在应用「${appName}」的上传包中检测到高风险文件。`,
-      title: message.includes("附件") ? message : `系统扫描发现风险：${message}`,
+      subtitle: isReport
+        ? `应用「${appName}」收到用户举报，请尽快处理。`
+        : `在应用「${appName}」的上传包中检测到高风险文件。`,
+      title: isReport
+        ? `应用「${appName}」收到举报`
+        : message.includes("附件")
+          ? message
+          : `系统扫描发现风险：${message}`,
     };
   }
 
+  // ── 平台公告 ──────────────────────────────────────────────────────────────
   if (eventType.includes("announcement") || eventType.includes("platform")) {
     return {
       actions: [{ label: "我知道了", primary: true }, ...commonActions],
@@ -184,29 +284,40 @@ export function resolveNotificationMeta(
     };
   }
 
+  // ── 创新需求 ──────────────────────────────────────────────────────────────
   if (eventType.includes("demand") || eventType.includes("innovation")) {
     const demandName = extractQuoted(message, "创新需求");
+    const verb = DEMAND_VERB[eventType] ?? "已更新";
     return {
       actions: [
-        { label: "查看需求详情", primary: true, to: `/innovation/${encodeURIComponent(aggregateId)}` },
+        {
+          label: "查看需求详情",
+          primary: true,
+          to: `/innovation/${encodeURIComponent(aggregateId)}`,
+        },
         ...commonActions,
       ],
       category: "创新需求",
       detailFields: [
         { label: "需求名称", value: demandName },
-        { label: "认领时间", value: formatDateTime(createdAt) },
-        { label: "认领团队", value: "法务小助手团队" },
+        { label: "当前状态", value: verb },
+        { label: "触发时间", value: formatDateTime(createdAt) },
       ],
-      detailLead: `您的创新需求「${demandName}」已被认领，感谢您的贡献！`,
+      detailLead: `您的创新需求「${demandName}」${verb}，感谢您的贡献！`,
       icon: BulbOutlined,
       iconBg: "#faad14",
       iconColor: "#ffffff",
-      subtitle: `您的创新需求已被“法务小助手团队”认领，感谢您的贡献！`,
-      title: `创新需求「${demandName}」已被认领`,
+      subtitle: `您的创新需求「${demandName}」${verb}。`,
+      title: `创新需求「${demandName}」${verb}`,
     };
   }
 
-  if (eventType.includes("system") || eventType.includes("storage") || eventType.includes("alert")) {
+  // ── 系统告警 ──────────────────────────────────────────────────────────────
+  if (
+    eventType.includes("system") ||
+    eventType.includes("storage") ||
+    eventType.includes("alert")
+  ) {
     return {
       actions: [{ label: "查看详情", primary: true }, ...commonActions],
       category: "系统告警",

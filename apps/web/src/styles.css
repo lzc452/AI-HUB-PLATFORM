@@ -210,3 +210,21 @@ ol {
   outline: 2px solid #0060f0;
   outline-offset: 2px;
 }
+
+/* ===== AI 助手：消息错峰入场动效 ===== */
+@keyframes assistant-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant-rise {
+    animation: assistant-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
