@@ -108,8 +108,8 @@ const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
 
   // ═══ ROOT ENTITY TABLES ═══
 
-  { table: "applications", where: `application_id::text LIKE '00000001-%'` },
-  { table: "ai_demands", where: `demand_id::text LIKE '00000010-%'` },
+  { table: "applications", where: `application_id::text LIKE '00000001-%' OR owner_employee_id LIKE 'DEMO-%' OR maintainer_employee_id LIKE 'DEMO-%'` },
+  { table: "ai_demands", where: `demand_id::text LIKE '00000010-%' OR requester_employee_id LIKE 'DEMO-%'` },
 
   {
     table: "notifications",
@@ -145,6 +145,9 @@ const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
   },
 
   { table: "identity_audit_events", where: `actor_employee_id LIKE 'DEMO-%'` },
+  { table: "user_sessions", where: `employee_id LIKE 'DEMO-%'` },
+  { table: "password_reset_challenges", where: `employee_id LIKE 'DEMO-%'` },
+  { table: "dingtalk_bindings", where: `employee_id LIKE 'DEMO-%'` },
   { table: "employee_roles", where: `employee_id LIKE 'DEMO-%'` },
   { table: "department_memberships", where: `employee_id LIKE 'DEMO-%'` },
 
@@ -161,10 +164,34 @@ const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
  * - Migration bookkeeping (kysely_migration, kysely_migration_lock)
  * - Any non-demo data inserted during local development
  */
-export async function cleanDemoData(db: Kysely<DatabaseSchema>): Promise<void> {
-  for (const step of CLEANUP_ORDER) {
-    await sql`DELETE FROM ${sql.ref(step.table)} WHERE ${sql.raw(step.where)}`.execute(
-      db,
-    );
+/** Tables that have BEFORE DELETE triggers preventing row deletion. */
+const PROTECTED_TABLES: readonly string[] = Object.freeze([
+  "ai_demands",
+  "ai_demand_comments",
+  "ai_demand_reports",
+  "ai_demand_progress_updates",
+  "ai_demand_pilots",
+  "ai_demand_audit_events",
+  "analytics_behavior_events",
+  "analytics_audit_events",
+]);
+
+export async function cleanDemoData(
+  db: Kysely<DatabaseSchema>,
+): Promise<void> {
+  for (const table of PROTECTED_TABLES) {
+    await sql`ALTER TABLE ${sql.ref(table)} DISABLE TRIGGER ALL`.execute(db);
+  }
+
+  try {
+    for (const step of CLEANUP_ORDER) {
+      await sql`DELETE FROM ${sql.ref(step.table)} WHERE ${sql.raw(step.where)}`.execute(
+        db,
+      );
+    }
+  } finally {
+    for (const table of PROTECTED_TABLES) {
+      await sql`ALTER TABLE ${sql.ref(table)} ENABLE TRIGGER ALL`.execute(db);
+    }
   }
 }

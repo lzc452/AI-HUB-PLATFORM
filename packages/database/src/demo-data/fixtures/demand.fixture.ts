@@ -781,6 +781,19 @@ export function buildDemandFixture(anchor: Date): DemandFixtureData {
     },
   );
 
+  // Ensure demands that reference another demand via merged_into_demand_id are
+  // inserted after their targets so the self-referential FK is always satisfied.
+  const demandIds = new Set(IDS.demand.all);
+  demands.sort((a, b) => {
+    const aRef = a.merged_into_demand_id;
+    const bRef = b.merged_into_demand_id;
+    // a references b's demand_id → b must come first
+    if (typeof aRef === "string" && demandIds.has(aRef) && aRef === b.demand_id) return 1;
+    // b references a's demand_id → a must come first
+    if (typeof bRef === "string" && demandIds.has(bRef) && bRef === a.demand_id) return -1;
+    return 0;
+  });
+
   // ── collaborators (6) ───────────────────────────────────────────────────────
 
   const demandCollaborators: Array<

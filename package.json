@@ -31,6 +31,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "devDependencies": {
+    "@ai-hub/database": "workspace:*",
     "@types/node": "18.19.130",
     "dependency-cruiser": "16.10.4",
     "eslint": "9.39.1",
