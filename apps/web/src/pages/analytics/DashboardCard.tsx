@@ -36,7 +36,7 @@ export function DashboardCard({
 
   return (
     <article
-      className="rounded-md border border-solid border-[#d9d9d9] bg-white p-4"
+      className="rounded-md bg-white p-4"
       aria-label={`${title} dashboard`}
     >
       <Title level={5} className="!mb-0 !mt-0">

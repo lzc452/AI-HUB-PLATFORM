@@ -3,6 +3,7 @@ export { EmptyBlock } from "./EmptyBlock";
 export { ErrorBlock } from "./ErrorBlock";
 export { ForbiddenBlock } from "./ForbiddenBlock";
 export { KpiCard } from "./KpiCard";
+export { KpiMetricCard } from "./KpiMetricCard";
 export { NotFoundBlock } from "./NotFoundBlock";
 export { SkeletonCard } from "./SkeletonCard";
 export { SkeletonDetail } from "./SkeletonDetail";

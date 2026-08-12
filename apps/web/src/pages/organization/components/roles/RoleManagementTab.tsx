@@ -44,7 +44,7 @@ export function RoleManagementTab() {
 
   if (error) {
     return (
-      <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2 text-[13px] text-[#ff4d4f]">
+      <section className="space-y-2 rounded-xl bg-white p-2 text-[13px] text-[#ff4d4f]">
         角色数据加载失败：{error.message}
       </section>
     );
@@ -57,7 +57,7 @@ export function RoleManagementTab() {
   };
 
   return (
-    <section className="space-y-2 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
+    <section className="space-y-2 rounded-xl bg-white p-2">
       <RoleFilterBar
         selectedCount={selectedRowKeys.length}
         value={filters}

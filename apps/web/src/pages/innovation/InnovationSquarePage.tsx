@@ -228,7 +228,7 @@ export default function InnovationSquarePage() {
 
   return (
     <div className="space-y-4">
-      <section className="flex flex-col justify-between gap-4 rounded-xl border border-[#d6e4ff] bg-[#eaf4ff] px-6 py-6 sm:flex-row sm:items-center">
+      <section className="flex flex-col justify-between gap-4 rounded-xl border border-[#d6e4ff] bg-[#eaf4ff] p-4 sm:flex-row sm:items-center">
         <div>
           <Typography.Title className="!mb-2" level={1}>
             创新广场
