@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   archiveApplication,
   getApplication,
+  getApplicationWorkspace,
   getApplicationDeliveries,
   getApplicationReviews,
   getApplicationVersions,
@@ -21,6 +22,14 @@ export function useApplication(applicationId: string | undefined) {
     enabled: Boolean(applicationId),
     queryFn: () => getApplication(applicationId as string),
     queryKey: ["applications", "detail", applicationId],
+  });
+}
+
+export function useApplicationWorkspace(applicationId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(applicationId),
+    queryFn: () => getApplicationWorkspace(applicationId as string),
+    queryKey: ["applications", "workspace", applicationId],
   });
 }
 

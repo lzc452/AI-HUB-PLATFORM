@@ -489,7 +489,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-10",
+        updatedAt: "2026-08-12",
         phases: [
           {
             id: "product",
@@ -516,6 +516,7 @@
               "innovationDetail 页面 UI 设计已定稿，采用需求说明与讨论区 60/40 分栏",
               "innovation 页面 UI 设计已定稿，采用结构化双列需求发现布局",
               "应用管理页面 UI 设计已定稿，采用治理指标、精确筛选与全宽应用表格布局",
+              "应用详情四个工作台按设计稿完成布局还原：基本信息、版本管理、审核工作台、交付配置",
             ],
           },
           {
@@ -525,13 +526,14 @@
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
-              "前端全部为静态壳体，API 零集成",
+              "应用详情、版本、审核和交付工作台已接入共享应用壳与真实路由；其余未列页面仍保留静态演示数据",
               "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
               "新增业务演示数据 seed（应用/需求/互动/通知/分析）与 init:dev、init:production 统一入口",
               "权限统一改造已完成：补齐路由/API 权限矩阵、全局 PermissionGuard、会话边界，并将演示账号改为 employee + 专业角色组合",
               "API Swagger 完整文档已接入（/internal/docs，开发/测试默认开启）",
               "外部集成均为 fake/unavailable adapter",
               "前端查询错误与 mutation 反馈已接入共享 Message 模块",
+              "新增 ApplicationWorkspace 聚合读取接口、交付配置扩展字段和应用资源/校验/快照迁移 0017",
             ],
           },
           {
@@ -548,6 +550,7 @@
               "数据库 seed 2 tests、真实登录 API 6 tests 通过（本地 PostgreSQL）",
               "demo-business seed 集成 2 tests、Swagger 文档真实 e2e 2 tests 通过",
               "权限矩阵定向验证：server 117/117、API 关键 10/10、DB registry/seed 3/3；数据库集成仍需 Docker runtime",
+              "应用管理目标路由 4/4 通过，审核工作台 6/6 通过；全量 Web 仍有 2 个既有基线失败",
             ],
           },
           {
@@ -690,7 +693,7 @@
             status: "已完成",
             progress: 100,
             summary:
-              "Phase 3 后端已落地：应用生命周期、不可变版本、四通道交付、制品校验管线（SHA-256/分片/扫描/签名）、审核池（领取/驳回/撤回/禁止自审/SLA）、发布/下架/归档/回滚；17 个 API 端点全部实现并测试通过。前端发布向导和审核工作台仍为静态壳体。",
+              "Phase 3 后端已落地：应用生命周期、不可变版本、四通道交付、制品校验管线（SHA-256/分片/扫描/签名）、审核池（领取/驳回/撤回/禁止自审/SLA）、发布/下架/归档/回滚；新增 ApplicationWorkspace 聚合读取与应用资源/校验/快照数据结构。前端应用详情四个工作台已按设计稿完成，真实提交/上传仍待后续接入。",
             tasks: [
               [
                 "应用身份、负责人、维护人与归属部门",
@@ -714,8 +717,8 @@
               ],
               [
                 "发布向导、详情预览与自动校验",
-                "有风险",
-                "后端 API 完整；前端发布向导和审核工作台为静态占位，无真实交互。",
+                "进行中",
+                "四个应用详情工作台已完成共享壳、路由、预览、校验、交付配置和审核信息呈现；真实上传、提交和校验任务编排仍待后续接入。",
               ],
               [
                 "审核池、领取、驳回、撤回、禁止自审、SLA 通知",
@@ -1409,6 +1412,30 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-12",
+            phase: "test",
+            title: "应用工作台视觉细节与回归收口",
+            body: "将版本、审核和交付页面中的资源图标改为 CSS/SVG 形状，按设计稿修正版本历史页和审核页头部结构；四条应用路由 4/4、审核工作台 6/6、lint、typecheck、build 和 diff check 保持通过。",
+          },
+          {
+            date: "2026-08-11",
+            phase: "ui",
+            title: "应用详情四个工作台完成设计稿还原",
+            body: "完成 /applications/:applicationId、/versions、/review、/delivery 四个路由的共享应用身份卡、标签页、版本对比、审核预览、交付渠道和校验历史布局；使用 SVG/CSS 资源替代缺失的 OCR 图标、二维码与缩略图，并保留响应式与可访问交互。",
+          },
+          {
+            date: "2026-08-11",
+            phase: "dev",
+            title: "应用工作台聚合接口与数据结构补齐",
+            body: "新增 ApplicationWorkspace DTO/service/controller/client hook，迁移 0017 扩展交付 configuration，并建立应用资源、版本快照和校验检查表，为四个工作台后续接入真实上传与校验任务保留持久化边界。",
+          },
+          {
+            date: "2026-08-11",
+            phase: "test",
+            title: "应用管理目标路由回归完成",
+            body: "server application service 11/11 通过；Web 目标应用路由 4/4、审核工作台 6/6 通过，lint、typecheck、build 和 diff check 通过。全量 Web 仍受应用列表既有数据断言与登录错误文案两项基线失败影响。",
+          },
           {
             date: "2026-08-10",
             phase: "ui",

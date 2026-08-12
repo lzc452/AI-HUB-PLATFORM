@@ -8,6 +8,7 @@ import type {
   ApplicationRepository,
   ApplicationRecord,
   ApplicationVersionRecord,
+  ApplicationWorkspace,
   DeliveryChannel,
   DeliveryRecord,
   ReviewDecision,
@@ -494,6 +495,31 @@ export class ApplicationService {
       this.assertApplicationReadable(actor, application);
     }
     return this.repository.listVersions(applicationId);
+  }
+
+  async getWorkspace(
+    applicationId: string,
+    actor?: ActorContext,
+  ): Promise<ApplicationWorkspace> {
+    const application = await this.getApplication(applicationId, actor);
+    const [versions, deliveries, reviews] = await Promise.all([
+      this.repository.listVersions(applicationId),
+      this.repository.listDeliveries(applicationId),
+      this.repository.listReviews(applicationId),
+    ]);
+    const latestVersion = versions[0];
+    const reviewQueue = latestVersion
+      ? await this.repository.findReviewQueueByVersion(
+          latestVersion.applicationVersionId,
+        )
+      : null;
+    return {
+      application,
+      versions,
+      deliveries,
+      reviews,
+      reviewQueue,
+    };
   }
 
   async listDeliveries(applicationId: string, actor?: ActorContext) {

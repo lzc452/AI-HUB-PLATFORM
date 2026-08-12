@@ -81,7 +81,7 @@ export function AppShell() {
           <div className="relative h-full">
             <Sider
               collapsed={collapsed}
-              collapsedWidth={64}
+                collapsedWidth={72}
               style={{
                 background: "#fff",
                 borderRight: "1px solid #d9d9d9",
@@ -89,7 +89,7 @@ export function AppShell() {
               }}
               theme="light"
               trigger={null}
-              width={180}
+              width={228}
             >
               {sidebarContent}
             </Sider>
@@ -109,7 +109,7 @@ export function AppShell() {
         )}
         <Content
           id="main-content"
-          className="min-h-0 p-4"
+          className="min-h-0 px-5 pb-5 pt-3"
           style={{ background: "#f5f5f5", overflowY: "auto" }}
           tabIndex={-1}
         >
