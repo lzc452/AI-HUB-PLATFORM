@@ -19,7 +19,8 @@ const db = createDatabase(databaseUrl);
 try {
   const result = await seedDemoDataset(db, {
     anchorDate,
-    mode: "reset",
+    mode: "upsert",
+    domains: ["identity", "application", "catalog", "demand", "notification"],
   });
   console.log(JSON.stringify(result, null, 2));
   console.log(`Seed complete in ${result.durationMs}ms`);
