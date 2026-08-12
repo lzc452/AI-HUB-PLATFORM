@@ -2,9 +2,7 @@ import type { Insertable } from "kysely";
 import type { DatabaseSchema } from "../../schema.js";
 import { IDS } from "../ids.js";
 import { daysAgo } from "../time-utils.js";
-import {
-  DEMO_ACCOUNT_DEFINITIONS,
-} from "../../demo-seed.js";
+import { DEMO_ACCOUNT_DEFINITIONS } from "../../demo-seed.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -185,12 +183,6 @@ const APP_DEFS: readonly AppDef[] = Object.freeze([
 
 type Channel = "web" | "desktop" | "mobile" | "mini_program";
 
-interface DeliveryDef {
-  channels: readonly Channel[];
-  /** Whether to mark some deliveries as disabled for variety. */
-  disabledIndex?: number;
-}
-
 /**
  * Delivery distribution:
  *   Published 0-7 (8 apps): 4 channels each = 32
@@ -258,47 +250,53 @@ const baseUrl = (channel: Channel): string => {
 
 export interface ApplicationFixtureData {
   applications: Array<Insertable<DatabaseSchema["applications"]>>;
-  applicationVersions: Array<Insertable<DatabaseSchema["application_versions"]>>;
-  applicationDeliveries: Array<Insertable<DatabaseSchema["application_deliveries"]>>;
+  applicationVersions: Array<
+    Insertable<DatabaseSchema["application_versions"]>
+  >;
+  applicationDeliveries: Array<
+    Insertable<DatabaseSchema["application_deliveries"]>
+  >;
   applicationReviews: Array<Insertable<DatabaseSchema["application_reviews"]>>;
-  applicationReviewQueue: Array<Insertable<DatabaseSchema["application_review_queue"]>>;
-  applicationAuditEvents: Array<Insertable<DatabaseSchema["application_audit_events"]>>;
+  applicationReviewQueue: Array<
+    Insertable<DatabaseSchema["application_review_queue"]>
+  >;
+  applicationAuditEvents: Array<
+    Insertable<DatabaseSchema["application_audit_events"]>
+  >;
 }
 
 // ── implementation ──────────────────────────────────────────────────────────
 
-export function buildApplicationFixture(
-  anchor: Date,
-): ApplicationFixtureData {
+export function buildApplicationFixture(anchor: Date): ApplicationFixtureData {
   // ── applications (20) ──────────────────────────────────────────────────────
 
-  const statuses: readonly Insertable<DatabaseSchema["applications"]>["status"][] =
-    [
-      "draft",
-      "draft",
-      "draft",
-      "in_review",
-      "in_review",
-      "in_review",
-      "approved",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "published",
-      "withdrawn",
-      "withdrawn",
-      "archived",
-    ];
+  const statuses: readonly Insertable<
+    DatabaseSchema["applications"]
+  >["status"][] = [
+    "draft",
+    "draft",
+    "draft",
+    "in_review",
+    "in_review",
+    "in_review",
+    "approved",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "published",
+    "withdrawn",
+    "withdrawn",
+    "archived",
+  ];
 
-  const applications: Array<Insertable<DatabaseSchema["applications"]>> = Array.from(
-    { length: 20 },
-    (_, i) => ({
+  const applications: Array<Insertable<DatabaseSchema["applications"]>> =
+    Array.from({ length: 20 }, (_, i) => ({
       application_id: IDS.application.all[i]!,
       owner_employee_id: APP_DEFS[i]!.ownerEmployeeId,
       maintainer_employee_id: APP_DEFS[i]!.maintainerEmployeeId,
@@ -309,8 +307,7 @@ export function buildApplicationFixture(
       current_version_id: null,
       created_at: daysAgo(anchor, 80 - i * 2),
       updated_at: daysAgo(anchor, 80 - i * 2),
-    }),
-  );
+    }));
 
   // ── versions (20) — one per application ────────────────────────────────────
 
@@ -396,9 +393,10 @@ export function buildApplicationFixture(
         delivery_id: IDS.delivery[deliveryIdx]!,
         application_id: appId,
         channel,
-        entry_url: channel === "mini_program"
-          ? baseUrl(channel)
-          : `${baseUrl(channel)}/${slug}`,
+        entry_url:
+          channel === "mini_program"
+            ? baseUrl(channel)
+            : `${baseUrl(channel)}/${slug}`,
         min_client_version: channel === "desktop" ? "1.0.0" : null,
         enabled,
         created_at: daysAgo(anchor, 60 - deliveryIdx),
@@ -468,16 +466,66 @@ export function buildApplicationFixture(
     actorEmployeeId: string;
     details: Record<string, unknown>;
   }[] = [
-    { appIdx: 0, eventType: "application.created", actorEmployeeId: EMP.employee, details: { source: "demo-seed" } },
-    { appIdx: 1, eventType: "application.created", actorEmployeeId: EMP.employee, details: { source: "demo-seed" } },
-    { appIdx: 3, eventType: "application.created", actorEmployeeId: EMP.appAdmin, details: { source: "demo-seed" } },
-    { appIdx: 3, eventType: "application.submitted", actorEmployeeId: EMP.appAdmin, details: { status: "in_review" } },
-    { appIdx: 4, eventType: "application.created", actorEmployeeId: EMP.appAdmin, details: { source: "demo-seed" } },
-    { appIdx: 6, eventType: "application.created", actorEmployeeId: EMP.appAdmin, details: { source: "demo-seed" } },
-    { appIdx: 7, eventType: "application.created", actorEmployeeId: EMP.appAdmin, details: { source: "demo-seed" } },
-    { appIdx: 7, eventType: "application.submitted", actorEmployeeId: EMP.appAdmin, details: { status: "in_review" } },
-    { appIdx: 7, eventType: "application.reviewed", actorEmployeeId: EMP.innovation, details: { decision: "approve" } },
-    { appIdx: 7, eventType: "application.published", actorEmployeeId: EMP.appAdmin, details: { source: "demo-seed" } },
+    {
+      appIdx: 0,
+      eventType: "application.created",
+      actorEmployeeId: EMP.employee,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 1,
+      eventType: "application.created",
+      actorEmployeeId: EMP.employee,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 3,
+      eventType: "application.created",
+      actorEmployeeId: EMP.appAdmin,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 3,
+      eventType: "application.submitted",
+      actorEmployeeId: EMP.appAdmin,
+      details: { status: "in_review" },
+    },
+    {
+      appIdx: 4,
+      eventType: "application.created",
+      actorEmployeeId: EMP.appAdmin,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 6,
+      eventType: "application.created",
+      actorEmployeeId: EMP.appAdmin,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 7,
+      eventType: "application.created",
+      actorEmployeeId: EMP.appAdmin,
+      details: { source: "demo-seed" },
+    },
+    {
+      appIdx: 7,
+      eventType: "application.submitted",
+      actorEmployeeId: EMP.appAdmin,
+      details: { status: "in_review" },
+    },
+    {
+      appIdx: 7,
+      eventType: "application.reviewed",
+      actorEmployeeId: EMP.innovation,
+      details: { decision: "approve" },
+    },
+    {
+      appIdx: 7,
+      eventType: "application.published",
+      actorEmployeeId: EMP.appAdmin,
+      details: { source: "demo-seed" },
+    },
   ];
 
   const applicationAuditEvents: Array<

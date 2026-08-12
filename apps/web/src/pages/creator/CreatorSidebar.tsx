@@ -62,9 +62,7 @@ export function CreatorSidebar() {
         <ul className="m-0 p-2">
           {publishingSuggestions.map((suggestion) => (
             <li key={suggestion}>
-              <div
-                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm text-[#595959] transition-colors hover:bg-[#f0f7ff] hover:text-[#1677ff]"
-              >
+              <div className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm text-[#595959] transition-colors hover:bg-[#f0f7ff] hover:text-[#1677ff]">
                 <span>{suggestion}</span>
                 <RightOutlined
                   aria-hidden="true"
@@ -83,9 +81,7 @@ export function CreatorSidebar() {
         <ul className="m-0 p-2">
           {developerResources.map((resource) => (
             <li key={resource.title}>
-              <div
-                className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm text-[#1f1f1f] transition-colors hover:bg-[#f0f7ff]"
-              >
+              <div className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm text-[#1f1f1f] transition-colors hover:bg-[#f0f7ff]">
                 {resourceIcons[resource.icon]}
                 <span className="flex-1">{resource.title}</span>
                 <RightOutlined

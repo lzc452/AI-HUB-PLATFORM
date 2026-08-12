@@ -304,14 +304,16 @@ export function CreatorAppTable({
           options={[...creatorSortOptions]}
           value={sortMode}
         />
-        {data && items.length === 0 ? null : (<Button
-          className="ml-auto"
-          icon={<PlusOutlined aria-hidden="true" />}
-          onClick={() => navigate("/applications")}
-          type="primary"
-        >
-          创建新应用
-        </Button>)}
+        {data && items.length === 0 ? null : (
+          <Button
+            className="ml-auto"
+            icon={<PlusOutlined aria-hidden="true" />}
+            onClick={() => navigate("/applications")}
+            type="primary"
+          >
+            创建新应用
+          </Button>
+        )}
       </div>
 
       {isPending ? <Skeleton active paragraph={{ rows: 6 }} /> : null}

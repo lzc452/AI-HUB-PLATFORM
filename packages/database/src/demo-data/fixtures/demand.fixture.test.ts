@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDemandFixture } from "./demand.fixture.js";
 import type { DemandStatus } from "@ai-hub/contracts";
-import type {
-  AiDemandsTable,
-  AiDemandCollaboratorsTable,
-  AiDemandAuditEventsTable,
-} from "../../schema.js";
 
 const ANCHOR = new Date("2025-06-15T12:00:00.000Z");
 
@@ -46,7 +41,9 @@ describe("buildDemandFixture", () => {
   });
 
   it("has exactly 2 published demands", () => {
-    const count = fixture.demands.filter((d) => d.status === "published").length;
+    const count = fixture.demands.filter(
+      (d) => d.status === "published",
+    ).length;
     expect(count).toBe(2);
   });
 
@@ -63,8 +60,9 @@ describe("buildDemandFixture", () => {
   });
 
   it("has exactly 2 completed demands", () => {
-    const count = fixture.demands.filter((d) => d.status === "completed")
-      .length;
+    const count = fixture.demands.filter(
+      (d) => d.status === "completed",
+    ).length;
     expect(count).toBe(2);
   });
 
@@ -166,9 +164,7 @@ describe("buildDemandFixture", () => {
   });
 
   it("provides published demands with no owner for demand.claim.available", () => {
-    const published = fixture.demands.filter(
-      (d) => d.status === "published",
-    );
+    const published = fixture.demands.filter((d) => d.status === "published");
     expect(published.length).toBe(2);
     for (const d of published) {
       expect(d.owner_employee_id).toBeNull();
@@ -233,8 +229,8 @@ describe("buildDemandFixture", () => {
       "closed",
       "merged",
     ]);
-    const withPriority = fixture.demands.filter(
-      (d) => priorityStatuses.has(d.status),
+    const withPriority = fixture.demands.filter((d) =>
+      priorityStatuses.has(d.status),
     );
     expect(withPriority.length).toBe(11);
     for (const d of withPriority) {
@@ -352,8 +348,10 @@ describe("buildDemandFixture", () => {
     expect(mergeReceived.length).toBe(1);
 
     const mergedDetails = merged[0]!.details as Record<string, unknown>;
-    const receivedDetails = mergeReceived[0]!
-      .details as Record<string, unknown>;
+    const receivedDetails = mergeReceived[0]!.details as Record<
+      string,
+      unknown
+    >;
     expect(mergedDetails.targetDemandId).toBeDefined();
     expect(receivedDetails.sourceDemandId).toBeDefined();
   });
@@ -368,9 +366,7 @@ describe("buildDemandFixture", () => {
   });
 
   it("collaborator owner roles match the demand owner_employee_id", () => {
-    const demandMap = new Map(
-      fixture.demands.map((d) => [d.demand_id, d]),
-    );
+    const demandMap = new Map(fixture.demands.map((d) => [d.demand_id, d]));
     const ownerCollabs = fixture.demandCollaborators.filter(
       (c) => c.role === "owner",
     );
@@ -418,7 +414,14 @@ describe("buildDemandFixture", () => {
 
   it("published_at is set for published, in_progress, pilot, completed, closed, merged demands", () => {
     const published = fixture.demands.filter((d) =>
-      ["published", "in_progress", "pilot", "completed", "closed", "merged"].includes(d.status),
+      [
+        "published",
+        "in_progress",
+        "pilot",
+        "completed",
+        "closed",
+        "merged",
+      ].includes(d.status),
     );
     expect(published.length).toBe(11);
     for (const d of published) {

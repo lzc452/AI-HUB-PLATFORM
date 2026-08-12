@@ -1,15 +1,8 @@
-import {
-  ApartmentOutlined,
-  SafetyCertificateOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
 import { Button, Table, Tag, Tooltip } from "antd";
-import type { CSSProperties } from "react";
 
 import {
   SYNC_OBJECT_META,
   SYNC_STATUS_META,
-  SYNC_TASK_ICON_META,
   SYNC_TYPE_META,
   type SyncObject,
   type SyncTaskSummary,
@@ -20,37 +13,12 @@ interface SyncTaskTableProps {
 }
 
 /** 任务对象图标：按同步对象映射到已有 antd 图标与颜色，无自定义 SVG。 */
-function TaskObjectIcon({ object }: { object: SyncObject }) {
-  const meta = SYNC_TASK_ICON_META[object] ?? {
-    color: "#1677ff",
-    iconName: "ApartmentOutlined",
-  };
-
-  const iconClass = "text-base";
-  const style: CSSProperties = { color: meta.color };
-
-  let icon: React.ReactNode;
-  switch (meta.iconName) {
-    case "UserOutlined":
-      icon = <UserOutlined className={iconClass} style={style} />;
-      break;
-    case "SafetyCertificateOutlined":
-      icon = <SafetyCertificateOutlined className={iconClass} style={style} />;
-      break;
-    case "ApartmentOutlined":
-    default:
-      icon = <ApartmentOutlined className={iconClass} style={style} />;
-  }
-
-  return <span aria-hidden>{icon}</span>;
-}
-
 /** 最近同步任务表格：列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
 export function SyncTaskTable({ rows }: SyncTaskTableProps) {
   const columns = [
     {
       dataIndex: "taskName",
-      render: (name: string, record: SyncTaskSummary) => (
+      render: (name: string) => (
         <div className="flex min-w-0 items-center gap-2">
           <Tooltip title={name}>
             <span className="block max-w-[120px] truncate">{name}</span>

@@ -2,7 +2,9 @@ import { existsSync } from "node:fs";
 
 // 本地开发时加载根目录 .env；生产环境由 Docker Compose 注入，.env 不存在则跳过
 const envPath = "./.env";
-if (existsSync(envPath)) process.loadEnvFile(envPath);
+if (process.env.AI_HUB_SKIP_DOTENV !== "1" && existsSync(envPath)) {
+  process.loadEnvFile(envPath);
+}
 
 import {
   createDatabase,

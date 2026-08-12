@@ -21,13 +21,11 @@ export interface RoleSummary {
   updatedAt: string;
 }
 
-export const ROLE_TYPE_META: Record<
-  RoleType,
-  { color: string; text: string }
-> = {
-  custom: { color: "#fa8c16", text: "自定义角色" },
-  system: { color: "#1677ff", text: "系统角色" },
-};
+export const ROLE_TYPE_META: Record<RoleType, { color: string; text: string }> =
+  {
+    custom: { color: "#fa8c16", text: "自定义角色" },
+    system: { color: "#1677ff", text: "系统角色" },
+  };
 
 export const ROLE_STATUS_META: Record<
   RoleStatus,

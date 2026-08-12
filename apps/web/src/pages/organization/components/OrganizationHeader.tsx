@@ -13,7 +13,10 @@ export function OrganizationHeader() {
   return (
     <div className="flex gap-3">
       <div className="flex h-22 w-22 shrink-0 items-center justify-center rounded-xl bg-[#1677ff]">
-        <TeamOutlined className="text-2xl !text-white" style={{ fontSize: "54px" }} />
+        <TeamOutlined
+          className="text-2xl !text-white"
+          style={{ fontSize: "54px" }}
+        />
       </div>
       <Title className="!my-0" level={1}>
         组织管理

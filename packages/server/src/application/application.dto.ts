@@ -122,6 +122,42 @@ export class RollbackRequestDto {
   applicationVersionId!: string;
 }
 
+/** 应用管理列表行。 */
+export class ApplicationAdminListRowDto {
+  @ApiProperty() applicationId!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() summary!: string;
+  @ApiProperty() categoryId!: string;
+  @ApiProperty({
+    enum: [
+      "draft",
+      "in_review",
+      "approved",
+      "published",
+      "withdrawn",
+      "archived",
+    ],
+  })
+  status!: string;
+  @ApiProperty() currentVersion!: string;
+  @ApiProperty({ nullable: true }) currentVersionId!: string | null;
+  @ApiProperty() ownerName!: string;
+  @ApiProperty() departmentName!: string;
+  @ApiProperty({ type: String, isArray: true }) deliveryChannels!: string[];
+  @ApiProperty() updatedAt!: string;
+  @ApiProperty() isMine!: boolean;
+  @ApiProperty() needsMyReview!: boolean;
+}
+
+/** 应用管理分页结果。 */
+export class ApplicationAdminListResultDto {
+  @ApiProperty({ type: ApplicationAdminListRowDto, isArray: true })
+  items!: ApplicationAdminListRowDto[];
+  @ApiProperty() page!: number;
+  @ApiProperty() pageSize!: number;
+  @ApiProperty() total!: number;
+}
+
 /** 应用记录。 */
 export class ApplicationDto {
   @ApiProperty({

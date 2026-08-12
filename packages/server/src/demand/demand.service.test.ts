@@ -290,10 +290,7 @@ describe("DemandService innovation extension", () => {
     await expect(
       service.toggleCommentLike(requester, demand.demandId, "comment-1"),
     ).resolves.toEqual({ liked: true });
-    expect(events).toEqual([
-      "demand.comment.liked",
-      "demand.comment.liked",
-    ]);
+    expect(events).toEqual(["demand.comment.liked", "demand.comment.liked"]);
   });
 
   it("masks anonymous requester display information for other readers", async () => {
@@ -355,7 +352,10 @@ describe("DemandService innovation extension", () => {
   });
 
   it("does not remove the demand owner from collaborators", async () => {
-    const demand = { ...baseDemand("demand-owner-removal"), ownerEmployeeId: "E100" };
+    const demand = {
+      ...baseDemand("demand-owner-removal"),
+      ownerEmployeeId: "E100",
+    };
     const repository = {
       withTransaction: async <T>(
         operation: (repo: DemandRepository) => Promise<T>,
@@ -394,7 +394,8 @@ describe("DemandService innovation extension", () => {
         role: DemandCollaboratorRecord["role"],
         expectedVersion: number,
       ) => {
-        if (expectedVersion !== demand.version) throw new Error("DEMAND_CONFLICT");
+        if (expectedVersion !== demand.version)
+          throw new Error("DEMAND_CONFLICT");
         demand.version += 1;
         return {
           demandId: demand.demandId,
@@ -439,7 +440,10 @@ describe("DemandService innovation extension", () => {
   it("rejects resolving a report through a different demand URL", async () => {
     const moderator: ActorContext = {
       ...requester,
-      permissions: [...(requester.permissions ?? []), PERMISSIONS.DEMAND_MODERATE],
+      permissions: [
+        ...(requester.permissions ?? []),
+        PERMISSIONS.DEMAND_MODERATE,
+      ],
     };
     const repository = {
       withTransaction: async <T>(
@@ -692,9 +696,19 @@ describe("DemandService innovation-square interactions", () => {
     } as unknown as DemandRepository;
     const service = new DemandService(repository, { authorize: allowAll });
 
-    await service.resolveReport(operator, "demand-public", "report-1", "hidden");
+    await service.resolveReport(
+      operator,
+      "demand-public",
+      "report-1",
+      "hidden",
+    );
     expect(hiddenAt).toBeInstanceOf(Date);
-    await service.resolveReport(operator, "demand-public", "report-1", "restored");
+    await service.resolveReport(
+      operator,
+      "demand-public",
+      "report-1",
+      "restored",
+    );
     expect(hiddenAt).toBeNull();
   });
 });

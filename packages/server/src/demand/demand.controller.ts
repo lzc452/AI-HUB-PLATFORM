@@ -244,7 +244,10 @@ export class DemandController {
   @ApiParam({ name: "demandId", description: "需求 ID" })
   @ApiParam({ name: "collaboratorEmployeeId", description: "协作人员工工号" })
   @ApiBody({ type: DemandCollaboratorRoleUpdateRequestDto })
-  @ApiOkResponse({ description: "更新后的协作成员记录", type: DemandCollaboratorDto })
+  @ApiOkResponse({
+    description: "更新后的协作成员记录",
+    type: DemandCollaboratorDto,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   updateCollaboratorRole(
     @Param("demandId") demandId: string,
@@ -424,7 +427,11 @@ export class DemandController {
   @ApiOperation({ summary: "试点列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
-  @ApiOkResponse({ description: "试点列表", type: DemandPilotDto, isArray: true })
+  @ApiOkResponse({
+    description: "试点列表",
+    type: DemandPilotDto,
+    isArray: true,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   listPilots(
     @Param("demandId") demandId: string,
@@ -432,7 +439,10 @@ export class DemandController {
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
     return this.call(async () =>
-      this.demands.listPilots(await this.actor(employeeId, sessionId), demandId),
+      this.demands.listPilots(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
     );
   }
 
@@ -668,7 +678,9 @@ export class DemandController {
       this.demands.list(await this.actor(employeeId, sessionId), {
         ...(status === undefined ? {} : { status }),
         ...(query === undefined ? {} : { query }),
-        ...(requesterDepartmentId === undefined ? {} : { requesterDepartmentId }),
+        ...(requesterDepartmentId === undefined
+          ? {}
+          : { requesterDepartmentId }),
         ...(audienceType === undefined ? {} : { audienceType }),
         ...(sort === undefined ? {} : { sort }),
         page: parsedPage,
@@ -810,7 +822,11 @@ export class DemandController {
   @ApiOperation({ summary: "需求举报列表" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
-  @ApiOkResponse({ description: "举报记录列表", type: DemandReportDto, isArray: true })
+  @ApiOkResponse({
+    description: "举报记录列表",
+    type: DemandReportDto,
+    isArray: true,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   listReports(
     @Param("demandId") demandId: string,
@@ -818,7 +834,10 @@ export class DemandController {
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
     return this.call(async () =>
-      this.demands.listReports(await this.actor(employeeId, sessionId), demandId),
+      this.demands.listReports(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
     );
   }
 

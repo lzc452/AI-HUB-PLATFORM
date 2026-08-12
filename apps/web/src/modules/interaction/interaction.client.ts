@@ -1,4 +1,8 @@
-import type { PaginatedResult, RatingOutput, CommentOutput } from "@ai-hub/contracts";
+import type {
+  PaginatedResult,
+  RatingOutput,
+  CommentOutput,
+} from "@ai-hub/contracts";
 
 import { apiFetch } from "../../shared/api/client";
 

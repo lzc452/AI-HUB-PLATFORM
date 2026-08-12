@@ -86,6 +86,14 @@ class ApiCatalogRepository implements CatalogRepository {
   async recordDeliveryAction(input: { actionType: string }) {
     this.recordedActions.push(input.actionType);
   }
+
+  async getRiskDescription(): Promise<string | null> {
+    return null;
+  }
+
+  async upsertRiskDescription(): Promise<void> {
+    // 测试替身不持久化目录风险说明。
+  }
 }
 
 describe("Phase 4 catalog API", () => {

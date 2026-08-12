@@ -29,8 +29,15 @@ import { Link, useSearchParams } from "react-router-dom";
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { useActor, useDepartments } from "../../modules/auth/useIdentity";
 import { hasPermission } from "../../modules/auth/roles";
-import { demandAudienceText, demandStatusColor, demandStatusText } from "../../modules/innovation/demandMeta";
-import { type DemandListQuery, type DemandSort } from "../../modules/innovation/demand.client";
+import {
+  demandAudienceText,
+  demandStatusColor,
+  demandStatusText,
+} from "../../modules/innovation/demandMeta";
+import {
+  type DemandListQuery,
+  type DemandSort,
+} from "../../modules/innovation/demand.client";
 import { useDemandList } from "../../modules/innovation/useDemand";
 import { MessageError } from "../../shared/ui/message";
 import { CreateDemandDrawer } from "./CreateDemandDrawer";
@@ -72,18 +79,34 @@ function dateText(value: string) {
   return `${year}-${month}-${day}`;
 }
 
-function AudienceIcon({ audienceType, displayAnonymously }: { audienceType: DemandAudienceType; displayAnonymously: boolean }) {
+function AudienceIcon({
+  audienceType,
+  displayAnonymously,
+}: {
+  audienceType: DemandAudienceType;
+  displayAnonymously: boolean;
+}) {
   if (displayAnonymously) return <LockOutlined />;
   if (audienceType === "all") return <GlobalOutlined />;
   if (audienceType === "department") return <TeamOutlined />;
   return <UserOutlined />;
 }
 
-function MetricDots({ color, label, value }: { color: string; label: string; value?: number | null | undefined }) {
+function MetricDots({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value?: number | null | undefined;
+}) {
   if (value === null || value === undefined) {
     return (
       <div>
-        <Typography.Text className="text-xs text-[#8c8c8c]">{label}</Typography.Text>
+        <Typography.Text className="text-xs text-[#8c8c8c]">
+          {label}
+        </Typography.Text>
         <div className="text-xs font-semibold text-[#8c8c8c]">—</div>
       </div>
     );
@@ -91,7 +114,9 @@ function MetricDots({ color, label, value }: { color: string; label: string; val
   return (
     <div>
       <div className="flex items-center gap-1">
-        <Typography.Text className="text-xs text-[#8c8c8c]">{label}</Typography.Text>
+        <Typography.Text className="text-xs text-[#8c8c8c]">
+          {label}
+        </Typography.Text>
         <Typography.Text className="text-xs font-semibold" style={{ color }}>
           {value}
         </Typography.Text>
@@ -101,17 +126,26 @@ function MetricDots({ color, label, value }: { color: string; label: string; val
         className="!text-[10px] leading-none"
         count={5}
         disabled
-        style={{ ["--ant-rate-star-color" as string]: color, ["--ant-rate-star-bg" as string]: "#f0f0f0" }}
+        style={{
+          ["--ant-rate-star-color" as string]: color,
+          ["--ant-rate-star-bg" as string]: "#f0f0f0",
+        }}
         value={value}
       />
     </div>
   );
 }
 
-function DemandCard({ demand, departmentName }: { demand: DemandView; departmentName?: string }) {
+function DemandCard({
+  demand,
+  departmentName,
+}: {
+  demand: DemandView;
+  departmentName?: string;
+}) {
   const audience = demand.displayAnonymously
     ? "匿名发布"
-    : demandAudienceText[demand.audienceType] ?? "受众已过滤";
+    : (demandAudienceText[demand.audienceType] ?? "受众已过滤");
   return (
     <Link
       aria-label="查看需求详情"
@@ -125,35 +159,67 @@ function DemandCard({ demand, departmentName }: { demand: DemandView; department
         <div className="flex h-full flex-col gap-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Tag color={demandStatusColor[demand.status]}>{demandStatusText[demand.status]}</Tag>
+              <Tag color={demandStatusColor[demand.status]}>
+                {demandStatusText[demand.status]}
+              </Tag>
               <Typography.Text className="text-xs" type="secondary">
-                {departmentName ?? demand.requesterDepartmentName ?? "未标注部门"}
+                {departmentName ??
+                  demand.requesterDepartmentName ??
+                  "未标注部门"}
               </Typography.Text>
-              <Typography.Text className="inline-flex items-center gap-1 text-xs" type="secondary">
-                <AudienceIcon audienceType={demand.audienceType} displayAnonymously={demand.displayAnonymously} />
+              <Typography.Text
+                className="inline-flex items-center gap-1 text-xs"
+                type="secondary"
+              >
+                <AudienceIcon
+                  audienceType={demand.audienceType}
+                  displayAnonymously={demand.displayAnonymously}
+                />
                 {audience}
               </Typography.Text>
             </div>
             <RightOutlined className="mt-0.5 text-xs text-[#bfbfbf]" />
           </div>
 
-          <Typography.Title className="!mb-0 !text-base" ellipsis={{ rows: 2 }} level={4}>
+          <Typography.Title
+            className="!mb-0 !text-base"
+            ellipsis={{ rows: 2 }}
+            level={4}
+          >
             {demand.title}
           </Typography.Title>
 
-          <Typography.Paragraph className="!mb-0 min-h-10 text-sm leading-6 text-[#595959]" ellipsis={{ rows: 2 }}>
+          <Typography.Paragraph
+            className="!mb-0 min-h-10 text-sm leading-6 text-[#595959]"
+            ellipsis={{ rows: 2 }}
+          >
             {demand.problemStatement}
           </Typography.Paragraph>
 
           <div className="flex items-end justify-between gap-2 rounded-xl bg-[#f7faff] p-3">
             <div className="flex gap-4">
-              <MetricDots color="#1677ff" label="业务价值" value={demand.businessValue} />
-              <MetricDots color="#8c8c8c" label="实施成本" value={demand.implementationCost} />
-              <MetricDots color="#ff7a45" label="风险" value={demand.riskLevel} />
+              <MetricDots
+                color="#1677ff"
+                label="业务价值"
+                value={demand.businessValue}
+              />
+              <MetricDots
+                color="#8c8c8c"
+                label="实施成本"
+                value={demand.implementationCost}
+              />
+              <MetricDots
+                color="#ff7a45"
+                label="风险"
+                value={demand.riskLevel}
+              />
             </div>
-            {demand.priorityScore !== null && demand.priorityScore !== undefined ? (
+            {demand.priorityScore !== null &&
+            demand.priorityScore !== undefined ? (
               <div className="text-right">
-                <Typography.Text className="block text-xs text-[#8c8c8c]">优先级评分</Typography.Text>
+                <Typography.Text className="block text-xs text-[#8c8c8c]">
+                  优先级评分
+                </Typography.Text>
                 <Typography.Text className="text-lg font-semibold text-[#d48806]">
                   {demand.priorityScore.toFixed(1)}
                 </Typography.Text>
@@ -188,9 +254,11 @@ export default function InnovationSquarePage() {
   const departments = useDepartments();
   const [createOpen, setCreateOpen] = useState(false);
   const query = searchParams.get("q") ?? "";
-  const status = (searchParams.get("status") as DemandStatus | null) ?? undefined;
+  const status =
+    (searchParams.get("status") as DemandStatus | null) ?? undefined;
   const department = searchParams.get("department") ?? undefined;
-  const audience = (searchParams.get("audience") as DemandAudienceType | null) ?? undefined;
+  const audience =
+    (searchParams.get("audience") as DemandAudienceType | null) ?? undefined;
   const sort = (searchParams.get("sort") as DemandSort | null) ?? "recent";
   const page = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
 
@@ -208,7 +276,10 @@ export default function InnovationSquarePage() {
   );
   const { data, error, isError, isPending } = useDemandList(requestQuery);
   const departmentNames = useMemo(
-    () => new Map((departments.data ?? []).map((item) => [item.departmentId, item.name])),
+    () =>
+      new Map(
+        (departments.data ?? []).map((item) => [item.departmentId, item.name]),
+      ),
     [departments.data],
   );
 
@@ -218,13 +289,22 @@ export default function InnovationSquarePage() {
       if (value) next.set(key, value);
       else next.delete(key);
     });
-    if ("q" in changes || "status" in changes || "department" in changes || "audience" in changes || "sort" in changes)
+    if (
+      "q" in changes ||
+      "status" in changes ||
+      "department" in changes ||
+      "audience" in changes ||
+      "sort" in changes
+    )
       next.delete("page");
     setSearchParams(next);
   };
 
   const resetFilters = () => setSearchParams({});
-  const canCreate = hasPermission(actor.data ?? null, PERMISSIONS.DEMAND_CREATE);
+  const canCreate = hasPermission(
+    actor.data ?? null,
+    PERMISSIONS.DEMAND_CREATE,
+  );
 
   return (
     <div className="space-y-4">
@@ -238,7 +318,12 @@ export default function InnovationSquarePage() {
           </Typography.Paragraph>
         </div>
         {canCreate ? (
-          <Button icon={<PlusOutlined />} onClick={() => setCreateOpen(true)} size="large" type="primary">
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => setCreateOpen(true)}
+            size="large"
+            type="primary"
+          >
             发起新需求
           </Button>
         ) : null}
@@ -267,7 +352,10 @@ export default function InnovationSquarePage() {
             aria-label="所属部门"
             className="min-w-40"
             onChange={(value) => updateParams({ department: value })}
-            options={(departments.data ?? []).map((item) => ({ label: item.name, value: item.departmentId }))}
+            options={(departments.data ?? []).map((item) => ({
+              label: item.name,
+              value: item.departmentId,
+            }))}
             placeholder="所属部门"
             showSearch
             value={department}
@@ -284,7 +372,10 @@ export default function InnovationSquarePage() {
           <Segmented
             className="!mb-0"
             onChange={(value) => updateParams({ sort: value as DemandSort })}
-            options={sortItems.map((item) => ({ label: item.label, value: item.key }))}
+            options={sortItems.map((item) => ({
+              label: item.label,
+              value: item.key,
+            }))}
             size="small"
             value={sort}
           />
@@ -299,7 +390,9 @@ export default function InnovationSquarePage() {
           <Typography.Text id="innovation-demand-list" type="secondary">
             共 {data?.total ?? 0} 个公开需求
           </Typography.Text>
-          <Typography.Text type="secondary">按{sortLabel[sort]}排序</Typography.Text>
+          <Typography.Text type="secondary">
+            按{sortLabel[sort]}排序
+          </Typography.Text>
         </div>
         {isPending ? (
           <div className="flex justify-center py-16">
@@ -307,12 +400,22 @@ export default function InnovationSquarePage() {
           </div>
         ) : null}
         <MessageError active={isError} cause={error} title="需求列表加载失败" />
-        {data && data.items.length === 0 ? <EmptyBlock description="当前筛选条件下没有可见需求" /> : null}
+        {data && data.items.length === 0 ? (
+          <EmptyBlock description="当前筛选条件下没有可见需求" />
+        ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           {(data?.items ?? []).map((entry) => {
             const view = entry as DemandView;
-            const departmentName = departmentNames.get(view.requesterDepartmentId ?? "");
-            return <DemandCard {...(departmentName ? { departmentName } : {})} demand={view} key={entry.demandId} />;
+            const departmentName = departmentNames.get(
+              view.requesterDepartmentId ?? "",
+            );
+            return (
+              <DemandCard
+                {...(departmentName ? { departmentName } : {})}
+                demand={view}
+                key={entry.demandId}
+              />
+            );
           })}
         </div>
         {data && data.total > PAGE_SIZE ? (
@@ -327,7 +430,10 @@ export default function InnovationSquarePage() {
           </div>
         ) : null}
       </section>
-      <CreateDemandDrawer onClose={() => setCreateOpen(false)} open={createOpen} />
+      <CreateDemandDrawer
+        onClose={() => setCreateOpen(false)}
+        open={createOpen}
+      />
     </div>
   );
 }

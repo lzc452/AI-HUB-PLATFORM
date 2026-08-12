@@ -35,7 +35,9 @@ const hoisted = vi.hoisted(() => {
     settled,
     useApplication: vi.fn((): Query => ({ ...settled, data: mockApp })),
     useApplicationReviews: vi.fn((): Query => ({ ...settled, data: [] })),
-    useApplicationVersions: vi.fn((): Query => ({ ...settled, data: [mockVersion] })),
+    useApplicationVersions: vi.fn(
+      (): Query => ({ ...settled, data: [mockVersion] }),
+    ),
   };
 });
 
@@ -51,7 +53,8 @@ const messageMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../../shared/ui/message", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../shared/ui/message")>();
+  const actual =
+    await importOriginal<typeof import("../../shared/ui/message")>();
   return {
     ...actual,
     showSuccessMessage: messageMocks.showSuccessMessage,
@@ -97,7 +100,9 @@ describe("ApplicationReviewPage", () => {
       screen.getByRole("heading", { name: "审核工作台" }),
     ).toBeInTheDocument();
     expect(screen.getByText("审核任务信息")).toBeInTheDocument();
-    expect(screen.getAllByText("自动校验报告").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("自动校验报告").length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(screen.getByText("审核操作")).toBeInTheDocument();
     expect(screen.getByText("审核意见记录")).toBeInTheDocument();
   });

@@ -1,4 +1,9 @@
-import { createDatabase, seedDemoDataset, assertDemoDataSafety, resolveAnchorDate } from "@ai-hub/database";
+import {
+  createDatabase,
+  seedDemoDataset,
+  assertDemoDataSafety,
+  resolveAnchorDate,
+} from "@ai-hub/database";
 
 const nodeEnv = process.env.NODE_ENV ?? "development";
 

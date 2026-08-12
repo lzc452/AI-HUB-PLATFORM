@@ -25,4 +25,3 @@ export type CommentView = {
   createdAt: string;
   updatedAt: string;
 };
-

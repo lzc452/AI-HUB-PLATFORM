@@ -20,6 +20,23 @@ export interface RecommendedApp {
   usage: string;
 }
 
+import { apiFetch } from "../../shared/api/client";
+
+export interface AssistantResponse {
+  status: "ok" | "degraded";
+  answer: string;
+}
+
+export function askAssistant(input: {
+  question: string;
+  context: Readonly<Record<string, unknown>>;
+}): Promise<AssistantResponse> {
+  return apiFetch<AssistantResponse>("/internal/analytics/assistant", {
+    body: JSON.stringify(input),
+    method: "POST",
+  });
+}
+
 export interface AssistantCapability {
   description: string;
   icon: "search" | "like" | "send" | "bulb";

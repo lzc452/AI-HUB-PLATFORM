@@ -11,6 +11,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from "@nestjs/common";
 import {
   ApiBody,
@@ -30,6 +31,7 @@ import { APPLICATION_SERVICE } from "./application.tokens.js";
 import { ApplicationService } from "./application.service.js";
 import {
   ApplicationDto,
+  ApplicationAdminListResultDto,
   ApplicationVersionDto,
   ApplicationWorkspaceDto,
   ConfigureDeliveryRequestDto,
@@ -334,6 +336,53 @@ export class ApplicationController {
     );
   }
 
+  @Get("admin-list")
+  @RequiresPermissions({
+    anyOf: [PERMISSIONS.APPLICATION_MANAGE, PERMISSIONS.APPLICATION_REVIEW],
+  })
+  @ApiOperation({ summary: "应用管理列表" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({
+    description: "应用管理分页结果",
+    type: ApplicationAdminListResultDto,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async listAdmin(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Query("keyword") keyword?: string,
+    @Query("mode") mode?: "all" | "review" | "owned",
+    @Query("status")
+    status?: import("./application.types.js").ApplicationStatus,
+    @Query("departmentId") departmentId?: string,
+    @Query("applicationType") applicationType?: string,
+    @Query("channel")
+    channel?: import("./application.types.js").DeliveryChannel,
+    @Query("sort") sort?: "recent" | "name" | "status",
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    const parsedPage = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
+    const parsedPageSize = Math.min(
+      100,
+      Math.max(1, Number.parseInt(pageSize ?? "10", 10) || 10),
+    );
+    return this.call(() =>
+      this.applications.listAdmin(actor, {
+        ...(keyword === undefined ? {} : { keyword }),
+        ...(mode === undefined ? {} : { mode }),
+        ...(status === undefined ? {} : { status }),
+        ...(departmentId === undefined ? {} : { departmentId }),
+        ...(applicationType === undefined ? {} : { applicationType }),
+        ...(channel === undefined ? {} : { channel }),
+        ...(sort === undefined ? {} : { sort }),
+        page: parsedPage,
+        pageSize: parsedPageSize,
+      }),
+    );
+  }
+
   @Get(":applicationId")
   @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
   @ApiOperation({ summary: "应用详情" })
@@ -357,7 +406,10 @@ export class ApplicationController {
   @ApiOperation({ summary: "应用管理工作台聚合数据" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
-  @ApiOkResponse({ description: "应用详情、版本、评审与交付聚合数据", type: ApplicationWorkspaceDto })
+  @ApiOkResponse({
+    description: "应用详情、版本、评审与交付聚合数据",
+    type: ApplicationWorkspaceDto,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   async getWorkspace(
     @Param("applicationId") applicationId: string,
@@ -365,7 +417,9 @@ export class ApplicationController {
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
     const actor = await this.requireActor(employeeId, sessionId, "read");
-    return this.call(() => this.applications.getWorkspace(applicationId, actor));
+    return this.call(() =>
+      this.applications.getWorkspace(applicationId, actor),
+    );
   }
 
   @Get(":applicationId/versions")

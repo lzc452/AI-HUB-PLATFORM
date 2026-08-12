@@ -8,8 +8,12 @@ import { DEMO_ACCOUNT_DEFINITIONS } from "../../demo-seed.js";
 // ── types ──────────────────────────────────────────────────────────────────────
 
 export interface AnalyticsFixtureData {
-  behaviorEvents: Array<Insertable<DatabaseSchema["analytics_behavior_events"]>>;
-  dailyAggregates: Array<Insertable<DatabaseSchema["analytics_daily_aggregates"]>>;
+  behaviorEvents: Array<
+    Insertable<DatabaseSchema["analytics_behavior_events"]>
+  >;
+  dailyAggregates: Array<
+    Insertable<DatabaseSchema["analytics_daily_aggregates"]>
+  >;
   exportJobs: Array<Insertable<DatabaseSchema["analytics_export_jobs"]>>;
   auditEvents: Array<Insertable<DatabaseSchema["analytics_audit_events"]>>;
   outboxEvents: Array<Insertable<DatabaseSchema["outbox_events"]>>;
@@ -19,6 +23,14 @@ export interface AnalyticsFixtureData {
 
 const EMPS = DEMO_ACCOUNT_DEFINITIONS.map((a) => a.employeeId);
 const DEPTS = ["demo-rnd", "demo-innovation", "demo-admin"];
+
+const at = <T>(values: readonly T[], index: number): T => {
+  const value = values[index];
+  if (value === undefined) {
+    throw new Error(`演示 fixture 索引越界: ${index}`);
+  }
+  return value;
+};
 
 function jsonb(value: unknown): unknown {
   return value;
@@ -46,9 +58,7 @@ const BEHAVIOR_EVENT_TYPES = [
 
 // ── builder ────────────────────────────────────────────────────────────────────
 
-export function buildAnalyticsFixture(
-  anchor: Date,
-): AnalyticsFixtureData {
+export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
   // ── behavior events (15 types × 2 = 30) ────────────────────────────────────
 
   const behaviorEvents: AnalyticsFixtureData["behaviorEvents"] = [];
@@ -57,15 +67,20 @@ export function buildAnalyticsFixture(
       const idx = i * 2 + j;
       const occurredAt = daysAgo(anchor, 29 - idx);
       behaviorEvents.push({
-        event_id: IDS.behaviorEvent[idx],
-        event_name: BEHAVIOR_EVENT_TYPES[i],
+        event_id: at(IDS.behaviorEvent, idx),
+        event_name: at(BEHAVIOR_EVENT_TYPES, i),
         aggregate_type: i < 6 ? "application" : "ai_demand",
-        aggregate_id: i < 6
-          ? IDS.application.published[i % IDS.application.published.length]
-          : IDS.demand.published[i % IDS.demand.published.length],
-        actor_employee_id: EMPS[idx % EMPS.length],
-        audience_department_id: DEPTS[idx % DEPTS.length],
-        audience_employee_id: j === 0 ? EMPS[(idx + 1) % EMPS.length] : null,
+        aggregate_id:
+          i < 6
+            ? at(
+                IDS.application.published,
+                i % IDS.application.published.length,
+              )
+            : at(IDS.demand.published, i % IDS.demand.published.length),
+        actor_employee_id: at(EMPS, idx % EMPS.length),
+        audience_department_id: at(DEPTS, idx % DEPTS.length),
+        audience_employee_id:
+          j === 0 ? at(EMPS, (idx + 1) % EMPS.length) : null,
         metadata: jsonb({ source: "demo", index: idx }),
         idempotency_key: demoIdempotency("analytics", "behavior", String(idx)),
         occurred_at: occurredAt,
@@ -90,8 +105,18 @@ export function buildAnalyticsFixture(
           metric_version: 1,
           day: dayStr,
           audience_scope_key: scopeKey,
-          value: Math.round((Math.sin(d * 0.3 + metricKeys.indexOf(metricKey) * 0.7 + scopeKeys.indexOf(scopeKey) * 1.1) * 0.5 + 0.5) * 100),
-          source_event_count: d + metricKeys.indexOf(metricKey) + scopeKeys.indexOf(scopeKey) + 1,
+          value: Math.round(
+            (Math.sin(
+              d * 0.3 +
+                metricKeys.indexOf(metricKey) * 0.7 +
+                scopeKeys.indexOf(scopeKey) * 1.1,
+            ) *
+              0.5 +
+              0.5) *
+              100,
+          ),
+          source_event_count:
+            d + metricKeys.indexOf(metricKey) + scopeKeys.indexOf(scopeKey) + 1,
           computed_at: daysAgo(anchor, d),
         });
       }
@@ -102,8 +127,8 @@ export function buildAnalyticsFixture(
 
   const exportJobs: AnalyticsFixtureData["exportJobs"] = [
     {
-      export_id: IDS.analyticsExportJob[0],
-      requested_by_employee_id: EMPS[0],
+      export_id: at(IDS.analyticsExportJob, 0),
+      requested_by_employee_id: at(EMPS, 0),
       target: "dashboard_overview",
       from_date: todayString(daysAgo(anchor, 30)),
       to_date: todayString(daysAgo(anchor, 1)),
@@ -113,8 +138,8 @@ export function buildAnalyticsFixture(
       completed_at: daysAgo(anchor, 4),
     },
     {
-      export_id: IDS.analyticsExportJob[1],
-      requested_by_employee_id: EMPS[2],
+      export_id: at(IDS.analyticsExportJob, 1),
+      requested_by_employee_id: at(EMPS, 2),
       target: "demand_metrics",
       from_date: todayString(daysAgo(anchor, 60)),
       to_date: todayString(daysAgo(anchor, 30)),
@@ -124,8 +149,8 @@ export function buildAnalyticsFixture(
       completed_at: null,
     },
     {
-      export_id: IDS.analyticsExportJob[2],
-      requested_by_employee_id: EMPS[1],
+      export_id: at(IDS.analyticsExportJob, 2),
+      requested_by_employee_id: at(EMPS, 1),
       target: "app_usage",
       from_date: todayString(daysAgo(anchor, 90)),
       to_date: todayString(daysAgo(anchor, 60)),
@@ -140,53 +165,53 @@ export function buildAnalyticsFixture(
 
   const auditEvents: AnalyticsFixtureData["auditEvents"] = [
     {
-      audit_event_id: IDS.analyticsAuditEvent[0],
-      actor_employee_id: EMPS[0],
+      audit_event_id: at(IDS.analyticsAuditEvent, 0),
+      actor_employee_id: at(EMPS, 0),
       action: "export.created",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[0],
+      aggregate_id: at(IDS.analyticsExportJob, 0),
       details: jsonb({ target: "dashboard_overview" }),
       created_at: daysAgo(anchor, 5),
     },
     {
-      audit_event_id: IDS.analyticsAuditEvent[1],
-      actor_employee_id: EMPS[0],
+      audit_event_id: at(IDS.analyticsAuditEvent, 1),
+      actor_employee_id: at(EMPS, 0),
       action: "export.completed",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[0],
+      aggregate_id: at(IDS.analyticsExportJob, 0),
       details: jsonb({ row_count: 1080 }),
       created_at: daysAgo(anchor, 4),
     },
     {
-      audit_event_id: IDS.analyticsAuditEvent[2],
-      actor_employee_id: EMPS[2],
+      audit_event_id: at(IDS.analyticsAuditEvent, 2),
+      actor_employee_id: at(EMPS, 2),
       action: "export.created",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[1],
+      aggregate_id: at(IDS.analyticsExportJob, 1),
       details: jsonb({ target: "demand_metrics" }),
       created_at: daysAgo(anchor, 1),
     },
     {
-      audit_event_id: IDS.analyticsAuditEvent[3],
-      actor_employee_id: EMPS[1],
+      audit_event_id: at(IDS.analyticsAuditEvent, 3),
+      actor_employee_id: at(EMPS, 1),
       action: "export.created",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[2],
+      aggregate_id: at(IDS.analyticsExportJob, 2),
       details: jsonb({ target: "app_usage" }),
       created_at: daysAgo(anchor, 3),
     },
     {
-      audit_event_id: IDS.analyticsAuditEvent[4],
-      actor_employee_id: EMPS[1],
+      audit_event_id: at(IDS.analyticsAuditEvent, 4),
+      actor_employee_id: at(EMPS, 1),
       action: "export.failed",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[2],
+      aggregate_id: at(IDS.analyticsExportJob, 2),
       details: jsonb({ error: "EXPORT_TIMEOUT" }),
       created_at: daysAgo(anchor, 2),
     },
     {
-      audit_event_id: IDS.analyticsAuditEvent[5],
-      actor_employee_id: EMPS[4],
+      audit_event_id: at(IDS.analyticsAuditEvent, 5),
+      actor_employee_id: at(EMPS, 4),
       action: "dashboard.viewed",
       aggregate_type: "analytics_dashboard",
       aggregate_id: "overview",
@@ -200,11 +225,11 @@ export function buildAnalyticsFixture(
   const now = anchor;
   const outboxEvents: AnalyticsFixtureData["outboxEvents"] = [
     {
-      id: IDS.notification[14],
+      id: at(IDS.notification, 14),
       event_type: "analytics.export.completed",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[0],
-      payload: jsonb({ export_id: IDS.analyticsExportJob[0] }),
+      aggregate_id: at(IDS.analyticsExportJob, 0),
+      payload: jsonb({ export_id: at(IDS.analyticsExportJob, 0) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "0"),
       status: "completed",
       attempts: 1,
@@ -216,11 +241,11 @@ export function buildAnalyticsFixture(
       completed_at: daysAgo(anchor, 4),
     },
     {
-      id: IDS.notification[15],
+      id: at(IDS.notification, 15),
       event_type: "analytics.export.requested",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[1],
-      payload: jsonb({ export_id: IDS.analyticsExportJob[1] }),
+      aggregate_id: at(IDS.analyticsExportJob, 1),
+      payload: jsonb({ export_id: at(IDS.analyticsExportJob, 1) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "1"),
       status: "pending",
       attempts: 0,
@@ -232,11 +257,11 @@ export function buildAnalyticsFixture(
       completed_at: null,
     },
     {
-      id: IDS.notification[16],
+      id: at(IDS.notification, 16),
       event_type: "analytics.export.failed",
       aggregate_type: "analytics_export",
-      aggregate_id: IDS.analyticsExportJob[2],
-      payload: jsonb({ export_id: IDS.analyticsExportJob[2] }),
+      aggregate_id: at(IDS.analyticsExportJob, 2),
+      payload: jsonb({ export_id: at(IDS.analyticsExportJob, 2) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "2"),
       status: "failed",
       attempts: 10,
@@ -248,11 +273,11 @@ export function buildAnalyticsFixture(
       completed_at: null,
     },
     {
-      id: IDS.notification[17],
+      id: at(IDS.notification, 17),
       event_type: "notification.delivery.pending",
       aggregate_type: "notification",
-      aggregate_id: IDS.notification[0],
-      payload: jsonb({ notification_id: IDS.notification[0] }),
+      aggregate_id: at(IDS.notification, 0),
+      payload: jsonb({ notification_id: at(IDS.notification, 0) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "3"),
       status: "pending",
       attempts: 0,
@@ -264,11 +289,11 @@ export function buildAnalyticsFixture(
       completed_at: null,
     },
     {
-      id: IDS.notification[18],
+      id: at(IDS.notification, 18),
       event_type: "notification.delivery.processing",
       aggregate_type: "notification",
-      aggregate_id: IDS.notification[1],
-      payload: jsonb({ notification_id: IDS.notification[1] }),
+      aggregate_id: at(IDS.notification, 1),
+      payload: jsonb({ notification_id: at(IDS.notification, 1) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "4"),
       status: "processing",
       attempts: 1,
@@ -280,11 +305,11 @@ export function buildAnalyticsFixture(
       completed_at: null,
     },
     {
-      id: IDS.notification[19],
+      id: at(IDS.notification, 19),
       event_type: "notification.delivery.failed",
       aggregate_type: "notification",
-      aggregate_id: IDS.notification[2],
-      payload: jsonb({ notification_id: IDS.notification[2] }),
+      aggregate_id: at(IDS.notification, 2),
+      payload: jsonb({ notification_id: at(IDS.notification, 2) }),
       idempotency_key: demoIdempotency("outbox", "analytics", "5"),
       status: "failed",
       attempts: 10,

@@ -157,7 +157,11 @@ export function resolveNotificationMeta(
     }
     return {
       actions: [
-        { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
+        {
+          label: "查看应用详情",
+          primary: true,
+          to: applicationDetailRoute(aggregateId),
+        },
         { label: "前往审核记录", to: applicationReviewRoute(aggregateId) },
         { label: "分享应用" },
         ...commonActions,
@@ -168,7 +172,10 @@ export function resolveNotificationMeta(
         { label: "当前版本", value: "v2.4.1" },
         { label: "提交时间", value: formatDateTime(createdAt) },
         { label: "审核人员", value: "李小龙（审核部）" },
-        { label: "审核意见", value: "功能完整，文档规范，符合平台安全标准，建议发布。" },
+        {
+          label: "审核意见",
+          value: "功能完整，文档规范，符合平台安全标准，建议发布。",
+        },
       ],
       detailLead: lead,
       icon: CheckCircleFilled,
@@ -187,17 +194,25 @@ export function resolveNotificationMeta(
     eventType.includes("rating")
   ) {
     const appName = extractQuoted(message, message.replace(/^评论回复：/, ""));
-    const isReply = eventType.includes("reply") || message.startsWith("评论回复");
+    const isReply =
+      eventType.includes("reply") || message.startsWith("评论回复");
     const isRating = eventType.includes("rating");
     return {
       actions: [
-        { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
+        {
+          label: "查看应用详情",
+          primary: true,
+          to: applicationDetailRoute(aggregateId),
+        },
         ...commonActions,
       ],
       category: "评论互动",
       detailFields: [
         { label: "应用名称", value: appName },
-        { label: "互动类型", value: isRating ? "新的评分" : isReply ? "评论回复" : "新评价" },
+        {
+          label: "互动类型",
+          value: isRating ? "新的评分" : isReply ? "评论回复" : "新评价",
+        },
         { label: "发生时间", value: formatDateTime(createdAt) },
       ],
       detailLead: isRating
@@ -231,7 +246,11 @@ export function resolveNotificationMeta(
     const isReport = eventType.includes("report");
     return {
       actions: [
-        { label: "查看应用详情", primary: true, to: applicationDetailRoute(aggregateId) },
+        {
+          label: "查看应用详情",
+          primary: true,
+          to: applicationDetailRoute(aggregateId),
+        },
         ...(isReport ? [{ label: "前往处理举报" }] : []),
         { label: "前往审核记录", to: applicationReviewRoute(aggregateId) },
         ...commonActions,

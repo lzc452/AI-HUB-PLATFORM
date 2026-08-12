@@ -78,7 +78,9 @@ export function useAdminApplicationList(
   const [mode, setMode] = useState<AdminApplicationFilterMode>(
     initial.mode ?? DEFAULT_FILTERS.mode,
   );
-  const [status, setStatus] = useState(initial.status ?? DEFAULT_FILTERS.status);
+  const [status, setStatus] = useState(
+    initial.status ?? DEFAULT_FILTERS.status,
+  );
   const [departmentId, setDepartmentId] = useState(
     initial.departmentId ?? DEFAULT_FILTERS.departmentId,
   );

@@ -66,7 +66,9 @@ describe("buildNotificationFixture", () => {
   // ── delivery status coverage ──────────────────────────────────────────────
 
   it("covers all 4 delivery statuses: pending, sent, retry, failed", () => {
-    const statuses = new Set(fixture.notifications.map((n) => n.delivery_status));
+    const statuses = new Set(
+      fixture.notifications.map((n) => n.delivery_status),
+    );
     expect(statuses.has("pending")).toBe(true);
     expect(statuses.has("sent")).toBe(true);
     expect(statuses.has("retry")).toBe(true);

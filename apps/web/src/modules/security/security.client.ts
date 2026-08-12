@@ -1,3 +1,5 @@
+import { apiFetch } from "../../shared/api/client";
+
 /**
  * 系统安全审计数据客户端。
  * 注意：demo 数据，后端暂无审计 API——当前以 Promise 包装本地演示数据，
@@ -35,6 +37,15 @@ export interface AuditLogRow {
   time: string;
   /** 追踪 ID（表格列展示，16 位十六进制）。 */
   traceId: string;
+}
+
+interface SecurityAuditEvent {
+  auditEventId: string;
+  actorEmployeeId: string | null;
+  eventType: string;
+  subjectEmployeeId: string | null;
+  details: unknown;
+  createdAt: string;
 }
 
 /** 设计图逐字数据：前 8 行审计日志。 */
@@ -352,5 +363,30 @@ export const SECURITY_AUDIT_DEMO_ROWS: AuditLogRow[] = [
  * 后续切换为 apiFetch("/internal/security/audit-logs") 时保持签名不变。
  */
 export function fetchSecurityAuditLogs(): Promise<AuditLogRow[]> {
-  return Promise.resolve(SECURITY_AUDIT_DEMO_ROWS);
+  return apiFetch<SecurityAuditEvent[]>("/internal/security/audit-logs").then(
+    (events) =>
+      events.map((event) => ({
+        actionType: event.eventType,
+        detail: {
+          auditNote: "审计事件已由后端记录。",
+          detailJson:
+            typeof event.details === "object" && event.details !== null
+              ? Object.fromEntries(
+                  Object.entries(event.details).map(([key, value]) => [
+                    key,
+                    String(value),
+                  ]),
+                )
+              : { value: String(event.details ?? "") },
+          impactScope: event.subjectEmployeeId ?? "平台安全范围",
+          riskLevel: "低风险",
+        },
+        module: event.eventType.split(".")[0] ?? "identity",
+        operatorDepartment: "平台安全",
+        operatorName: event.actorEmployeeId ?? "系统",
+        summary: event.eventType,
+        time: event.createdAt.replace("T", " ").replace(".000Z", ""),
+        traceId: event.auditEventId,
+      })),
+  );
 }

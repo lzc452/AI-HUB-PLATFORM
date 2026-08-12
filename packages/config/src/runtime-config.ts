@@ -90,7 +90,10 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
   const dingtalkSsoEnabled = value.DINGTALK_SSO_ENABLED === "true";
   if (dingtalkSsoEnabled) {
     const missing: string[] = [];
-    if (value.DINGTALK_CLIENT_ID === undefined || value.DINGTALK_CLIENT_ID === "")
+    if (
+      value.DINGTALK_CLIENT_ID === undefined ||
+      value.DINGTALK_CLIENT_ID === ""
+    )
       missing.push("DINGTALK_CLIENT_ID");
     if (
       value.DINGTALK_CLIENT_SECRET_FILE === undefined &&

@@ -101,7 +101,10 @@ export default function MarketplacePage() {
             className="flex items-center justify-between gap-6 rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 lg:p-6"
           >
             <div className="min-w-0 space-y-2">
-              <Typography.Title level={1} className="!mb-0 !text-2xl lg:!text-3xl">
+              <Typography.Title
+                level={1}
+                className="!mb-0 !text-2xl lg:!text-3xl"
+              >
                 发现企业内部 AI 应用
               </Typography.Title>
               <Paragraph className="!mb-0 text-sm text-[#595959] lg:text-base">
@@ -110,7 +113,7 @@ export default function MarketplacePage() {
             </div>
           </section>
 
-          <div className='bg-white p-2 lg:p-4 rounded-xl space-y-4'>
+          <div className="bg-white p-2 lg:p-4 rounded-xl space-y-4">
             <MarketplaceFilters
               categoryId={categoryId}
               categoryOptions={categoryOptions}
@@ -138,7 +141,10 @@ export default function MarketplacePage() {
               sortMode={sortMode}
             />
 
-            <section aria-labelledby="market-results-heading" className="space-y-4">
+            <section
+              aria-labelledby="market-results-heading"
+              className="space-y-4"
+            >
               {isPending ? (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <SkeletonCard count={6} />

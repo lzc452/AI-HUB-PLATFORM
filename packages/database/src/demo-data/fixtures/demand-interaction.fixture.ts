@@ -16,14 +16,14 @@ const EMP = Object.freeze({
 
 /** Demand indices in IDS.demand.all */
 const D = Object.freeze({
-  inProgress0: 9,  // AI辅助项目风险评估
+  inProgress0: 9, // AI辅助项目风险评估
   inProgress1: 10, // 多语言文档翻译与校对系统
   inProgress2: 11, // 研发效能度量仪表盘
-  pilot0: 12,      // 企业级API全生命周期管理平台
-  completed0: 13,  // 智能客服工单自动分配系统
-  completed1: 14,  // 统一数据血缘追踪工具
-  published0: 7,   // 智能排班与资源调度系统
-  published1: 8,   // 自动化合规审计工具
+  pilot0: 12, // 企业级API全生命周期管理平台
+  completed0: 13, // 智能客服工单自动分配系统
+  completed1: 14, // 统一数据血缘追踪工具
+  published0: 7, // 智能排班与资源调度系统
+  published1: 8, // 自动化合规审计工具
 });
 
 // ── comments plan (8: 5 root + 3 replies) ───────────────────────────────────
@@ -190,7 +190,9 @@ const REPORTS_PLAN: readonly ReportPlan[] = Object.freeze([
 
 // ── progress-updates plan (6) ───────────────────────────────────────────────
 
-type DemandStatus = Insertable<DatabaseSchema["ai_demand_progress_updates"]>["status"];
+type DemandStatus = Insertable<
+  DatabaseSchema["ai_demand_progress_updates"]
+>["status"];
 
 interface ProgressUpdatePlan {
   /** Index into IDS.demandProgress */
@@ -360,11 +362,17 @@ const DEMAND_APP_LINKS_PLAN: readonly DemandAppLinkPlan[] = Object.freeze([
 export interface DemandInteractionFixtureData {
   demandComments: Array<Insertable<DatabaseSchema["ai_demand_comments"]>>;
   demandLikes: Array<Insertable<DatabaseSchema["ai_demand_likes"]>>;
-  demandCommentLikes: Array<Insertable<DatabaseSchema["ai_demand_comment_likes"]>>;
+  demandCommentLikes: Array<
+    Insertable<DatabaseSchema["ai_demand_comment_likes"]>
+  >;
   demandReports: Array<Insertable<DatabaseSchema["ai_demand_reports"]>>;
-  demandProgressUpdates: Array<Insertable<DatabaseSchema["ai_demand_progress_updates"]>>;
+  demandProgressUpdates: Array<
+    Insertable<DatabaseSchema["ai_demand_progress_updates"]>
+  >;
   demandPilots: Array<Insertable<DatabaseSchema["ai_demand_pilots"]>>;
-  demandApplications: Array<Insertable<DatabaseSchema["ai_demand_applications"]>>;
+  demandApplications: Array<
+    Insertable<DatabaseSchema["ai_demand_applications"]>
+  >;
 }
 
 // ── implementation ──────────────────────────────────────────────────────────
@@ -390,7 +398,10 @@ export function buildDemandInteractionFixture(
   // so replies can reference their parent's ID.
   const commentIdByPlanIdx = new Map<number, string>();
   for (const plan of COMMENTS_PLAN) {
-    commentIdByPlanIdx.set(plan.commentIdx, IDS.demandComment[plan.commentIdx]!);
+    commentIdByPlanIdx.set(
+      plan.commentIdx,
+      IDS.demandComment[plan.commentIdx]!,
+    );
   }
 
   const demandComments: Array<
@@ -431,23 +442,19 @@ export function buildDemandInteractionFixture(
 
   // ── reports (3) ───────────────────────────────────────────────────────────
 
-  const demandReports: Array<
-    Insertable<DatabaseSchema["ai_demand_reports"]>
-  > = REPORTS_PLAN.map((plan, i) => ({
-    report_id: IDS.demandReport[plan.reportIdx]!,
-    demand_id: IDS.demand.all[plan.demandIdx]!,
-    comment_id:
-      plan.commentIdx !== null
-        ? IDS.demandComment[plan.commentIdx]!
-        : null,
-    reporter_employee_id: plan.reporterEmployeeId,
-    reason: plan.reason,
-    status: plan.status,
-    resolved_by_employee_id: plan.resolvedByEmployeeId,
-    resolved_at:
-      plan.status !== "open" ? daysAgo(anchor, 5 - i) : null,
-    created_at: daysAgo(anchor, 8 - i),
-  }));
+  const demandReports: Array<Insertable<DatabaseSchema["ai_demand_reports"]>> =
+    REPORTS_PLAN.map((plan, i) => ({
+      report_id: IDS.demandReport[plan.reportIdx]!,
+      demand_id: IDS.demand.all[plan.demandIdx]!,
+      comment_id:
+        plan.commentIdx !== null ? IDS.demandComment[plan.commentIdx]! : null,
+      reporter_employee_id: plan.reporterEmployeeId,
+      reason: plan.reason,
+      status: plan.status,
+      resolved_by_employee_id: plan.resolvedByEmployeeId,
+      resolved_at: plan.status !== "open" ? daysAgo(anchor, 5 - i) : null,
+      created_at: daysAgo(anchor, 8 - i),
+    }));
 
   // ── progress updates (6) ──────────────────────────────────────────────────
 
@@ -465,27 +472,26 @@ export function buildDemandInteractionFixture(
 
   // ── pilots (4) ────────────────────────────────────────────────────────────
 
-  const demandPilots: Array<
-    Insertable<DatabaseSchema["ai_demand_pilots"]>
-  > = PILOTS_PLAN.map((plan, i) => ({
-    pilot_id: IDS.demandPilot[plan.pilotIdx]!,
-    demand_id: IDS.demand.all[plan.demandIdx]!,
-    application_id:
-      plan.applicationPubIdx !== null
-        ? IDS.application.published[plan.applicationPubIdx]!
-        : null,
-    name: plan.name,
-    starts_at: daysAgo(anchor, 18 - i * 3),
-    ends_at:
-      plan.status === "completed" || plan.status === "cancelled"
-        ? daysAgo(anchor, 10 - i * 2)
-        : null,
-    outcome: plan.outcome,
-    status: plan.status,
-    created_by_employee_id: plan.createdByEmployeeId,
-    created_at: daysAgo(anchor, 20 - i * 2),
-    updated_at: daysAgo(anchor, 12 - i * 2),
-  }));
+  const demandPilots: Array<Insertable<DatabaseSchema["ai_demand_pilots"]>> =
+    PILOTS_PLAN.map((plan, i) => ({
+      pilot_id: IDS.demandPilot[plan.pilotIdx]!,
+      demand_id: IDS.demand.all[plan.demandIdx]!,
+      application_id:
+        plan.applicationPubIdx !== null
+          ? IDS.application.published[plan.applicationPubIdx]!
+          : null,
+      name: plan.name,
+      starts_at: daysAgo(anchor, 18 - i * 3),
+      ends_at:
+        plan.status === "completed" || plan.status === "cancelled"
+          ? daysAgo(anchor, 10 - i * 2)
+          : null,
+      outcome: plan.outcome,
+      status: plan.status,
+      created_by_employee_id: plan.createdByEmployeeId,
+      created_at: daysAgo(anchor, 20 - i * 2),
+      updated_at: daysAgo(anchor, 12 - i * 2),
+    }));
 
   // ── demand-application links (4) ──────────────────────────────────────────
 

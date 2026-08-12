@@ -101,9 +101,7 @@ describe("buildDemandInteractionFixture", () => {
   });
 
   it("reply parent_comment_id references resolve within comments", () => {
-    const commentIds = new Set(
-      fixture.demandComments.map((c) => c.comment_id),
-    );
+    const commentIds = new Set(fixture.demandComments.map((c) => c.comment_id));
     const replies = fixture.demandComments.filter(
       (c) => c.parent_comment_id !== null,
     );
@@ -162,9 +160,7 @@ describe("buildDemandInteractionFixture", () => {
   });
 
   it("report comment_id references resolve within comments", () => {
-    const commentIds = new Set(
-      fixture.demandComments.map((c) => c.comment_id),
-    );
+    const commentIds = new Set(fixture.demandComments.map((c) => c.comment_id));
     for (const report of fixture.demandReports) {
       if (report.comment_id !== null) {
         expect(commentIds.has(report.comment_id)).toBe(true);

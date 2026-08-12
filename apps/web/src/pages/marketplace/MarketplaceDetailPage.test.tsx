@@ -154,9 +154,7 @@ describe("MarketplaceDetailPage", () => {
 
     await screen.findByRole("heading", { name: "OCR 票据识别" });
     for (const label of ["描述", "版本历史", "评价管理", "风险说明"]) {
-      expect(
-        screen.getByRole("tab", { name: label }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: label })).toBeInTheDocument();
     }
   });
 
@@ -166,15 +164,11 @@ describe("MarketplaceDetailPage", () => {
     await screen.findByRole("heading", { name: "OCR 票据识别" });
     fireEvent.click(screen.getByRole("tab", { name: "版本历史" }));
 
-    expect(
-      await screen.findByText("暂无版本记录"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("暂无版本记录")).toBeInTheDocument();
     expect(globalThis.window.location.search).toContain("tab=history");
 
     fireEvent.click(screen.getByRole("tab", { name: "描述" }));
-    expect(
-      await screen.findByText("详细介绍"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("详细介绍")).toBeInTheDocument();
     expect(globalThis.window.location.search).not.toContain("tab=");
   });
 

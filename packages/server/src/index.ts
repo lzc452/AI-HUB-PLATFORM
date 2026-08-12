@@ -59,13 +59,19 @@ export type { IdentityModuleOptions } from "./identity/identity.module.js";
 export { KyselyIdentityRepository } from "./identity/identity.repository.js";
 export { IdentityService } from "./identity/identity.service.js";
 export { LoginEncryptionService } from "./identity/login-encryption.service.js";
-export type { ChallengeContext, DecryptedLoginPayload } from "./identity/login-encryption.service.js";
+export type {
+  ChallengeContext,
+  DecryptedLoginPayload,
+} from "./identity/login-encryption.service.js";
 export { InMemoryLoginChallengeStore } from "./identity/login-challenge.store.js";
 export type { LoginChallengeStore } from "./identity/login-challenge.store.js";
 export { DingTalkSsoService } from "./identity/dingtalk-sso.service.js";
 export type { DingTalkSsoConfig } from "./identity/dingtalk-sso.service.js";
 export { DingTalkApiClient } from "./identity/dingtalk-api.client.js";
-export type { DingTalkApiPort, DingTalkUserInfo } from "./identity/dingtalk-api.client.js";
+export type {
+  DingTalkApiPort,
+  DingTalkUserInfo,
+} from "./identity/dingtalk-api.client.js";
 export {
   AUTHORIZATION_METADATA_KEY,
   Authenticated,

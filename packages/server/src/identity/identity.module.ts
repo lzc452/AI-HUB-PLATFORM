@@ -8,6 +8,7 @@ import { LoginEncryptionService } from "./login-encryption.service.js";
 import { InMemoryLoginChallengeStore } from "./login-challenge.store.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import { DingTalkApiClient } from "./dingtalk-api.client.js";
+import { SecurityController } from "./security.controller.js";
 
 export const IDENTITY_SERVICE = Symbol("IDENTITY_SERVICE");
 
@@ -77,10 +78,7 @@ export class IdentityModule {
       });
       providers.push({
         provide: DingTalkSsoService,
-        useFactory: (
-          api: DingTalkApiClient,
-          identity: IdentityService,
-        ) =>
+        useFactory: (api: DingTalkApiClient, identity: IdentityService) =>
           new DingTalkSsoService(
             {
               clientId: ssoConfig.clientId,
@@ -98,7 +96,7 @@ export class IdentityModule {
 
     return {
       module: IdentityModule,
-      controllers: [IdentityController],
+      controllers: [IdentityController, SecurityController],
       providers,
       exports: [IdentityService],
     };
@@ -107,7 +105,7 @@ export class IdentityModule {
   static forTest(identity: IdentityService): DynamicModule {
     return {
       module: IdentityModule,
-      controllers: [IdentityController],
+      controllers: [IdentityController, SecurityController],
       providers: [{ provide: IdentityService, useValue: identity }],
       exports: [IdentityService],
     };

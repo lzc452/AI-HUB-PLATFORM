@@ -1,4 +1,8 @@
-import { CheckCircleFilled, CloseCircleFilled, RightOutlined } from "@ant-design/icons";
+import {
+  CheckCircleFilled,
+  CloseCircleFilled,
+  RightOutlined,
+} from "@ant-design/icons";
 import { Button, Typography } from "antd";
 
 import { type SyncLogSummary } from "./constants";
@@ -14,7 +18,9 @@ export function SyncLogsPanel({ logs }: SyncLogsPanelProps) {
   return (
     <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="m-0 text-base font-medium text-[#1f1f1f]">最近同步日志</h3>
+        <h3 className="m-0 text-base font-medium text-[#1f1f1f]">
+          最近同步日志
+        </h3>
         <Button icon={<RightOutlined />} size="small" type="link">
           查看全部
         </Button>

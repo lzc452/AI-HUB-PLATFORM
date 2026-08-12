@@ -4,15 +4,7 @@ import {
   MenuUnfoldOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import {
-  Badge,
-  Button,
-  Dropdown,
-  Input,
-  Layout,
-  Modal,
-  Popover,
-} from "antd";
+import { Badge, Button, Dropdown, Input, Layout, Modal, Popover } from "antd";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { readLastViewedApplicationId } from "../../modules/application/last-viewed";
@@ -181,7 +173,9 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
               icon={<UserOutlined aria-hidden="true" />}
               type="text"
             >
-              <span className="hidden sm:inline">{actor?.employeeId ?? "未登录"}</span>
+              <span className="hidden sm:inline">
+                {actor?.employeeId ?? "未登录"}
+              </span>
               <DownOutlined aria-hidden="true" />
             </Button>
           </Dropdown>

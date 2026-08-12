@@ -108,15 +108,32 @@ vi.mock("../../modules/innovation/useDemand", () => ({
   useLikeDemandComment: () => ({ isPending: false, mutate: mockCommentLike }),
   useAddDemandComment: () => ({ isPending: false, mutate: mockAddComment }),
   useReportDemand: () => ({ isPending: false, mutate: vi.fn() }),
-  useDemandGovernanceData: () => ({ collaborators: { data: [] }, applications: { data: [] }, pilots: { data: [] }, reports: { data: [] } }),
+  useDemandGovernanceData: () => ({
+    collaborators: { data: [] },
+    applications: { data: [] },
+    pilots: { data: [] },
+    reports: { data: [] },
+  }),
 }));
 
 vi.mock("../../modules/auth/useAuth", () => ({
-  useAuth: () => ({ actor: { employeeId: "e-1", permissions: ["demand.create", "demand.read", "demand.interact", "demand.manage"] } }),
+  useAuth: () => ({
+    actor: {
+      employeeId: "e-1",
+      permissions: [
+        "demand.create",
+        "demand.read",
+        "demand.interact",
+        "demand.manage",
+      ],
+    },
+  }),
 }));
 
 function renderWithRouter(ui: React.ReactNode, initialEntry = "/innovation") {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialEntry]}>
@@ -136,13 +153,20 @@ describe("Innovation pages", () => {
 
   it("同步 URL 筛选并按整卡进入详情", async () => {
     renderWithRouter(<InnovationSquarePage />);
-    expect(screen.getByRole("heading", { name: "创新广场" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "创新广场" }),
+    ).toBeInTheDocument();
     fireEvent.change(screen.getByRole("searchbox", { name: "搜索需求" }), {
       target: { value: "知识" },
     });
-    fireEvent.keyDown(screen.getByRole("searchbox", { name: "搜索需求" }), { key: "Enter" });
+    fireEvent.keyDown(screen.getByRole("searchbox", { name: "搜索需求" }), {
+      key: "Enter",
+    });
     await waitFor(() => expect(mockList).toHaveBeenCalled());
-    expect(screen.getByRole("link", { name: "查看需求详情" })).toHaveAttribute("href", "/innovation/d-1");
+    expect(screen.getByRole("link", { name: "查看需求详情" })).toHaveAttribute(
+      "href",
+      "/innovation/d-1",
+    );
   });
 
   it("详情页支持需求点赞、Emoji、一级回复和评论点赞", () => {
@@ -151,7 +175,10 @@ describe("Innovation pages", () => {
     expect(mockLike).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "添加 Emoji" }));
     fireEvent.click(screen.getByRole("button", { name: "😀" }));
-    expect((screen.getByRole("textbox", { name: "讨论内容" }) as HTMLTextAreaElement).value).toContain("😀");
+    expect(
+      (screen.getByRole("textbox", { name: "讨论内容" }) as HTMLTextAreaElement)
+        .value,
+    ).toContain("😀");
     fireEvent.click(screen.getByRole("button", { name: /赞同这条评论/ }));
     expect(mockCommentLike).toHaveBeenCalledWith("c-1");
   });

@@ -8,7 +8,11 @@ import type {
   DeliveryRecord,
   ReviewQueueRecord,
   ReviewRecord,
+  ApplicationAdminListInput,
+  ApplicationAdminListResult,
+  DeliveryChannel,
 } from "./application.types.js";
+import type { ActorContext } from "@ai-hub/contracts";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -55,6 +59,181 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .executeTakeFirst();
     return row === undefined ? null : this.mapApplication(row);
+  }
+
+  async listAdmin(
+    actor: ActorContext,
+    input: ApplicationAdminListInput,
+  ): Promise<ApplicationAdminListResult> {
+    const canManage =
+      actor.permissions?.includes("application.manage") === true ||
+      actor.permissions?.includes("*") === true;
+    let query = this.db
+      .selectFrom("applications as application")
+      .innerJoin(
+        "employees as owner",
+        "owner.employee_id",
+        "application.owner_employee_id",
+      )
+      .innerJoin(
+        "departments as department",
+        "department.department_id",
+        "application.department_id",
+      )
+      .leftJoin(
+        "application_catalog_metadata as metadata",
+        "metadata.application_id",
+        "application.application_id",
+      )
+      .select([
+        "application.application_id as applicationId",
+        "application.name as name",
+        "application.summary as summary",
+        "application.status as status",
+        "application.current_version_id as currentVersionId",
+        "application.updated_at as updatedAt",
+        "application.owner_employee_id as ownerEmployeeId",
+        "application.maintainer_employee_id as maintainerEmployeeId",
+        "owner.display_name as ownerName",
+        "department.name as departmentName",
+        "metadata.category_id as categoryId",
+      ]);
+
+    if (!canManage) {
+      query = query.where((eb) =>
+        eb.or([
+          eb("application.owner_employee_id", "=", actor.employeeId),
+          eb("application.maintainer_employee_id", "=", actor.employeeId),
+        ]),
+      );
+    }
+    if (input.keyword?.trim()) {
+      const keyword = `%${input.keyword.trim()}%`;
+      query = query.where((eb) =>
+        eb.or([
+          eb("application.name", "ilike", keyword),
+          eb("application.summary", "ilike", keyword),
+          eb("application.application_id", "ilike", keyword),
+        ]),
+      );
+    }
+    if (input.status !== undefined)
+      query = query.where("application.status", "=", input.status);
+    if (input.departmentId !== undefined && input.departmentId !== "all")
+      query = query.where("application.department_id", "=", input.departmentId);
+    if (input.applicationType !== undefined && input.applicationType !== "all")
+      query = query.where("metadata.category_id", "=", input.applicationType);
+    if (input.mode === "owned")
+      query = query.where((eb) =>
+        eb.or([
+          eb("application.owner_employee_id", "=", actor.employeeId),
+          eb("application.maintainer_employee_id", "=", actor.employeeId),
+        ]),
+      );
+    if (input.mode === "review")
+      query = query.where("application.status", "=", "in_review");
+    const rows = await query
+      .orderBy(
+        input.sort === "name"
+          ? "application.name"
+          : input.sort === "status"
+            ? "application.status"
+            : "application.updated_at",
+        "desc",
+      )
+      .execute();
+    const applicationIds = rows.map((row) => row.applicationId);
+    const [deliveries, versions, reviewQueues] = await Promise.all([
+      applicationIds.length === 0
+        ? Promise.resolve(
+            [] as Array<{ application_id: string; channel: DeliveryChannel }>,
+          )
+        : this.db
+            .selectFrom("application_deliveries")
+            .select(["application_id", "channel"])
+            .where("application_id", "in", applicationIds)
+            .where("enabled", "=", true)
+            .execute(),
+      rows.some((row) => row.currentVersionId !== null)
+        ? this.db
+            .selectFrom("application_versions")
+            .select(["application_version_id", "version"])
+            .where(
+              "application_version_id",
+              "in",
+              rows
+                .map((row) => row.currentVersionId)
+                .filter((id): id is string => id !== null),
+            )
+            .execute()
+        : Promise.resolve(
+            [] as Array<{ application_version_id: string; version: string }>,
+          ),
+      applicationIds.length === 0
+        ? Promise.resolve(
+            [] as Array<{
+              application_id: string;
+              status: "available" | "claimed";
+              claimed_by_employee_id: string | null;
+            }>,
+          )
+        : this.db
+            .selectFrom("application_review_queue")
+            .select(["application_id", "status", "claimed_by_employee_id"])
+            .where("application_id", "in", applicationIds)
+            .execute(),
+    ]);
+    const versionById = new Map(
+      versions.map((version) => [
+        version.application_version_id,
+        version.version,
+      ]),
+    );
+    const channelsByApp = new Map<string, DeliveryChannel[]>();
+    for (const delivery of deliveries)
+      channelsByApp.set(delivery.application_id, [
+        ...(channelsByApp.get(delivery.application_id) ?? []),
+        delivery.channel,
+      ]);
+    const reviewByApp = new Map(
+      reviewQueues.map((queue) => [queue.application_id, queue]),
+    );
+    const items = rows
+      .filter(
+        (row) =>
+          input.channel === undefined ||
+          channelsByApp.get(row.applicationId)?.includes(input.channel),
+      )
+      .map((row) => ({
+        applicationId: row.applicationId,
+        name: row.name,
+        summary: row.summary,
+        categoryId: row.categoryId ?? "",
+        status: row.status,
+        currentVersion:
+          row.currentVersionId === null
+            ? ""
+            : (versionById.get(row.currentVersionId) ?? ""),
+        currentVersionId: row.currentVersionId,
+        ownerName: row.ownerName,
+        departmentName: row.departmentName,
+        deliveryChannels: channelsByApp.get(row.applicationId) ?? [],
+        updatedAt: row.updatedAt.toISOString(),
+        isMine:
+          row.ownerEmployeeId === actor.employeeId ||
+          row.maintainerEmployeeId === actor.employeeId,
+        needsMyReview:
+          row.status === "in_review" &&
+          reviewByApp.get(row.applicationId)?.claimed_by_employee_id !==
+            actor.employeeId,
+      }));
+    const start = (input.page - 1) * input.pageSize;
+    return {
+      items: items.slice(start, start + input.pageSize),
+      page: input.page,
+      pageSize: input.pageSize,
+      total: items.length,
+    };
   }
 
   async createVersion(

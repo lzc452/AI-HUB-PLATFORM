@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  showErrorMessage,
-  showSuccessMessage,
-} from "../../shared/ui/message";
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import {
   hideComment,
   listComments,

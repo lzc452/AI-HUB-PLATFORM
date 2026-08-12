@@ -188,6 +188,41 @@
         display: grid;
         gap: 10px;
       }
+      .audit-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .audit-grid .panel > ul {
+        margin-top: 12px;
+      }
+      .audit-grid .panel li + li {
+        margin-top: 8px;
+      }
+      .audit-wide {
+        grid-column: 1 / -1;
+      }
+      .audit-table-wrap {
+        overflow-x: auto;
+      }
+      .audit-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        min-width: 760px;
+      }
+      .audit-table th,
+      .audit-table td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+        line-height: 1.5;
+      }
+      .audit-table th {
+        background: #f8fafc;
+        white-space: nowrap;
+      }
       .task,
       .program-task {
         border: 1px solid var(--line);
@@ -296,8 +331,12 @@
       }
       @media (max-width: 1120px) {
         .header-grid,
-        .grid {
+        .grid,
+        .audit-grid {
           grid-template-columns: 1fr;
+        }
+        .audit-wide {
+          grid-column: auto;
         }
         .flow {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -340,6 +379,7 @@
           <button class="tab" data-view="overview" aria-selected="true">
             总览
           </button>
+          <button class="tab" data-view="audit">V1 闭环审计</button>
           <button class="tab" data-view="program">V1 阶段矩阵</button>
           <button class="tab" data-view="tasks">任务台账</button>
           <button class="tab" data-view="issues">问题</button>
@@ -360,22 +400,26 @@
           <span class="badge" id="updated-at"></span>
         </div>
         <div class="flow" id="phase-flow"></div>
-        <div class="”panel”" style="”margin-top:" 16px”>
+        <div class="panel" style="margin-top: 16px">
           <h2>当前判断</h2>
-          <p class="”note”">
-            <strong>后端 Phase 1–7 已全部落地。</strong
-            >所有领域模块（identity、application、catalog、interaction、notification、creator、demand、analytics）的
-            service/repository/controller 均已实现并通过测试。 前端架构已从扁平
-            SPA（App.tsx + router.tsx）重构为
-            pages/components/modules/router/shared 分层工程。
-            <strong>2026-08-05 已交付 Kimi K3 接手前端开发</strong
-            >，含完整架构设计和逐步实现提示词，handoff 文档见
-            <code>docs/handoff/</code>。 Phase 7
-            生产部署为本地契约验证通过（Compose
-            模型、安全边界、PG/WAL/对象存储恢复
-            runbook、监控告警配置），真实双机部署和演练需要外部基础设施。
+          <p class="note">
+            <strong>本地 V1 尚未闭环。</strong>
+            工程静态门禁和若干后端状态机已有代码证据，但 21
+            张设计图当前运行截图验收为 0/21，Compose + PostgreSQL + API + worker
+            + 浏览器端到端领域链为 0/11。“上传应用 → 审核 →
+            发布市场”与“下载/使用 → 评论 → 点赞 → 评分 →
+            反馈”两条主流程均不能标记为 DONE。详细证据见“V1 闭环审计”页签和
+            <code>docs/audit/v1-flow-gap-matrix.md</code>。
           </p>
         </div>
+      </section>
+
+      <section data-panel="audit">
+        <div class="section-title">
+          <h2>V1 闭环审计</h2>
+          <span class="badge">按代码、测试、截图与端到端证据计数</span>
+        </div>
+        <div class="audit-grid" id="audit-ledger"></div>
       </section>
 
       <section data-panel="program">
@@ -990,8 +1034,7 @@
               "应用管理需要与创作者中心明确分工，同时在同一页面承载应用状态、版本、审核、负责人、交付渠道和快捷操作。",
             solution:
               "采用浅蓝标题区、四项治理指标、角色视图切换、完整筛选条和全宽应用表格；复用现有蓝白产品壳、状态标签与 16px/8px 圆角规则。",
-            skip:
-              "本次仅完成主页面 UI 图和路由设计规范，尚未实现应用管理页面改版、响应式列表或新增交互。",
+            skip: "本次仅完成主页面 UI 图和路由设计规范，尚未实现应用管理页面改版、响应式列表或新增交互。",
           },
           {
             id: "t-026",
@@ -1007,8 +1050,7 @@
               "运行库仅执行到 migration 0012，employee 角色仍保存旧权限 marketplace.read；当前前后端要求 catalog.read 等统一点号权限。开发 API 启动流程未自动迁移，真实演示账号回归又未断言基础权限，导致版本错位未被及时发现。",
             solution:
               "将 dev:api 改为 migration 成功后才启动 API，并新增失败短路测试；强化 demo 账号真实 PostgreSQL E2E，要求所有账号具备员工基础权限；同步当前开发库迁移并校正统一授权后的回归断言。",
-            skip:
-              "全量 pnpm build 的 Web 阶段受当前工具沙箱禁止 esbuild 子进程影响（spawn EPERM）；pnpm test、pnpm typecheck、pnpm lint 及真实浏览器/API 回归均已通过。",
+            skip: "全量 pnpm build 的 Web 阶段受当前工具沙箱禁止 esbuild 子进程影响（spawn EPERM）；pnpm test、pnpm typecheck、pnpm lint 及真实浏览器/API 回归均已通过。",
           },
           {
             id: "t-025",
@@ -1040,8 +1082,7 @@
               "页面需同时承载需求发现、筛选排序、价值判断与详情跳转，且不能因信息密度过高退化为管理表格。",
             solution:
               "采用浅蓝标题区、完整筛选条和两列宽卡片，将状态、部门、问题描述、价值/成本/风险、优先级、点赞与讨论数集中到单个可点击需求条目中。",
-            skip:
-              "本次仅完成 UI 设计图，尚未实现前端页面、筛选交互、发起需求流程、响应式状态或自动化测试。",
+            skip: "本次仅完成 UI 设计图，尚未实现前端页面、筛选交互、发起需求流程、响应式状态或自动化测试。",
           },
           {
             id: "t-023",
@@ -1057,8 +1098,7 @@
               "初版讨论输入框包含 @ 人员功能，且点赞按钮未处于标题区最右侧，不符合当前功能范围和标题区左右布局要求。",
             solution:
               "移除讨论区全部 @ 入口；标题、状态和副文保持左对齐，更多操作置于点赞按钮左侧，点赞按钮固定为标题区最右侧主操作。",
-            skip:
-              "本次仅完成 UI 设计图，未实现前端代码、讨论区 @ 功能、交互状态或自动化测试。",
+            skip: "本次仅完成 UI 设计图，未实现前端代码、讨论区 @ 功能、交互状态或自动化测试。",
           },
           {
             id: "t-022",
@@ -1074,8 +1114,7 @@
               "现有前端以 roleCodes 控制菜单，刷新时 actor 尚未恢复会放开全部菜单；切换账号时空 allowedRoles 会导致 Marketplace 菜单为空。",
             solution:
               "固定目标权限码、系统角色和资源级条件的完整矩阵，让 seed、contracts、server Guard 和前端路由共同引用同一权限模型；切换账号时清理用户级缓存，菜单与路由统一复用 assistant 权限；0013 迁移将 marketplace/identity/analytics 旧别名规范化，同时保留未知 custom permission；新建 local/DingTalk 员工自动补齐 employee 基础角色。",
-            skip:
-              "数据库集成测试仍需可用的 Docker/testcontainers runtime；本地可运行的 server、API、Web、typecheck、lint 和定向迁移验证已完成。",
+            skip: "数据库集成测试仍需可用的 Docker/testcontainers runtime；本地可运行的 server、API、Web、typecheck、lint 和定向迁移验证已完成。",
           },
           {
             id: "t-020",
@@ -1779,17 +1818,216 @@
         }
         return value;
       }
+      function applyV1AuditEvidence(value) {
+        const phaseById = new Map(
+          (value.phases ?? []).map((phase) => [phase.id, phase]),
+        );
+        const ui = phaseById.get("ui");
+        const dev = phaseById.get("dev");
+        const test = phaseById.get("test");
+        const ops = phaseById.get("ops");
+        if (ui) {
+          ui.progress = 0;
+          ui.tasks = [
+            "当前运行截图验收 0/21；设计图存在不等于页面视觉、交互和数据流已验收。",
+          ];
+        }
+        if (dev) {
+          dev.progress = 0;
+          dev.tasks = [
+            "Compose + PostgreSQL + API + worker + 浏览器领域链验收 0/11；已有代码能力在下方 DONE 单列。",
+          ];
+        }
+        if (test) {
+          test.progress = 83;
+          test.tasks = [
+            "format、lint、typecheck、boundaries、build 通过；根 pnpm test 被 Testcontainers 无 runtime 阻断。",
+          ];
+        }
+        const auditLedger = value.auditLedger ?? (value.auditLedger = {});
+        auditLedger.updatedAt = "2026-08-12";
+        auditLedger.status = "partial";
+        auditLedger.metrics = [
+          ["设计图验收", "0/21"],
+          ["端到端领域链", "0/11"],
+          ["工程门禁", "5/6"],
+          ["本地 Compose", "未验收"],
+        ];
+        auditLedger.DONE = [
+          "format、lint、typecheck、boundaries、build 五项工程门禁通过。",
+          "Web 全量 17 个文件、85 个测试通过。",
+          "seed 的“缺少 DATABASE_URL”测试已与仓库 .env 隔离。",
+          "密码登录、session、actor 恢复、logout 与权限路由已有前后端代码链。",
+          "应用创建、版本、交付、提交审核、认领/释放、审批和发布的后端状态机已实现。",
+          "后端已实现禁止自审、artifact 校验、四渠道发布门禁、审计和 Outbox 事务。",
+          "市场列表/详情、点赞、整数评分、评论读取与官方回复已有 API 和表。",
+          "应用管理列表、Analytics、Assistant 问答、Security identity audit 已接真实读取接口。",
+        ];
+        auditLedger.UNDO = [
+          "真实 artifact 上传、完成上传、扫描状态与签名结果接口。",
+          "版本、审核、交付和发布工作台的真实前端 mutation 接线。",
+          "市场“立即使用”与下载的交付解析和真实前端调用。",
+          "普通用户发表评论、分页查询、整数评分契约统一和应用反馈。",
+          "组织用户/部门/角色 CRUD、角色列表与同步管理接口。",
+          "统一安全审计、分页筛选与审计导出。",
+          "删除生产页面 fallbackVersions、fallbackReviews、组织 mock 和交付静态数据。",
+          "Docker migration、重复 migration、seed 幂等、API/worker/Outbox 联调。",
+          "5 个角色的 401/403、受众隔离、禁止自审和资源归属浏览器回归。",
+          "21 张设计图当前运行截图、交互状态、响应式与可访问性验收。",
+        ];
+        auditLedger.TODO = [
+          "P0：落地 artifact upload/asset API 与对象存储适配器。",
+          "P0：为 createVersion、configureDelivery、claim/release、review、publish 增加 client/hook/form。",
+          "P0：新增 delivery resolve，返回受众校验后的跳转、短期下载 URL 或二维码 payload。",
+          "P0：允许普通用户创建根评论，增加评论表单并移除评分 allowHalf。",
+          "P0：增加 application_feedback 的创建、查询、处理和前端状态跟踪。",
+          "P1：补齐组织 CRUD、同步任务以及统一 security audit/export。",
+          "P1：按 0018/0019/0020 前向 migration 方案更新 schema、fixture、seed、Repository 与测试。",
+          "P1：Docker 恢复后跑 migration/seed/API/worker/browser，并完成 21 图验收。",
+        ];
+        auditLedger.疑点 = [
+          "Docker Desktop Linux engine 当前不可连接",
+          "真实 DingTalk/Dify 凭据与双机部署不在本地 V1 硬完成线",
+          "前端允许半星，但 API/数据库仅允许 1–5 整数星。",
+          "artifact_signature 在 Web 类型允许 null，而数据库/Service 要求非空。",
+          "发布要求 web/desktop/mobile/mini_program 四渠道全部 enabled，是否符合最终 V1 产品口径需确认。",
+        ];
+        auditLedger.staticData = [
+          [
+            "组织/角色",
+            "ROLES_MOCK_DATA；创建、编辑、禁用、删除等按钮无真实 handler",
+          ],
+          [
+            "组织/部门",
+            "DEPARTMENTS_MOCK_DATA；负责人、成员数、应用数和同步时间不可信",
+          ],
+          [
+            "组织/同步",
+            "任务、健康度、告警、日志、配置、统计均为 mock，含 200ms 假延时",
+          ],
+          [
+            "组织/用户",
+            "角色按数组索引生成，最近登录固定生成；KPI 1286/98.6% 硬编码",
+          ],
+          ["应用版本", "空数据回退 fallbackVersions 和静态 artifact 元数据"],
+          [
+            "审核工作台",
+            "fallbackReviews、校验项、SLA、认领人静态；动作只弹提示",
+          ],
+          [
+            "交付配置",
+            "URL、安装包、二维码、限制、最近记录静态；保存/提交是假操作",
+          ],
+          [
+            "市场详情",
+            "维护人、附件、问题描述、特性与评分人数静态或派生；CTA disabled",
+          ],
+          [
+            "AI 助手",
+            "capabilities、示例问题、recommendedApps 静态；问答请求本身是真实 API",
+          ],
+          ["Security", "安全配置/会话/扫描为占位页签，导出为提示"],
+        ];
+        auditLedger.apiGaps = [
+          [
+            "已有待接线",
+            "create version、configure delivery、submit/claim/release/review、publish、catalog action、comment mutation",
+          ],
+          [
+            "Artifact",
+            "upload init/parts/complete/status；application assets 查询/删除",
+          ],
+          [
+            "交付解析",
+            "按 channel 返回 redirect URL、短期 download URL 或 QR payload",
+          ],
+          ["互动反馈", "普通用户根评论；feedback create/list/update"],
+          [
+            "组织",
+            "员工/部门/角色 CRUD、角色分配、批量导入、同步 overview/run/retry/config",
+          ],
+          ["安全", "overview、统一 audit logs 分页筛选、异步 export job"],
+          [
+            "应用管理",
+            "admin-kpis 与 admin-metadata，避免前端只取前 200 条聚合",
+          ],
+        ];
+        auditLedger.databaseMigrations = [
+          [
+            "无需新表",
+            "员工/部门/角色计数可聚合现有表；普通根评论复用 application_comments；点赞/整数评分/举报表已存在",
+          ],
+          [
+            "0018 组织",
+            "departments/roles 管理字段；identity_sync_run_items；可选 identity_sync_config",
+          ],
+          [
+            "0019 Artifact",
+            "application_artifact_uploads；扩展 application_assets；application_delivery_assets；artifact_key 唯一索引",
+          ],
+          [
+            "0020 审计/反馈",
+            "security_audit_events、security_audit_export_jobs、application_feedback；扩展 delivery actions/comments",
+          ],
+          [
+            "同步规则",
+            "不改 0001–0017；同步 schema.ts、fixture、seed、Repository、contract 和集成测试",
+          ],
+        ];
+        auditLedger.flowVerdicts = [
+          [
+            "登录 → 上传 → 审核 → 发布",
+            "不闭环",
+            "登录代码链存在；真实上传缺失；版本/交付/审核/发布前端未接；无 DB/browser 证据",
+          ],
+          [
+            "登录 → 下载 → 评论 → 点赞 → 评分 → 反馈",
+            "不闭环",
+            "市场读取、点赞、整数评分有代码链；下载、普通评论、反馈缺失；无 DB/browser 证据",
+          ],
+        ];
+        if (ops) {
+          ops.progress = 0;
+          ops.tasks = [
+            "Docker Desktop Linux engine 未运行，尚无本轮 PostgreSQL/API/worker 联调证据。",
+          ];
+        }
+        const events = value.events ?? (value.events = []);
+        if (
+          !events.some((event) => event.title === "V1 本地可运行审计基线建立")
+        ) {
+          events.unshift({
+            date: "2026-08-12",
+            phase: "test",
+            title: "V1 本地可运行审计基线建立",
+            body: "已建立隔离分支与审计台账；修复 database fixture 的 lint/typecheck 阻塞和 seed 测试的 .env 污染；应用管理 admin-list、analytics platform 已完成真实接线。Docker 与全量门禁仍为 UNDO。",
+          });
+        }
+        if (
+          !events.some((event) => event.title === "V1 双主流程闭环审计完成")
+        ) {
+          events.unshift({
+            date: "2026-08-12",
+            phase: "product",
+            title: "V1 双主流程闭环审计完成",
+            body: "确认发布链与市场消费链均未闭环；已列出生产静态数据、已有待接接口、新增 API、0018–0020 migration 建议以及 DONE/UNDO/TODO/疑点。",
+          });
+        }
+        return value;
+      }
       function loadData() {
         try {
-          return applyPhase4Evidence(
-            applyPhase3Evidence(
-              JSON.parse(localStorage.getItem(storageKey)) ||
-                structuredClone(seedData),
+          return applyV1AuditEvidence(
+            applyPhase4Evidence(
+              applyPhase3Evidence(
+                JSON.parse(localStorage.getItem(storageKey)) ||
+                  structuredClone(seedData),
+              ),
             ),
           );
         } catch {
-          return applyPhase4Evidence(
-            applyPhase3Evidence(structuredClone(seedData)),
+          return applyV1AuditEvidence(
+            applyPhase4Evidence(applyPhase3Evidence(structuredClone(seedData))),
           );
         }
       }
@@ -1815,6 +2053,7 @@
       function render() {
         renderMetrics();
         renderPhases();
+        renderAudit();
         renderProgram();
         renderTasks();
         renderIssues();
@@ -1825,6 +2064,16 @@
           `最后更新：${data.updatedAt}`;
       }
       function renderMetrics() {
+        if (data.auditLedger?.metrics) {
+          document.getElementById("metrics").innerHTML =
+            data.auditLedger.metrics
+              .map(
+                ([label, value]) =>
+                  `<div class="metric"><span>${label}</span><strong>${value}</strong></div>`,
+              )
+              .join("");
+          return;
+        }
         const allProgramTasks = data.programPhases.flatMap(
           (phase) => phase.tasks,
         );
@@ -1857,6 +2106,36 @@
               `<article class="phase"><div class="phase-top"><h3>${phase.name}</h3><span class="badge">${phase.progress}%</span></div><div class="progress"><i style="width:${phase.progress}%"></i></div><p class="note">${phase.goal}</p><ul>${phase.tasks.map((task) => `<li>${task}</li>`).join("")}</ul></article>`,
           )
           .join("");
+      }
+      function renderAudit() {
+        const ledger = data.auditLedger;
+        if (!ledger) return;
+        const listPanel = (title, items, badgeClass = "") =>
+          `<article class="panel"><div class="phase-top"><h3>${title}</h3><span class="badge ${badgeClass}">${items.length} 项</span></div><ul>${items.map((item) => `<li>${item}</li>`).join("")}</ul></article>`;
+        const tablePanel = (title, headers, rows) =>
+          `<article class="panel audit-wide"><h3>${title}</h3><div class="audit-table-wrap"><table class="audit-table"><thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div></article>`;
+        document.getElementById("audit-ledger").innerHTML = [
+          listPanel("DONE", ledger.DONE, "status-done"),
+          listPanel("疑点", ledger.疑点, "status-risk"),
+          listPanel("UNDO", ledger.UNDO, "status-skip"),
+          listPanel("TODO", ledger.TODO, "status-todo"),
+          tablePanel(
+            "前端生产静态数据与占位",
+            ["页面/模块", "事实与影响"],
+            ledger.staticData,
+          ),
+          tablePanel("后端接口缺口", ["接口族", "需要完成"], ledger.apiGaps),
+          tablePanel(
+            "数据库同步方案",
+            ["批次", "修改内容"],
+            ledger.databaseMigrations,
+          ),
+          tablePanel(
+            "核心业务流程判定",
+            ["流程", "结论", "原因"],
+            ledger.flowVerdicts,
+          ),
+        ].join("");
       }
       function renderProgram() {
         document.getElementById("program-list").innerHTML = data.programPhases

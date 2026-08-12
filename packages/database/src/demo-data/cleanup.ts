@@ -21,50 +21,128 @@ interface CleanupStep {
 const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
   // ═══ FK LEAF TABLES ═══
 
-  { table: "ai_demand_comment_likes", where: `comment_id::text LIKE '00000011-%'` },
+  {
+    table: "ai_demand_comment_likes",
+    where: `comment_id::text LIKE '00000011-%'`,
+  },
   { table: "ai_demand_reports", where: `demand_id::text LIKE '00000010-%'` },
   { table: "ai_demand_comments", where: `demand_id::text LIKE '00000010-%'` },
   { table: "ai_demand_likes", where: `demand_id::text LIKE '00000010-%'` },
-  { table: "ai_demand_progress_updates", where: `demand_id::text LIKE '00000010-%'` },
+  {
+    table: "ai_demand_progress_updates",
+    where: `demand_id::text LIKE '00000010-%'`,
+  },
   { table: "ai_demand_pilots", where: `demand_id::text LIKE '00000010-%'` },
-  { table: "ai_demand_applications", where: `demand_id::text LIKE '00000010-%'` },
-  { table: "ai_demand_collaborators", where: `demand_id::text LIKE '00000010-%'` },
-  { table: "ai_demand_audit_events", where: `demand_id::text LIKE '00000010-%'` },
+  {
+    table: "ai_demand_applications",
+    where: `demand_id::text LIKE '00000010-%'`,
+  },
+  {
+    table: "ai_demand_collaborators",
+    where: `demand_id::text LIKE '00000010-%'`,
+  },
+  {
+    table: "ai_demand_audit_events",
+    where: `demand_id::text LIKE '00000010-%'`,
+  },
 
-  { table: "application_reports", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_comments", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_ratings", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_likes", where: `application_id::text LIKE '00000001-%'` },
+  {
+    table: "application_reports",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_comments",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_ratings",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_likes",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
 
-  { table: "application_tag_links", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_audiences", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_catalog_metadata", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_catalog_labels", where: `application_id::text LIKE '00000001-%'` },
-  { table: "catalog_delivery_actions", where: `application_id::text LIKE '00000001-%'` },
+  {
+    table: "application_tag_links",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_audiences",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_catalog_metadata",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_catalog_labels",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "catalog_delivery_actions",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
 
-  { table: "application_audit_events", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_review_queue", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_reviews", where: `application_id::text LIKE '00000001-%'` },
+  {
+    table: "application_audit_events",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_review_queue",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_reviews",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
 
-  { table: "application_deliveries", where: `application_id::text LIKE '00000001-%'` },
-  { table: "application_versions", where: `application_id::text LIKE '00000001-%'` },
+  {
+    table: "application_deliveries",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
+  {
+    table: "application_versions",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
 
   // ═══ ROOT ENTITY TABLES ═══
 
   { table: "applications", where: `application_id::text LIKE '00000001-%' OR owner_employee_id LIKE 'DEMO-%' OR maintainer_employee_id LIKE 'DEMO-%'` },
   { table: "ai_demands", where: `demand_id::text LIKE '00000010-%' OR requester_employee_id LIKE 'DEMO-%'` },
 
-  { table: "notifications", where: `idempotency_key LIKE 'demo:notification:%'` },
+  {
+    table: "notifications",
+    where: `idempotency_key LIKE 'demo:notification:%'`,
+  },
 
-  { table: "analytics_daily_aggregates", where: `metric_key = ANY(ARRAY['app_views','app_likes','app_ratings','app_comments','app_delivery_actions','demand_created','demand_published','demand_completed','demand_likes','demand_comments','active_users','total_events'])` },
-  { table: "analytics_behavior_events", where: `idempotency_key LIKE 'demo:analytics:%'` },
-  { table: "analytics_audit_events", where: `audit_event_id::text LIKE '00000041-%'` },
-  { table: "analytics_export_jobs", where: `export_id::text LIKE '00000042-%'` },
+  {
+    table: "analytics_daily_aggregates",
+    where: `metric_key = ANY(ARRAY['app_views','app_likes','app_ratings','app_comments','app_delivery_actions','demand_created','demand_published','demand_completed','demand_likes','demand_comments','active_users','total_events'])`,
+  },
+  {
+    table: "analytics_behavior_events",
+    where: `idempotency_key LIKE 'demo:analytics:%'`,
+  },
+  {
+    table: "analytics_audit_events",
+    where: `audit_event_id::text LIKE '00000041-%'`,
+  },
+  {
+    table: "analytics_export_jobs",
+    where: `export_id::text LIKE '00000042-%'`,
+  },
 
   { table: "outbox_events", where: `idempotency_key LIKE 'demo:outbox:%'` },
 
-  { table: "catalog_tags", where: `tag_id = ANY(ARRAY['ai','attendance','productivity','reporting','collaboration','automation','security','mobile'])` },
-  { table: "catalog_categories", where: `category_id = ANY(ARRAY['productivity','ai','reporting','collaboration','automation'])` },
+  {
+    table: "catalog_tags",
+    where: `tag_id = ANY(ARRAY['ai','attendance','productivity','reporting','collaboration','automation','security','mobile'])`,
+  },
+  {
+    table: "catalog_categories",
+    where: `category_id = ANY(ARRAY['productivity','ai','reporting','collaboration','automation'])`,
+  },
 
   { table: "identity_audit_events", where: `actor_employee_id LIKE 'DEMO-%'` },
   { table: "user_sessions", where: `employee_id LIKE 'DEMO-%'` },

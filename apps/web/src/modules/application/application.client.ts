@@ -188,3 +188,22 @@ export function archiveApplication(
     },
   );
 }
+
+export function createApplication(input: {
+  name: string;
+  summary: string;
+}): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>("/internal/applications", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function submitApplicationReview(
+  applicationVersionId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/submit-review`,
+    { method: "POST" },
+  );
+}

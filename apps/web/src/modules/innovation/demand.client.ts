@@ -90,7 +90,9 @@ function encodedDemandId(demandId: string): string {
   return encodeURIComponent(demandId);
 }
 
-export function listDemands(query: DemandListQuery = {}): Promise<DemandListResult> {
+export function listDemands(
+  query: DemandListQuery = {},
+): Promise<DemandListResult> {
   const search = new URLSearchParams();
   if (query.query) search.set("query", query.query);
   if (query.status) search.set("status", query.status);
@@ -106,7 +108,9 @@ export function listDemands(query: DemandListQuery = {}): Promise<DemandListResu
 }
 
 export function getDemand(demandId: string): Promise<DemandEntry> {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}`);
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}`,
+  );
 }
 
 export function createDemandDraft(input: CreateDemandInput) {
@@ -120,10 +124,13 @@ export function updateDemandDraft(
   demandId: string,
   input: Partial<CreateDemandInput> & { expectedVersion?: number },
 ) {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}`, {
-    body: JSON.stringify(input),
-    method: "PATCH",
-  });
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}`,
+    {
+      body: JSON.stringify(input),
+      method: "PATCH",
+    },
+  );
 }
 
 export function submitDemandForReview(demandId: string) {
@@ -137,17 +144,25 @@ export function reviewDemand(
   demandId: string,
   input: { decision: "publish" | "reject"; reason?: string },
 ) {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}/review`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/review`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function claimDemand(demandId: string, expectedVersion?: number) {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}/claim`, {
-    body: JSON.stringify(expectedVersion === undefined ? {} : { expectedVersion }),
-    method: "POST",
-  });
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/claim`,
+    {
+      body: JSON.stringify(
+        expectedVersion === undefined ? {} : { expectedVersion },
+      ),
+      method: "POST",
+    },
+  );
 }
 
 export function advanceDemandStatus(
@@ -156,29 +171,43 @@ export function advanceDemandStatus(
   expectedVersion: number,
   reason?: string,
 ) {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}/status`, {
-    body: JSON.stringify({ expectedVersion, nextStatus: status, ...(reason ? { reason } : {}) }),
-    method: "POST",
-  });
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/status`,
+    {
+      body: JSON.stringify({
+        expectedVersion,
+        nextStatus: status,
+        ...(reason ? { reason } : {}),
+      }),
+      method: "POST",
+    },
+  );
 }
 
 export function setDemandPriority(
   demandId: string,
   input: DemandPriorityInput & { expectedVersion?: number },
 ) {
-  return apiFetch<DemandEntry>(`/internal/demands/${encodedDemandId(demandId)}/priority`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/priority`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
-export function listDemandComments(demandId: string): Promise<DemandCommentRecord[]> {
+export function listDemandComments(
+  demandId: string,
+): Promise<DemandCommentRecord[]> {
   return apiFetch<DemandCommentRecord[]>(
     `/internal/demands/${encodedDemandId(demandId)}/comments`,
   );
 }
 
-export function likeDemand(demandId: string): Promise<{ liked: boolean; likeCount?: number }> {
+export function likeDemand(
+  demandId: string,
+): Promise<{ liked: boolean; likeCount?: number }> {
   return apiFetch<{ liked: boolean; likeCount?: number }>(
     `/internal/demands/${encodedDemandId(demandId)}/like`,
     { body: JSON.stringify({}), method: "POST" },
@@ -213,14 +242,19 @@ export function reportDemand(
   demandId: string,
   input: { reason: string; commentId: string | null },
 ) {
-  return apiFetch<unknown>(`/internal/demands/${encodedDemandId(demandId)}/reports`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<unknown>(
+    `/internal/demands/${encodedDemandId(demandId)}/reports`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function listDemandPilots(demandId: string) {
-  return apiFetch<DemandPilotRecord[]>(`/internal/demands/${encodedDemandId(demandId)}/pilots`);
+  return apiFetch<DemandPilotRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/pilots`,
+  );
 }
 
 export interface DemandProgressRecord {
@@ -234,31 +268,45 @@ export interface DemandProgressRecord {
 }
 
 export function listDemandReports(demandId: string) {
-  return apiFetch<DemandReportRecord[]>(`/internal/demands/${encodedDemandId(demandId)}/reports`);
+  return apiFetch<DemandReportRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/reports`,
+  );
 }
 
 export function listDemandProgress(demandId: string) {
-  return apiFetch<DemandProgressRecord[]>(`/internal/demands/${encodedDemandId(demandId)}/progress`);
+  return apiFetch<DemandProgressRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/progress`,
+  );
 }
 
 export function addDemandProgress(
   demandId: string,
   input: { status: DemandStatus; title: string; body: string },
 ) {
-  return apiFetch<DemandProgressRecord>(`/internal/demands/${encodedDemandId(demandId)}/progress`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandProgressRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/progress`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function addDemandCollaborator(
   demandId: string,
-  input: { employeeId: string; role: "collaborator" | "operator"; expectedVersion: number },
+  input: {
+    employeeId: string;
+    role: "collaborator" | "operator";
+    expectedVersion: number;
+  },
 ) {
-  return apiFetch<DemandCollaboratorRecord>(`/internal/demands/${encodedDemandId(demandId)}/collaborators`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandCollaboratorRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/collaborators`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function updateDemandCollaboratorRole(
@@ -277,12 +325,20 @@ export function updateDemandCollaboratorRole(
 
 export function createDemandPilot(
   demandId: string,
-  input: { name: string; startsAt: string; endsAt?: string; applicationId?: string },
+  input: {
+    name: string;
+    startsAt: string;
+    endsAt?: string;
+    applicationId?: string;
+  },
 ) {
-  return apiFetch<DemandPilotRecord>(`/internal/demands/${encodedDemandId(demandId)}/pilots`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandPilotRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/pilots`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function updateDemandPilot(
@@ -290,59 +346,104 @@ export function updateDemandPilot(
   pilotId: string,
   input: { status?: string; outcome?: string; endsAt?: string | null },
 ) {
-  return apiFetch<DemandPilotRecord>(`/internal/demands/${encodedDemandId(demandId)}/pilots/${encodeURIComponent(pilotId)}`, {
-    body: JSON.stringify(input),
-    method: "PATCH",
-  });
+  return apiFetch<DemandPilotRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/pilots/${encodeURIComponent(pilotId)}`,
+    {
+      body: JSON.stringify(input),
+      method: "PATCH",
+    },
+  );
 }
 
 export function linkDemandApplication(
   demandId: string,
-  input: { applicationId: string; role: "candidate" | "pilot" | "solution"; isPrimary?: boolean; expectedVersion: number },
+  input: {
+    applicationId: string;
+    role: "candidate" | "pilot" | "solution";
+    isPrimary?: boolean;
+    expectedVersion: number;
+  },
 ) {
-  return apiFetch<DemandApplicationLinkRecord>(`/internal/demands/${encodedDemandId(demandId)}/applications`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandApplicationLinkRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/applications`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function createApplicationFromDemand(
   demandId: string,
-  input: { name: string; summary: string; departmentId?: string; maintainerEmployeeId?: string; isPrimary?: boolean },
+  input: {
+    name: string;
+    summary: string;
+    departmentId?: string;
+    maintainerEmployeeId?: string;
+    isPrimary?: boolean;
+  },
 ) {
-  return apiFetch<DemandApplicationLinkRecord>(`/internal/demands/${encodedDemandId(demandId)}/applications/from-demand`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<DemandApplicationLinkRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/applications/from-demand`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
 export function mergeDemand(
   demandId: string,
-  input: { targetDemandId: string; sourceExpectedVersion: number; targetExpectedVersion: number },
+  input: {
+    targetDemandId: string;
+    sourceExpectedVersion: number;
+    targetExpectedVersion: number;
+  },
 ) {
-  return apiFetch<unknown>(`/internal/demands/${encodedDemandId(demandId)}/merge`, {
-    body: JSON.stringify(input),
-    method: "POST",
-  });
+  return apiFetch<unknown>(
+    `/internal/demands/${encodedDemandId(demandId)}/merge`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
 }
 
-export function resolveDemandReport(demandId: string, reportId: string, status: "dismissed" | "hidden" | "restored") {
-  return apiFetch<DemandReportRecord>(`/internal/demands/${encodedDemandId(demandId)}/reports/${encodeURIComponent(reportId)}/resolve`, {
-    body: JSON.stringify({ status }),
-    method: "POST",
-  });
+export function resolveDemandReport(
+  demandId: string,
+  reportId: string,
+  status: "dismissed" | "hidden" | "restored",
+) {
+  return apiFetch<DemandReportRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/reports/${encodeURIComponent(reportId)}/resolve`,
+    {
+      body: JSON.stringify({ status }),
+      method: "POST",
+    },
+  );
 }
 
 export function lookupAnonymousAuthor(demandId: string, commentId: string) {
-  return apiFetch<{ employeeId: string }>(`/internal/demands/${encodedDemandId(demandId)}/comments/${encodeURIComponent(commentId)}/anonymous-author`);
+  return apiFetch<{ employeeId: string }>(
+    `/internal/demands/${encodedDemandId(demandId)}/comments/${encodeURIComponent(commentId)}/anonymous-author`,
+  );
 }
 
 export function listDemandCollaborators(demandId: string) {
-  return apiFetch<DemandCollaboratorRecord[]>(`/internal/demands/${encodedDemandId(demandId)}/collaborators`);
+  return apiFetch<DemandCollaboratorRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/collaborators`,
+  );
 }
 
-export function removeDemandCollaborator(demandId: string, employeeId: string, expectedVersion?: number) {
-  const suffix = expectedVersion === undefined ? "" : `?expectedVersion=${encodeURIComponent(String(expectedVersion))}`;
+export function removeDemandCollaborator(
+  demandId: string,
+  employeeId: string,
+  expectedVersion?: number,
+) {
+  const suffix =
+    expectedVersion === undefined
+      ? ""
+      : `?expectedVersion=${encodeURIComponent(String(expectedVersion))}`;
   return apiFetch<void>(
     `/internal/demands/${encodedDemandId(demandId)}/collaborators/${encodeURIComponent(employeeId)}${suffix}`,
     { method: "DELETE" },
@@ -350,11 +451,20 @@ export function removeDemandCollaborator(demandId: string, employeeId: string, e
 }
 
 export function listDemandApplications(demandId: string) {
-  return apiFetch<DemandApplicationLinkRecord[]>(`/internal/demands/${encodedDemandId(demandId)}/applications`);
+  return apiFetch<DemandApplicationLinkRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/applications`,
+  );
 }
 
-export function removeDemandApplication(demandId: string, applicationId: string, expectedVersion?: number) {
-  const suffix = expectedVersion === undefined ? "" : `?expectedVersion=${encodeURIComponent(String(expectedVersion))}`;
+export function removeDemandApplication(
+  demandId: string,
+  applicationId: string,
+  expectedVersion?: number,
+) {
+  const suffix =
+    expectedVersion === undefined
+      ? ""
+      : `?expectedVersion=${encodeURIComponent(String(expectedVersion))}`;
   return apiFetch<void>(
     `/internal/demands/${encodedDemandId(demandId)}/applications/${encodeURIComponent(applicationId)}${suffix}`,
     { method: "DELETE" },

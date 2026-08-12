@@ -30,9 +30,7 @@ describe("Message 反馈", () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(messageApi.error).toHaveBeenCalledTimes(1);
-    expect(messageApi.error).toHaveBeenCalledWith(
-      "应用列表加载失败：网络异常",
-    );
+    expect(messageApi.error).toHaveBeenCalledWith("应用列表加载失败：网络异常");
 
     rerender(<MessageError cause={cause} title="应用列表加载失败" />);
     expect(messageApi.error).toHaveBeenCalledTimes(1);
@@ -44,9 +42,7 @@ describe("Message 反馈", () => {
       <MessageError cause={cause} title="加载失败" />,
     );
 
-    rerender(
-      <MessageError active={false} cause={cause} title="加载失败" />,
-    );
+    rerender(<MessageError active={false} cause={cause} title="加载失败" />);
     rerender(<MessageError cause={cause} title="加载失败" />);
 
     expect(messageApi.error).toHaveBeenCalledTimes(2);
@@ -69,8 +65,6 @@ describe("Message 反馈", () => {
     expect(getMessageContent("权限不足", "操作失败")).toBe(
       "操作失败：权限不足",
     );
-    expect(getMessageContent({ code: "UNKNOWN" }, "操作失败")).toBe(
-      "操作失败",
-    );
+    expect(getMessageContent({ code: "UNKNOWN" }, "操作失败")).toBe("操作失败");
   });
 });

@@ -986,7 +986,11 @@ export class DemandService {
       throw new Error("DEMAND_OWNER_COLLABORATOR_PROTECTED");
     }
     await this.repository.withTransaction(async (repository) => {
-      await repository.removeCollaborator(demandId, employeeId, expectedVersion);
+      await repository.removeCollaborator(
+        demandId,
+        employeeId,
+        expectedVersion,
+      );
       await repository.recordAudit({
         demandId,
         actorEmployeeId: actor.employeeId,

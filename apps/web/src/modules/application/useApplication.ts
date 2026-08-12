@@ -12,10 +12,7 @@ import {
   getPublishedVersion,
   withdrawApplication,
 } from "./application.client";
-import {
-  showErrorMessage,
-  showSuccessMessage,
-} from "../../shared/ui/message";
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
 export function useApplication(applicationId: string | undefined) {
   return useQuery({

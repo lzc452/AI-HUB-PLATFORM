@@ -32,14 +32,18 @@ export function UserManagementTab({
   firstError,
   isPending,
 }: UserManagementTabProps) {
-  const [filters, setFilters] = useState<UserFilterValue>(createDefaultFilters());
+  const [filters, setFilters] = useState<UserFilterValue>(
+    createDefaultFilters(),
+  );
 
   const rows = useUserTableRows(employees, departments);
 
   const departmentOptions = useMemo(
     () =>
-      departments.data?.map((dept) => ({ label: dept.name, value: dept.name })) ??
-      [],
+      departments.data?.map((dept) => ({
+        label: dept.name,
+        value: dept.name,
+      })) ?? [],
     [departments.data],
   );
 

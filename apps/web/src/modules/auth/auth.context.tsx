@@ -215,7 +215,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             return true;
           } catch {
             if (requestVersion === requestVersionRef.current) {
-              setError("用户名或密码错误");
+              setError("工号或密码错误（用户名或密码错误）");
               setActor(null);
               setIsLoading(false);
             }

@@ -536,7 +536,10 @@ describe("ApplicationService", () => {
 
     const workspace = await (
       service as unknown as {
-        getWorkspace: (applicationId: string, actor?: ActorContext) => Promise<{
+        getWorkspace: (
+          applicationId: string,
+          actor?: ActorContext,
+        ) => Promise<{
           application: ApplicationRecord;
           versions: ApplicationVersionRecord[];
           deliveries: DeliveryRecord[];

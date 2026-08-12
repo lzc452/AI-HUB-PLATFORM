@@ -135,7 +135,11 @@ export class DemandCollaboratorRoleUpdateRequestDto {
   @ApiProperty({ description: "协作角色", enum: COLLABORATOR_ROLE })
   role!: (typeof COLLABORATOR_ROLE)[number];
 
-  @ApiProperty({ type: Number, description: "期望版本号（乐观锁）", example: 1 })
+  @ApiProperty({
+    type: Number,
+    description: "期望版本号（乐观锁）",
+    example: 1,
+  })
   expectedVersion!: number;
 }
 
@@ -390,10 +394,18 @@ export class DemandEntryDto {
   })
   requesterEmployeeId?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: "发起人主部门 ID", nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    description: "发起人主部门 ID",
+    nullable: true,
+  })
   requesterDepartmentId?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: "发起人展示名称", nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    description: "发起人展示名称",
+    nullable: true,
+  })
   requesterDisplayName?: string | null;
 
   @ApiProperty({
@@ -514,7 +526,11 @@ export class DemandEntryDto {
   })
   ownerEmployeeId?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: "负责人展示名称", nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    description: "负责人展示名称",
+    nullable: true,
+  })
   ownerDisplayName?: string | null;
 
   @ApiPropertyOptional({
@@ -745,10 +761,18 @@ export class DemandCommentDto {
   })
   authorEmployeeId?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: "作者展示名称", nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    description: "作者展示名称",
+    nullable: true,
+  })
   authorDisplayName?: string | null;
 
-  @ApiPropertyOptional({ type: String, description: "作者主部门 ID", nullable: true })
+  @ApiPropertyOptional({
+    type: String,
+    description: "作者主部门 ID",
+    nullable: true,
+  })
   authorDepartmentId?: string | null;
 
   @ApiProperty({

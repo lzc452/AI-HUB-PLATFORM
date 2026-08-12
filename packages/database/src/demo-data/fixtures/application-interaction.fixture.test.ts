@@ -58,9 +58,6 @@ describe("buildApplicationInteractionFixture", () => {
   });
 
   it("rating application_id references resolve within published apps", () => {
-    const allAppIds = new Set(
-      fixture.applicationRatings.map((r) => r.application_id),
-    );
     // Each rating's application_id is a valid UUID-like string
     for (const r of fixture.applicationRatings) {
       expect(typeof r.application_id).toBe("string");
@@ -136,9 +133,7 @@ describe("buildApplicationInteractionFixture", () => {
   // ── report statuses ───────────────────────────────────────────────────────
 
   it("has exactly 1 open and 1 dismissed report", () => {
-    const open = fixture.applicationReports.filter(
-      (r) => r.status === "open",
-    );
+    const open = fixture.applicationReports.filter((r) => r.status === "open");
     const dismissed = fixture.applicationReports.filter(
       (r) => r.status === "dismissed",
     );
@@ -181,9 +176,7 @@ describe("buildApplicationInteractionFixture", () => {
   });
 
   it("ratings cover at least 3 distinct star values", () => {
-    const starValues = new Set(
-      fixture.applicationRatings.map((r) => r.stars),
-    );
+    const starValues = new Set(fixture.applicationRatings.map((r) => r.stars));
     expect(starValues.size).toBeGreaterThanOrEqual(3);
   });
 

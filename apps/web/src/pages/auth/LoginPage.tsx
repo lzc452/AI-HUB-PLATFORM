@@ -95,9 +95,7 @@ export default function LoginPage() {
           {/* 品牌区 */}
           <div className="flex items-center gap-3 px-8 pt-6 lg:px-12">
             <img alt="AI应用共享平台" className="h-9 w-auto" src={logoUrl} />
-            <span className="text-xl font-bold text-black">
-              AI应用共享平台
-            </span>
+            <span className="text-xl font-bold text-black">AI应用共享平台</span>
           </div>
 
           {/* 表单主体：弹性垂直居中，空间不足时自动压缩间距 */}
@@ -110,7 +108,16 @@ export default function LoginPage() {
                 统一访问企业内部 AI 应用、创新需求与创作者中心
               </p> */}
 
-              <MessageError active={Boolean(error)} cause={error} title="登录失败" />
+              <MessageError
+                active={Boolean(error)}
+                cause={error}
+                title="登录失败"
+              />
+              {error ? (
+                <div className="mb-3 text-sm text-red-600" role="alert">
+                  {error}
+                </div>
+              ) : null}
 
               <form aria-label="登录表单" noValidate onSubmit={onSubmit}>
                 {/* component={false} 仅提供 vertical 布局上下文，避免嵌套 form */}
@@ -130,9 +137,7 @@ export default function LoginPage() {
                           aria-label="工号 / 邮箱"
                           autoComplete="username"
                           placeholder="请输入工号或邮箱"
-                          prefix={
-                            <UserOutlined className="text-gray-400" />
-                          }
+                          prefix={<UserOutlined className="text-gray-400" />}
                           size="large"
                         />
                       )}
@@ -153,9 +158,7 @@ export default function LoginPage() {
                           aria-label="密码"
                           autoComplete="current-password"
                           placeholder="请输入密码"
-                          prefix={
-                            <LockOutlined className="text-gray-400" />
-                          }
+                          prefix={<LockOutlined className="text-gray-400" />}
                           size="large"
                         />
                       )}
