@@ -1,6 +1,16 @@
 import type { CreateDemandInput } from "@ai-hub/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Checkbox, Drawer, Form, Input, Radio, Select, Space, Typography } from "antd";
+import {
+  Button,
+  Checkbox,
+  Drawer,
+  Form,
+  Input,
+  Radio,
+  Select,
+  Space,
+  Typography,
+} from "antd";
 import { useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +23,11 @@ import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
 const schema = z
   .object({
-    title: z.string().trim().min(3, "标题至少 3 个字").max(200, "标题不能超过 200 个字"),
+    title: z
+      .string()
+      .trim()
+      .min(3, "标题至少 3 个字")
+      .max(200, "标题不能超过 200 个字"),
     problemStatement: z.string().trim().min(10, "问题描述至少 10 个字"),
     desiredOutcome: z.string().trim().min(10, "期望结果至少 10 个字"),
     audienceType: z.enum(["all", "department", "employee"]),
@@ -24,10 +38,18 @@ const schema = z
   })
   .superRefine((value, context) => {
     if (value.audienceType === "department" && !value.departmentId) {
-      context.addIssue({ code: "custom", message: "请选择可见部门", path: ["departmentId"] });
+      context.addIssue({
+        code: "custom",
+        message: "请选择可见部门",
+        path: ["departmentId"],
+      });
     }
     if (value.audienceType === "employee" && !value.employeeId) {
-      context.addIssue({ code: "custom", message: "请选择可见员工", path: ["employeeId"] });
+      context.addIssue({
+        code: "custom",
+        message: "请选择可见员工",
+        path: ["employeeId"],
+      });
     }
   });
 
@@ -63,11 +85,19 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
 
   const audienceType = watch("audienceType");
   const departmentOptions = useMemo(
-    () => (departments.data ?? []).map((item) => ({ label: item.name, value: item.departmentId })),
+    () =>
+      (departments.data ?? []).map((item) => ({
+        label: item.name,
+        value: item.departmentId,
+      })),
     [departments.data],
   );
   const employeeOptions = useMemo(
-    () => (employees.data ?? []).map((item) => ({ label: item.displayName, value: item.employeeId })),
+    () =>
+      (employees.data ?? []).map((item) => ({
+        label: item.displayName,
+        value: item.employeeId,
+      })),
     [employees.data],
   );
 
@@ -82,9 +112,14 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
       problemStatement: values.problemStatement.trim(),
       desiredOutcome: values.desiredOutcome.trim(),
       audienceType: values.audienceType,
-      ...(values.audienceType === "department" && values.departmentId ? { departmentId: values.departmentId } : {}),
-      ...(values.audienceType === "employee" && values.employeeId ? { employeeId: values.employeeId } : {}),
-      includeChildren: values.audienceType === "department" ? values.includeChildren : false,
+      ...(values.audienceType === "department" && values.departmentId
+        ? { departmentId: values.departmentId }
+        : {}),
+      ...(values.audienceType === "employee" && values.employeeId
+        ? { employeeId: values.employeeId }
+        : {}),
+      includeChildren:
+        values.audienceType === "department" ? values.includeChildren : false,
       displayAnonymously: values.displayAnonymously,
     };
 
@@ -111,10 +146,21 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
       footer={
         <Space className="w-full justify-end">
           <Button onClick={closeAndReset}>取消</Button>
-          <Button loading={isSubmitting || createDraft.isPending} onClick={() => void handleSubmit((values) => submit(values, false))()}>
+          <Button
+            loading={isSubmitting || createDraft.isPending}
+            onClick={() =>
+              void handleSubmit((values) => submit(values, false))()
+            }
+          >
             保存草稿
           </Button>
-          <Button loading={isSubmitting || createDraft.isPending} onClick={() => void handleSubmit((values) => submit(values, true))()} type="primary">
+          <Button
+            loading={isSubmitting || createDraft.isPending}
+            onClick={() =>
+              void handleSubmit((values) => submit(values, true))()
+            }
+            type="primary"
+          >
             提交审核
           </Button>
         </Space>
@@ -128,33 +174,157 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
       <Typography.Paragraph type="secondary">
         把问题、期望结果和可见范围一次说明清楚，便于团队共同推进。
       </Typography.Paragraph>
-      <form className="space-y-4" noValidate onSubmit={(event) => event.preventDefault()}>
-        <Form.Item help={errors.title?.message ?? ""} label="需求标题" validateStatus={errors.title ? "error" : ""}>
-          <Controller control={control} name="title" render={({ field }) => <Input {...field} aria-label="需求标题" maxLength={200} showCount />} />
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <Form.Item
+          help={errors.title?.message ?? ""}
+          label="需求标题"
+          validateStatus={errors.title ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="title"
+            render={({ field }) => (
+              <Input
+                {...field}
+                aria-label="需求标题"
+                maxLength={200}
+                showCount
+              />
+            )}
+          />
         </Form.Item>
-        <Form.Item help={errors.problemStatement?.message ?? ""} label="当前问题" validateStatus={errors.problemStatement ? "error" : ""}>
-          <Controller control={control} name="problemStatement" render={({ field }) => <Input.TextArea {...field} aria-label="当前问题" autoSize={{ minRows: 4, maxRows: 8 }} showCount />} />
+        <Form.Item
+          help={errors.problemStatement?.message ?? ""}
+          label="当前问题"
+          validateStatus={errors.problemStatement ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="problemStatement"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="当前问题"
+                autoSize={{ minRows: 4, maxRows: 8 }}
+                showCount
+              />
+            )}
+          />
         </Form.Item>
-        <Form.Item help={errors.desiredOutcome?.message ?? ""} label="期望结果" validateStatus={errors.desiredOutcome ? "error" : ""}>
-          <Controller control={control} name="desiredOutcome" render={({ field }) => <Input.TextArea {...field} aria-label="期望结果" autoSize={{ minRows: 4, maxRows: 8 }} showCount />} />
+        <Form.Item
+          help={errors.desiredOutcome?.message ?? ""}
+          label="期望结果"
+          validateStatus={errors.desiredOutcome ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="desiredOutcome"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="期望结果"
+                autoSize={{ minRows: 4, maxRows: 8 }}
+                showCount
+              />
+            )}
+          />
         </Form.Item>
-        <Form.Item label="可见范围" help={errors.audienceType?.message ?? ""} validateStatus={errors.audienceType ? "error" : ""}>
-          <Controller control={control} name="audienceType" render={({ field }) => <Radio.Group {...field} options={[{ label: "全员", value: "all" }, { label: "部门", value: "department" }, { label: "员工", value: "employee" }]} />} />
+        <Form.Item
+          label="可见范围"
+          help={errors.audienceType?.message ?? ""}
+          validateStatus={errors.audienceType ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="audienceType"
+            render={({ field }) => (
+              <Radio.Group
+                {...field}
+                options={[
+                  { label: "全员", value: "all" },
+                  { label: "部门", value: "department" },
+                  { label: "员工", value: "employee" },
+                ]}
+              />
+            )}
+          />
         </Form.Item>
         {audienceType === "department" ? (
           <>
-            <Form.Item help={errors.departmentId?.message ?? ""} label="选择部门" validateStatus={errors.departmentId ? "error" : ""}>
-              <Controller control={control} name="departmentId" render={({ field }) => <Select {...field} allowClear aria-label="选择部门" className="w-full" options={departmentOptions} placeholder="请选择部门" showSearch />} />
+            <Form.Item
+              help={errors.departmentId?.message ?? ""}
+              label="选择部门"
+              validateStatus={errors.departmentId ? "error" : ""}
+            >
+              <Controller
+                control={control}
+                name="departmentId"
+                render={({ field }) => (
+                  <Select
+                    {...field}
+                    allowClear
+                    aria-label="选择部门"
+                    className="w-full"
+                    options={departmentOptions}
+                    placeholder="请选择部门"
+                    showSearch
+                  />
+                )}
+              />
             </Form.Item>
-            <Controller control={control} name="includeChildren" render={({ field }) => <Checkbox checked={field.value} onChange={(event) => field.onChange(event.target.checked)}>包含子部门</Checkbox>} />
+            <Controller
+              control={control}
+              name="includeChildren"
+              render={({ field }) => (
+                <Checkbox
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                >
+                  包含子部门
+                </Checkbox>
+              )}
+            />
           </>
         ) : null}
         {audienceType === "employee" ? (
-          <Form.Item help={errors.employeeId?.message ?? ""} label="选择员工" validateStatus={errors.employeeId ? "error" : ""}>
-            <Controller control={control} name="employeeId" render={({ field }) => <Select {...field} allowClear aria-label="选择员工" className="w-full" options={employeeOptions} placeholder="请选择员工" showSearch />} />
+          <Form.Item
+            help={errors.employeeId?.message ?? ""}
+            label="选择员工"
+            validateStatus={errors.employeeId ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="employeeId"
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  allowClear
+                  aria-label="选择员工"
+                  className="w-full"
+                  options={employeeOptions}
+                  placeholder="请选择员工"
+                  showSearch
+                />
+              )}
+            />
           </Form.Item>
         ) : null}
-        <Controller control={control} name="displayAnonymously" render={({ field }) => <Checkbox checked={field.value} onChange={(event) => field.onChange(event.target.checked)}>匿名展示发起人</Checkbox>} />
+        <Controller
+          control={control}
+          name="displayAnonymously"
+          render={({ field }) => (
+            <Checkbox
+              checked={field.value}
+              onChange={(event) => field.onChange(event.target.checked)}
+            >
+              匿名展示发起人
+            </Checkbox>
+          )}
+        />
       </form>
     </Drawer>
   );

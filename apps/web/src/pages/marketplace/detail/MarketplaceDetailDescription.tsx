@@ -91,10 +91,7 @@ export function MarketplaceDetailDescription({
           <Title id="screenshots-heading" level={2} className="!mb-3 !text-lg">
             截图预览
           </Title>
-          <Empty
-            description="该应用暂未上传截图"
-            imageStyle={{ height: 80 }}
-          />
+          <Empty description="该应用暂未上传截图" imageStyle={{ height: 80 }} />
         </section>
 
         <section
@@ -140,10 +137,7 @@ export function MarketplaceDetailDescription({
         </section>
       </div>
 
-      <aside
-        aria-label="应用信息与推荐"
-        className="space-y-4 lg:col-span-1"
-      >
+      <aside aria-label="应用信息与推荐" className="space-y-4 lg:col-span-1">
         <Card
           aria-labelledby="info-heading"
           className="rounded-2xl shadow-sm"

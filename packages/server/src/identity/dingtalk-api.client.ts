@@ -95,8 +95,7 @@ export class DingTalkApiClient implements DingTalkApiPort {
 
     const info: DingTalkUserInfo = {
       dingtalkUserId: json.openId,
-      employeeNumber:
-        typeof json.jobNumber === "string" ? json.jobNumber : "",
+      employeeNumber: typeof json.jobNumber === "string" ? json.jobNumber : "",
     };
     if (typeof json.unionId === "string") {
       info.unionId = json.unionId;

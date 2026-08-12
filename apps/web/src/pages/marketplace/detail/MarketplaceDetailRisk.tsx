@@ -103,9 +103,7 @@ export function MarketplaceDetailRisk({
       ) : (
         <div className="rounded-xl border border-[#fff1b8] bg-[#fffbe6] p-4">
           <div className="flex items-start gap-3">
-            <ExclamationCircleOutlined
-              className="mt-0.5 shrink-0 text-lg text-[#faad14]"
-            />
+            <ExclamationCircleOutlined className="mt-0.5 shrink-0 text-lg text-[#faad14]" />
             <div>
               <Text className="!text-sm leading-relaxed text-[#595959]">
                 {risk?.riskDescription ?? "暂无风险说明"}

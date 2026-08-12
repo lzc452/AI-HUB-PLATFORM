@@ -38,7 +38,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("transaction_id", "uuid", (column) =>
       column.primaryKey().defaultTo(sql`gen_random_uuid()`),
     )
-    .addColumn("state_hash", "varchar(64)", (column) => column.notNull().unique())
+    .addColumn("state_hash", "varchar(64)", (column) =>
+      column.notNull().unique(),
+    )
     .addColumn("browser_context_binding_hash", "varchar(64)", (column) =>
       column.notNull(),
     )

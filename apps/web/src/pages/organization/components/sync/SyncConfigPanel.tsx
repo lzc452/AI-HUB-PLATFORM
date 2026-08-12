@@ -1,4 +1,8 @@
-import { CheckCircleFilled, EditOutlined, MessageOutlined } from "@ant-design/icons";
+import {
+  CheckCircleFilled,
+  EditOutlined,
+  MessageOutlined,
+} from "@ant-design/icons";
 import { Button, Divider, Typography } from "antd";
 
 import { type SyncConfigData } from "./constants";
@@ -48,7 +52,9 @@ export function SyncConfigPanel({ config }: SyncConfigPanelProps) {
                 )}
               </div>
             ) : (
-              <div className="mt-1 text-[13px] text-[#1f1f1f]">{value as string}</div>
+              <div className="mt-1 text-[13px] text-[#1f1f1f]">
+                {value as string}
+              </div>
             )}
             <Divider className="!mb-0 !mt-3" />
           </div>

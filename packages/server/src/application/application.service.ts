@@ -9,6 +9,8 @@ import type {
   ApplicationRecord,
   ApplicationVersionRecord,
   ApplicationWorkspace,
+  ApplicationAdminListInput,
+  ApplicationAdminListResult,
   DeliveryChannel,
   DeliveryRecord,
   ReviewDecision,
@@ -487,6 +489,19 @@ export class ApplicationService {
       });
     }
     return application;
+  }
+
+  async listAdmin(
+    actor: ActorContext,
+    input: ApplicationAdminListInput,
+  ): Promise<ApplicationAdminListResult> {
+    if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
+      throw new Error("APPLICATION_PAGINATION_INVALID");
+    }
+    if (this.repository.listAdmin === undefined) {
+      throw new Error("APPLICATION_ADMIN_LIST_UNAVAILABLE");
+    }
+    return this.repository.listAdmin(actor, input);
   }
 
   async listVersions(applicationId: string, actor?: ActorContext) {

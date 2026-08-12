@@ -57,7 +57,8 @@ export function deriveMaintainers(applicationId: string): string[] {
 
 /** 根据应用 id 在固定池中取责任人（1 人）。 */
 export function deriveOwner(applicationId: string): string {
-  const offset = hashByApplicationId(`${applicationId}:o`) % MOCK_MAINTAINERS.length;
+  const offset =
+    hashByApplicationId(`${applicationId}:o`) % MOCK_MAINTAINERS.length;
   return MOCK_MAINTAINERS[offset] ?? MOCK_MAINTAINERS[0]!;
 }
 

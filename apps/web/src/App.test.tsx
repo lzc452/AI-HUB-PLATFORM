@@ -6,6 +6,31 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
+vi.mock("./modules/application/adminList.client", () => ({
+  getAdminApplicationList: vi.fn(async () => ({
+    items: [
+      {
+        applicationId: "app-rd-perf-001",
+        name: "统一研发效能数据看板",
+        summary: "",
+        categoryId: "cat-rd",
+        status: "published",
+        currentVersion: "v1.0.0",
+        currentVersionId: "version-rd-perf-001",
+        ownerName: "E0001",
+        departmentName: "研发部",
+        deliveryChannels: ["web"],
+        updatedAt: new Date().toISOString(),
+        isMine: true,
+        needsMyReview: false,
+      },
+    ],
+    page: 1,
+    pageSize: 10,
+    total: 1,
+  })),
+}));
+
 vi.mock("./modules/innovation/useDemand", () => ({
   useCreateDemandDraft: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useAddDemandComment: () => ({
@@ -243,7 +268,9 @@ describe("App", () => {
     expect(screen.getByText("交付异常")).toBeInTheDocument();
     // 表格中第一个应用名称是到 /applications/[id] 的链接
     expect(
-      screen.getByRole("link", { name: "查看应用 统一研发效能数据看板" }),
+      await screen.findByRole("link", {
+        name: "查看应用 统一研发效能数据看板",
+      }),
     ).toHaveAttribute("href", "/applications/app-rd-perf-001");
   });
 

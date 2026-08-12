@@ -68,6 +68,15 @@ export type Auditor = (input: {
   details: unknown;
 }) => Promise<void>;
 
+export interface IdentityAuditEventRecord {
+  auditEventId: string;
+  actorEmployeeId: string | null;
+  eventType: string;
+  subjectEmployeeId: string | null;
+  details: unknown;
+  createdAt: Date;
+}
+
 export interface IdentityRepository {
   withTransaction<T>(
     operation: (repository: IdentityRepository) => Promise<T>,
@@ -125,6 +134,10 @@ export interface IdentityRepository {
     subjectEmployeeId: EmployeeId | null;
     details: unknown;
   }): Promise<void>;
+  listAuditEvents?(input?: {
+    eventType?: string;
+    limit?: number;
+  }): Promise<readonly IdentityAuditEventRecord[]>;
   // ── DingTalk SSO ───────────────────────────────────────────
   createDingTalkSsoTransaction(input: {
     stateHash: string;

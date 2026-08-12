@@ -12,6 +12,7 @@ export interface AdminApplicationRow {
   categoryId: string;
   status: AdminApplicationStatus;
   currentVersion: string;
+  currentVersionId: string | null;
   ownerName: string;
   departmentName: string;
   deliveryChannels: readonly DeliveryChannel[];

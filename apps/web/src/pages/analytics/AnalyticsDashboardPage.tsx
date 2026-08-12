@@ -111,16 +111,16 @@ export default function AnalyticsDashboardPage() {
         <Title className="!mb-0" level={1}>
           数据看板
         </Title>
-      <Tabs
-        activeKey={activeTab}
-        className="analytics-dashboard-tabs"
-        items={tabItems}
-        onChange={setActiveTab}
-        tabBarExtraContent={{
-          left: undefined,
-          right: (
-            <div className="flex items-center gap-2">
-              {timeFilterOptions.map((option) => (
+        <Tabs
+          activeKey={activeTab}
+          className="analytics-dashboard-tabs"
+          items={tabItems}
+          onChange={setActiveTab}
+          tabBarExtraContent={{
+            left: undefined,
+            right: (
+              <div className="flex items-center gap-2">
+                {timeFilterOptions.map((option) => (
                   <Button
                     aria-pressed={timeFilter === option.value}
                     className="dashboard-segment-button rounded px-3 py-1 text-sm transition-colors"
@@ -131,14 +131,14 @@ export default function AnalyticsDashboardPage() {
                     {option.label}
                   </Button>
                 ))}
-              <Button icon={<DownloadOutlined aria-hidden="true" />}>
-                导出
-              </Button>
-            </div>
-          ),
-        }}
-        tabBarGutter={24}
-      />
+                <Button icon={<DownloadOutlined aria-hidden="true" />}>
+                  导出
+                </Button>
+              </div>
+            ),
+          }}
+          tabBarGutter={24}
+        />
       </div>
     </ConfigProvider>
   );

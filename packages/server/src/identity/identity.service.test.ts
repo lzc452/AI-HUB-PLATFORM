@@ -245,9 +245,8 @@ class MemoryIdentityRepository implements IdentityRepository {
     handoffHash: string,
   ): Promise<DingTalkSsoTransactionRecord | null> {
     return (
-      this.ssoTransactions.find(
-        (tx) => tx.handoffTokenHash === handoffHash,
-      ) ?? null
+      this.ssoTransactions.find((tx) => tx.handoffTokenHash === handoffHash) ??
+      null
     );
   }
 
@@ -263,9 +262,7 @@ class MemoryIdentityRepository implements IdentityRepository {
     }
   }
 
-  async consumeDingTalkSsoTransaction(
-    transactionId: string,
-  ): Promise<boolean> {
+  async consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean> {
     const tx = this.ssoTransactions.find(
       (t) => t.transactionId === transactionId,
     );

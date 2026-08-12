@@ -638,7 +638,7 @@ export class KyselyDemandRepository implements DemandRepository {
       employeeId: row.employee_id,
       role: row.role,
       createdAt: row.created_at,
-      }));
+    }));
   }
 
   async updateCollaboratorRole(
@@ -722,7 +722,10 @@ export class KyselyDemandRepository implements DemandRepository {
       .execute();
   }
 
-  async hasCommentLike(commentId: string, employeeId: string): Promise<boolean> {
+  async hasCommentLike(
+    commentId: string,
+    employeeId: string,
+  ): Promise<boolean> {
     const row = await this.db
       .selectFrom("ai_demand_comment_likes")
       .select("comment_id")
@@ -740,7 +743,10 @@ export class KyselyDemandRepository implements DemandRepository {
       .execute();
   }
 
-  async removeCommentLike(commentId: string, employeeId: string): Promise<void> {
+  async removeCommentLike(
+    commentId: string,
+    employeeId: string,
+  ): Promise<void> {
     await this.db
       .deleteFrom("ai_demand_comment_likes")
       .where("comment_id", "=", commentId)
@@ -777,7 +783,9 @@ export class KyselyDemandRepository implements DemandRepository {
       .executeTakeFirstOrThrow();
     const comment = this.mapComment(row);
     const projected = await this.listComments(input.demandId);
-    return projected.find((item) => item.commentId === comment.commentId) ?? comment;
+    return (
+      projected.find((item) => item.commentId === comment.commentId) ?? comment
+    );
   }
 
   async listComments(
@@ -933,9 +941,7 @@ export class KyselyDemandRepository implements DemandRepository {
       .execute();
   }
 
-  private selectDemand(
-    actor?: Parameters<DemandRepository["findVisible"]>[0],
-  ) {
+  private selectDemand(actor?: Parameters<DemandRepository["findVisible"]>[0]) {
     return this.db
       .selectFrom("ai_demands")
       .selectAll("ai_demands")

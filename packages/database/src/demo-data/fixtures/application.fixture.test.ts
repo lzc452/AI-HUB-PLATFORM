@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { buildApplicationFixture } from "./application.fixture.js";
-import type {
-  ApplicationsTable,
-  ApplicationVersionsTable,
-  ApplicationDeliveriesTable,
-  ApplicationReviewsTable,
-  ApplicationReviewQueueTable,
-  ApplicationAuditEventsTable,
-} from "../../schema.js";
 
 const ANCHOR = new Date("2025-06-15T12:00:00.000Z");
 
@@ -92,7 +84,9 @@ describe("buildApplicationFixture", () => {
   });
 
   it("all version ids are unique", () => {
-    const ids = fixture.applicationVersions.map((v) => v.application_version_id);
+    const ids = fixture.applicationVersions.map(
+      (v) => v.application_version_id,
+    );
     expect(new Set(ids).size).toBe(ids.length);
   });
 

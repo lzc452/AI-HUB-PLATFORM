@@ -58,8 +58,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     title: "跨部门知识图谱构建平台",
     problemStatement:
       "各部门知识分散在多个系统中，缺乏统一的知识关联和检索机制。",
-    desiredOutcome:
-      "构建企业级知识图谱，实现跨部门知识的自动关联和智能检索。",
+    desiredOutcome: "构建企业级知识图谱，实现跨部门知识的自动关联和智能检索。",
     requesterEmployeeId: EMP.employee,
     status: "draft",
     audienceType: "department",
@@ -70,8 +69,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
   },
   {
     title: "保密项目专用代码审查工具",
-    problemStatement:
-      "敏感项目需要内部代码审查，但现有工具无法满足保密要求。",
+    problemStatement: "敏感项目需要内部代码审查，但现有工具无法满足保密要求。",
     desiredOutcome:
       "开发一套本地化部署的代码审查工具，支持离线运行和端到端加密。",
     requesterEmployeeId: EMP.superAdmin,
@@ -100,8 +98,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
   },
   {
     title: "财务报表智能生成工具",
-    problemStatement:
-      "每月财务报表编制耗时3个工作日，数据来源分散且容易遗漏。",
+    problemStatement: "每月财务报表编制耗时3个工作日，数据来源分散且容易遗漏。",
     desiredOutcome:
       "实现财务报表的自动化采集、汇总和生成，将编制时间缩短至半天以内。",
     requesterEmployeeId: EMP.employee,
@@ -157,8 +154,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
   },
   {
     title: "自动化合规审计工具",
-    problemStatement:
-      "企业合规检查依赖人工抽样，覆盖面不足且效率低下。",
+    problemStatement: "企业合规检查依赖人工抽样，覆盖面不足且效率低下。",
     desiredOutcome:
       "提供自动化的合规审计工具，覆盖全部业务流程，支持自定义审计规则。",
     requesterEmployeeId: EMP.employee,
@@ -281,8 +277,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     title: "统一通知中心（已合并至消息推送中心）",
     problemStatement:
       "系统通知分散在邮件、短信、站内信等多个渠道，缺少统一管理入口。",
-    desiredOutcome:
-      "配合消息推送中心实现多渠道通知的统一管理和策略配置。",
+    desiredOutcome: "配合消息推送中心实现多渠道通知的统一管理和策略配置。",
     requesterEmployeeId: EMP.appAdmin,
     status: "merged",
     audienceType: "all",
@@ -353,31 +348,121 @@ function computePriority(def: PriorityDef): {
 }
 
 // Priority for published, in_progress, pilot, completed, closed, merged demands
-const PRIORITIES: ReadonlyMap<number, ReturnType<typeof computePriority>> =
-  new Map([
-    // Published 1 (index 7): medium priority
-    [7, computePriority({ businessValue: 4, implementationCost: 2, riskLevel: 2, adminPriority: 3 })],
-    // Published 2 (index 8): lower priority
-    [8, computePriority({ businessValue: 3, implementationCost: 3, riskLevel: 3, adminPriority: 2 })],
-    // In Progress 1 (index 9): high business value
-    [9, computePriority({ businessValue: 5, implementationCost: 2, riskLevel: 1, adminPriority: 5 })],
-    // In Progress 2 (index 10): medium priority
-    [10, computePriority({ businessValue: 4, implementationCost: 4, riskLevel: 2, adminPriority: 3 })],
-    // In Progress 3 (index 11): lower priority
-    [11, computePriority({ businessValue: 3, implementationCost: 2, riskLevel: 3, adminPriority: 4 })],
-    // Pilot 1 (index 12): high priority
-    [12, computePriority({ businessValue: 5, implementationCost: 1, riskLevel: 2, adminPriority: 4 })],
-    // Completed 1 (index 13): high priority
-    [13, computePriority({ businessValue: 5, implementationCost: 2, riskLevel: 1, adminPriority: 5 })],
-    // Completed 2 (index 14): medium priority
-    [14, computePriority({ businessValue: 4, implementationCost: 3, riskLevel: 2, adminPriority: 3 })],
-    // Closed 1 (index 15): medium priority
-    [15, computePriority({ businessValue: 3, implementationCost: 2, riskLevel: 4, adminPriority: 2 })],
-    // Merged 1 - source (index 16): medium-high
-    [16, computePriority({ businessValue: 4, implementationCost: 2, riskLevel: 3, adminPriority: 3 })],
-    // Merged 2 - target (index 17): high priority (accumulated from merge)
-    [17, computePriority({ businessValue: 5, implementationCost: 1, riskLevel: 2, adminPriority: 5 })],
-  ]);
+const PRIORITIES: ReadonlyMap<
+  number,
+  ReturnType<typeof computePriority>
+> = new Map([
+  // Published 1 (index 7): medium priority
+  [
+    7,
+    computePriority({
+      businessValue: 4,
+      implementationCost: 2,
+      riskLevel: 2,
+      adminPriority: 3,
+    }),
+  ],
+  // Published 2 (index 8): lower priority
+  [
+    8,
+    computePriority({
+      businessValue: 3,
+      implementationCost: 3,
+      riskLevel: 3,
+      adminPriority: 2,
+    }),
+  ],
+  // In Progress 1 (index 9): high business value
+  [
+    9,
+    computePriority({
+      businessValue: 5,
+      implementationCost: 2,
+      riskLevel: 1,
+      adminPriority: 5,
+    }),
+  ],
+  // In Progress 2 (index 10): medium priority
+  [
+    10,
+    computePriority({
+      businessValue: 4,
+      implementationCost: 4,
+      riskLevel: 2,
+      adminPriority: 3,
+    }),
+  ],
+  // In Progress 3 (index 11): lower priority
+  [
+    11,
+    computePriority({
+      businessValue: 3,
+      implementationCost: 2,
+      riskLevel: 3,
+      adminPriority: 4,
+    }),
+  ],
+  // Pilot 1 (index 12): high priority
+  [
+    12,
+    computePriority({
+      businessValue: 5,
+      implementationCost: 1,
+      riskLevel: 2,
+      adminPriority: 4,
+    }),
+  ],
+  // Completed 1 (index 13): high priority
+  [
+    13,
+    computePriority({
+      businessValue: 5,
+      implementationCost: 2,
+      riskLevel: 1,
+      adminPriority: 5,
+    }),
+  ],
+  // Completed 2 (index 14): medium priority
+  [
+    14,
+    computePriority({
+      businessValue: 4,
+      implementationCost: 3,
+      riskLevel: 2,
+      adminPriority: 3,
+    }),
+  ],
+  // Closed 1 (index 15): medium priority
+  [
+    15,
+    computePriority({
+      businessValue: 3,
+      implementationCost: 2,
+      riskLevel: 4,
+      adminPriority: 2,
+    }),
+  ],
+  // Merged 1 - source (index 16): medium-high
+  [
+    16,
+    computePriority({
+      businessValue: 4,
+      implementationCost: 2,
+      riskLevel: 3,
+      adminPriority: 3,
+    }),
+  ],
+  // Merged 2 - target (index 17): high priority (accumulated from merge)
+  [
+    17,
+    computePriority({
+      businessValue: 5,
+      implementationCost: 1,
+      riskLevel: 2,
+      adminPriority: 5,
+    }),
+  ],
+]);
 
 // ── owner / version plan ─────────────────────────────────────────────────────
 
@@ -390,32 +475,122 @@ interface DemandStatePlan {
 
 const STATE_PLANS: readonly DemandStatePlan[] = Object.freeze([
   // drafts: no owner, v1
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // pending_review: no owner, v1 (submitted from draft)
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: null, version: 2, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: null,
+    version: 2,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // rejected: no owner, v1
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // published: no owner (available for claiming), v1/v2
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: null, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: null,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // in_progress: claimed by various employees
-  { ownerEmployeeId: EMP.appAdmin, version: 2, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: EMP.superAdmin, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
-  { ownerEmployeeId: EMP.innovation, version: 1, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: EMP.appAdmin,
+    version: 2,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: EMP.superAdmin,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: EMP.innovation,
+    version: 1,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // pilot: claimed, linked to an application solution
-  { ownerEmployeeId: EMP.appAdmin, version: 3, mergedIntoDemandId: null, primarySolutionApplicationId: IDS.application.published[6]! },
+  {
+    ownerEmployeeId: EMP.appAdmin,
+    version: 3,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: IDS.application.published[6]!,
+  },
   // completed: claimed, linked to application solution
-  { ownerEmployeeId: EMP.appAdmin, version: 4, mergedIntoDemandId: null, primarySolutionApplicationId: IDS.application.published[7]! },
-  { ownerEmployeeId: EMP.employee, version: 2, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: EMP.appAdmin,
+    version: 4,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: IDS.application.published[7]!,
+  },
+  {
+    ownerEmployeeId: EMP.employee,
+    version: 2,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // closed: claimed
-  { ownerEmployeeId: EMP.appAdmin, version: 2, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: EMP.appAdmin,
+    version: 2,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
   // merged source → merged target
-  { ownerEmployeeId: EMP.appAdmin, version: 3, mergedIntoDemandId: IDS.demand.merged[1]!, primarySolutionApplicationId: null },
-  { ownerEmployeeId: EMP.employee, version: 4, mergedIntoDemandId: null, primarySolutionApplicationId: null },
+  {
+    ownerEmployeeId: EMP.appAdmin,
+    version: 3,
+    mergedIntoDemandId: IDS.demand.merged[1]!,
+    primarySolutionApplicationId: null,
+  },
+  {
+    ownerEmployeeId: EMP.employee,
+    version: 4,
+    mergedIntoDemandId: null,
+    primarySolutionApplicationId: null,
+  },
 ]);
 
 // ── collaborator plan (6 entries) ────────────────────────────────────────────
@@ -451,34 +626,91 @@ interface AuditDef {
 
 const AUDIT_DEFS: readonly AuditDef[] = Object.freeze([
   // Pending Review 1 (index 3): submitted + reviewed (approved)
-  { demandIndex: 3, actorEmployeeId: EMP.appAdmin, eventType: "demand.submitted", details: { status: "pending_review" } },
-  { demandIndex: 3, actorEmployeeId: EMP.innovation, eventType: "demand.reviewed", details: { decision: "publish" } },
+  {
+    demandIndex: 3,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.submitted",
+    details: { status: "pending_review" },
+  },
+  {
+    demandIndex: 3,
+    actorEmployeeId: EMP.innovation,
+    eventType: "demand.reviewed",
+    details: { decision: "publish" },
+  },
 
   // Pending Review 2 (index 4): submitted + reviewed (rejected)
-  { demandIndex: 4, actorEmployeeId: EMP.employee, eventType: "demand.submitted", details: { status: "pending_review" } },
-  { demandIndex: 4, actorEmployeeId: EMP.innovation, eventType: "demand.reviewed", details: { decision: "reject", reason: "方案可行性不足，建议补充技术调研后重新提交" } },
+  {
+    demandIndex: 4,
+    actorEmployeeId: EMP.employee,
+    eventType: "demand.submitted",
+    details: { status: "pending_review" },
+  },
+  {
+    demandIndex: 4,
+    actorEmployeeId: EMP.innovation,
+    eventType: "demand.reviewed",
+    details: {
+      decision: "reject",
+      reason: "方案可行性不足，建议补充技术调研后重新提交",
+    },
+  },
 
   // Published 1 (index 7): created
-  { demandIndex: 7, actorEmployeeId: EMP.appAdmin, eventType: "demand.created", details: { source: "demo-seed" } },
+  {
+    demandIndex: 7,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.created",
+    details: { source: "demo-seed" },
+  },
 
   // In Progress 1 (index 9): claimed + status changed
-  { demandIndex: 9, actorEmployeeId: EMP.appAdmin, eventType: "demand.claimed", details: { ownerEmployeeId: EMP.appAdmin } },
-  { demandIndex: 9, actorEmployeeId: EMP.appAdmin, eventType: "demand.status.changed", details: { from: "published", to: "in_progress" } },
+  {
+    demandIndex: 9,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.claimed",
+    details: { ownerEmployeeId: EMP.appAdmin },
+  },
+  {
+    demandIndex: 9,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.status.changed",
+    details: { from: "published", to: "in_progress" },
+  },
 
   // Completed 1 (index 13): status progression
-  { demandIndex: 13, actorEmployeeId: EMP.appAdmin, eventType: "demand.status.changed", details: { from: "pilot", to: "completed" } },
+  {
+    demandIndex: 13,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.status.changed",
+    details: { from: "pilot", to: "completed" },
+  },
 
   // Merged 1 → Merged 2 (indices 16, 17): merge audit trail
-  { demandIndex: 16, actorEmployeeId: EMP.appAdmin, eventType: "demand.merged", details: { targetDemandId: IDS.demand.merged[1]! } },
-  { demandIndex: 17, actorEmployeeId: EMP.employee, eventType: "demand.merge.received", details: { sourceDemandId: IDS.demand.merged[0]! } },
+  {
+    demandIndex: 16,
+    actorEmployeeId: EMP.appAdmin,
+    eventType: "demand.merged",
+    details: { targetDemandId: IDS.demand.merged[1]! },
+  },
+  {
+    demandIndex: 17,
+    actorEmployeeId: EMP.employee,
+    eventType: "demand.merge.received",
+    details: { sourceDemandId: IDS.demand.merged[0]! },
+  },
 ]);
 
 // ── fixture data type ────────────────────────────────────────────────────────
 
 export interface DemandFixtureData {
   demands: Array<Insertable<DatabaseSchema["ai_demands"]>>;
-  demandCollaborators: Array<Insertable<DatabaseSchema["ai_demand_collaborators"]>>;
-  demandAuditEvents: Array<Insertable<DatabaseSchema["ai_demand_audit_events"]>>;
+  demandCollaborators: Array<
+    Insertable<DatabaseSchema["ai_demand_collaborators"]>
+  >;
+  demandAuditEvents: Array<
+    Insertable<DatabaseSchema["ai_demand_audit_events"]>
+  >;
 }
 
 // ── implementation ──────────────────────────────────────────────────────────

@@ -1,7 +1,11 @@
 import { Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
-import { MessageError, showSuccessMessage } from "../../shared/ui/message";
+import {
+  MessageError,
+  showErrorMessage,
+  showSuccessMessage,
+} from "../../shared/ui/message";
 import {
   type AdminApplicationFilterMode,
   type AdminApplicationStatus,
@@ -11,11 +15,13 @@ import {
 import { channelText } from "../../modules/marketplace/catalogMeta";
 import { useAdminApplicationList } from "../../modules/application/useAdminApplicationList";
 import { useAdminKpis } from "../../modules/application/useAdminKpis";
+import {
+  createApplication,
+  submitApplicationReview,
+} from "../../modules/application/application.client";
 
 import { ApplicationAdminHero } from "./ApplicationAdminHero";
-import {
-  ApplicationAdminKpiCards,
-} from "./ApplicationAdminKpiCards";
+import { ApplicationAdminKpiCards } from "./ApplicationAdminKpiCards";
 import {
   ApplicationAdminFilters,
   type FilterOption,
@@ -93,9 +99,15 @@ export default function ApplicationsPage() {
   const kpiCards: AdminKpiCards = useMemo(
     () => ({
       total: { ...KPI_ACCENTS.total, value: kpiNumbers.total },
-      pendingReview: { ...KPI_ACCENTS.pendingReview, value: kpiNumbers.pendingReview },
+      pendingReview: {
+        ...KPI_ACCENTS.pendingReview,
+        value: kpiNumbers.pendingReview,
+      },
       published: { ...KPI_ACCENTS.published, value: kpiNumbers.published },
-      deliveryFailed: { ...KPI_ACCENTS.deliveryFailed, value: kpiNumbers.deliveryFailed },
+      deliveryFailed: {
+        ...KPI_ACCENTS.deliveryFailed,
+        value: kpiNumbers.deliveryFailed,
+      },
     }),
     [kpiNumbers],
   );
@@ -103,7 +115,7 @@ export default function ApplicationsPage() {
   const countByMode = useMemo<Record<AdminApplicationFilterMode, number>>(
     () => ({
       all: kpiNumbers.total,
-      owned: 12,
+      owned: list.data?.items.filter((item) => item.isMine).length ?? 0,
       review: kpiNumbers.pendingReview,
     }),
     [kpiNumbers.total, kpiNumbers.pendingReview],
@@ -127,7 +139,16 @@ export default function ApplicationsPage() {
       },
       onOk: async () => {
         // 暂未接入真实接口，模拟成功后刷新列表并提示。
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        if (action === "review" && row.currentVersionId) {
+          await submitApplicationReview(row.currentVersionId);
+        } else if (["view", "version", "edit"].includes(action)) {
+          window.location.assign(
+            `/applications/${encodeURIComponent(row.applicationId)}`,
+          );
+          return;
+        } else {
+          throw new Error("该操作需要在应用工作台中完成");
+        }
         showSuccessMessage(plan.success);
         list.refetch();
       },
@@ -136,11 +157,21 @@ export default function ApplicationsPage() {
   }, [list, pendingAction]);
 
   const handleCreate = () => {
-    Modal.info({
-      content: "应用创建向导即将上线，当前仅展示管理视图。",
-      okText: "我知道了",
-      title: "创建应用",
-    });
+    const name = window.prompt("请输入应用名称");
+    if (!name?.trim()) {
+      return;
+    }
+    const summary = window.prompt("请输入应用简介") ?? "";
+    void createApplication({ name: name.trim(), summary: summary.trim() })
+      .then((application) => {
+        showSuccessMessage("应用创建成功");
+        window.location.assign(
+          `/applications/${encodeURIComponent(application.applicationId)}`,
+        );
+      })
+      .catch((error: unknown) => {
+        showErrorMessage(error, "创建应用失败");
+      });
   };
 
   return (

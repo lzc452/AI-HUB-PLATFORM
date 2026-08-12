@@ -11,7 +11,10 @@ function base64urlFromBuffer(buffer: ArrayBuffer): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]!);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function bufferFromBase64url(encoded: string): Uint8Array<ArrayBuffer> {
@@ -68,12 +71,9 @@ async function encryptAndWrap(
     encoder.encode(plaintext),
   );
 
-  const wrappedKey = await crypto.subtle.wrapKey(
-    "raw",
-    aesKey,
-    rsaKey,
-    { name: "RSA-OAEP" },
-  );
+  const wrappedKey = await crypto.subtle.wrapKey("raw", aesKey, rsaKey, {
+    name: "RSA-OAEP",
+  });
 
   return {
     encryptedPayload: base64urlFromBuffer(ciphertext as ArrayBuffer),
@@ -130,10 +130,17 @@ describe("LoginEncryptionService", () => {
     const challenge = service.createChallenge();
     const envelope = await encryptAndWrap(
       JSON.stringify({ employeeId: "E001", password: "p", deviceLabel: "b" }),
-      { jwk: challenge.jwk as unknown as JsonWebKey, keyId: challenge.keyId, nonce: challenge.nonce },
+      {
+        jwk: challenge.jwk as unknown as JsonWebKey,
+        keyId: challenge.keyId,
+        nonce: challenge.nonce,
+      },
     );
 
-    const tampered = { ...envelope, encryptedPayload: envelope.encryptedPayload + "X" };
+    const tampered = {
+      ...envelope,
+      encryptedPayload: envelope.encryptedPayload + "X",
+    };
     await expect(
       service.decryptEnvelope(tampered, challenge.nonce),
     ).rejects.toThrow("LOGIN_ENCRYPTION_DECRYPTION_FAILED");
@@ -143,7 +150,11 @@ describe("LoginEncryptionService", () => {
     const challenge = service.createChallenge();
     const envelope = await encryptAndWrap(
       JSON.stringify({ employeeId: "E001", password: "p", deviceLabel: "b" }),
-      { jwk: challenge.jwk as unknown as JsonWebKey, keyId: challenge.keyId, nonce: challenge.nonce },
+      {
+        jwk: challenge.jwk as unknown as JsonWebKey,
+        keyId: challenge.keyId,
+        nonce: challenge.nonce,
+      },
     );
 
     const tampered = { ...envelope, aad: envelope.aad + "X" };
@@ -156,7 +167,11 @@ describe("LoginEncryptionService", () => {
     const challenge = service.createChallenge();
     const envelope = await encryptAndWrap(
       JSON.stringify({ employeeId: "E001", password: "p", deviceLabel: "b" }),
-      { jwk: challenge.jwk as unknown as JsonWebKey, keyId: challenge.keyId, nonce: challenge.nonce },
+      {
+        jwk: challenge.jwk as unknown as JsonWebKey,
+        keyId: challenge.keyId,
+        nonce: challenge.nonce,
+      },
     );
 
     const tampered = { ...envelope, keyId: "wrong-key-id" };
@@ -169,7 +184,11 @@ describe("LoginEncryptionService", () => {
     const challenge = service.createChallenge();
     const envelope = await encryptAndWrap(
       JSON.stringify({ employeeId: "E001", password: "p", deviceLabel: "b" }),
-      { jwk: challenge.jwk as unknown as JsonWebKey, keyId: challenge.keyId, nonce: challenge.nonce },
+      {
+        jwk: challenge.jwk as unknown as JsonWebKey,
+        keyId: challenge.keyId,
+        nonce: challenge.nonce,
+      },
     );
 
     await expect(

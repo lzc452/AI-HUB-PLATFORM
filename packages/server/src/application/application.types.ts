@@ -84,6 +84,41 @@ export interface ApplicationWorkspace {
   reviewQueue: ReviewQueueRecord | null;
 }
 
+export interface ApplicationAdminListInput {
+  keyword?: string;
+  mode?: "all" | "review" | "owned";
+  status?: ApplicationStatus;
+  departmentId?: string;
+  applicationType?: string;
+  channel?: DeliveryChannel;
+  sort?: "recent" | "name" | "status";
+  page: number;
+  pageSize: number;
+}
+
+export interface ApplicationAdminListRow {
+  applicationId: string;
+  name: string;
+  summary: string;
+  categoryId: string;
+  status: ApplicationStatus;
+  currentVersion: string;
+  currentVersionId: string | null;
+  ownerName: string;
+  departmentName: string;
+  deliveryChannels: readonly DeliveryChannel[];
+  updatedAt: string;
+  isMine: boolean;
+  needsMyReview: boolean;
+}
+
+export interface ApplicationAdminListResult {
+  items: readonly ApplicationAdminListRow[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
 export interface ApplicationAuthorizationPort {
   authorize(request: AuthorizationRequest): Promise<AuthorizationDecision>;
 }
@@ -100,6 +135,10 @@ export interface ApplicationRepository {
     summary: string;
   }): Promise<ApplicationRecord>;
   findApplication(applicationId: string): Promise<ApplicationRecord | null>;
+  listAdmin?(
+    actor: ActorContext,
+    input: ApplicationAdminListInput,
+  ): Promise<ApplicationAdminListResult>;
   createVersion(
     input: Omit<ApplicationVersionRecord, "createdAt">,
   ): Promise<ApplicationVersionRecord>;

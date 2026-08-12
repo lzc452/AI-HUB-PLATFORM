@@ -1,4 +1,7 @@
-import type { ChallengeResponse, EncryptedLoginEnvelope } from "@ai-hub/contracts";
+import type {
+  ChallengeResponse,
+  EncryptedLoginEnvelope,
+} from "@ai-hub/contracts";
 
 function base64urlFromBuffer(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -6,7 +9,10 @@ function base64urlFromBuffer(buffer: ArrayBuffer): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]!);
   }
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 /**
@@ -66,12 +72,9 @@ export async function buildLoginEnvelope(
   );
 
   // Wrap the AES key with RSA-OAEP.
-  const wrappedKey = await crypto.subtle.wrapKey(
-    "raw",
-    aesKey,
-    rsaKey,
-    { name: "RSA-OAEP" },
-  );
+  const wrappedKey = await crypto.subtle.wrapKey("raw", aesKey, rsaKey, {
+    name: "RSA-OAEP",
+  });
 
   return {
     encryptedPayload: base64urlFromBuffer(ciphertext as ArrayBuffer),

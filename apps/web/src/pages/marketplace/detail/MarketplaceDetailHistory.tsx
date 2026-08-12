@@ -1,5 +1,8 @@
 import type { ApplicationVersion } from "@ai-hub/contracts";
-import { ClockCircleOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import {
+  ClockCircleOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
 import { Empty, Skeleton, Tag, Timeline, Typography } from "antd";
 
 const { Text, Title } = Typography;
@@ -86,7 +89,12 @@ export function MarketplaceDetailHistory({
               </Text>
             </div>
           ),
-          color: v.scanStatus === "passed" ? "green" : v.scanStatus === "failed" ? "red" : "gray",
+          color:
+            v.scanStatus === "passed"
+              ? "green"
+              : v.scanStatus === "failed"
+                ? "red"
+                : "gray",
         }))}
       />
     </section>

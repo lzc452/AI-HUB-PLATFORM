@@ -1,4 +1,8 @@
-import { CaretDownOutlined, CaretUpOutlined, MinusOutlined } from "@ant-design/icons";
+import {
+  CaretDownOutlined,
+  CaretUpOutlined,
+  MinusOutlined,
+} from "@ant-design/icons";
 import { Typography } from "antd";
 
 const { Text, Title } = Typography;
@@ -39,7 +43,9 @@ export function KpiMetricCard({
   return (
     <article
       className="dashboard-panel dash-rise rounded-xl bg-white p-3"
-      style={index !== undefined ? { animationDelay: `${index * 60}ms` } : undefined}
+      style={
+        index !== undefined ? { animationDelay: `${index * 60}ms` } : undefined
+      }
     >
       <div className="flex items-center gap-3">
         <div
@@ -57,7 +63,10 @@ export function KpiMetricCard({
           {trend && TrendIcon ? (
             <span
               className="mt-1 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-medium leading-none"
-              style={{ backgroundColor: trendMeta.tint, color: trendMeta.color }}
+              style={{
+                backgroundColor: trendMeta.tint,
+                color: trendMeta.color,
+              }}
             >
               <TrendIcon aria-hidden="true" className="text-[10px]" />
               {trend.direction === "up" ? "+" : ""}

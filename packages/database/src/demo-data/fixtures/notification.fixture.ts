@@ -15,7 +15,9 @@ const EMP = Object.freeze({
   superAdmin: DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
 });
 
-type DeliveryStatus = Insertable<DatabaseSchema["notifications"]>["delivery_status"];
+type DeliveryStatus = Insertable<
+  DatabaseSchema["notifications"]
+>["delivery_status"];
 
 // ── notification plan (20: 覆盖全部权威通知类型，按 5 个角色分发) ─────────────
 //
@@ -333,9 +335,7 @@ export function buildNotificationFixture(
         String(plan.notificationIdx),
       ),
       message: plan.message,
-      read_at: plan.isRead
-        ? daysAgo(anchor, plan.daysOffset - 1)
-        : null,
+      read_at: plan.isRead ? daysAgo(anchor, plan.daysOffset - 1) : null,
       delivery_status: plan.deliveryStatus,
       delivery_attempts: plan.deliveryAttempts,
       last_delivery_error: plan.lastDeliveryError,

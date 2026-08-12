@@ -13,6 +13,7 @@ import type {
   SessionRecord,
   PasswordResetChallengeRecord,
   DingTalkSyncMode,
+  IdentityAuditEventRecord,
 } from "./identity.types.js";
 
 export class KyselyIdentityRepository implements IdentityRepository {
@@ -340,6 +341,32 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .execute();
   }
 
+  async listAuditEvents(
+    input: {
+      eventType?: string;
+      limit?: number;
+    } = {},
+  ): Promise<readonly IdentityAuditEventRecord[]> {
+    let query = this.db
+      .selectFrom("identity_audit_events")
+      .selectAll()
+      .orderBy("created_at", "desc");
+    if (input.eventType !== undefined && input.eventType.length > 0) {
+      query = query.where("event_type", "=", input.eventType);
+    }
+    const rows = await query
+      .limit(Math.min(Math.max(input.limit ?? 100, 1), 500))
+      .execute();
+    return rows.map((row) => ({
+      auditEventId: row.audit_event_id,
+      actorEmployeeId: row.actor_employee_id,
+      eventType: row.event_type,
+      subjectEmployeeId: row.subject_employee_id,
+      details: row.details,
+      createdAt: row.created_at,
+    }));
+  }
+
   // ── employee_number / DingTalk SSO ─────────────────────────
 
   async findEmployeeByEmployeeNumber(
@@ -418,7 +445,9 @@ export class KyselyIdentityRepository implements IdentityRepository {
 
   async findDingTalkSsoTransactionByStateHash(
     stateHash: string,
-  ): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord | null> {
+  ): Promise<
+    import("./identity.types.js").DingTalkSsoTransactionRecord | null
+  > {
     const row = await this.db
       .selectFrom("dingtalk_sso_transactions")
       .selectAll()
@@ -440,7 +469,9 @@ export class KyselyIdentityRepository implements IdentityRepository {
 
   async findDingTalkSsoTransactionByHandoffHash(
     handoffHash: string,
-  ): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord | null> {
+  ): Promise<
+    import("./identity.types.js").DingTalkSsoTransactionRecord | null
+  > {
     const row = await this.db
       .selectFrom("dingtalk_sso_transactions")
       .selectAll()
@@ -471,9 +502,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .execute();
   }
 
-  async consumeDingTalkSsoTransaction(
-    transactionId: string,
-  ): Promise<boolean> {
+  async consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean> {
     const result = await this.db
       .updateTable("dingtalk_sso_transactions")
       .set({ consumed_at: new Date() })

@@ -185,8 +185,7 @@ export class IdentityController {
       return this.identity
         .loginWithEncryptedPassword(raw.envelope as EncryptedLoginEnvelope)
         .catch((error: unknown) => {
-          const msg =
-            error instanceof Error ? error.message : "LOGIN_FAILED";
+          const msg = error instanceof Error ? error.message : "LOGIN_FAILED";
           if (msg === "INVALID_CREDENTIALS") {
             throw new UnauthorizedException("INVALID_CREDENTIALS");
           }
@@ -329,8 +328,9 @@ export class IdentityController {
       throw new BadRequestException("DINGTALK_SSO_STATE_INVALID");
     }
 
-    return this.dingtalkSso.completeSso(handoffToken).catch(
-      (error: unknown) => {
+    return this.dingtalkSso
+      .completeSso(handoffToken)
+      .catch((error: unknown) => {
         if (error instanceof Error) {
           if (error.message === "INVALID_CREDENTIALS") {
             throw new UnauthorizedException("INVALID_CREDENTIALS");
@@ -340,16 +340,12 @@ export class IdentityController {
           }
         }
         throw error;
-      },
-    );
+      });
   }
 }
 
 /** Simple cookie reader — mirrors the pattern in csrf.ts. */
-function readCookie(
-  cookieHeader: string,
-  name: string,
-): string | undefined {
+function readCookie(cookieHeader: string, name: string): string | undefined {
   for (const part of cookieHeader.split(";")) {
     const [key, ...value] = part.trim().split("=");
     if (key === name) return value.join("=") || undefined;

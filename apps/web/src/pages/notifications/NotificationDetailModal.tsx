@@ -35,14 +35,15 @@ export function NotificationDetailModal({
       footer={
         <div className="flex flex-wrap gap-3">
           {meta.actions.map((action) => {
-            const content = action.label === "分享应用" 
-              ? (
+            const content =
+              action.label === "分享应用" ? (
                 <span className="inline-flex items-center gap-1">
                   <LinkOutlined />
                   {action.label}
                 </span>
-              ) 
-              : action.label;
+              ) : (
+                action.label
+              );
 
             if (action.to) {
               return (
@@ -114,7 +115,9 @@ export function NotificationDetailModal({
             <ul className="m-0 list-none space-y-1 p-0 text-[#595959]">
               {meta.detailFields.map((field) => (
                 <li key={field.label}>
-                  <Text type="secondary">• {field.label}：{field.value}</Text>
+                  <Text type="secondary">
+                    • {field.label}：{field.value}
+                  </Text>
                 </li>
               ))}
             </ul>

@@ -13,7 +13,12 @@ export function SyncHealthPanel({ health }: SyncHealthPanelProps) {
   const items = [
     { color: "#52c41a", key: "success", label: "成功任务", ...health.success },
     { color: "#ff4d4f", key: "failed", label: "失败任务", ...health.failed },
-    { color: "#1677ff", key: "inProgress", label: "进行中", ...health.inProgress },
+    {
+      color: "#1677ff",
+      key: "inProgress",
+      label: "进行中",
+      ...health.inProgress,
+    },
     { color: "#bfbfbf", key: "pending", label: "待执行", ...health.pending },
   ];
 
@@ -41,7 +46,10 @@ export function SyncHealthPanel({ health }: SyncHealthPanelProps) {
         </div>
         <div className="flex-1 space-y-2">
           {items.map(({ color, count, key, label, rate }) => (
-            <div key={key} className="flex items-center justify-between text-[13px]">
+            <div
+              key={key}
+              className="flex items-center justify-between text-[13px]"
+            >
               <div className="flex items-center gap-2">
                 <span
                   className="inline-block h-2 w-2 rounded-full"

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export interface ReplayNonceRecord {
   nonceHash: string;
   actorEmployeeId: string;
@@ -22,6 +20,7 @@ export class InMemoryLoginChallengeStore implements LoginChallengeStore {
   private readonly consumed = new Set<string>();
 
   async consume(nonceHash: string, _expiresAt: Date): Promise<boolean> {
+    void _expiresAt;
     if (this.consumed.has(nonceHash)) {
       return false;
     }

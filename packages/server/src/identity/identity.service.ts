@@ -410,6 +410,13 @@ export class IdentityService {
     return this.repository.listEmployeeRoles(employeeId);
   }
 
+  listAuditEvents(input?: { eventType?: string; limit?: number }) {
+    if (this.repository.listAuditEvents === undefined) {
+      return Promise.resolve([]);
+    }
+    return this.repository.listAuditEvents(input);
+  }
+
   // ── Login encryption ───────────────────────────────────────
 
   /** Generate an encryption challenge (public JWK + nonce). */
@@ -424,17 +431,12 @@ export class IdentityService {
   async loginWithEncryptedPassword(
     envelope: EncryptedLoginEnvelope,
   ): Promise<LoginResult> {
-    if (
-      this.encryption === undefined ||
-      this.challengeStore === undefined
-    ) {
+    if (this.encryption === undefined || this.challengeStore === undefined) {
       throw new Error("LOGIN_METHOD_UNAVAILABLE");
     }
 
     // Consume the nonce (replay protection).
-    const nonceHash = createHash("sha256")
-      .update(envelope.nonce)
-      .digest("hex");
+    const nonceHash = createHash("sha256").update(envelope.nonce).digest("hex");
     const consumed = await this.challengeStore.consume(
       nonceHash,
       new Date(Date.now() + 5 * 60 * 1000),

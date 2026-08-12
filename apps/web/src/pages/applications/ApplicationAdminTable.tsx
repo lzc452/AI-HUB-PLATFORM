@@ -27,10 +27,7 @@ export type ApplicationRowAction =
 export interface ApplicationAdminTableProps {
   isLoading?: boolean;
   isError?: boolean;
-  onAction?: (
-    action: ApplicationRowAction,
-    row: AdminApplicationRow,
-  ) => void;
+  onAction?: (action: ApplicationRowAction, row: AdminApplicationRow) => void;
   rows: readonly AdminApplicationRow[];
 }
 
@@ -200,7 +197,9 @@ export function ApplicationAdminTable({
               <td className={`${cellClass} !text-left`}>
                 <div className="flex flex-col text-xs">
                   <span className="!text-[#1f1f1f]">{row.ownerName}</span>
-                  <span className="!text-[#8c8c8c]">/ {row.departmentName}</span>
+                  <span className="!text-[#8c8c8c]">
+                    / {row.departmentName}
+                  </span>
                 </div>
               </td>
               <td className={`${cellClass} !text-left`}>
@@ -275,14 +274,12 @@ function RowActions({
   row,
 }: {
   onAction?:
-    | ((
-        action: ApplicationRowAction,
-        row: AdminApplicationRow,
-      ) => void)
+    | ((action: ApplicationRowAction, row: AdminApplicationRow) => void)
     | undefined;
   row: AdminApplicationRow;
 }) {
-  const handle = (action: ApplicationRowAction) => () => onAction?.(action, row);
+  const handle = (action: ApplicationRowAction) => () =>
+    onAction?.(action, row);
 
   if (row.status === "in_review") {
     return (

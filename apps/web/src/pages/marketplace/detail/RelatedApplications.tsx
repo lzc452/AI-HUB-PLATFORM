@@ -1,6 +1,13 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeOutlined, StarFilled } from "@ant-design/icons";
-import { Button, Card, Empty as AntdEmpty, Tag, Tooltip, Typography } from "antd";
+import {
+  Button,
+  Card,
+  Empty as AntdEmpty,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
@@ -87,7 +94,9 @@ export function RelatedApplications({ entry }: RelatedApplicationsProps) {
 
   const related = useMemo(() => {
     const items = data?.items ?? [];
-    const others = items.filter((item) => item.applicationId !== entry.applicationId);
+    const others = items.filter(
+      (item) => item.applicationId !== entry.applicationId,
+    );
     const sameCategory = others.filter(
       (item) => item.categoryId === entry.categoryId,
     );

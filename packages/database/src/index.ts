@@ -15,7 +15,10 @@ export type {
   SeedDemoAccountsResult,
 } from "./demo-seed.js";
 export { seedDemoBusinessData } from "./demo-business-seed.js";
-export { assertDemoDataSafety, resolveAnchorDate } from "./demo-data/demo-config.js";
+export {
+  assertDemoDataSafety,
+  resolveAnchorDate,
+} from "./demo-data/demo-config.js";
 export {
   seedDemoDataset,
   checkDemoDataset,

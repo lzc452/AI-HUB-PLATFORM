@@ -234,7 +234,9 @@ describe("buildAnalyticsFixture", () => {
   it("produces identical data for the same anchor date", () => {
     const f1 = buildAnalyticsFixture(anchor);
     const f2 = buildAnalyticsFixture(anchor);
-    expect(f1.dailyAggregates[0].value).toBe(f2.dailyAggregates[0].value);
-    expect(f1.dailyAggregates[1079].value).toBe(f2.dailyAggregates[1079].value);
+    expect(f1.dailyAggregates[0]?.value).toBe(f2.dailyAggregates[0]?.value);
+    expect(f1.dailyAggregates[1079]?.value).toBe(
+      f2.dailyAggregates[1079]?.value,
+    );
   });
 });

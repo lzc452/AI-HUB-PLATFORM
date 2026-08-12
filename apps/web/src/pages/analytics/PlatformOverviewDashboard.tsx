@@ -81,7 +81,10 @@ export function PlatformOverviewDashboard() {
   return (
     <div className="space-y-2">
       {/* KPI 指标 */}
-      <section aria-label="核心指标" className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <section
+        aria-label="核心指标"
+        className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6"
+      >
         {data.kpiMetrics.map((metric, index) => (
           <KpiMetricCard
             icon={kpiIcons[metric.label] ?? <TeamOutlined aria-hidden="true" />}
@@ -249,10 +252,7 @@ function PlatformOverviewSkeleton() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
-          <div
-            className="rounded-xl  bg-white p-4"
-            key={index}
-          >
+          <div className="rounded-xl  bg-white p-4" key={index}>
             <Skeleton active paragraph={{ rows: 2 }} title={false} />
           </div>
         ))}
@@ -348,10 +348,7 @@ function DepartmentHeatmap({
     () => Array.from(new Set(data.map((d) => d.department))).reverse(),
     [data],
   );
-  const maxUsage = useMemo(
-    () => Math.max(...data.map((d) => d.usage)),
-    [data],
-  );
+  const maxUsage = useMemo(() => Math.max(...data.map((d) => d.usage)), [data]);
   const seriesData = useMemo(
     () =>
       data.map((d) => [d.week, d.department, d.usage]) as Array<
@@ -633,7 +630,12 @@ function SlaTable({
 function AlertsList({
   data,
 }: {
-  data: Array<{ content: string; id: string; time: string; type: "info" | "warning" }>;
+  data: Array<{
+    content: string;
+    id: string;
+    time: string;
+    type: "info" | "warning";
+  }>;
 }) {
   return (
     <ul className="space-y-3">

@@ -48,7 +48,7 @@ describe("buildIdentityFixture", () => {
     const deptIds = new Set(fixture.departments.map((d) => d.department_id));
     for (const d of fixture.departments) {
       if (d.parent_department_id !== null) {
-        expect(deptIds.has(d.parent_department_id)).toBe(true);
+        expect(deptIds.has(d.parent_department_id!)).toBe(true);
       }
     }
   });
@@ -85,7 +85,7 @@ describe("buildIdentityFixture", () => {
     const empIds = new Set(fixture.employees.map((e) => e.employee_id));
     for (const ev of fixture.identityAuditEvents) {
       if (ev.actor_employee_id !== null) {
-        expect(empIds.has(ev.actor_employee_id)).toBe(true);
+        expect(empIds.has(ev.actor_employee_id!)).toBe(true);
       }
     }
   });
@@ -94,7 +94,7 @@ describe("buildIdentityFixture", () => {
     const empIds = new Set(fixture.employees.map((e) => e.employee_id));
     for (const ev of fixture.identityAuditEvents) {
       if (ev.subject_employee_id !== null) {
-        expect(empIds.has(ev.subject_employee_id)).toBe(true);
+        expect(empIds.has(ev.subject_employee_id!)).toBe(true);
       }
     }
   });
@@ -136,13 +136,19 @@ describe("buildIdentityFixture", () => {
 
   it("all created_at values are Date instances", () => {
     for (const d of fixture.departments) {
-      expect(d.created_at! instanceof Date || typeof d.created_at === "object").toBe(true);
+      expect(
+        d.created_at! instanceof Date || typeof d.created_at === "object",
+      ).toBe(true);
     }
     for (const e of fixture.employees) {
-      expect(e.created_at! instanceof Date || typeof e.created_at === "object").toBe(true);
+      expect(
+        e.created_at! instanceof Date || typeof e.created_at === "object",
+      ).toBe(true);
     }
     for (const ev of fixture.identityAuditEvents) {
-      expect(ev.created_at! instanceof Date || typeof ev.created_at === "object").toBe(true);
+      expect(
+        ev.created_at! instanceof Date || typeof ev.created_at === "object",
+      ).toBe(true);
     }
   });
 

@@ -27,9 +27,17 @@ describe("数据看板页面", () => {
         }
         if (path.includes("/internal/analytics/dashboards/")) {
           return Response.json({
-            dashboardKey: "market",
+            dashboardKey: "platform",
             from: "2026-05-01",
-            metrics: [],
+            metrics: [
+              {
+                metricKey: "active_employee_count",
+                day: "2026-05-31",
+                audienceScopeKey: "all",
+                value: 285,
+                sourceEventCount: 285,
+              },
+            ],
             to: "2026-06-01",
           });
         }
@@ -39,9 +47,7 @@ describe("数据看板页面", () => {
             appRanking: [
               { iconColor: "#1677ff", name: "智能合同审查", value: 1248 },
             ],
-            conversionRates: [
-              { direction: "up", rate: 70.2, stage: "待认领" },
-            ],
+            conversionRates: [{ direction: "up", rate: 70.2, stage: "待认领" }],
             deliveryTrend: [{ date: "05-09", value: 34 }],
             departmentHeatmap: [
               { department: "财务部", usage: 186, week: "05-09~05-15" },

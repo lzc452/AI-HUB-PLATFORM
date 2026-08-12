@@ -45,10 +45,7 @@ export function DepartmentManagementTab() {
         value={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
       />
-      <DepartmentTable
-        parentNameMap={parentNameMap}
-        rows={filteredRows}
-      />
+      <DepartmentTable parentNameMap={parentNameMap} rows={filteredRows} />
     </section>
   );
 }

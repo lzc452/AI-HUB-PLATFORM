@@ -1,8 +1,17 @@
-export type SyncTaskType = "full" | "incremental" | "compensation" | "validation" | "pending";
+export type SyncTaskType =
+  | "full"
+  | "incremental"
+  | "compensation"
+  | "validation"
+  | "pending";
 
 export type SyncTaskStatus = "success" | "failed" | "pending";
 
-export type SyncObject = "organization" | "user" | "department" | "user_binding";
+export type SyncObject =
+  | "organization"
+  | "user"
+  | "department"
+  | "user_binding";
 
 export type SyncAlertStatus = "unprocessed" | "processing";
 
@@ -120,7 +129,10 @@ export const SYNC_ALERT_STATUS_META: Record<
 };
 
 /** 同步任务类型 → 图标名称（严格使用 @ant-design/icons 已有图标）。 */
-export const SYNC_TASK_ICON_META: Record<SyncObject, { color: string; iconName: string }> = {
+export const SYNC_TASK_ICON_META: Record<
+  SyncObject,
+  { color: string; iconName: string }
+> = {
   department: { color: "#1677ff", iconName: "ApartmentOutlined" },
   organization: { color: "#722ed1", iconName: "ApartmentOutlined" },
   user: { color: "#52c41a", iconName: "UserOutlined" },

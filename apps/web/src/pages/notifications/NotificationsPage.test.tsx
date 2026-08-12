@@ -49,12 +49,14 @@ const hoisted = vi.hoisted(() => ({
   listNotifications: vi.fn(),
   markNotificationRead: vi.fn(),
   markAllReadMutate: vi.fn(),
-  useNotifications: vi.fn((): MockNotificationsResult => ({
-    data: mockNotifications,
-    error: null,
-    isError: false,
-    isPending: false,
-  })),
+  useNotifications: vi.fn(
+    (): MockNotificationsResult => ({
+      data: mockNotifications,
+      error: null,
+      isError: false,
+      isPending: false,
+    }),
+  ),
   useMarkAllNotificationsRead: vi.fn(() => ({
     isPending: false,
     mutate: vi.fn(),
@@ -116,9 +118,15 @@ describe("NotificationsPage", () => {
   it("renders notification list with titles and timestamps", () => {
     renderPage();
 
-    expect(screen.getByRole("heading", { name: "站内通知" })).toBeInTheDocument();
-    expect(screen.getByText("您的应用「OCR票据识别」审核已通过")).toBeInTheDocument();
-    expect(screen.getByText("应用「会议纪要总结」收到新的评价")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "站内通知" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("您的应用「OCR票据识别」审核已通过"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("应用「会议纪要总结」收到新的评价"),
+    ).toBeInTheDocument();
     expect(screen.getByText("系统扫描发现 1 个高风险附件")).toBeInTheDocument();
     expect(screen.getByText("共 3 条")).toBeInTheDocument();
   });
@@ -129,8 +137,12 @@ describe("NotificationsPage", () => {
     const unreadTab = screen.getByRole("tab", { name: "未读" });
     fireEvent.click(unreadTab);
 
-    expect(screen.getByText("您的应用「OCR票据识别」审核已通过")).toBeInTheDocument();
-    expect(screen.queryByText("应用「会议纪要总结」收到新的评价")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("您的应用「OCR票据识别」审核已通过"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("应用「会议纪要总结」收到新的评价"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("系统扫描发现 1 个高风险附件")).toBeInTheDocument();
     expect(screen.getByText("共 2 条")).toBeInTheDocument();
   });
@@ -141,7 +153,9 @@ describe("NotificationsPage", () => {
     fireEvent.click(screen.getByText("您的应用「OCR票据识别」审核已通过"));
 
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("您的应用「OCR票据识别」审核已通过")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("您的应用「OCR票据识别」审核已通过"),
+    ).toBeInTheDocument();
     expect(within(dialog).getByText("审核相关")).toBeInTheDocument();
     expect(within(dialog).getByText("审核信息")).toBeInTheDocument();
     expect(within(dialog).getByText("查看应用详情")).toBeInTheDocument();
@@ -162,7 +176,10 @@ describe("NotificationsPage", () => {
 
   it("disables mark-all-read when no unread notifications", () => {
     hoisted.useNotifications.mockReturnValue({
-      data: mockNotifications.map((n) => ({ ...n, readAt: "2026-08-11T17:00:00+08:00" })),
+      data: mockNotifications.map((n) => ({
+        ...n,
+        readAt: "2026-08-11T17:00:00+08:00",
+      })),
       error: null,
       isError: false,
       isPending: false,

@@ -18,6 +18,7 @@ test("package registers the demo business seed command", () => {
 test("demo business seed requires DATABASE_URL", () => {
   const environment = { ...process.env };
   delete environment.DATABASE_URL;
+  environment.AI_HUB_SKIP_DOTENV = "1";
 
   const result = spawnSync(
     process.execPath,

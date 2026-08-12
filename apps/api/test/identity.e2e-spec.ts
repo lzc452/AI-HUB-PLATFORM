@@ -106,8 +106,12 @@ class ApiIdentityRepository implements IdentityRepository {
   }
   async recordAudit(): Promise<void> {}
   // ── New methods ─────────────────────────────────────────────
-  async findEmployeeByEmployeeNumber() { return null; }
-  async findEmployeeByDingTalkUserId() { return null; }
+  async findEmployeeByEmployeeNumber() {
+    return null;
+  }
+  async findEmployeeByDingTalkUserId() {
+    return null;
+  }
   async createDingTalkSsoTransaction() {
     return {
       transactionId: "sso-tx-1",
@@ -121,10 +125,16 @@ class ApiIdentityRepository implements IdentityRepository {
       consumedAt: null,
     };
   }
-  async findDingTalkSsoTransactionByStateHash() { return null; }
-  async findDingTalkSsoTransactionByHandoffHash() { return null; }
+  async findDingTalkSsoTransactionByStateHash() {
+    return null;
+  }
+  async findDingTalkSsoTransactionByHandoffHash() {
+    return null;
+  }
   async updateDingTalkSsoTransactionAfterCallback(): Promise<void> {}
-  async consumeDingTalkSsoTransaction() { return true; }
+  async consumeDingTalkSsoTransaction() {
+    return true;
+  }
   async activateEmployee(): Promise<void> {}
 }
 

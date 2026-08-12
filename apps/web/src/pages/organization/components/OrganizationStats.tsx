@@ -13,7 +13,6 @@ interface OrganizationStatsProps {
   total: number;
 }
 
-
 /** 顶部统计卡网格。数据由容器计算后整体传入，自身不持有数据。 */
 export function OrganizationStats({
   active,

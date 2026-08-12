@@ -85,7 +85,10 @@ export function ApplicationAdminFilters({
   status,
   statusOptions,
 }: ApplicationAdminFiltersProps) {
-  const modeItems: ReadonlyArray<{ label: React.ReactNode; value: AdminApplicationFilterMode }> = [
+  const modeItems: ReadonlyArray<{
+    label: React.ReactNode;
+    value: AdminApplicationFilterMode;
+  }> = [
     {
       label: <ModeLabel count={countByMode.all} mode="all" />,
       value: "all",
@@ -109,7 +112,12 @@ export function ApplicationAdminFilters({
         <Segmented<AdminApplicationFilterMode>
           aria-label="应用视图"
           onChange={(value) => onModeChange(value)}
-          options={modeItems as { label: React.ReactNode; value: AdminApplicationFilterMode }[]}
+          options={
+            modeItems as {
+              label: React.ReactNode;
+              value: AdminApplicationFilterMode;
+            }[]
+          }
           size="middle"
           value={mode}
         />
@@ -123,7 +131,9 @@ export function ApplicationAdminFilters({
           disabled={isLoading}
           onChange={(event) => onKeywordChange(event.target.value)}
           placeholder="搜索应用名称或应用 ID"
-          prefix={<SearchOutlined aria-hidden="true" className="text-[#bfbfbf]" />}
+          prefix={
+            <SearchOutlined aria-hidden="true" className="text-[#bfbfbf]" />
+          }
           value={keyword}
         />
 
@@ -132,7 +142,9 @@ export function ApplicationAdminFilters({
           aria-label="全部状态"
           className="!min-w-28"
           disabled={isLoading}
-          onChange={(value?: string) => onStatusChange(value ?? PLACEHOLDER_ALL)}
+          onChange={(value?: string) =>
+            onStatusChange(value ?? PLACEHOLDER_ALL)
+          }
           options={statusOptions as FilterOption[]}
           placeholder="全部状态"
           value={status === PLACEHOLDER_ALL ? undefined : status}
@@ -143,7 +155,9 @@ export function ApplicationAdminFilters({
           aria-label="所属部门"
           className="!min-w-32"
           disabled={isLoading}
-          onChange={(value?: string) => onDepartmentChange(value ?? PLACEHOLDER_ALL)}
+          onChange={(value?: string) =>
+            onDepartmentChange(value ?? PLACEHOLDER_ALL)
+          }
           options={departmentOptions as FilterOption[]}
           placeholder="所属部门"
           showSearch
@@ -155,10 +169,14 @@ export function ApplicationAdminFilters({
           aria-label="应用类型"
           className="!min-w-28"
           disabled={isLoading}
-          onChange={(value?: string) => onApplicationTypeChange(value ?? PLACEHOLDER_ALL)}
+          onChange={(value?: string) =>
+            onApplicationTypeChange(value ?? PLACEHOLDER_ALL)
+          }
           options={applicationTypeOptions as FilterOption[]}
           placeholder="应用类型"
-          value={applicationType === PLACEHOLDER_ALL ? undefined : applicationType}
+          value={
+            applicationType === PLACEHOLDER_ALL ? undefined : applicationType
+          }
         />
 
         <Select

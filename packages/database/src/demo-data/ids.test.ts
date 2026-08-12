@@ -321,7 +321,7 @@ describe("IDS sequential ordering", () => {
     const { all } = IDS.demand;
     let offset = 0;
     for (const status of expectedStatuses) {
-      const ids = (IDS.demand as Record<string, readonly string[]>)[status];
+      const ids = (IDS.demand as Record<string, readonly string[]>)[status]!;
       expect(
         all.slice(offset, offset + ids.length),
         `demand.${status} slice mismatch`,

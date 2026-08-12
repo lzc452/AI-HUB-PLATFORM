@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Key } from "react";
 
-import {
-  createDefaultRoleFilters,
-  type RoleFilterValue,
-} from "./constants";
+import { createDefaultRoleFilters, type RoleFilterValue } from "./constants";
 import { RoleFilterBar } from "./RoleFilterBar";
 import { RoleTable } from "./RoleTable";
 import { useRoleRows } from "./hooks/useRoleRows";

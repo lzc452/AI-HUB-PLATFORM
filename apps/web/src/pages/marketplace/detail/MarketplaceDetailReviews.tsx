@@ -76,9 +76,7 @@ function CommentThread({
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-[#8c8c8c]">
             <UserOutlined />
-            {comment.displayAnonymously
-              ? "匿名用户"
-              : comment.authorEmployeeId}
+            {comment.displayAnonymously ? "匿名用户" : comment.authorEmployeeId}
             <span>·</span>
             <span>{formatDate(comment.createdAt)}</span>
             {isHidden && (
@@ -92,7 +90,9 @@ function CommentThread({
               danger={!isHidden}
               icon={isHidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
               onClick={() =>
-                isHidden ? onRestore(comment.commentId) : onHide(comment.commentId)
+                isHidden
+                  ? onRestore(comment.commentId)
+                  : onHide(comment.commentId)
               }
               size="small"
               type="link"
@@ -140,7 +140,11 @@ function CommentThread({
                   <Button
                     danger={!reply.hiddenAt}
                     icon={
-                      reply.hiddenAt ? <EyeOutlined /> : <EyeInvisibleOutlined />
+                      reply.hiddenAt ? (
+                        <EyeOutlined />
+                      ) : (
+                        <EyeInvisibleOutlined />
+                      )
                     }
                     onClick={() =>
                       reply.hiddenAt
@@ -156,9 +160,7 @@ function CommentThread({
               </div>
               <p
                 className={`!mb-0 text-sm ${
-                  reply.hiddenAt
-                    ? "italic text-[#8c8c8c]"
-                    : "text-[#1f1f1f]"
+                  reply.hiddenAt ? "italic text-[#8c8c8c]" : "text-[#1f1f1f]"
                 }`}
               >
                 {reply.hiddenAt ? "该评论已被管理员隐藏" : reply.body}
@@ -172,12 +174,8 @@ function CommentThread({
 }
 
 export interface MarketplaceDetailReviewsProps {
-  ratings:
-    | { items: readonly RatingOutput[]; total: number }
-    | undefined;
-  comments:
-    | { items: readonly CommentOutput[]; total: number }
-    | undefined;
+  ratings: { items: readonly RatingOutput[]; total: number } | undefined;
+  comments: { items: readonly CommentOutput[]; total: number } | undefined;
   ratingsPending: boolean;
   commentsPending: boolean;
   isModerator: boolean;

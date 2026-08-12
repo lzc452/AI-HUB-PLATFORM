@@ -73,19 +73,21 @@ export function AppCard({ departmentName, entry }: AppCardProps) {
         <Text type="secondary" className="!text-xs">
           {channels} | {departmentName ?? entry.departmentId}{" "}
         </Text>
-        
+
         <div className="mt-auto flex items-center justify-between gap-4">
-          <span className="text-[#8c8c8c] !text-xs">{relativeUpdateText(entry.publishedAt)}</span>
+          <span className="text-[#8c8c8c] !text-xs">
+            {relativeUpdateText(entry.publishedAt)}
+          </span>
           <div className="flex items-center gap-3 text-[#8c8c8c]">
             <span className="inline-flex items-center gap-1">
               <StarFilled aria-hidden="true" className="text-[#fcb824]" />
-              <Text className="!text-xs">{entry.ratingAverage?.toFixed(1) ?? "暂无"}</Text>
+              <Text className="!text-xs">
+                {entry.ratingAverage?.toFixed(1) ?? "暂无"}
+              </Text>
             </span>
             <span className="inline-flex items-center gap-1 text-[#8c8c8c]">
               <LikeOutlined aria-hidden="true" />
-              <Text className="!text-xs">
-                {formatCount(entry.likeCount)}
-              </Text>
+              <Text className="!text-xs">{formatCount(entry.likeCount)}</Text>
             </span>
           </div>
         </div>

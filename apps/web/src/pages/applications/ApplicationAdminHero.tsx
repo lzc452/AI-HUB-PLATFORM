@@ -91,10 +91,7 @@ function HeroGeometry(): ReactNode {
           fill="url(#heroCubeA)"
           points="40,4 70,20 70,52 40,68 10,52 10,20"
         />
-        <polygon
-          fill="url(#heroCubeC)"
-          points="40,4 70,20 40,36 10,20"
-        />
+        <polygon fill="url(#heroCubeC)" points="40,4 70,20 40,36 10,20" />
         <polygon
           fill="url(#heroCubeB)"
           points="10,20 40,36 40,68 10,52"
@@ -106,10 +103,7 @@ function HeroGeometry(): ReactNode {
           fill="url(#heroCubeB)"
           points="28,2 50,14 50,38 28,50 6,38 6,14"
         />
-        <polygon
-          fill="url(#heroCubeC)"
-          points="28,2 50,14 28,26 6,14"
-        />
+        <polygon fill="url(#heroCubeC)" points="28,2 50,14 28,26 6,14" />
         <polygon
           fill="url(#heroCubeA)"
           points="6,14 28,26 28,50 6,38"

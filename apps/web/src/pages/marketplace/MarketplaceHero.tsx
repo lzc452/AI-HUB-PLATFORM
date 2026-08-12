@@ -31,7 +31,9 @@ export function MarketplaceHero({
   pageCount,
   sortMode,
 }: MarketplaceHeroProps) {
-  const totalText = total ? `共 ${total} 个应用 · 第 ${page} / ${pageCount} 页` : "";
+  const totalText = total
+    ? `共 ${total} 个应用 · 第 ${page} / ${pageCount} 页`
+    : "";
   const canPrev = page > 1;
   const canNext = page < pageCount;
 

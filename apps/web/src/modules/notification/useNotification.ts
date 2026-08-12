@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import {
-  showErrorMessage,
-  showSuccessMessage,
-} from "../../shared/ui/message";
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import { listNotifications, markNotificationRead } from "./notification.client";
 
 export function useNotifications(options?: { enabled?: boolean }) {
@@ -31,9 +28,7 @@ export function useMarkAllNotificationsRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (notificationIds: readonly string[]) => {
-      await Promise.all(
-        notificationIds.map((id) => markNotificationRead(id)),
-      );
+      await Promise.all(notificationIds.map((id) => markNotificationRead(id)));
     },
     onError: (error) => showErrorMessage(error, "全部标记已读失败"),
     onSuccess: async () => {

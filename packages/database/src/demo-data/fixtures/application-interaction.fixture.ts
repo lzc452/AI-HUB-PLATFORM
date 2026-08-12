@@ -351,7 +351,9 @@ const DELIVERY_ACTION_PLAN: readonly DeliveryActionPlan[] = Object.freeze([
 export interface AppInteractionFixtureData {
   applicationLikes: Array<Insertable<DatabaseSchema["application_likes"]>>;
   applicationRatings: Array<Insertable<DatabaseSchema["application_ratings"]>>;
-  applicationComments: Array<Insertable<DatabaseSchema["application_comments"]>>;
+  applicationComments: Array<
+    Insertable<DatabaseSchema["application_comments"]>
+  >;
   applicationReports: Array<Insertable<DatabaseSchema["application_reports"]>>;
   deliveryActions: Array<
     Insertable<DatabaseSchema["catalog_delivery_actions"]>
@@ -375,12 +377,13 @@ export function buildApplicationInteractionFixture(
 ): AppInteractionFixtureData {
   // ── likes (12) ──────────────────────────────────────────────────────────
 
-  const applicationLikes: Array<Insertable<DatabaseSchema["application_likes"]>> =
-    LIKES_PLAN.map((plan, i) => ({
-      application_id: IDS.application.published[plan.appIdx]!,
-      employee_id: plan.employeeId,
-      created_at: daysAgo(anchor, 25 - i),
-    }));
+  const applicationLikes: Array<
+    Insertable<DatabaseSchema["application_likes"]>
+  > = LIKES_PLAN.map((plan, i) => ({
+    application_id: IDS.application.published[plan.appIdx]!,
+    employee_id: plan.employeeId,
+    created_at: daysAgo(anchor, 25 - i),
+  }));
 
   // ── ratings (8) ─────────────────────────────────────────────────────────
 
@@ -389,8 +392,7 @@ export function buildApplicationInteractionFixture(
   > = RATINGS_PLAN.map((plan, i) => ({
     rating_id: IDS.rating[plan.ratingIdx]!,
     application_id: IDS.application.published[plan.appIdx]!,
-    application_version_id:
-      IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
+    application_version_id: IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
     employee_id: plan.employeeId,
     stars: plan.stars,
     body: plan.body,
@@ -413,8 +415,7 @@ export function buildApplicationInteractionFixture(
   > = COMMENTS_PLAN.map((plan, i) => ({
     comment_id: IDS.appComment[plan.commentIdx]!,
     application_id: IDS.application.published[plan.appIdx]!,
-    application_version_id:
-      IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
+    application_version_id: IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
     parent_comment_id:
       plan.parentCommentIdx !== null
         ? commentIdByPlanIdx.get(plan.parentCommentIdx)!
@@ -439,8 +440,7 @@ export function buildApplicationInteractionFixture(
     reason: plan.reason,
     status: plan.status,
     resolved_by_employee_id: plan.resolvedByEmployeeId,
-    resolved_at:
-      plan.status === "dismissed" ? daysAgo(anchor, 5 - i) : null,
+    resolved_at: plan.status === "dismissed" ? daysAgo(anchor, 5 - i) : null,
     created_at: daysAgo(anchor, 10 - i),
   }));
 
@@ -451,8 +451,7 @@ export function buildApplicationInteractionFixture(
   > = DELIVERY_ACTION_PLAN.map((plan, i) => ({
     action_id: IDS.deliveryAction[plan.actionIdx]!,
     application_id: IDS.application.published[plan.appIdx]!,
-    application_version_id:
-      IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
+    application_version_id: IDS.version[PUBLISHED_OFFSET + plan.appIdx]!,
     actor_employee_id: plan.actorEmployeeId,
     action_type: plan.actionType,
     channel: plan.channel,

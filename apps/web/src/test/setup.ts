@@ -50,6 +50,30 @@ beforeEach(() => {
       if (path.includes("/internal/notifications")) {
         return Response.json([]);
       }
+      if (path.includes("/internal/applications/admin-list")) {
+        return Response.json({
+          items: [
+            {
+              applicationId: "app-rd-perf-001",
+              name: "缁熶竴鐮斿彂鏁堣兘鏁版嵁鐪嬫澘",
+              summary: "",
+              categoryId: "cat-rd",
+              status: "published",
+              currentVersion: "v1.0.0",
+              currentVersionId: "version-rd-perf-001",
+              ownerName: "E0001",
+              departmentName: "研发部",
+              deliveryChannels: ["web"],
+              updatedAt: new Date().toISOString(),
+              isMine: true,
+              needsMyReview: false,
+            },
+          ],
+          page: 1,
+          pageSize: 10,
+          total: 1,
+        });
+      }
       return Response.json({}, { status: 404 });
     }),
   );

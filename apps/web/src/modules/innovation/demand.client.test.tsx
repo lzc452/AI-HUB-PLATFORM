@@ -8,7 +8,11 @@ describe("需求协作者客户端", () => {
       "fetch",
       vi.fn().mockResolvedValue(
         new Response(
-          JSON.stringify({ demandId: "d-1", employeeId: "e-2", role: "operator" }),
+          JSON.stringify({
+            demandId: "d-1",
+            employeeId: "e-2",
+            role: "operator",
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         ),
       ),

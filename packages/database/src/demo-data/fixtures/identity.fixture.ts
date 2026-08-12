@@ -16,9 +16,13 @@ import { daysAgo } from "../time-utils.js";
 export interface IdentityFixtureData {
   departments: Array<Insertable<DatabaseSchema["departments"]>>;
   employees: Array<Insertable<DatabaseSchema["employees"]>>;
-  departmentMemberships: Array<Insertable<DatabaseSchema["department_memberships"]>>;
+  departmentMemberships: Array<
+    Insertable<DatabaseSchema["department_memberships"]>
+  >;
   employeeRoles: Array<Insertable<DatabaseSchema["employee_roles"]>>;
-  identityAuditEvents: Array<Insertable<DatabaseSchema["identity_audit_events"]>>;
+  identityAuditEvents: Array<
+    Insertable<DatabaseSchema["identity_audit_events"]>
+  >;
 }
 
 /**
@@ -54,6 +58,7 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
       status: "active" as const,
       primary_department_id: a.primaryDepartmentId,
       password_reset_required: false,
+      password_hash: "",
       employee_number: null,
       created_at: daysAgo(anchor, 90),
       updated_at: daysAgo(anchor, 90),
@@ -94,11 +99,9 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
 
   // 1 extra event: the super admin updates the regular employee's profile.
   const extraEvent: Insertable<DatabaseSchema["identity_audit_events"]> = {
-    actor_employee_id:
-      DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
+    actor_employee_id: DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
     event_type: "profile_updated",
-    subject_employee_id:
-      DEMO_ACCOUNT_DEFINITIONS[0]!.employeeId,
+    subject_employee_id: DEMO_ACCOUNT_DEFINITIONS[0]!.employeeId,
     details: { field: "display_name" },
     created_at: daysAgo(anchor, 15),
   };

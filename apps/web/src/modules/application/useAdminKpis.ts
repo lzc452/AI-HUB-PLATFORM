@@ -12,9 +12,7 @@ export interface AdminKpiSummary {
 const QUERY_KEY = ["applications", "admin-kpis"] as const;
 
 /**
- * 应用管理 KPI 摘要：与列表解耦的独立查询。
- * 当前阶段以 pageSize=200 拉取全量并在前端聚合（mock 数据 42 条）；
- * 后续对接 `GET /internal/applications/admin-summary` 时只需替换 queryFn。
+ * 应用管理 KPI 摘要：使用真实应用管理列表聚合当前权限范围内的数据。
  */
 export function useAdminKpis() {
   const queryClient = useQueryClient();

@@ -19,7 +19,9 @@ export function KpiCard({ icon, label, trend, value }: KpiCardProps) {
       {/* 背景颜色 随机 colors */}
       <div
         className="mb-2 w-12 h-12 flex items-center gap-2 rounded-full justify-center"
-        style={{ backgroundColor: colors[Math.floor(Math.random() * colors.length)] }}
+        style={{
+          backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+        }}
       >
         {icon}
       </div>

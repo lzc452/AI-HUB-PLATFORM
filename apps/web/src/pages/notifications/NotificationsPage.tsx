@@ -1,13 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Avatar,
-  Button,
-  Card,
-  Pagination,
-  Spin,
-  Tabs,
-  Typography,
-} from "antd";
+import { Avatar, Button, Card, Pagination, Spin, Tabs, Typography } from "antd";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { MessageError } from "../../shared/ui/message";
@@ -17,7 +9,10 @@ import {
 } from "../../modules/notification/useNotification";
 import type { NotificationRecord } from "../../modules/notification/notification.client";
 import { NotificationDetailModal } from "./NotificationDetailModal";
-import { formatRelativeTime, resolveNotificationMeta } from "./notificationMeta";
+import {
+  formatRelativeTime,
+  resolveNotificationMeta,
+} from "./notificationMeta";
 
 const { Text, Title } = Typography;
 
@@ -54,7 +49,8 @@ export default function NotificationsPage() {
   }, [filtered, page, pageSize]);
 
   const unreadIds = useMemo(
-    () => data?.filter((n) => n.readAt === null).map((n) => n.notificationId) ?? [],
+    () =>
+      data?.filter((n) => n.readAt === null).map((n) => n.notificationId) ?? [],
     [data],
   );
 
@@ -100,11 +96,7 @@ export default function NotificationsPage() {
         </div>
       ) : null}
 
-      <MessageError
-        active={isError}
-        cause={error}
-        title="通知加载失败"
-      />
+      <MessageError active={isError} cause={error} title="通知加载失败" />
 
       {!isPending && data && data.length === 0 ? (
         <EmptyBlock description="暂无通知" />
@@ -159,15 +151,14 @@ export default function NotificationsPage() {
                     <div className="min-w-0 flex-1">
                       <Text
                         className={`block truncate text-sm ${
-                          isUnread ? "font-semibold text-[#1f1f1f]" : "text-[#1f1f1f]"
+                          isUnread
+                            ? "font-semibold text-[#1f1f1f]"
+                            : "text-[#1f1f1f]"
                         }`}
                       >
                         {meta.title}
                       </Text>
-                      <Text
-                        className="block truncate text-sm"
-                        type="secondary"
-                      >
+                      <Text className="block truncate text-sm" type="secondary">
                         {meta.subtitle}
                       </Text>
                     </div>
@@ -187,9 +178,7 @@ export default function NotificationsPage() {
       {!isPending && total > 0 ? (
         <Card className="border-[#d9d9d9]" styles={{ body: { padding: 12 } }}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Text className="text-sm text-[#595959]">
-              共 {total} 条
-            </Text>
+            <Text className="text-sm text-[#595959]">共 {total} 条</Text>
             <Pagination
               current={page}
               onChange={setPage}

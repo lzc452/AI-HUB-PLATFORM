@@ -76,7 +76,7 @@ describe("buildCatalogFixture", () => {
     );
     for (const m of fixture.metadata) {
       if (m.replacement_application_id !== null) {
-        expect(metadataAppIds.has(m.replacement_application_id)).toBe(true);
+        expect(metadataAppIds.has(m.replacement_application_id!)).toBe(true);
       }
     }
   });
@@ -146,7 +146,7 @@ describe("buildCatalogFixture", () => {
     ]);
     for (const a of fixture.audiences) {
       if (a.department_id !== null) {
-        expect(validDepts.has(a.department_id)).toBe(true);
+        expect(validDepts.has(a.department_id!)).toBe(true);
       }
     }
   });
@@ -161,7 +161,7 @@ describe("buildCatalogFixture", () => {
     ]);
     for (const a of fixture.audiences) {
       if (a.employee_id !== null) {
-        expect(validEmployees.has(a.employee_id)).toBe(true);
+        expect(validEmployees.has(a.employee_id!)).toBe(true);
       }
     }
   });

@@ -128,7 +128,11 @@ class MemoryInteractionRepository implements InteractionRepository {
     this.audits.push(input.eventType);
   }
 
-  async listRatings(input: { applicationId: string; page: number; pageSize: number }) {
+  async listRatings(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }) {
     const filtered = this.ratings.filter(
       (r) => r.applicationId === input.applicationId,
     );
@@ -139,11 +143,14 @@ class MemoryInteractionRepository implements InteractionRepository {
     return { items: paged, total: filtered.length };
   }
 
-  async listComments(input: { applicationId: string; page: number; pageSize: number }) {
+  async listComments(input: {
+    applicationId: string;
+    page: number;
+    pageSize: number;
+  }) {
     const roots = this.comments.filter(
       (c) =>
-        c.applicationId === input.applicationId &&
-        c.parentCommentId === null,
+        c.applicationId === input.applicationId && c.parentCommentId === null,
     );
     const paged = roots.slice(
       (input.page - 1) * input.pageSize,

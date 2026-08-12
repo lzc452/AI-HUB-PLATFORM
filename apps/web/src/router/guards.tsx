@@ -20,13 +20,7 @@ export function RequireAuth() {
     );
   }
   if (!actor) {
-    return (
-      <MessageError
-        active
-        cause={error}
-        title="无法恢复当前身份"
-      />
-    );
+    return <MessageError active cause={error} title="无法恢复当前身份" />;
   }
 
   return <Outlet />;

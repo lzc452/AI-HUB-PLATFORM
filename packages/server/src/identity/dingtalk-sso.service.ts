@@ -1,9 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { IdentityService } from "./identity.service.js";
-import type {
-  IdentityRepository,
-  LoginResult,
-} from "./identity.types.js";
+import type { IdentityRepository, LoginResult } from "./identity.types.js";
 import type { DingTalkApiPort } from "./dingtalk-api.client.js";
 
 const SSO_TTL_MS = 10 * 60 * 1000; // 10 minutes for OAuth flow
@@ -74,9 +71,7 @@ export class DingTalkSsoService {
       expiresAt,
     });
 
-    const redirectUrl = new URL(
-      "https://login.dingtalk.com/oauth2/auth",
-    );
+    const redirectUrl = new URL("https://login.dingtalk.com/oauth2/auth");
     redirectUrl.searchParams.set("response_type", "code");
     redirectUrl.searchParams.set("client_id", this.config.clientId);
     redirectUrl.searchParams.set("redirect_uri", this.config.redirectUri);
@@ -115,9 +110,7 @@ export class DingTalkSsoService {
     const bindingHash = sha256hex(browserBindingCookie);
 
     const transaction =
-      await this.repository.findDingTalkSsoTransactionByStateHash(
-        stateHash,
-      );
+      await this.repository.findDingTalkSsoTransactionByStateHash(stateHash);
 
     if (transaction === null) {
       throw new Error("DINGTALK_SSO_STATE_INVALID");
@@ -197,10 +190,9 @@ export class DingTalkSsoService {
     }
 
     // Check if this DingTalk user is already bound to someone else.
-    const alreadyBound =
-      await this.repository.findEmployeeByDingTalkUserId(
-        transaction.dingtalkUserId,
-      );
+    const alreadyBound = await this.repository.findEmployeeByDingTalkUserId(
+      transaction.dingtalkUserId,
+    );
     if (alreadyBound !== null) {
       throw new Error("DINGTALK_SSO_ALREADY_BOUND");
     }
@@ -212,17 +204,13 @@ export class DingTalkSsoService {
 
     // For now, search by dingtalkUserId matching employee_id directly
     // (since employee_number column may not be populated yet).
-    const employee =
-      await this.repository.findEmployee(standardized);
+    const employee = await this.repository.findEmployee(standardized);
 
     if (employee === null) {
       throw new Error("DINGTALK_SSO_USER_NOT_FOUND");
     }
 
-    if (
-      employee.status === "disabled" ||
-      employee.status === "archived"
-    ) {
+    if (employee.status === "disabled" || employee.status === "archived") {
       throw new Error("DINGTALK_SSO_ACCOUNT_DISABLED");
     }
 

@@ -60,10 +60,9 @@ export function startDingTalkSso(
 
 /** Complete DingTalk SSO after OAuth callback. */
 export function completeDingTalkSso(): Promise<LoginResponse> {
-  return apiFetch<LoginResponse>(
-    "/internal/identity/login/dingtalk/complete",
-    { method: "POST" },
-  );
+  return apiFetch<LoginResponse>("/internal/identity/login/dingtalk/complete", {
+    method: "POST",
+  });
 }
 
 export function logoutSession(sessionId: string): Promise<void> {
