@@ -74,11 +74,48 @@ export class InteractionService {
     });
   }
 
-  async reply(
+  /** 普通员工创建根评论（最大两级：根评论 + 一级回复）。 */
+  async createComment(
     actor: ActorContext,
     input: {
       applicationId: string;
-      parentCommentId: string | null;
+      body: string;
+      displayAnonymously?: boolean;
+    },
+  ) {
+    await this.assertAllowed(actor, "interact");
+    await this.requireApplication(input.applicationId);
+    if (input.body.trim().length === 0) {
+      throw new Error("COMMENT_BODY_REQUIRED");
+    }
+    const versionId = await this.repository.findCurrentVersionId(
+      input.applicationId,
+    );
+    return this.repository.withTransaction(async (repository) => {
+      const comment = await repository.createComment({
+        applicationId: input.applicationId,
+        applicationVersionId: versionId,
+        parentCommentId: null,
+        authorEmployeeId: actor.employeeId,
+        body: input.body.trim(),
+        displayAnonymously: input.displayAnonymously ?? false,
+        commentKind: "user",
+        hiddenAt: null,
+      });
+      await repository.emitOutbox?.({
+        applicationId: input.applicationId,
+        eventType: "interaction.comment.created",
+      });
+      return comment;
+    });
+  }
+
+  /** 所有者/维护者回复一级评论（官方回复，保留两级深度约束）。 */
+  async replyComment(
+    actor: ActorContext,
+    input: {
+      applicationId: string;
+      parentCommentId: string;
       body: string;
     },
   ) {
@@ -90,14 +127,15 @@ export class InteractionService {
     ) {
       throw new Error("OFFICIAL_REPLY_FORBIDDEN");
     }
-    if (input.parentCommentId !== null) {
-      const parent = await this.repository.findComment(input.parentCommentId);
-      if (parent === null || parent.applicationId !== input.applicationId) {
-        throw new Error("COMMENT_NOT_FOUND");
-      }
-      if (parent.parentCommentId !== null)
-        throw new Error("COMMENT_DEPTH_EXCEEDED");
+    if (input.body.trim().length === 0) {
+      throw new Error("COMMENT_BODY_REQUIRED");
     }
+    const parent = await this.repository.findComment(input.parentCommentId);
+    if (parent === null || parent.applicationId !== input.applicationId) {
+      throw new Error("COMMENT_NOT_FOUND");
+    }
+    if (parent.parentCommentId !== null)
+      throw new Error("COMMENT_DEPTH_EXCEEDED");
     const versionId = await this.repository.findCurrentVersionId(
       input.applicationId,
     );
@@ -107,8 +145,9 @@ export class InteractionService {
         applicationVersionId: versionId,
         parentCommentId: input.parentCommentId,
         authorEmployeeId: actor.employeeId,
-        body: input.body,
+        body: input.body.trim(),
         displayAnonymously: false,
+        commentKind: "official",
         hiddenAt: null,
       });
       await repository.emitOutbox?.({

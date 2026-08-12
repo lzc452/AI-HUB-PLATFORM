@@ -1,4 +1,4 @@
-import { Modal } from "antd";
+import { Form, Input, Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -17,7 +17,7 @@ import { useAdminApplicationList } from "../../modules/application/useAdminAppli
 import { useAdminKpis } from "../../modules/application/useAdminKpis";
 import {
   createApplication,
-  submitApplicationReview,
+  publishApplication,
 } from "../../modules/application/application.client";
 
 import { ApplicationAdminHero } from "./ApplicationAdminHero";
@@ -87,6 +87,9 @@ export default function ApplicationsPage() {
     action: ApplicationRowAction;
     row: AdminApplicationRow;
   } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm] = Form.useForm<{ name: string; summary: string }>();
 
   // KPI 与 Tab 计数由独立的摘要接口提供，与列表筛选/分页完全解耦。
   const kpiNumbers = kpisQuery.data ?? {
@@ -138,40 +141,68 @@ export default function ApplicationsPage() {
         setPendingAction(null);
       },
       onOk: async () => {
-        // 暂未接入真实接口，模拟成功后刷新列表并提示。
+        // 语义接线：review 走审核工作台；edit 走创作者中心；publish 调真实发布接口。
         if (action === "review" && row.currentVersionId) {
-          await submitApplicationReview(row.currentVersionId);
-        } else if (["view", "version", "edit"].includes(action)) {
+          window.location.assign(
+            `/applications/${encodeURIComponent(row.applicationId)}/review`,
+          );
+          return;
+        }
+        if (action === "edit") {
+          window.location.assign(
+            `/creator/${encodeURIComponent(row.applicationId)}`,
+          );
+          return;
+        }
+        if (action === "view") {
           window.location.assign(
             `/applications/${encodeURIComponent(row.applicationId)}`,
           );
           return;
-        } else {
-          throw new Error("该操作需要在应用工作台中完成");
         }
-        showSuccessMessage(plan.success);
-        list.refetch();
+        if (action === "version") {
+          window.location.assign(
+            `/applications/${encodeURIComponent(row.applicationId)}/versions`,
+          );
+          return;
+        }
+        if (action === "publish" && row.currentVersionId) {
+          await publishApplication(row.applicationId, row.currentVersionId);
+          showSuccessMessage(plan.success);
+          list.refetch();
+          return;
+        }
+        // delete / republish：V1 后端无对应状态机入口，明确提示，不伪装成功。
+        showErrorMessage(new Error(plan.content), "操作不可用");
+        modal.destroy();
       },
       title: plan.title,
     });
   }, [list, pendingAction]);
 
   const handleCreate = () => {
-    const name = window.prompt("请输入应用名称");
-    if (!name?.trim()) {
-      return;
-    }
-    const summary = window.prompt("请输入应用简介") ?? "";
-    void createApplication({ name: name.trim(), summary: summary.trim() })
-      .then((application) => {
-        showSuccessMessage("应用创建成功");
-        window.location.assign(
-          `/applications/${encodeURIComponent(application.applicationId)}`,
-        );
-      })
-      .catch((error: unknown) => {
-        showErrorMessage(error, "创建应用失败");
+    setCreateOpen(true);
+  };
+
+  const handleCreateSubmit = async () => {
+    const values = await createForm.validateFields();
+    setCreating(true);
+    try {
+      const application = await createApplication({
+        name: values.name.trim(),
+        summary: values.summary.trim(),
       });
+      showSuccessMessage("应用创建成功");
+      setCreateOpen(false);
+      createForm.resetFields();
+      window.location.assign(
+        `/applications/${encodeURIComponent(application.applicationId)}`,
+      );
+    } catch (error: unknown) {
+      showErrorMessage(error, "创建应用失败");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -234,6 +265,37 @@ export default function ApplicationsPage() {
           />
         ) : null}
       </div>
+
+      <Modal
+        cancelText="取消"
+        confirmLoading={creating}
+        okText="创建"
+        onCancel={() => setCreateOpen(false)}
+        onOk={() => void handleCreateSubmit()}
+        open={createOpen}
+        title="创建应用"
+      >
+        <Form form={createForm} layout="vertical" name="create-application">
+          <Form.Item
+            label="应用名称"
+            name="name"
+            rules={[{ required: true, message: "请输入应用名称" }]}
+          >
+            <Input maxLength={60} placeholder="例如：智能考勤助手" />
+          </Form.Item>
+          <Form.Item
+            label="应用简介"
+            name="summary"
+            rules={[{ required: true, message: "请输入应用简介" }]}
+          >
+            <Input.TextArea
+              maxLength={200}
+              placeholder="一句话描述应用价值"
+              rows={3}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
@@ -253,10 +315,10 @@ function describeAction(
   switch (action) {
     case "delete":
       return {
-        content: `确认删除草稿「${row.name}」吗？该操作无法撤销。`,
+        content: `「${row.name}」为草稿，V1 暂不支持在管理台删除，请在创作者中心处理。`,
         danger: true,
-        okText: "删除",
-        success: "草稿已删除",
+        okText: "知道了",
+        success: "",
         title: "删除草稿",
       };
     case "edit":
@@ -269,11 +331,19 @@ function describeAction(
       };
     case "republish":
       return {
-        content: `对「${row.name}」发起重新发布流程？`,
+        content: `「${row.name}」已下架。重新发布需重新提交审核并走发布流程，请在应用工作台中操作。`,
         danger: false,
-        okText: "提交",
-        success: "已提交重新发布申请",
+        okText: "知道了",
+        success: "",
         title: "重新发布",
+      };
+    case "publish":
+      return {
+        content: `确认将「${row.name}」发布到市场？发布后所有目标受众可见。`,
+        danger: false,
+        okText: "确认发布",
+        success: "应用已发布到市场",
+        title: "发布应用",
       };
     case "review":
       return {

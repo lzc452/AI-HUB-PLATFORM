@@ -6,6 +6,7 @@ import type {
   CatalogRepository,
   CatalogSearchInput,
 } from "./catalog.types.js";
+import type { DeliveryChannel } from "../application/application.types.js";
 
 type CatalogRow = {
   applicationId: string;
@@ -194,6 +195,8 @@ export class KyselyCatalogRepository implements CatalogRepository {
     actorEmployeeId: string;
     actionType: "web_redirect" | "package_download" | "qr_display";
     channel?: string | null;
+    idempotencyKey?: string | null;
+    status?: "initiated" | "served" | "failed";
   }): Promise<void> {
     await this.db
       .insertInto("catalog_delivery_actions")
@@ -203,8 +206,50 @@ export class KyselyCatalogRepository implements CatalogRepository {
         actor_employee_id: input.actorEmployeeId,
         action_type: input.actionType,
         channel: input.channel ?? null,
+        idempotency_key: input.idempotencyKey ?? null,
+        status: input.status ?? "initiated",
       })
       .execute();
+  }
+
+  async findDelivery(
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<{ entryUrl: string; enabled: boolean } | null> {
+    const row = await this.db
+      .selectFrom("application_deliveries")
+      .select(["entry_url", "enabled"])
+      .where("application_id", "=", applicationId)
+      .where("channel", "=", channel)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : { entryUrl: row.entry_url, enabled: row.enabled };
+  }
+
+  async findDeliveryAssetStorageKey(
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("application_delivery_assets")
+      .innerJoin(
+        "application_assets",
+        "application_assets.asset_id",
+        "application_delivery_assets.asset_id",
+      )
+      .innerJoin(
+        "application_deliveries",
+        "application_deliveries.delivery_id",
+        "application_delivery_assets.delivery_id",
+      )
+      .select("application_assets.storage_key")
+      .where("application_deliveries.application_id", "=", applicationId)
+      .where("application_deliveries.channel", "=", channel)
+      .orderBy("application_delivery_assets.sort_order", "asc")
+      .limit(1)
+      .executeTakeFirst();
+    return row?.storage_key ?? null;
   }
 
   async getRiskDescription(applicationId: string): Promise<string | null> {

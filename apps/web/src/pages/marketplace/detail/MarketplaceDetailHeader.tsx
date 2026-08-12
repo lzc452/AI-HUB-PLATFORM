@@ -1,8 +1,9 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
-import { Button, Rate, Tag, Tooltip, Typography } from "antd";
+import { Button, Dropdown, Rate, Tag, Tooltip, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
+import type { DeliveryChannel } from "../../../modules/marketplace/marketplace.client";
 import {
   channelText,
   formatCount,
@@ -20,6 +21,8 @@ export interface MarketplaceDetailHeaderProps {
   entry: CatalogEntry;
   onLike: () => void;
   onRate: (stars: number) => void;
+  onResolve: (channel: DeliveryChannel) => void;
+  resolving: boolean;
   ratingDisabled: boolean;
   ratingPending: boolean;
   likePending: boolean;
@@ -31,6 +34,8 @@ export function MarketplaceDetailHeader({
   likePending,
   onLike,
   onRate,
+  onResolve,
+  resolving,
   ratingDisabled,
   ratingPending,
 }: MarketplaceDetailHeaderProps) {
@@ -42,6 +47,7 @@ export function MarketplaceDetailHeader({
   const departmentLabel = departmentName ?? entry.departmentId;
   const ownerName = deriveOwner(entry.applicationId);
   const ratingLabel = entry.ratingAverage?.toFixed(1) ?? "暂无";
+  const primaryChannel: DeliveryChannel | undefined = entry.deliveryChannels[0];
 
   return (
     <header
@@ -105,11 +111,25 @@ export function MarketplaceDetailHeader({
           </div>
         </div>
         <div className="flex shrink-0 gap-2">
-          <Tooltip title="交付动作接口待接入">
-            <Button disabled type="primary">
-              立即使用
+          <Dropdown
+            menu={{
+              items: entry.deliveryChannels.map((channel) => ({
+                key: channel,
+                label: (
+                  <span onClick={() => onResolve(channel)} role="menuitem">
+                    {channelText[channel]}
+                  </span>
+                ),
+              })),
+            }}
+            trigger={["click"]}
+          >
+            <Button loading={resolving} type="primary">
+              {primaryChannel !== undefined
+                ? `立即使用（${channelText[primaryChannel]}）`
+                : "立即使用"}
             </Button>
-          </Tooltip>
+          </Dropdown>
           <Tooltip title="收藏功能待接入">
             <Button
               aria-label="收藏"
@@ -143,7 +163,6 @@ export function MarketplaceDetailHeader({
         <span className="inline-flex items-center gap-2 text-sm text-[#595959]">
           我的评分：
           <Rate
-            allowHalf
             aria-label="为应用评分"
             disabled={ratingDisabled}
             onChange={(stars) => onRate(stars)}

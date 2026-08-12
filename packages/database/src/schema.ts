@@ -22,6 +22,14 @@ export interface DepartmentsTable {
   name: string;
   parent_department_id: string | null;
   source: "local" | "dingtalk";
+  status: ColumnType<
+    "active" | "disabled",
+    "active" | "disabled" | undefined,
+    "active" | "disabled"
+  >;
+  manager_employee_id: string | null;
+  external_id: string | null;
+  last_synced_at: Date | null;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
@@ -49,6 +57,14 @@ export interface RolesTable {
   name: string;
   permissions: readonly string[];
   is_system: boolean;
+  status: ColumnType<
+    "active" | "disabled",
+    "active" | "disabled" | undefined,
+    "active" | "disabled"
+  >;
+  created_by_employee_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
 export interface EmployeeRolesTable {
@@ -96,6 +112,32 @@ export interface DingTalkSyncRunsTable {
   started_at: ColumnType<Date, Date | undefined, never>;
   finished_at: Date | null;
   summary: unknown;
+}
+
+export interface IdentitySyncRunItemsTable {
+  sync_run_item_id: Generated<string>;
+  sync_run_id: string;
+  object_type: string;
+  object_id: string;
+  status: ColumnType<string, string | undefined, string>;
+  processed_count: number;
+  success_count: number;
+  failure_count: number;
+  error_code: string | null;
+  started_at: Date | null;
+  finished_at: Date | null;
+  retry_of_item_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface IdentitySyncConfigTable {
+  id: boolean;
+  enabled: boolean;
+  schedule: string | null;
+  external_org_id: string | null;
+  secret_reference: string | null;
+  last_updated_by_employee_id: string | null;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
 export interface IdentityAuditEventsTable {
@@ -161,6 +203,47 @@ export interface ApplicationAssetsTable {
   storage_key: string;
   mime_type: string;
   size_bytes: number;
+  sort_order: number;
+  sha256: string | null;
+  scan_status: ColumnType<
+    "pending" | "passed" | "failed",
+    "pending" | "passed" | "failed" | undefined,
+    "pending" | "passed" | "failed"
+  >;
+  uploaded_by_employee_id: string | null;
+  object_etag: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface ApplicationArtifactUploadsTable {
+  upload_id: Generated<string>;
+  application_id: string;
+  uploaded_by_employee_id: string;
+  object_key: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  sha256: string | null;
+  signature: string | null;
+  part_count: number;
+  upload_status: ColumnType<string, string | undefined, string>;
+  scan_status: ColumnType<
+    "pending" | "passed" | "failed",
+    "pending" | "passed" | "failed" | undefined,
+    "pending" | "passed" | "failed"
+  >;
+  error_code: string | null;
+  expires_at: Date;
+  completed_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationDeliveryAssetsTable {
+  delivery_id: string;
+  platform: string;
+  asset_id: string;
+  version: string | null;
   sort_order: number;
   created_at: ColumnType<Date, Date | undefined, never>;
 }
@@ -268,6 +351,14 @@ export interface CatalogDeliveryActionsTable {
   actor_employee_id: string;
   action_type: "web_redirect" | "package_download" | "qr_display";
   channel: string | null;
+  idempotency_key: string | null;
+  status: ColumnType<
+    "initiated" | "served" | "failed",
+    "initiated" | "served" | "failed" | undefined,
+    "initiated" | "served" | "failed"
+  >;
+  completed_at: Date | null;
+  failure_code: string | null;
   occurred_at: ColumnType<Date, Date | undefined, Date>;
 }
 
@@ -297,9 +388,60 @@ export interface ApplicationCommentsTable {
   author_employee_id: string;
   body: string;
   display_anonymously: boolean;
+  comment_kind: ColumnType<
+    "user" | "official",
+    "user" | "official" | undefined,
+    "user" | "official"
+  >;
   hidden_at: Date | null;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface SecurityAuditEventsTable {
+  audit_event_id: Generated<string>;
+  trace_id: string | null;
+  module: string;
+  action: string;
+  actor_employee_id: string | null;
+  subject: string | null;
+  result: ColumnType<string, string | undefined, string>;
+  risk: ColumnType<string, string | undefined, string>;
+  ip_address: string | null;
+  user_agent: string | null;
+  details: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface SecurityAuditExportJobsTable {
+  export_job_id: Generated<string>;
+  requested_by_employee_id: string;
+  filter_snapshot: unknown;
+  status: ColumnType<string, string | undefined, string>;
+  result_storage_key: string | null;
+  expires_at: Date | null;
+  failure_code: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  completed_at: Date | null;
+}
+
+export interface ApplicationFeedbackTable {
+  feedback_id: Generated<string>;
+  application_id: string;
+  application_version_id: string | null;
+  creator_employee_id: string;
+  type: "bug" | "suggestion" | "content_issue";
+  body: string;
+  status: ColumnType<
+    "open" | "in_progress" | "resolved" | "closed",
+    "open" | "in_progress" | "resolved" | "closed" | undefined,
+    "open" | "in_progress" | "resolved" | "closed"
+  >;
+  assignee_employee_id: string | null;
+  resolution: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+  resolved_at: Date | null;
 }
 
 export interface ApplicationReportsTable {
@@ -525,11 +667,15 @@ export interface DatabaseSchema {
   request_replay_nonces: RequestReplayNoncesTable;
   dingtalk_bindings: DingTalkBindingsTable;
   dingtalk_sync_runs: DingTalkSyncRunsTable;
+  identity_sync_run_items: IdentitySyncRunItemsTable;
+  identity_sync_config: IdentitySyncConfigTable;
   identity_audit_events: IdentityAuditEventsTable;
   applications: ApplicationsTable;
   application_versions: ApplicationVersionsTable;
   application_deliveries: ApplicationDeliveriesTable;
   application_assets: ApplicationAssetsTable;
+  application_artifact_uploads: ApplicationArtifactUploadsTable;
+  application_delivery_assets: ApplicationDeliveryAssetsTable;
   application_version_snapshots: ApplicationVersionSnapshotsTable;
   application_validation_checks: ApplicationValidationChecksTable;
   application_reviews: ApplicationReviewsTable;
@@ -546,6 +692,9 @@ export interface DatabaseSchema {
   application_ratings: ApplicationRatingsTable;
   application_comments: ApplicationCommentsTable;
   application_reports: ApplicationReportsTable;
+  application_feedback: ApplicationFeedbackTable;
+  security_audit_events: SecurityAuditEventsTable;
+  security_audit_export_jobs: SecurityAuditExportJobsTable;
   notifications: NotificationsTable;
   ai_demands: AiDemandsTable;
   ai_demand_collaborators: AiDemandCollaboratorsTable;

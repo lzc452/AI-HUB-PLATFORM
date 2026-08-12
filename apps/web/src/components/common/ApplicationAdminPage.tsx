@@ -95,6 +95,7 @@ export function ApplicationNavigation() {
 }
 
 export interface ApplicationAdminPageProps {
+  actions?: React.ReactNode;
   children: React.ReactNode;
   description: string;
   title: string;
@@ -102,6 +103,7 @@ export interface ApplicationAdminPageProps {
 }
 
 export function ApplicationAdminPage({
+  actions,
   children,
   description,
   title,
@@ -182,6 +184,7 @@ export function ApplicationAdminPage({
         </div>
 
         <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {actions}
           {isDetail ? (
             <>
               <Button

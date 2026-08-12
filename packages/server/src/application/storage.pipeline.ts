@@ -131,4 +131,24 @@ export class ArtifactPipeline implements ArtifactVerificationPort {
     }
     return result;
   }
+
+  /**
+   * 注册一个已通过校验的 artifact（大文件单请求上传路径使用）。
+   * 上传完成时由外部完成 digest/scan/verify 校验后调用，使后续 createVersion 的
+   * verifyArtifact 可以命中，避免大文件经内存 chunk Map 承载。
+   */
+  async registerVerifiedArtifact(input: {
+    artifactKey: string;
+    sha256: string;
+    signature: string;
+  }): Promise<ArtifactVerificationResult> {
+    const result = {
+      accepted: true,
+      scanStatus: "passed",
+      sha256: input.sha256,
+    } as const;
+    this.verifications.set(input.artifactKey, result);
+    this.verifiedSignatures.set(input.artifactKey, input.signature);
+    return result;
+  }
 }

@@ -139,6 +139,12 @@ export class CommentRecordDto {
   displayAnonymously!: boolean;
 
   @ApiPropertyOptional({
+    description: "评论类型：user=普通评论，official=官方回复",
+    enum: ["user", "official"],
+  })
+  commentKind?: "user" | "official";
+
+  @ApiPropertyOptional({
     description: "隐藏时间（ISO 8601），未隐藏为 null",
     type: String,
     format: "date-time",

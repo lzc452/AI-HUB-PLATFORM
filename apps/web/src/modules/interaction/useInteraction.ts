@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import {
+  createComment,
+  createFeedback,
   hideComment,
   listComments,
+  listMyFeedback,
   listRatings,
   rateApplication,
   restoreComment,
@@ -91,5 +94,45 @@ export function useRestoreComment(applicationId: string | undefined) {
       });
       showSuccessMessage("评论已恢复");
     },
+  });
+}
+
+export function useCreateComment(applicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { parentCommentId?: string | null; body: string }) =>
+      createComment(applicationId as string, input),
+    onError: (error) => showErrorMessage(error, "发表评论失败"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["interactions", "comments", applicationId],
+      });
+      showSuccessMessage("评论已发表");
+    },
+  });
+}
+
+export function useCreateFeedback(applicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      type: "bug" | "suggestion" | "content_issue";
+      body: string;
+    }) => createFeedback(applicationId as string, input),
+    onError: (error) => showErrorMessage(error, "提交反馈失败"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["interactions", "feedback", applicationId],
+      });
+      showSuccessMessage("反馈已提交");
+    },
+  });
+}
+
+export function useMyFeedback(applicationId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(applicationId),
+    queryFn: () => listMyFeedback(applicationId as string),
+    queryKey: ["interactions", "feedback", applicationId],
   });
 }

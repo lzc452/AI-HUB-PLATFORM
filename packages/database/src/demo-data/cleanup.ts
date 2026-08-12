@@ -108,8 +108,14 @@ const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
 
   // ═══ ROOT ENTITY TABLES ═══
 
-  { table: "applications", where: `application_id::text LIKE '00000001-%' OR owner_employee_id LIKE 'DEMO-%' OR maintainer_employee_id LIKE 'DEMO-%'` },
-  { table: "ai_demands", where: `demand_id::text LIKE '00000010-%' OR requester_employee_id LIKE 'DEMO-%'` },
+  {
+    table: "applications",
+    where: `application_id::text LIKE '00000001-%' OR owner_employee_id LIKE 'DEMO-%' OR maintainer_employee_id LIKE 'DEMO-%'`,
+  },
+  {
+    table: "ai_demands",
+    where: `demand_id::text LIKE '00000010-%' OR requester_employee_id LIKE 'DEMO-%'`,
+  },
 
   {
     table: "notifications",
@@ -176,9 +182,7 @@ const PROTECTED_TABLES: readonly string[] = Object.freeze([
   "analytics_audit_events",
 ]);
 
-export async function cleanDemoData(
-  db: Kysely<DatabaseSchema>,
-): Promise<void> {
+export async function cleanDemoData(db: Kysely<DatabaseSchema>): Promise<void> {
   for (const table of PROTECTED_TABLES) {
     await sql`ALTER TABLE ${sql.ref(table)} DISABLE TRIGGER ALL`.execute(db);
   }

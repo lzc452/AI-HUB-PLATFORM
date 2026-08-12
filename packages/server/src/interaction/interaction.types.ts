@@ -26,6 +26,7 @@ export interface CommentRecord {
   authorEmployeeId: string;
   body: string;
   displayAnonymously: boolean;
+  commentKind: "user" | "official";
   hiddenAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

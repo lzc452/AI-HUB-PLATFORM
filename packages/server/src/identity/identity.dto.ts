@@ -181,3 +181,83 @@ export class RevokeSessionsResultDto {
   @ApiProperty({ type: Number, description: "撤销的会话数量", example: 2 })
   revoked!: number;
 }
+
+/** 员工分页列表结果。 */
+export class EmployeePageResultDto {
+  @ApiProperty({ type: EmployeeSummaryDto, isArray: true })
+  items!: EmployeeSummaryDto[];
+
+  @ApiProperty({ type: Number })
+  total!: number;
+}
+
+/** 更新员工请求。 */
+export class UpdateEmployeeRequestDto {
+  @ApiPropertyOptional({ type: String, description: "显示名" })
+  displayName?: string;
+
+  @ApiPropertyOptional({
+    description: "状态",
+    enum: ["active", "disabled", "pending_binding"],
+  })
+  status?: "active" | "disabled" | "pending_binding";
+
+  @ApiPropertyOptional({ type: String, description: "主部门 ID" })
+  primaryDepartmentId?: string;
+}
+
+/** 创建/更新部门请求。 */
+export class UpsertDepartmentRequestDto {
+  @ApiProperty({ type: String, description: "部门 ID" })
+  departmentId!: string;
+
+  @ApiProperty({ type: String, description: "部门名称" })
+  name!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "父部门 ID",
+  })
+  parentDepartmentId?: string | null;
+}
+
+/** 更新部门请求。 */
+export class UpdateDepartmentRequestDto {
+  @ApiPropertyOptional({ type: String, description: "部门名称" })
+  name?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "父部门 ID",
+  })
+  parentDepartmentId?: string | null;
+}
+
+/** 分配员工角色请求。 */
+export class AssignRolesRequestDto {
+  @ApiProperty({ type: [String], description: "角色编码列表" })
+  roleCodes!: string[];
+}
+
+/** 同步记录。 */
+export class SyncRunDto {
+  @ApiProperty({ type: String })
+  syncRunId!: string;
+
+  @ApiProperty({ type: String })
+  mode!: string;
+
+  @ApiProperty({ type: String })
+  status!: string;
+
+  @ApiProperty({ type: String, description: "开始时间（ISO 8601）" })
+  startedAt!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  completedAt?: string | null;
+
+  @ApiPropertyOptional({ description: "同步摘要" })
+  summary?: unknown;
+}

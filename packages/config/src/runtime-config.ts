@@ -14,6 +14,12 @@ const schema = z.object({
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).default(1000),
   WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
+  STORAGE_DIRECTORY: z.string().default(".storage/artifacts"),
+  ARTIFACT_MAX_SIZE_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(2 * 1024 * 1024 * 1024),
   ENABLE_API_DOCS: booleanFromEnv,
   DEMO_DATA_ENABLED: booleanFromEnv,
   DEMO_MODE: booleanFromEnv,
@@ -33,6 +39,8 @@ export interface RuntimeConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   outboxPollIntervalMs: number;
   workerMetricsPort: number;
+  storageDirectory: string;
+  artifactMaxSizeBytes: number;
   enableApiDocs: boolean;
   demoDataEnabled: boolean;
   demoMode: boolean;
@@ -133,6 +141,8 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     logLevel: value.LOG_LEVEL,
     outboxPollIntervalMs: value.OUTBOX_POLL_INTERVAL_MS,
     workerMetricsPort: value.WORKER_METRICS_PORT,
+    storageDirectory: value.STORAGE_DIRECTORY,
+    artifactMaxSizeBytes: value.ARTIFACT_MAX_SIZE_BYTES,
     enableApiDocs: value.ENABLE_API_DOCS,
     demoDataEnabled: value.DEMO_DATA_ENABLED,
     demoMode: value.DEMO_MODE,

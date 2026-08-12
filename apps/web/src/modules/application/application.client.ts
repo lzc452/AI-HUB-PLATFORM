@@ -207,3 +207,227 @@ export function submitApplicationReview(
     { method: "POST" },
   );
 }
+
+// ---------------------------------------------------------------------------
+// 发布链：创建版本 / 交付 / 审核 / 发布 / 上传 / 资产
+// ---------------------------------------------------------------------------
+
+export interface CreateVersionInput {
+  version: string;
+  changelog: string;
+  artifactKey: string;
+  artifactSha256: string;
+  artifactSignature: string;
+}
+
+export function createVersion(
+  applicationId: string,
+  input: CreateVersionInput,
+): Promise<ApplicationVersionRecord> {
+  return apiFetch<ApplicationVersionRecord>(
+    `${applicationsPath(applicationId)}/versions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ ...input, scanStatus: "passed" }),
+    },
+  );
+}
+
+export interface ConfigureDeliveryInput {
+  entryUrl: string;
+  minClientVersion?: string | null;
+  enabled: boolean;
+}
+
+export function configureDelivery(
+  applicationId: string,
+  channel: DeliveryChannel,
+  input: ConfigureDeliveryInput,
+): Promise<DeliveryRecord> {
+  return apiFetch<DeliveryRecord>(
+    `${applicationsPath(applicationId)}/deliveries/${channel}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function claimReview(
+  applicationVersionId: string,
+): Promise<ReviewQueueRecord> {
+  return apiFetch<ReviewQueueRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/claim-review`,
+    { method: "POST" },
+  );
+}
+
+export function releaseReview(
+  applicationVersionId: string,
+): Promise<ReviewQueueRecord> {
+  return apiFetch<ReviewQueueRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/release-review`,
+    { method: "POST" },
+  );
+}
+
+export function reviewApplicationVersion(
+  applicationVersionId: string,
+  input: {
+    decision: "approve" | "reject" | "request_changes";
+    comment: string;
+  },
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/review`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function getReviewQueue(
+  applicationVersionId: string,
+): Promise<ReviewQueueRecord> {
+  return apiFetch<ReviewQueueRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/review-queue`,
+  );
+}
+
+export function publishApplication(
+  applicationId: string,
+  applicationVersionId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `${applicationsPath(applicationId)}/publish`,
+    { method: "POST", body: JSON.stringify({ applicationVersionId }) },
+  );
+}
+
+// ---- artifact 上传 ----
+
+export interface ArtifactUploadRecord {
+  uploadId: string;
+  objectKey: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadStatus: "uploading" | "completed" | "failed";
+  scanStatus: "pending" | "passed" | "failed";
+  sha256: string | null;
+  errorCode: string | null;
+  expiresAt: string;
+}
+
+export function createArtifactUpload(
+  applicationId: string,
+  input: { fileName: string; mimeType: string; sizeBytes: number },
+): Promise<ArtifactUploadRecord> {
+  return apiFetch<ArtifactUploadRecord>(
+    `${applicationsPath(applicationId)}/artifact-uploads`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+/** 上传 artifact 内容（raw body），带进度回调。 */
+export function uploadArtifactContent(
+  applicationId: string,
+  uploadId: string,
+  content: ArrayBuffer,
+  onProgress?: (percent: number) => void,
+): Promise<ArtifactUploadRecord> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(
+      "PUT",
+      `/internal/applications/${encodeURIComponent(applicationId)}/artifact-uploads/${encodeURIComponent(uploadId)}/content`,
+    );
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.setRequestHeader(
+      "x-employee-id",
+      localStorage.getItem("ai-hub.employee-id") ?? "",
+    );
+    xhr.setRequestHeader(
+      "x-session-id",
+      localStorage.getItem("ai-hub.session-id") ?? "",
+    );
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress !== undefined) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText) as ArtifactUploadRecord);
+      } else {
+        reject(new Error(`UPLOAD_FAILED:${xhr.status}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("UPLOAD_NETWORK_ERROR"));
+    xhr.send(content);
+  });
+}
+
+export function completeArtifactUpload(
+  applicationId: string,
+  uploadId: string,
+  signature: string,
+): Promise<ArtifactUploadRecord> {
+  return apiFetch<ArtifactUploadRecord>(
+    `${applicationsPath(applicationId)}/artifact-uploads/${encodeURIComponent(uploadId)}/complete`,
+    { method: "POST", body: JSON.stringify({ signature }) },
+  );
+}
+
+export function getArtifactUploadStatus(
+  applicationId: string,
+  uploadId: string,
+): Promise<ArtifactUploadRecord> {
+  return apiFetch<ArtifactUploadRecord>(
+    `${applicationsPath(applicationId)}/artifact-uploads/${encodeURIComponent(uploadId)}`,
+  );
+}
+
+// ---- 资产 ----
+
+export interface AssetRecord {
+  assetId: string;
+  assetType: "icon" | "screenshot" | "attachment";
+  name: string;
+  storageKey: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string | null;
+  scanStatus: "pending" | "passed" | "failed";
+  createdAt: string;
+}
+
+export function listAssets(applicationId: string): Promise<AssetRecord[]> {
+  return apiFetch<AssetRecord[]>(`${applicationsPath(applicationId)}/assets`);
+}
+
+export function createAsset(
+  applicationId: string,
+  input: {
+    assetType: "icon" | "screenshot" | "attachment";
+    name: string;
+    storageKey: string;
+    mimeType: string;
+    sizeBytes: number;
+    sha256?: string | null;
+    sortOrder?: number;
+  },
+): Promise<AssetRecord> {
+  return apiFetch<AssetRecord>(`${applicationsPath(applicationId)}/assets`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAsset(
+  applicationId: string,
+  assetId: string,
+): Promise<void> {
+  return apiFetch<void>(
+    `${applicationsPath(applicationId)}/assets/${encodeURIComponent(assetId)}`,
+    { method: "DELETE" },
+  );
+}

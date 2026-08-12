@@ -1,0 +1,1 @@
+export const FEEDBACK_SERVICE = Symbol("FEEDBACK_SERVICE");

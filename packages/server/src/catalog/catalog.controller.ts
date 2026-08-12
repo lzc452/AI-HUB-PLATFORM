@@ -7,10 +7,12 @@ import {
   Headers,
   Inject,
   NotFoundException,
+  Optional,
   Param,
   Post,
   Put,
   Query,
+  StreamableFile,
 } from "@nestjs/common";
 import {
   ApiBody,
@@ -31,6 +33,7 @@ import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import { ApplicationService } from "../application/application.service.js";
 import { ApplicationVersionDto } from "../application/application.dto.js";
+import { DiskObjectStorage } from "../application/storage.disk.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import type { CatalogSearchInput } from "./catalog.types.js";
@@ -56,6 +59,9 @@ export class CatalogController {
     @Inject(IdentityService) private readonly identity: IdentityService,
     @Inject(APPLICATION_SERVICE)
     private readonly applications: ApplicationService,
+    @Optional()
+    @Inject(DiskObjectStorage)
+    private readonly storage: DiskObjectStorage | undefined,
   ) {}
 
   @Get()
@@ -158,6 +164,69 @@ export class CatalogController {
       );
       return { recorded: true };
     });
+  }
+
+  @Post(":applicationId/deliveries/:channel/resolve")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({
+    summary: "解析交付渠道",
+    description:
+      "受众校验后返回 Web 跳转地址、短期下载 URL 或二维码 payload，并记录行为。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({
+    name: "channel",
+    description: "交付渠道",
+    enum: ["web", "desktop", "mobile", "mini_program"],
+  })
+  @ApiOkResponse({
+    description: "交付解析结果（kind: web_redirect/download/qr/unavailable）",
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async resolveDelivery(
+    @Param("applicationId") applicationId: string,
+    @Param("channel")
+    channel: "web" | "desktop" | "mobile" | "mini_program",
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.catalog.resolveDelivery(
+        await this.requireActor(employeeId, sessionId),
+        applicationId,
+        channel,
+      ),
+    );
+  }
+
+  @Get(":applicationId/deliveries/:channel/asset")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "下载交付安装包（流式）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "channel", description: "交付渠道" })
+  @ApiOkResponse({ description: "安装包文件流" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async downloadAsset(
+    @Param("applicationId") applicationId: string,
+    @Param("channel")
+    channel: "web" | "desktop" | "mobile" | "mini_program",
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId);
+    const storageKey = await this.call(() =>
+      this.catalog.getDeliveryAssetStorageKey(actor, applicationId, channel),
+    );
+    if (this.storage === undefined) {
+      throw new NotFoundException("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    const stream = await this.storage.openReadStream(storageKey);
+    if (stream === null) {
+      throw new NotFoundException("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    return new StreamableFile(stream);
   }
 
   @Get(":applicationId/versions")

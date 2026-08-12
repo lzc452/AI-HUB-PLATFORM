@@ -1,5 +1,5 @@
-import { Card, Skeleton } from "antd";
-import { useEffect } from "react";
+import { Card, message, Modal, Skeleton } from "antd";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
@@ -8,12 +8,20 @@ import { NotFoundBlock } from "../../components/common/NotFoundBlock";
 import { rememberLastViewedApplicationId } from "../../modules/application/last-viewed";
 import {
   useComments,
+  useCreateFeedback,
+  useCreateComment,
   useHideComment,
+  useMyFeedback,
   useRateApplication,
   useRatings,
   useRestoreComment,
   useToggleLike,
 } from "../../modules/interaction/useInteraction";
+import {
+  downloadDeliveryAsset,
+  resolveDelivery,
+  type DeliveryChannel,
+} from "../../modules/marketplace/marketplace.client";
 import {
   useCatalogEntry,
   useRiskDescription,
@@ -56,6 +64,9 @@ export default function MarketplaceDetailPage() {
   const toggleLike = useToggleLike(applicationId);
   const rateApplication = useRateApplication(applicationId);
   const { activeTab, setTab } = useDetailTabParam();
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [ratingsPage, setRatingsPage] = useState(1);
+  const [resolving, setResolving] = useState(false);
 
   // Tab-specific data hooks — only fetch when tab is active
   const versions = useVersions(
@@ -69,12 +80,12 @@ export default function MarketplaceDetailPage() {
   );
   const ratings = useRatings(
     activeTab === "reviews" ? applicationId : undefined,
-    1,
+    ratingsPage,
     10,
   );
   const comments = useComments(
     activeTab === "reviews" ? applicationId : undefined,
-    1,
+    commentsPage,
     10,
   );
   const hideComment = useHideComment(
@@ -83,12 +94,60 @@ export default function MarketplaceDetailPage() {
   const restoreComment = useRestoreComment(
     activeTab === "reviews" ? applicationId : undefined,
   );
+  const createComment = useCreateComment(
+    activeTab === "reviews" ? applicationId : undefined,
+  );
+  const createFeedback = useCreateFeedback(applicationId);
+  const myFeedback = useMyFeedback(
+    activeTab === "reviews" ? applicationId : undefined,
+  );
 
   useEffect(() => {
     if (applicationId) {
       rememberLastViewedApplicationId(applicationId);
     }
   }, [applicationId]);
+
+  // 交付解析：web 跳转、download 触发浏览器下载、qr 弹窗展示、unavailable 提示。
+  const handleResolve = async (channel: DeliveryChannel) => {
+    if (!applicationId) return;
+    setResolving(true);
+    try {
+      const result = await resolveDelivery(applicationId, channel);
+      if (result.kind === "web_redirect") {
+        window.open(result.url, "_blank", "noopener,noreferrer");
+      } else if (result.kind === "download") {
+        const { blob, fileName } = await downloadDeliveryAsset(
+          applicationId,
+          channel,
+        );
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      } else if (result.kind === "qr") {
+        Modal.info({
+          content: (
+            <div className="py-2 text-center">
+              <div>请使用企业微信 / 对应 App 扫码</div>
+              <div className="mt-2 break-all text-xs text-[#595959]">
+                {result.payload}
+              </div>
+            </div>
+          ),
+          title: "扫码使用",
+        });
+      } else {
+        message.warning(result.reason);
+      }
+    } catch (cause) {
+      message.error(cause instanceof Error ? cause.message : "交付解析失败");
+    } finally {
+      setResolving(false);
+    }
+  };
 
   if (isPending) return <MarketplaceDetailSkeleton />;
 
@@ -112,8 +171,10 @@ export default function MarketplaceDetailPage() {
         likePending={toggleLike.isPending}
         onLike={() => toggleLike.mutate()}
         onRate={(stars) => rateApplication.mutate(stars)}
+        onResolve={(channel) => void handleResolve(channel)}
         ratingDisabled={Boolean(!applicationId || rateApplication.isPending)}
         ratingPending={rateApplication.isPending}
+        resolving={resolving}
       />
       <MarketplaceDetailTabs activeTab={activeTab} onTabChange={setTab} />
 
@@ -129,11 +190,18 @@ export default function MarketplaceDetailPage() {
       {activeTab === "reviews" && (
         <MarketplaceDetailReviews
           comments={comments.data}
+          commentsPage={commentsPage}
           commentsPending={comments.isPending}
+          createComment={createComment}
+          createFeedback={createFeedback}
           isModerator={false}
+          myFeedback={myFeedback.data}
+          onCommentsPageChange={setCommentsPage}
           onHideComment={(id) => hideComment.mutate(id)}
           onRestoreComment={(id) => restoreComment.mutate(id)}
+          onRatingsPageChange={setRatingsPage}
           ratings={ratings.data}
+          ratingsPage={ratingsPage}
           ratingsPending={ratings.isPending}
         />
       )}

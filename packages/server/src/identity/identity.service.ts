@@ -143,6 +143,120 @@ export class IdentityService {
     });
   }
 
+  // -------------------------------------------------------------------------
+  // 组织管理（批次 3）：员工分页/更新、部门 CRUD、角色分配、同步记录
+  // -------------------------------------------------------------------------
+
+  async listEmployeesPage(input?: {
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = Math.max(1, input?.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, input?.pageSize ?? 20));
+    return this.repository.listEmployeesPage({ ...input, page, pageSize });
+  }
+
+  async updateEmployee(
+    actor: ActorContext,
+    employeeId: EmployeeId,
+    input: {
+      displayName?: string;
+      status?: "active" | "disabled" | "pending_binding";
+      primaryDepartmentId?: string;
+    },
+  ): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      await repository.updateEmployee(employeeId, input);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.employee.updated",
+        subjectEmployeeId: employeeId,
+        details: input,
+      });
+    });
+  }
+
+  async createDepartment(
+    actor: ActorContext,
+    input: {
+      departmentId: string;
+      name: string;
+      parentDepartmentId?: string | null;
+      source: "local" | "dingtalk";
+    },
+  ): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      await repository.createDepartment({
+        departmentId: input.departmentId,
+        name: input.name,
+        parentDepartmentId: input.parentDepartmentId ?? null,
+        source: input.source,
+      });
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.department.created",
+        subjectEmployeeId: null,
+        details: { departmentId: input.departmentId },
+      });
+    });
+  }
+
+  async updateDepartment(
+    actor: ActorContext,
+    departmentId: string,
+    input: { name?: string; parentDepartmentId?: string | null },
+  ): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      await repository.updateDepartment(departmentId, input);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.department.updated",
+        subjectEmployeeId: null,
+        details: { departmentId, ...input },
+      });
+    });
+  }
+
+  async deleteDepartment(
+    actor: ActorContext,
+    departmentId: string,
+  ): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      const members = await repository.countDepartmentMembers(departmentId);
+      if (members > 0) {
+        throw new Error("DEPARTMENT_NOT_EMPTY");
+      }
+      await repository.deleteDepartment(departmentId);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.department.deleted",
+        subjectEmployeeId: null,
+        details: { departmentId },
+      });
+    });
+  }
+
+  async setEmployeeRoles(
+    actor: ActorContext,
+    employeeId: EmployeeId,
+    roleCodes: readonly string[],
+  ): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      await repository.setEmployeeRoles(employeeId, roleCodes);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.roles.assigned",
+        subjectEmployeeId: employeeId,
+        details: { roleCodes },
+      });
+    });
+  }
+
+  async listSyncRuns(limit = 20) {
+    return this.repository.listSyncRuns(limit);
+  }
+
   /** 仅撤销当前调用者自己的会话，避免 logout 接口被用来注销他人会话。 */
   async logout(actor: ActorContext): Promise<boolean> {
     return this.revokeSessionForActor(actor, actor.sessionId);

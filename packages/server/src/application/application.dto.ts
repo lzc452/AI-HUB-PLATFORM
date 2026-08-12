@@ -429,3 +429,130 @@ export class ApplicationWorkspaceDto {
   @ApiProperty({ type: ReviewQueueDto, nullable: true })
   reviewQueue!: ReviewQueueDto | null;
 }
+
+/** 创建 artifact 上传会话请求。 */
+export class ArtifactUploadInitRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "文件名",
+    example: "smart-attendance-1.0.0.zip",
+  })
+  fileName!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "MIME 类型",
+    example: "application/zip",
+  })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  sizeBytes!: number;
+}
+
+/** artifact 上传会话。 */
+export class ArtifactUploadDto {
+  @ApiProperty({ type: String, description: "上传会话 ID" })
+  uploadId!: string;
+
+  @ApiProperty({ type: String, description: "临时对象键" })
+  objectKey!: string;
+
+  @ApiProperty({ type: String, description: "文件名" })
+  fileName!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  sizeBytes!: number;
+
+  @ApiProperty({
+    description: "上传状态",
+    enum: ["uploading", "completed", "failed"],
+  })
+  uploadStatus!: "uploading" | "completed" | "failed";
+
+  @ApiProperty({
+    description: "扫描状态",
+    enum: ["pending", "passed", "failed"],
+  })
+  scanStatus!: "pending" | "passed" | "failed";
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "SHA-256（complete 后返回）",
+  })
+  sha256!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "错误码" })
+  errorCode!: string | null;
+
+  @ApiProperty({ type: String, description: "过期时间（ISO 8601）" })
+  expiresAt!: string;
+}
+
+/** 完成上传请求。 */
+export class CompleteArtifactUploadRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "制品签名（V1 可为空字符串，走 Noop 校验）",
+    example: "",
+  })
+  signature!: string;
+}
+
+/** 应用资产。 */
+export class AssetDto {
+  @ApiProperty({ type: String, description: "资产 ID" })
+  assetId!: string;
+
+  @ApiProperty({ type: String, description: "资产类型" })
+  assetType!: "icon" | "screenshot" | "attachment";
+
+  @ApiProperty({ type: String, description: "资产名称" })
+  name!: string;
+
+  @ApiProperty({ type: String, description: "存储键" })
+  storageKey!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "大小（字节）" })
+  sizeBytes!: number;
+
+  @ApiProperty({ type: String, nullable: true, description: "SHA-256" })
+  sha256!: string | null;
+
+  @ApiProperty({ description: "扫描状态" })
+  scanStatus!: "pending" | "passed" | "failed";
+
+  @ApiProperty({ type: String, description: "创建时间（ISO 8601）" })
+  createdAt!: string;
+}
+
+/** 创建资产请求。 */
+export class CreateAssetRequestDto {
+  @ApiProperty({ type: String, description: "资产类型" })
+  assetType!: "icon" | "screenshot" | "attachment";
+
+  @ApiProperty({ type: String, description: "资产名称" })
+  name!: string;
+
+  @ApiProperty({ type: String, description: "存储键（已上传至存储的对象键）" })
+  storageKey!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "大小（字节）" })
+  sizeBytes!: number;
+
+  @ApiProperty({ type: String, nullable: true, description: "SHA-256" })
+  sha256?: string | null;
+
+  @ApiPropertyOptional({ type: Number, description: "排序" })
+  sortOrder?: number;
+}

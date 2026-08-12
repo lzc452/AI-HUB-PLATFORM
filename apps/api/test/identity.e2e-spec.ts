@@ -59,6 +59,21 @@ class ApiIdentityRepository implements IdentityRepository {
       },
     ];
   }
+  async listEmployeesPage() {
+    return { items: await this.listEmployees(), total: 1 };
+  }
+  async updateEmployee(): Promise<void> {}
+  async updateDepartment(): Promise<void> {}
+  async deleteDepartment(): Promise<number> {
+    return 0;
+  }
+  async countDepartmentMembers(): Promise<number> {
+    return 0;
+  }
+  async setEmployeeRoles(): Promise<void> {}
+  async listSyncRuns() {
+    return [];
+  }
   async findSession() {
     return {
       sessionId: "session-1",

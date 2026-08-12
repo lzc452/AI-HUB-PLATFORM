@@ -19,6 +19,7 @@ import { iconGradient } from "../../modules/marketplace/catalogMeta";
 export type ApplicationRowAction =
   | "delete"
   | "edit"
+  | "publish"
   | "republish"
   | "review"
   | "view"
@@ -72,6 +73,12 @@ const statusMeta: Record<
     border: "#ffd591",
     color: "#ad6800",
     label: "审核中",
+  },
+  approved: {
+    background: "#f6ffed",
+    border: "#b7eb8f",
+    color: "#237804",
+    label: "已通过",
   },
   draft: {
     background: "#f5f5f5",
@@ -328,6 +335,28 @@ function RowActions({
           ariaLabel={`重新发布 ${row.name}`}
           label="重新发布"
           onClick={handle("republish")}
+        />
+      </div>
+    );
+  }
+
+  if (row.status === "approved") {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <ActionLink
+          ariaLabel={`发布 ${row.name}`}
+          label="发布"
+          onClick={handle("publish")}
+        />
+        <ActionLink
+          ariaLabel={`查看 ${row.name}`}
+          label="查看"
+          onClick={handle("view")}
+        />
+        <ActionLink
+          ariaLabel={`查看 ${row.name} 版本`}
+          label="版本"
+          onClick={handle("version")}
         />
       </div>
     );

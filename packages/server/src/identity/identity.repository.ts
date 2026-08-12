@@ -4,7 +4,7 @@ import type {
   EmployeeSummary,
 } from "@ai-hub/contracts";
 import type { DatabaseSchema } from "@ai-hub/database";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type {
   CreateEmployeeInput,
   EmployeeRecord,
@@ -156,6 +156,167 @@ export class KyselyIdentityRepository implements IdentityRepository {
     return rows.map((row) => ({
       roleCode: row.role_code,
       permissions: row.permissions,
+    }));
+  }
+
+  async listEmployeesPage(input?: {
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ items: readonly EmployeeSummary[]; total: number }> {
+    const keyword = input?.keyword?.trim();
+    const buildQuery = () => {
+      let query = this.db
+        .selectFrom("employees")
+        .select([
+          "employee_id",
+          "display_name",
+          "status",
+          "primary_department_id",
+        ]);
+      if (keyword !== undefined && keyword.length > 0) {
+        const pattern = `%${keyword}%`;
+        query = query.where((eb) =>
+          eb.or([
+            eb("employee_id", "ilike", pattern),
+            eb("display_name", "ilike", pattern),
+          ]),
+        );
+      }
+      return query;
+    };
+    const countRow = await this.db
+      .selectFrom(() => buildQuery().as("filtered"))
+      .select(sql<{ count: number }>`count(*)::int`.as("count"))
+      .executeTakeFirst();
+    const total = Number(countRow?.count ?? 0);
+    const page = input?.page ?? 1;
+    const pageSize = input?.pageSize ?? 20;
+    const rows = await buildQuery()
+      .orderBy("employee_id")
+      .limit(pageSize)
+      .offset((page - 1) * pageSize)
+      .execute();
+    return {
+      items: rows.map((row) => ({
+        employeeId: row.employee_id,
+        displayName: row.display_name,
+        status: row.status,
+        primaryDepartmentId: row.primary_department_id,
+      })),
+      total,
+    };
+  }
+
+  async updateEmployee(
+    employeeId: EmployeeId,
+    input: {
+      displayName?: string;
+      status?: "pending_binding" | "active" | "disabled" | "archived";
+      primaryDepartmentId?: string;
+    },
+  ): Promise<void> {
+    await this.db
+      .updateTable("employees")
+      .set({
+        ...(input.displayName === undefined
+          ? {}
+          : { display_name: input.displayName }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        ...(input.primaryDepartmentId === undefined
+          ? {}
+          : { primary_department_id: input.primaryDepartmentId }),
+      })
+      .where("employee_id", "=", employeeId)
+      .execute();
+  }
+
+  async updateDepartment(
+    departmentId: string,
+    input: { name?: string; parentDepartmentId?: string | null },
+  ): Promise<void> {
+    await this.db
+      .updateTable("departments")
+      .set({
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.parentDepartmentId === undefined
+          ? {}
+          : { parent_department_id: input.parentDepartmentId }),
+      })
+      .where("department_id", "=", departmentId)
+      .execute();
+  }
+
+  async deleteDepartment(departmentId: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom("departments")
+      .where("department_id", "=", departmentId)
+      .executeTakeFirst();
+    return Number(result.numDeletedRows ?? 0);
+  }
+
+  async countDepartmentMembers(departmentId: string): Promise<number> {
+    const row = await this.db
+      .selectFrom("department_memberships")
+      .select(sql<{ count: number }>`count(*)::int`.as("count"))
+      .where("department_id", "=", departmentId)
+      .executeTakeFirst();
+    return Number(row?.count ?? 0);
+  }
+
+  async setEmployeeRoles(
+    employeeId: EmployeeId,
+    roleCodes: readonly string[],
+  ): Promise<void> {
+    await this.db.transaction().execute(async (transaction) => {
+      await transaction
+        .deleteFrom("employee_roles")
+        .where("employee_id", "=", employeeId)
+        .execute();
+      if (roleCodes.length > 0) {
+        await transaction
+          .insertInto("employee_roles")
+          .values(
+            roleCodes.map((roleCode) => ({
+              employee_id: employeeId,
+              role_code: roleCode,
+            })),
+          )
+          .execute();
+      }
+    });
+  }
+
+  async listSyncRuns(limit = 20): Promise<
+    readonly {
+      syncRunId: string;
+      mode: string;
+      status: string;
+      startedAt: Date;
+      completedAt: Date | null;
+      summary: unknown;
+    }[]
+  > {
+    const rows = await this.db
+      .selectFrom("dingtalk_sync_runs")
+      .select([
+        "sync_run_id",
+        "mode",
+        "status",
+        "started_at",
+        "finished_at",
+        "summary",
+      ])
+      .orderBy("started_at", "desc")
+      .limit(limit)
+      .execute();
+    return rows.map((row) => ({
+      syncRunId: row.sync_run_id,
+      mode: row.mode,
+      status: row.status,
+      startedAt: row.started_at,
+      completedAt: row.finished_at,
+      summary: row.summary,
     }));
   }
 

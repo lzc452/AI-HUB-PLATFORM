@@ -16,6 +16,9 @@ import * as demandCommentLikesAndPriority from "./migrations/0014_demand_comment
 import * as loginSecurityAndDingTalkSso from "./migrations/0015_login_security_and_dingtalk_sso.js";
 import * as applicationRiskDescription from "./migrations/0016_application_risk_description.js";
 import * as applicationWorkspace from "./migrations/0017_application_workspace.js";
+import * as organizationSyncFields from "./migrations/0018_organization_sync_fields.js";
+import * as artifactUploads from "./migrations/0019_artifact_uploads.js";
+import * as securityAuditFeedback from "./migrations/0020_security_audit_feedback.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -36,6 +39,9 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0015_login_security_and_dingtalk_sso": loginSecurityAndDingTalkSso,
   "0016_application_risk_description": applicationRiskDescription,
   "0017_application_workspace": applicationWorkspace,
+  "0018_organization_sync_fields": organizationSyncFields,
+  "0019_artifact_uploads": artifactUploads,
+  "0020_security_audit_feedback": securityAuditFeedback,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

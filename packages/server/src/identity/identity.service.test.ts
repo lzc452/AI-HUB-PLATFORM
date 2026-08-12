@@ -92,6 +92,82 @@ class MemoryIdentityRepository implements IdentityRepository {
     return this.roles.get(employeeId) ?? [];
   }
 
+  async listEmployeesPage(input?: {
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const keyword = input?.keyword?.trim().toLowerCase();
+    const all = [...this.employees.values()].filter((employee) => {
+      if (keyword === undefined || keyword.length === 0) return true;
+      return (
+        employee.employeeId.toLowerCase().includes(keyword) ||
+        employee.displayName.toLowerCase().includes(keyword)
+      );
+    });
+    const page = input?.page ?? 1;
+    const pageSize = input?.pageSize ?? 20;
+    return {
+      items: all
+        .slice((page - 1) * pageSize, page * pageSize)
+        .map((employee) => ({
+          employeeId: employee.employeeId,
+          displayName: employee.displayName,
+          status: employee.status,
+          primaryDepartmentId: employee.primaryDepartmentId,
+        })),
+      total: all.length,
+    };
+  }
+
+  async updateEmployee(
+    employeeId: EmployeeId,
+    input: {
+      displayName?: string;
+      status?: EmployeeRecord["status"];
+      primaryDepartmentId?: string;
+    },
+  ): Promise<void> {
+    const current = this.employees.get(employeeId);
+    if (current !== undefined) {
+      this.employees.set(employeeId, { ...current, ...input });
+    }
+  }
+
+  async updateDepartment(
+    departmentId: string,
+    input: { name?: string; parentDepartmentId?: string | null },
+  ): Promise<void> {
+    const current = this.departments.get(departmentId);
+    if (current !== undefined) {
+      this.departments.set(departmentId, { ...current, ...input });
+    }
+  }
+
+  async deleteDepartment(departmentId: string): Promise<number> {
+    return this.departments.delete(departmentId) ? 1 : 0;
+  }
+
+  async countDepartmentMembers(departmentId: string): Promise<number> {
+    return [...this.employees.values()].filter(
+      (employee) => employee.primaryDepartmentId === departmentId,
+    ).length;
+  }
+
+  async setEmployeeRoles(
+    employeeId: EmployeeId,
+    roleCodes: readonly string[],
+  ): Promise<void> {
+    this.roles.set(
+      employeeId,
+      roleCodes.map((roleCode) => ({ roleCode, permissions: [] })),
+    );
+  }
+
+  async listSyncRuns() {
+    return [];
+  }
+
   async findSession(sessionId: string): Promise<SessionRecord | null> {
     return (
       this.sessions.find((session) => session.sessionId === sessionId) ?? null

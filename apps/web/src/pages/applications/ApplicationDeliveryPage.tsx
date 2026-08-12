@@ -1,17 +1,20 @@
-import { Button, Input, Spin, Tag, Typography } from "antd";
+import { Button, Empty, Input, Spin, Tag, Typography } from "antd";
 import type { DeliveryChannel } from "@ai-hub/contracts";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
-import { useApplicationDeliveries } from "../../modules/application/useApplication";
+import type { AssetRecord } from "../../modules/application/application.client";
 import {
-  MessageError,
-  showSuccessMessage,
-  showWarningMessage,
-} from "../../shared/ui/message";
+  useApplicationDeliveries,
+  useAssets,
+  useConfigureDelivery,
+} from "../../modules/application/useApplication";
+import { MessageError, showSuccessMessage } from "../../shared/ui/message";
 
 const { Text } = Typography;
+
+type AssetItem = AssetRecord;
 
 const channels: Array<{
   channel: DeliveryChannel;
@@ -27,6 +30,8 @@ const channels: Array<{
 export default function ApplicationDeliveryPage() {
   const { applicationId } = useParams();
   const deliveriesQuery = useApplicationDeliveries(applicationId);
+  const assetsQuery = useAssets(applicationId);
+  const configure = useConfigureDelivery(applicationId);
   const [activeChannel, setActiveChannel] = useState<DeliveryChannel>("web");
   const [webUrl, setWebUrl] = useState("https://ocr.company.com");
   const deliveryMap = useMemo(
@@ -35,6 +40,20 @@ export default function ApplicationDeliveryPage() {
     [deliveriesQuery.data],
   );
   const activeDelivery = deliveryMap.get(activeChannel);
+
+  // 读取真实交付记录后回填 Web 地址。
+  useEffect(() => {
+    const web = deliveryMap.get("web");
+    if (web?.entryUrl) setWebUrl(web.entryUrl);
+  }, [deliveryMap]);
+
+  const handleSave = () => {
+    const enabled = activeDelivery?.enabled ?? false;
+    void configure.mutateAsync({
+      channel: activeChannel,
+      input: { entryUrl: webUrl, enabled: !enabled },
+    });
+  };
 
   return (
     <ApplicationAdminPage
@@ -54,7 +73,7 @@ export default function ApplicationDeliveryPage() {
                 已启用交付渠道：
                 <strong className="text-[#1f2937]">
                   {deliveriesQuery.data?.filter((item) => item.enabled)
-                    .length || 4}
+                    .length ?? 0}
                 </strong>
               </div>
             </div>
@@ -83,20 +102,26 @@ export default function ApplicationDeliveryPage() {
             <WebDeliveryCard
               value={webUrl}
               onChange={setWebUrl}
-              configured={activeDelivery?.enabled ?? true}
+              configured={activeDelivery?.enabled ?? false}
             />
           ) : null}
-          {activeChannel === "desktop" ? <DesktopDeliveryCard /> : null}
-          {activeChannel === "mobile" ? <MobileDeliveryCard /> : null}
+          {activeChannel === "desktop" ? (
+            <DesktopDeliveryCard assets={assetsQuery.query.data ?? []} />
+          ) : null}
+          {activeChannel === "mobile" ? (
+            <MobileDeliveryCard assets={assetsQuery.query.data ?? []} />
+          ) : null}
           {activeChannel === "mini_program" ? <MiniProgramCard /> : null}
           <div className="flex justify-end gap-2 rounded-lg border border-[#e2e8f0] bg-white px-5 py-3">
-            <Button onClick={() => showSuccessMessage("交付配置草稿已保存")}>
-              保存草稿
+            <Button loading={configure.isPending} onClick={handleSave}>
+              {activeDelivery?.enabled ? "停用渠道" : "保存并启用"}
             </Button>
             <Button
               type="primary"
               onClick={() =>
-                showWarningMessage("提交审核前请完成全部交付渠道校验")
+                showSuccessMessage(
+                  "提交审核请在版本管理页由负责人发起（本页只负责交付配置）",
+                )
               }
             >
               提交审核
@@ -223,7 +248,7 @@ function WebDeliveryCard({
   );
 }
 
-function DesktopDeliveryCard() {
+function DesktopDeliveryCard({ assets }: { assets: AssetItem[] }) {
   return (
     <section className="app-admin-card overflow-hidden">
       <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
@@ -234,23 +259,26 @@ function DesktopDeliveryCard() {
         桌面端应用
       </h3>
       <div className="grid gap-3 p-4 md:grid-cols-2">
-        <UploadCard
-          title="Windows 安装包（.exe/.msi）"
-          name="OCR 票据识别_2.4.1_x64.exe"
-          size="128.6 MB"
-          icon="app-ui-icon-desktop"
-        />
-        <UploadCard
-          title="macOS 安装包（.dmg/.pkg）"
-          name="OCR 票据识别_2.4.1_arm64.dmg"
-          size="156.3 MB"
-          icon="app-ui-icon-desktop"
-        />
+        {assets.length === 0 ? (
+          <Empty description="暂无安装包资产，请在版本管理页上传后选择" />
+        ) : (
+          assets
+            .slice(0, 2)
+            .map((asset) => (
+              <UploadCard
+                key={asset.assetId}
+                name={asset.name}
+                size={`${(asset.sizeBytes / 1024 / 1024).toFixed(1)} MB`}
+                title={asset.assetType === "attachment" ? "安装包" : asset.name}
+                icon="app-ui-icon-desktop"
+              />
+            ))
+        )}
       </div>
     </section>
   );
 }
-function MobileDeliveryCard() {
+function MobileDeliveryCard({ assets }: { assets: AssetItem[] }) {
   return (
     <section className="app-admin-card overflow-hidden">
       <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
@@ -261,34 +289,21 @@ function MobileDeliveryCard() {
         移动端应用
       </h3>
       <div className="grid gap-3 p-4 md:grid-cols-2">
-        <UploadCard
-          title="Android 应用（.apk）"
-          name="ocr_receipt_2.4.1_release.apk"
-          size="54.7 MB"
-          icon="app-ui-icon-mobile"
-        />
-        <div className="rounded-lg border border-[#e4eaf2] p-3">
-          <div className="text-[13px] font-semibold">iOS 应用</div>
-          <div className="mt-3 flex items-center gap-3">
-            <Input
-              defaultValue="https://apps.company.com/ocr/ios"
-              suffix={
-                <i
-                  aria-hidden="true"
-                  className="app-ui-icon app-ui-icon-check text-[#20b26b]"
-                />
-              }
-            />
-            <QrGraphic />
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-[12px] text-[#1677ff]">
-            <i
-              aria-hidden="true"
-              className="app-ui-icon app-ui-icon-download"
-            />
-            下载二维码
-          </div>
-        </div>
+        {assets.length === 0 ? (
+          <Empty description="暂无安装包资产，请在版本管理页上传后选择" />
+        ) : (
+          assets
+            .slice(0, 2)
+            .map((asset) => (
+              <UploadCard
+                key={asset.assetId}
+                name={asset.name}
+                size={`${(asset.sizeBytes / 1024 / 1024).toFixed(1)} MB`}
+                title={asset.assetType === "attachment" ? "安装包" : asset.name}
+                icon="app-ui-icon-mobile"
+              />
+            ))
+        )}
       </div>
     </section>
   );

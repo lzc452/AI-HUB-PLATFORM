@@ -5,6 +5,8 @@ import type {
   ApplicationRecord,
   ApplicationRepository,
   ApplicationVersionRecord,
+  ArtifactUploadRecord,
+  AssetRecord,
   DeliveryRecord,
   ReviewQueueRecord,
   ReviewRecord,
@@ -280,6 +282,139 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return rows.map((row) => this.mapVersion(row));
   }
 
+  async createArtifactUpload(
+    input: Omit<ArtifactUploadRecord, "uploadId" | "createdAt" | "completedAt">,
+  ): Promise<ArtifactUploadRecord> {
+    const row = await this.db
+      .insertInto("application_artifact_uploads")
+      .values({
+        application_id: input.applicationId,
+        uploaded_by_employee_id: input.uploadedByEmployeeId,
+        object_key: input.objectKey,
+        file_name: input.fileName,
+        mime_type: input.mimeType,
+        size_bytes: input.sizeBytes,
+        sha256: input.sha256,
+        signature: input.signature,
+        part_count: input.partCount,
+        upload_status: input.uploadStatus,
+        scan_status: input.scanStatus,
+        error_code: input.errorCode,
+        expires_at: input.expiresAt,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapArtifactUpload(row);
+  }
+
+  async findArtifactUpload(
+    uploadId: string,
+  ): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .selectFrom("application_artifact_uploads")
+      .selectAll()
+      .where("upload_id", "=", uploadId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async updateArtifactUpload(
+    uploadId: string,
+    input: Partial<
+      Pick<
+        ArtifactUploadRecord,
+        | "sha256"
+        | "signature"
+        | "sizeBytes"
+        | "uploadStatus"
+        | "scanStatus"
+        | "errorCode"
+        | "completedAt"
+        | "objectKey"
+      >
+    >,
+  ): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .updateTable("application_artifact_uploads")
+      .set({
+        ...(input.sha256 === undefined ? {} : { sha256: input.sha256 }),
+        ...(input.signature === undefined
+          ? {}
+          : { signature: input.signature }),
+        ...(input.sizeBytes === undefined
+          ? {}
+          : { size_bytes: input.sizeBytes }),
+        ...(input.uploadStatus === undefined
+          ? {}
+          : { upload_status: input.uploadStatus }),
+        ...(input.scanStatus === undefined
+          ? {}
+          : { scan_status: input.scanStatus }),
+        ...(input.errorCode === undefined
+          ? {}
+          : { error_code: input.errorCode }),
+        ...(input.completedAt === undefined
+          ? {}
+          : { completed_at: input.completedAt }),
+        ...(input.objectKey === undefined
+          ? {}
+          : { object_key: input.objectKey }),
+      })
+      .where("upload_id", "=", uploadId)
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async createAsset(
+    input: Omit<AssetRecord, "assetId" | "createdAt">,
+  ): Promise<AssetRecord> {
+    const row = await this.db
+      .insertInto("application_assets")
+      .values({
+        application_id: input.applicationId,
+        application_version_id: input.applicationVersionId,
+        asset_type: input.assetType,
+        name: input.name,
+        storage_key: input.storageKey,
+        mime_type: input.mimeType,
+        size_bytes: input.sizeBytes,
+        sort_order: input.sortOrder,
+        sha256: input.sha256,
+        scan_status: input.scanStatus,
+        uploaded_by_employee_id: input.uploadedByEmployeeId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapAsset(row);
+  }
+
+  async listAssets(applicationId: string): Promise<readonly AssetRecord[]> {
+    const rows = await this.db
+      .selectFrom("application_assets")
+      .selectAll()
+      .where("application_id", "=", applicationId)
+      .orderBy("sort_order", "asc")
+      .execute();
+    return rows.map((row) => this.mapAsset(row));
+  }
+
+  async findAsset(assetId: string): Promise<AssetRecord | null> {
+    const row = await this.db
+      .selectFrom("application_assets")
+      .selectAll()
+      .where("asset_id", "=", assetId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapAsset(row);
+  }
+
+  async deleteAsset(assetId: string): Promise<void> {
+    await this.db
+      .deleteFrom("application_assets")
+      .where("asset_id", "=", assetId)
+      .execute();
+  }
+
   async setApplicationStatus(
     applicationId: string,
     status: ApplicationRecord["status"],
@@ -541,6 +676,49 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       claimedByEmployeeId: row.claimed_by_employee_id,
       claimedAt: row.claimed_at,
       slaDueAt: row.sla_due_at,
+      createdAt: row.created_at,
+    };
+  }
+
+  private mapArtifactUpload(
+    row: Selectable<DatabaseSchema["application_artifact_uploads"]>,
+  ): ArtifactUploadRecord {
+    return {
+      uploadId: row.upload_id,
+      applicationId: row.application_id,
+      uploadedByEmployeeId: row.uploaded_by_employee_id,
+      objectKey: row.object_key,
+      fileName: row.file_name,
+      mimeType: row.mime_type,
+      sizeBytes: row.size_bytes,
+      sha256: row.sha256,
+      signature: row.signature,
+      partCount: row.part_count,
+      uploadStatus: row.upload_status as ArtifactUploadRecord["uploadStatus"],
+      scanStatus: row.scan_status,
+      errorCode: row.error_code,
+      expiresAt: row.expires_at,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+    };
+  }
+
+  private mapAsset(
+    row: Selectable<DatabaseSchema["application_assets"]>,
+  ): AssetRecord {
+    return {
+      assetId: row.asset_id,
+      applicationId: row.application_id,
+      applicationVersionId: row.application_version_id,
+      assetType: row.asset_type,
+      name: row.name,
+      storageKey: row.storage_key,
+      mimeType: row.mime_type,
+      sizeBytes: row.size_bytes,
+      sortOrder: row.sort_order,
+      sha256: row.sha256,
+      scanStatus: row.scan_status,
+      uploadedByEmployeeId: row.uploaded_by_employee_id,
       createdAt: row.created_at,
     };
   }

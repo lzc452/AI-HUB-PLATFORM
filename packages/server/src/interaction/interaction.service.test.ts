@@ -220,51 +220,57 @@ describe("InteractionService", () => {
     expect(repository.ratings[0]?.stars).toBe(5);
   });
 
-  it("allows only the application team to create an official one-level reply", async () => {
+  it("allows any employee to create a root comment; only the team may reply", async () => {
     const repository = new MemoryInteractionRepository();
     const service = new InteractionService(repository, { authorize: allowAll });
 
+    const root = await service.createComment(employee, {
+      applicationId: "app-1",
+      body: "普通用户的根评论",
+    });
+    expect(root.commentKind).toBe("user");
+
     await expect(
-      service.reply(employee, {
+      service.replyComment(employee, {
         applicationId: "app-1",
-        parentCommentId: null,
+        parentCommentId: root.commentId,
         body: "reply",
       }),
     ).rejects.toThrow("OFFICIAL_REPLY_FORBIDDEN");
-    const comment = await service.reply(owner, {
+
+    const official = await service.replyComment(owner, {
       applicationId: "app-1",
-      parentCommentId: null,
+      parentCommentId: root.commentId,
       body: "official",
     });
-    expect(comment.authorEmployeeId).toBe("E100");
+    expect(official.commentKind).toBe("official");
+    expect(official.authorEmployeeId).toBe("E100");
     await expect(
-      service.reply(owner, {
+      service.replyComment(owner, {
         applicationId: "app-1",
-        parentCommentId: comment.commentId,
-        body: "second",
-      }),
-    ).resolves.toBeDefined();
-    const child = repository.comments[1]!;
-    repository.comments.push({
-      ...child,
-      commentId: "grandparent",
-      parentCommentId: child.commentId,
-    });
-    await expect(
-      service.reply(owner, {
-        applicationId: "app-1",
-        parentCommentId: "grandparent",
+        parentCommentId: official.commentId,
         body: "third",
       }),
     ).rejects.toThrow("COMMENT_DEPTH_EXCEEDED");
   });
 
+  it("rejects empty comment bodies", async () => {
+    const repository = new MemoryInteractionRepository();
+    const service = new InteractionService(repository, { authorize: allowAll });
+
+    await expect(
+      service.createComment(employee, {
+        applicationId: "app-1",
+        body: "   ",
+      }),
+    ).rejects.toThrow("COMMENT_BODY_REQUIRED");
+  });
+
   it("keeps reports non-destructive and audits anonymous identity lookup", async () => {
     const repository = new MemoryInteractionRepository();
     const service = new InteractionService(repository, { authorize: allowAll });
-    const comment = await service.reply(owner, {
+    const comment = await service.createComment(owner, {
       applicationId: "app-1",
-      parentCommentId: null,
       body: "content",
     });
     const report = await service.report(employee, {

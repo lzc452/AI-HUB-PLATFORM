@@ -87,6 +87,14 @@ class ApiCatalogRepository implements CatalogRepository {
     this.recordedActions.push(input.actionType);
   }
 
+  async findDelivery(): Promise<{ entryUrl: string; enabled: boolean } | null> {
+    return { entryUrl: "https://app.company.com", enabled: true };
+  }
+
+  async findDeliveryAssetStorageKey(): Promise<string | null> {
+    return null;
+  }
+
   async getRiskDescription(): Promise<string | null> {
     return null;
   }

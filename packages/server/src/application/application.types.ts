@@ -12,6 +12,7 @@ export type ApplicationStatus =
   | "withdrawn"
   | "archived";
 export type ApplicationVersionScanStatus = "pending" | "passed" | "failed";
+export type ArtifactUploadStatus = "uploading" | "completed" | "failed";
 export type ReviewDecision = "approve" | "reject" | "request_changes";
 export type ReviewQueueStatus = "available" | "claimed";
 export type ReviewSlaStatus = "on_time" | "overdue";
@@ -38,6 +39,41 @@ export interface ApplicationVersionRecord {
   artifactSignature: string;
   scanStatus: ApplicationVersionScanStatus;
   createdByEmployeeId: string;
+  createdAt: Date;
+}
+
+export interface ArtifactUploadRecord {
+  uploadId: string;
+  applicationId: string;
+  uploadedByEmployeeId: string;
+  objectKey: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string | null;
+  signature: string | null;
+  partCount: number;
+  uploadStatus: ArtifactUploadStatus;
+  scanStatus: ApplicationVersionScanStatus;
+  errorCode: string | null;
+  expiresAt: Date;
+  completedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface AssetRecord {
+  assetId: string;
+  applicationId: string;
+  applicationVersionId: string | null;
+  assetType: "icon" | "screenshot" | "attachment";
+  name: string;
+  storageKey: string;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  sha256: string | null;
+  scanStatus: ApplicationVersionScanStatus;
+  uploadedByEmployeeId: string | null;
   createdAt: Date;
 }
 
@@ -148,6 +184,32 @@ export interface ApplicationRepository {
   listVersions(
     applicationId: string,
   ): Promise<readonly ApplicationVersionRecord[]>;
+  createArtifactUpload(
+    input: Omit<ArtifactUploadRecord, "uploadId" | "createdAt" | "completedAt">,
+  ): Promise<ArtifactUploadRecord>;
+  findArtifactUpload(uploadId: string): Promise<ArtifactUploadRecord | null>;
+  updateArtifactUpload(
+    uploadId: string,
+    input: Partial<
+      Pick<
+        ArtifactUploadRecord,
+        | "sha256"
+        | "signature"
+        | "sizeBytes"
+        | "uploadStatus"
+        | "scanStatus"
+        | "errorCode"
+        | "completedAt"
+        | "objectKey"
+      >
+    >,
+  ): Promise<ArtifactUploadRecord | null>;
+  createAsset(
+    input: Omit<AssetRecord, "assetId" | "createdAt">,
+  ): Promise<AssetRecord>;
+  listAssets(applicationId: string): Promise<readonly AssetRecord[]>;
+  findAsset(assetId: string): Promise<AssetRecord | null>;
+  deleteAsset(assetId: string): Promise<void>;
   setApplicationStatus(
     applicationId: string,
     status: ApplicationStatus,

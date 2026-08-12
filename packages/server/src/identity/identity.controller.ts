@@ -2,12 +2,16 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
+  NotFoundException,
   Optional,
   Param,
+  Patch,
   Post,
+  Put,
   Query,
   Req,
   Res,
@@ -38,7 +42,9 @@ import { IdentityService } from "./identity.service.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import {
   ActorContextDto,
+  AssignRolesRequestDto,
   DepartmentSummaryDto,
+  EmployeePageResultDto,
   EmployeeSummaryDto,
   LoginRequestDto,
   LoginResponseDto,
@@ -46,6 +52,10 @@ import {
   RevokeSessionsRequestDto,
   RevokeSessionsResultDto,
   RoleRecordDto,
+  SyncRunDto,
+  UpdateDepartmentRequestDto,
+  UpdateEmployeeRequestDto,
+  UpsertDepartmentRequestDto,
 } from "./identity.dto.js";
 import {
   ApiIdentityHeaders,
@@ -108,6 +118,149 @@ export class IdentityController {
   @ApiProblemResponses([400, 401, 403])
   async listEmployeeRoles(@Param("employeeId") employeeId: string) {
     return this.identity.listEmployeeRoles(employeeId);
+  }
+
+  @Get("/employees/page")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_READ)
+  @ApiOperation({ summary: "员工分页列表（关键词搜索）" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "分页结果", type: EmployeePageResultDto })
+  @ApiProblemResponses([400, 401, 403])
+  async listEmployeesPage(
+    @Query("keyword") keyword?: string,
+    @Query("page") page?: string,
+    @Query("pageSize") pageSize?: string,
+  ) {
+    return this.identity.listEmployeesPage({
+      ...(keyword === undefined ? {} : { keyword }),
+      page: Number.parseInt(page ?? "1", 10) || 1,
+      pageSize: Math.min(100, Number.parseInt(pageSize ?? "20", 10) || 20),
+    });
+  }
+
+  @Patch("/employees/:employeeId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @ApiOperation({ summary: "更新员工信息" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "employeeId", description: "员工工号" })
+  @ApiBody({ type: UpdateEmployeeRequestDto })
+  @ApiOkResponse({ description: "更新完成" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async updateEmployee(
+    @Param("employeeId") employeeId: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: UpdateEmployeeRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.updateEmployee(actor, employeeId, body),
+    );
+    return { updated: true };
+  }
+
+  @Put("/employees/:employeeId/roles")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @ApiOperation({ summary: "分配员工角色（原子替换）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "employeeId", description: "员工工号" })
+  @ApiBody({ type: AssignRolesRequestDto })
+  @ApiOkResponse({ description: "分配完成" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async assignRoles(
+    @Param("employeeId") employeeId: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: AssignRolesRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.setEmployeeRoles(actor, employeeId, body.roleCodes),
+    );
+    return { assigned: true };
+  }
+
+  @Post("/departments")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "创建部门" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: UpsertDepartmentRequestDto })
+  @ApiOkResponse({ description: "创建完成" })
+  @ApiProblemResponses([400, 401, 403])
+  async createDepartment(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: UpsertDepartmentRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.createDepartment(actor, {
+        departmentId: body.departmentId,
+        name: body.name,
+        parentDepartmentId: body.parentDepartmentId ?? null,
+        source: "local",
+      }),
+    );
+    return { created: true };
+  }
+
+  @Patch("/departments/:departmentId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE)
+  @ApiOperation({ summary: "更新部门" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "departmentId", description: "部门 ID" })
+  @ApiBody({ type: UpdateDepartmentRequestDto })
+  @ApiOkResponse({ description: "更新完成" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async updateDepartment(
+    @Param("departmentId") departmentId: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: UpdateDepartmentRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.updateDepartment(actor, departmentId, body),
+    );
+    return { updated: true };
+  }
+
+  @Delete("/departments/:departmentId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE)
+  @ApiOperation({ summary: "删除部门（须为空部门）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "departmentId", description: "部门 ID" })
+  @ApiOkResponse({ description: "删除完成" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async deleteDepartment(
+    @Param("departmentId") departmentId: string,
+    @CurrentActor() actor: ActorContext,
+  ) {
+    await this.call(() => this.identity.deleteDepartment(actor, departmentId));
+    return { deleted: true };
+  }
+
+  @Get("/sync-runs")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @ApiOperation({ summary: "组织同步运行记录" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({
+    description: "同步记录列表",
+    type: SyncRunDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async listSyncRuns(@Query("limit") limit?: string) {
+    return this.identity.listSyncRuns(
+      Math.min(100, Number.parseInt(limit ?? "20", 10) || 20),
+    );
+  }
+
+  @Post("/sync/run")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @HttpCode(200)
+  @ApiOperation({ summary: "触发组织同步（V1 占位）" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "同步任务已创建" })
+  @ApiProblemResponses([400, 401, 403])
+  async triggerSync() {
+    return {
+      accepted: true,
+      note: "V1 仅记录同步会话，请在接入钉钉目录后启用",
+    };
   }
 
   @Post("/employees/:employeeId/revoke-sessions")
@@ -341,6 +494,22 @@ export class IdentityController {
         }
         throw error;
       });
+  }
+
+  private async call<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  private rethrow(error: unknown): never {
+    const code =
+      error instanceof Error ? error.message : "IDENTITY_REQUEST_FAILED";
+    if (code.endsWith("_NOT_FOUND")) throw new NotFoundException(code);
+    if (code.endsWith("_NOT_EMPTY")) throw new BadRequestException(code);
+    throw new BadRequestException(code);
   }
 }
 

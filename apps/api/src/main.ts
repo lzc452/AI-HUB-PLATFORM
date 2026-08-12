@@ -9,6 +9,7 @@ const processWithEnvLoader = process as typeof process & {
 if (existsSync(envPath)) processWithEnvLoader.loadEnvFile?.(envPath);
 
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { parseRuntimeConfig } from "@ai-hub/config";
 import { createDatabase } from "@ai-hub/database";
 import {
@@ -19,6 +20,9 @@ import {
   PinoNestLogger,
   KyselyReplayNonceRepository,
   createProductionSecurityMiddleware,
+  ArtifactPipeline,
+  DiskObjectStorage,
+  createNoopSecurity,
 } from "@ai-hub/server";
 
 import { ApiModule } from "./api.module.js";
@@ -59,12 +63,16 @@ async function bootstrap() {
     };
   }
 
-  const app = await NestFactory.create(
+  const artifactStorage = new DiskObjectStorage(config.storageDirectory);
+  const app = await NestFactory.create<NestExpressApplication>(
     ApiModule.register(
       config.databaseUrl,
       { logger, metrics },
-      undefined,
+      createArtifactVerification(artifactStorage),
       identityOptions,
+      config.storageDirectory,
+      config.artifactMaxSizeBytes,
+      artifactStorage,
     ),
     { logger: new PinoNestLogger(logger) },
   );
@@ -83,8 +91,20 @@ async function bootstrap() {
     enabled: shouldEnableApiDocs(config.nodeEnv, config.enableApiDocs),
   });
   app.enableShutdownHooks(["SIGTERM"]);
+  app.useBodyParser("json", { limit: "2.5gb" });
+  app.useBodyParser("raw", {
+    limit: "2.5gb",
+    type: ["application/octet-stream"],
+  });
 
   await app.listen(config.apiPort);
+}
+
+/** 生产装配：Disk 对象存储 + Noop 安全组件 → ArtifactPipeline（V1 先行实现）。 */
+function createArtifactVerification(
+  storage: DiskObjectStorage,
+): ArtifactPipeline {
+  return new ArtifactPipeline(storage, createNoopSecurity());
 }
 
 await bootstrap();

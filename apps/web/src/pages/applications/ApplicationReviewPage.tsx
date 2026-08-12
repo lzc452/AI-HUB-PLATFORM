@@ -28,17 +28,18 @@ import type {
   ApplicationRecord,
   ApplicationVersionRecord,
   ReviewRecord,
+  ReviewQueueRecord,
 } from "../../modules/application/application.client";
 import {
   useApplication,
   useApplicationReviews,
   useApplicationVersions,
+  useClaimReview,
+  useReleaseReview,
+  useReviewApplicationVersion,
+  useReviewQueue,
 } from "../../modules/application/useApplication";
-import {
-  MessageError,
-  showSuccessMessage,
-  showWarningMessage,
-} from "../../shared/ui/message";
+import { MessageError, showWarningMessage } from "../../shared/ui/message";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -53,6 +54,7 @@ type ViewModel = {
   version: ApplicationVersionRecord | undefined;
   reviews: ReviewRecord[];
   checks: Check[];
+  reviewQueue: ReviewQueueRecord | null;
 };
 
 export default function ApplicationReviewPage() {
@@ -60,14 +62,20 @@ export default function ApplicationReviewPage() {
   const applicationQuery = useApplication(applicationId);
   const versionsQuery = useApplicationVersions(applicationId);
   const reviewsQuery = useApplicationReviews(applicationId);
+  const version = versionsQuery.data?.[0];
+  const reviewQueueQuery = useReviewQueue(version?.applicationVersionId);
+  const claim = useClaimReview();
+  const release = useReleaseReview();
+  const reviewAction = useReviewApplicationVersion();
   const data = useMemo<ViewModel>(
     () => ({
       app: applicationQuery.data,
-      version: versionsQuery.data?.[0],
-      reviews: reviewsQuery.data?.length ? reviewsQuery.data : fallbackReviews,
-      checks: validationChecks,
+      version,
+      reviews: reviewsQuery.data ?? [],
+      checks: deriveChecks(version),
+      reviewQueue: reviewQueueQuery.data ?? null,
     }),
-    [applicationQuery.data, reviewsQuery.data, versionsQuery.data],
+    [applicationQuery.data, reviewQueueQuery.data, reviewsQuery.data, version],
   );
   const pending =
     applicationQuery.isPending ||
@@ -77,6 +85,8 @@ export default function ApplicationReviewPage() {
     applicationQuery.error ?? versionsQuery.error ?? reviewsQuery.error;
   const hasError =
     applicationQuery.isError || versionsQuery.isError || reviewsQuery.isError;
+
+  const versionId = version?.applicationVersionId;
 
   return (
     <ApplicationAdminPage
@@ -93,9 +103,19 @@ export default function ApplicationReviewPage() {
       {!pending && !hasError ? (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="space-y-3">
-            <TaskInfoCard version={data.version} app={data.app} />
+            <TaskInfoCard
+              app={data.app}
+              claim={claim}
+              release={release}
+              reviewQueue={data.reviewQueue}
+              version={data.version}
+              versionId={versionId}
+            />
             <ValidationCard checks={data.checks} />
-            <ReviewActionCard />
+            <ReviewActionCard
+              reviewAction={reviewAction}
+              versionId={versionId}
+            />
           </aside>
           <main className="space-y-3">
             <PreviewCard app={data.app} version={data.version} />
@@ -105,6 +125,26 @@ export default function ApplicationReviewPage() {
       ) : null}
     </ApplicationAdminPage>
   );
+}
+
+/** 由版本扫描状态派生的校验项（后端真实校验报告后续并入 review-queue 响应）。 */
+function deriveChecks(version: ApplicationVersionRecord | undefined): Check[] {
+  if (version === undefined) {
+    return [];
+  }
+  const base: Check[] = [
+    { name: "制品完整性（SHA-256）", status: "passed" },
+    {
+      name: "恶意代码扫描",
+      status: version.scanStatus === "passed" ? "passed" : "warning",
+    },
+    {
+      name: "交付渠道完整性",
+      status: "info",
+      description: "需在交付配置中确认四渠道",
+    },
+  ];
+  return base;
 }
 
 function SpinPlaceholder() {
@@ -117,11 +157,22 @@ function SpinPlaceholder() {
 
 function TaskInfoCard({
   app,
+  claim,
+  release,
+  reviewQueue,
   version,
+  versionId,
 }: {
   app: ApplicationRecord | undefined;
+  claim: ReturnType<typeof useClaimReview>;
+  release: ReturnType<typeof useReleaseReview>;
+  reviewQueue: ReviewQueueRecord | null;
   version: ApplicationVersionRecord | undefined;
+  versionId: string | undefined;
 }) {
+  const slaLabel = reviewQueue
+    ? `${Math.max(0, Math.ceil((new Date(reviewQueue.slaDueAt).getTime() - Date.now()) / 36e5))}h`
+    : "-";
   return (
     <Card
       className="app-admin-card"
@@ -130,18 +181,16 @@ function TaskInfoCard({
     >
       <div className="space-y-3 text-[13px]">
         <InfoLine label="SLA 剩余时间">
-          <strong className="text-[18px] text-[#f59e0b]">18h 23m</strong>
+          <strong className="text-[18px] text-[#f59e0b]">{slaLabel}</strong>
         </InfoLine>
-        <InfoLine label="提交人">
-          {app?.ownerEmployeeId ?? "李小龙"}（财务部）
-        </InfoLine>
+        <InfoLine label="提交人">{app?.ownerEmployeeId ?? "-"}</InfoLine>
         <InfoLine label="提交时间">
           <span>
             <i
               aria-hidden="true"
               className="app-ui-icon app-ui-icon-calendar mr-1 text-[#8a94a6]"
             />
-            {formatDate(version?.createdAt ?? "2026-08-01T10:20:00+08:00")}
+            {version ? formatDate(version.createdAt) : "-"}
           </span>
         </InfoLine>
         <InfoLine label="当前领取人">
@@ -150,25 +199,33 @@ function TaskInfoCard({
               aria-hidden="true"
               className="app-ui-icon app-ui-icon-user mr-1 text-[#8a94a6]"
             />
-            王芳（审核组）
+            {reviewQueue?.claimedByEmployeeId ?? "待认领"}
           </span>
         </InfoLine>
       </div>
       <Button
         block
         className="mt-4"
+        disabled={!versionId}
+        loading={claim.isPending}
         type="primary"
-        onClick={() => showSuccessMessage("任务领取成功（只读预览）")}
+        onClick={() => {
+          if (versionId) claim.mutate(versionId);
+        }}
       >
         领取任务
       </Button>
       <div className="mt-2 grid grid-cols-2 gap-2">
-        <Button onClick={() => showWarningMessage("已释放任务（只读预览）")}>
+        <Button
+          disabled={!versionId}
+          loading={release.isPending}
+          onClick={() => {
+            if (versionId) release.mutate(versionId);
+          }}
+        >
           释放任务
         </Button>
-        <Button
-          onClick={() => showWarningMessage("任务转交功能将在下一版本开放")}
-        >
+        <Button disabled title="V1 暂不支持转交">
           转交任务
         </Button>
       </div>
@@ -227,7 +284,13 @@ function ValidationCard({ checks }: { checks: Check[] }) {
   );
 }
 
-function ReviewActionCard() {
+function ReviewActionCard({
+  reviewAction,
+  versionId,
+}: {
+  reviewAction: ReturnType<typeof useReviewApplicationVersion>;
+  versionId: string | undefined;
+}) {
   const [reason, setReason] = useState("");
   return (
     <Card
@@ -245,6 +308,7 @@ function ReviewActionCard() {
         id="reject-reason"
         aria-label="驳回原因"
         className="mt-2"
+        disabled={!versionId}
         maxLength={500}
         onChange={(event) => setReason(event.target.value)}
         placeholder="请输入驳回原因（必填）"
@@ -253,32 +317,42 @@ function ReviewActionCard() {
       />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button
+          disabled={!versionId}
+          loading={reviewAction.isPending}
           type="primary"
-          onClick={() => showSuccessMessage("已通过审核（只读预览）")}
+          onClick={() => {
+            if (versionId) {
+              reviewAction.mutate({
+                applicationVersionId: versionId,
+                comment: "",
+                decision: "approve",
+              });
+            }
+          }}
         >
           通过审核
         </Button>
         <Button
           aria-label="驳回"
           danger
+          disabled={!versionId}
+          loading={reviewAction.isPending}
           onClick={() => {
+            if (!versionId) return;
             if (!reason.trim()) {
               showWarningMessage("请输入驳回原因");
               return;
             }
-            showSuccessMessage("已驳回并记录原因（只读预览）");
+            reviewAction.mutate({
+              applicationVersionId: versionId,
+              comment: reason.trim(),
+              decision: "reject",
+            });
           }}
         >
           驳回
         </Button>
       </div>
-      <Button
-        block
-        className="mt-2"
-        onClick={() => showWarningMessage("备注已保存（只读预览）")}
-      >
-        保存备注
-      </Button>
       <div className="mt-3 text-[11px] text-[#8a94a6]">
         <InfoCircleOutlined /> 提示：不可审核自己参与的应用，请按流程完成审核。
       </div>
@@ -312,7 +386,7 @@ function PreviewCard({
           {
             key: "validation",
             label: "自动校验报告",
-            children: <ValidationSummary />,
+            children: <ValidationSummary checks={deriveChecks(version)} />,
           },
           {
             key: "risk",
@@ -434,11 +508,11 @@ function PreviewOverview({
   );
 }
 
-function ValidationSummary() {
+function ValidationSummary({ checks }: { checks: Check[] }) {
   return (
     <div className="p-5">
       <Timeline
-        items={validationChecks.map((item) => ({
+        items={checks.map((item) => ({
           color: item.status === "warning" ? "orange" : "green",
           children: (
             <span className="text-[13px]">
@@ -460,46 +534,50 @@ function ReviewHistoryCard({ reviews }: { reviews: ReviewRecord[] }) {
       styles={{ body: { padding: 20 } }}
       title={<span className="font-semibold">审核意见记录</span>}
     >
-      <div className="space-y-4">
-        {reviews.map((review) => (
-          <div
-            className="flex gap-3 border-b border-[#edf0f5] pb-4 last:border-0 last:pb-0"
-            key={review.reviewId}
-          >
-            <Avatar className="shrink-0 bg-[#1677ff]">
-              {review.reviewerEmployeeId.slice(0, 1)}
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <strong className="text-[13px]">
-                  {review.reviewerEmployeeId}
-                </strong>
-                <Tag
-                  color={
-                    review.decision === "approve"
-                      ? "success"
+      {reviews.length === 0 ? (
+        <Empty description="暂无审核记录" />
+      ) : (
+        <div className="space-y-4">
+          {reviews.map((review) => (
+            <div
+              className="flex gap-3 border-b border-[#edf0f5] pb-4 last:border-0 last:pb-0"
+              key={review.reviewId}
+            >
+              <Avatar className="shrink-0 bg-[#1677ff]">
+                {review.reviewerEmployeeId.slice(0, 1)}
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong className="text-[13px]">
+                    {review.reviewerEmployeeId}
+                  </strong>
+                  <Tag
+                    color={
+                      review.decision === "approve"
+                        ? "success"
+                        : review.decision === "reject"
+                          ? "error"
+                          : "warning"
+                    }
+                  >
+                    {review.decision === "approve"
+                      ? "通过建议"
                       : review.decision === "reject"
-                        ? "error"
-                        : "warning"
-                  }
-                >
-                  {review.decision === "approve"
-                    ? "通过建议"
-                    : review.decision === "reject"
-                      ? "驳回"
-                      : "补充说明"}
-                </Tag>
-                <span className="ml-auto text-[12px] text-[#8a94a6]">
-                  {formatDate(review.createdAt)}
-                </span>
+                        ? "驳回"
+                        : "补充说明"}
+                  </Tag>
+                  <span className="ml-auto text-[12px] text-[#8a94a6]">
+                    {formatDate(review.createdAt)}
+                  </span>
+                </div>
+                <p className="m-0 mt-1 text-[13px] text-[#596579]">
+                  {review.comment || "暂无审核意见"}
+                </p>
               </div>
-              <p className="m-0 mt-1 text-[13px] text-[#596579]">
-                {review.comment || "暂无审核意见"}
-              </p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
@@ -555,46 +633,3 @@ function formatDate(value: string) {
     minute: "2-digit",
   });
 }
-
-const validationChecks: Check[] = [
-  { name: "格式校验", status: "passed" },
-  { name: "文件扫描", status: "safe", description: "未检测到病毒或风险文件" },
-  {
-    name: "安装包签名",
-    status: "warning",
-    description: "证书将于 2026-09-15 过期",
-  },
-  {
-    name: "大小限制",
-    status: "passed",
-    description: "安装包大小 98.6 KB，符合限制",
-  },
-  {
-    name: "SHA-256",
-    status: "info",
-    description: "b3e5d2a1…e9f7c4b8（完整值）",
-  },
-];
-
-const fallbackReviews: ReviewRecord[] = [
-  {
-    applicationId: "app-001",
-    applicationOwnerEmployeeId: "李小龙",
-    applicationVersionId: "ver-001",
-    comment: "应用整体功能完善，自动校验通过，建议通过审核并上线。",
-    createdAt: "2026-08-01T09:30:00+08:00",
-    decision: "approve",
-    reviewerEmployeeId: "王芳",
-    reviewId: "review-mock-1",
-  },
-  {
-    applicationId: "app-001",
-    applicationOwnerEmployeeId: "李小龙",
-    applicationVersionId: "ver-001",
-    comment: "安装包签名证书将于 2026-09-15 过期，请关注更新并及时续签。",
-    createdAt: "2026-08-01T09:05:00+08:00",
-    decision: "request_changes",
-    reviewerEmployeeId: "刘涛（安全组）",
-    reviewId: "review-mock-2",
-  },
-];

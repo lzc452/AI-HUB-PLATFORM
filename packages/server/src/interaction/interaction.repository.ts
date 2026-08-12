@@ -127,6 +127,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
         author_employee_id: input.authorEmployeeId,
         body: input.body,
         display_anonymously: input.displayAnonymously,
+        comment_kind: input.commentKind,
         hidden_at: input.hiddenAt,
       })
       .returningAll()
@@ -326,6 +327,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
       authorEmployeeId: row.author_employee_id,
       body: row.body,
       displayAnonymously: row.display_anonymously,
+      commentKind: row.comment_kind,
       hiddenAt: row.hidden_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

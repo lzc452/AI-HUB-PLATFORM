@@ -72,3 +72,63 @@ export function restoreComment(
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// 评论（普通员工根评论 / 官方回复）与应用反馈
+// ---------------------------------------------------------------------------
+
+export interface CommentOutputExt extends CommentOutput {
+  commentKind?: "user" | "official";
+}
+
+/** 发表评论：parentCommentId 为空创建根评论；提供时为官方回复（需 owner/maintainer）。 */
+export function createComment(
+  applicationId: string,
+  input: { parentCommentId?: string | null; body: string },
+): Promise<CommentOutputExt> {
+  return apiFetch<CommentOutputExt>(
+    `${interactionsPath(applicationId)}/comments`,
+    {
+      body: JSON.stringify({
+        parentCommentId: input.parentCommentId ?? null,
+        body: input.body,
+      }),
+      method: "POST",
+    },
+  );
+}
+
+export interface FeedbackRecord {
+  feedbackId: string;
+  applicationId: string;
+  applicationVersionId: string | null;
+  creatorEmployeeId: string;
+  type: "bug" | "suggestion" | "content_issue";
+  body: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  assigneeEmployeeId: string | null;
+  resolution: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+}
+
+export function createFeedback(
+  applicationId: string,
+  input: { type: FeedbackRecord["type"]; body: string },
+): Promise<FeedbackRecord> {
+  return apiFetch<FeedbackRecord>(
+    `${interactionsPath(applicationId)}/feedback`,
+    {
+      body: JSON.stringify(input),
+      method: "POST",
+    },
+  );
+}
+
+export function listMyFeedback(
+  applicationId: string,
+): Promise<FeedbackRecord[]> {
+  return apiFetch<FeedbackRecord[]>(
+    `${interactionsPath(applicationId)}/feedback`,
+  );
+}

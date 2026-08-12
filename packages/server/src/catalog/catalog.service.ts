@@ -4,7 +4,9 @@ import type {
   CatalogListResult,
   CatalogRepository,
   CatalogSearchInput,
+  DeliveryResolveResult,
 } from "./catalog.types.js";
+import type { DeliveryChannel } from "../application/application.types.js";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
 export class CatalogService {
@@ -73,6 +75,92 @@ export class CatalogService {
         audience: { employeeId: actor.employeeId },
       });
     }
+  }
+
+  async resolveDelivery(
+    actor: ActorContext,
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<DeliveryResolveResult> {
+    const entry = await this.getDetail(actor, applicationId);
+    if (!entry.deliveryChannels.includes(channel)) {
+      throw new Error("CATALOG_DELIVERY_CHANNEL_NOT_ENABLED");
+    }
+    const delivery = await this.repository.findDelivery(applicationId, channel);
+    if (delivery === null || !delivery.enabled) {
+      throw new Error("CATALOG_DELIVERY_CHANNEL_NOT_ENABLED");
+    }
+
+    const actionType: CatalogDeliveryAction =
+      channel === "web"
+        ? "web_redirect"
+        : channel === "mini_program"
+          ? "qr_display"
+          : "package_download";
+
+    const idempotencyKey = `action:${actor.sessionId}:${applicationId}:${channel}:${entry.currentVersionId}`;
+    await this.repository.recordDeliveryAction({
+      applicationId,
+      applicationVersionId: entry.currentVersionId,
+      actorEmployeeId: actor.employeeId,
+      actionType,
+      channel,
+      idempotencyKey,
+      status: "initiated",
+    });
+
+    if (actionType === "package_download") {
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_downloaded",
+        aggregateType: "application",
+        aggregateId: applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-downloaded:${actor.sessionId}:${applicationId}:${entry.currentVersionId}:${Date.now()}`,
+        metadata: { channel },
+        audience: { employeeId: actor.employeeId },
+      });
+    }
+
+    if (channel === "web") {
+      return { kind: "web_redirect", url: delivery.entryUrl };
+    }
+    if (channel === "mini_program") {
+      return { kind: "qr", payload: delivery.entryUrl };
+    }
+    const storageKey = await this.repository.findDeliveryAssetStorageKey(
+      applicationId,
+      channel,
+    );
+    if (storageKey !== null) {
+      return {
+        kind: "download",
+        url: `/internal/catalog/${encodeURIComponent(applicationId)}/deliveries/${channel}/asset`,
+        fileName: null,
+      };
+    }
+    if (delivery.entryUrl.trim().length > 0) {
+      return { kind: "web_redirect", url: delivery.entryUrl };
+    }
+    return { kind: "unavailable", reason: "该渠道暂未配置可下载安装包" };
+  }
+
+  async getDeliveryAssetStorageKey(
+    actor: ActorContext,
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<string> {
+    const entry = await this.getDetail(actor, applicationId);
+    if (!entry.deliveryChannels.includes(channel)) {
+      throw new Error("CATALOG_DELIVERY_CHANNEL_NOT_ENABLED");
+    }
+    const storageKey = await this.repository.findDeliveryAssetStorageKey(
+      applicationId,
+      channel,
+    );
+    if (storageKey === null) {
+      throw new Error("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    return storageKey;
   }
 
   async getRiskDescription(

@@ -9,6 +9,7 @@ import {
   usePublishedVersion,
 } from "../../modules/application/useApplication";
 import { MessageError, showWarningMessage } from "../../shared/ui/message";
+import { UploadVersionDrawer } from "./UploadVersionDrawer";
 
 const scanStatusMeta: Record<
   ApplicationVersionRecord["scanStatus"],
@@ -24,6 +25,7 @@ export default function ApplicationVersionsPage() {
   const versionsQuery = useApplicationVersions(applicationId);
   const publishedVersion = usePublishedVersion(applicationId);
   const [selectedVersionId, setSelectedVersionId] = useState<string>();
+  const [uploadOpen, setUploadOpen] = useState(false);
   const versions = versionsQuery.data ?? [];
   const current = publishedVersion.data ?? versions[0];
   const selected =
@@ -39,10 +41,20 @@ export default function ApplicationVersionsPage() {
 
   return (
     <ApplicationAdminPage
+      actions={
+        <Button onClick={() => setUploadOpen(true)} type="primary">
+          上传新版本
+        </Button>
+      }
       description="比较不可变的应用版本及其产物元数据。"
       showNavigation={false}
       title="版本管理"
     >
+      <UploadVersionDrawer
+        applicationId={applicationId as string}
+        onClose={() => setUploadOpen(false)}
+        open={uploadOpen}
+      />
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(430px,1fr)_minmax(0,2fr)]">
         <section className="app-admin-card overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 border-b border-[#edf0f5] p-3">
@@ -65,66 +77,63 @@ export default function ApplicationVersionsPage() {
             {versions.length === 0 && !versionsQuery.isPending ? (
               <Empty className="py-12" description="暂无版本记录" />
             ) : null}
-            {(versions.length ? versions : fallbackVersions).map(
-              (version, index) => {
-                const isCurrent =
-                  version.applicationVersionId ===
-                    current?.applicationVersionId ||
-                  (!current && index === 0);
-                const isSelected =
-                  version.applicationVersionId ===
-                  selected?.applicationVersionId;
-                const meta = scanStatusMeta[version.scanStatus];
-                return (
-                  <button
-                    className={`relative mb-2 flex w-full gap-4 rounded-lg border p-4 text-left transition ${isSelected ? "border-[#5796ff] bg-[#f8fbff] shadow-[0_0_0_1px_#5796ff]" : "border-[#e4eaf2] bg-white hover:border-[#9ebef4]"}`}
-                    key={version.applicationVersionId}
-                    onClick={() =>
-                      setSelectedVersionId(version.applicationVersionId)
-                    }
-                    type="button"
+            {(versions.length ? versions : []).map((version, index) => {
+              const isCurrent =
+                version.applicationVersionId ===
+                  current?.applicationVersionId ||
+                (!current && index === 0);
+              const isSelected =
+                version.applicationVersionId === selected?.applicationVersionId;
+              const meta = scanStatusMeta[version.scanStatus];
+              return (
+                <button
+                  className={`relative mb-2 flex w-full gap-4 rounded-lg border p-4 text-left transition ${isSelected ? "border-[#5796ff] bg-[#f8fbff] shadow-[0_0_0_1px_#5796ff]" : "border-[#e4eaf2] bg-white hover:border-[#9ebef4]"}`}
+                  key={version.applicationVersionId}
+                  onClick={() =>
+                    setSelectedVersionId(version.applicationVersionId)
+                  }
+                  type="button"
+                >
+                  <span
+                    className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-white ring-1 ${isCurrent ? "bg-[#1677ff] ring-[#1677ff]" : meta.color === "warning" ? "bg-[#f59e0b] ring-[#f59e0b]" : "bg-[#20b26b] ring-[#20b26b]"}`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <strong className="text-[17px] text-[#1f2937]">
+                        v{version.version.replace(/^v/, "")}
+                      </strong>
+                      {isCurrent ? <Tag color="blue">当前版本</Tag> : null}
+                      <Tag color={meta.color}>{meta.label}</Tag>
+                    </span>
+                    <span className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-[#697386]">
+                      <span>
+                        <i
+                          aria-hidden="true"
+                          className="app-ui-icon app-ui-icon-calendar mr-1 text-[#8a94a6]"
+                        />
+                        {formatDate(version.createdAt)}
+                      </span>
+                      <span>
+                        <i
+                          aria-hidden="true"
+                          className="app-ui-icon app-ui-icon-user mr-1 text-[#8a94a6]"
+                        />
+                        {version.createdByEmployeeId}
+                      </span>
+                    </span>
+                    <span className="mt-2 block text-[13px] text-[#596579]">
+                      {version.changelog ||
+                        "优化票据识别模型，提升识别准确率；新增增值税电子发票支持。"}
+                    </span>
+                  </span>
+                  <span
+                    className={`hidden shrink-0 self-center rounded-md border px-3 py-1 text-xs sm:block ${isSelected ? "border-[#1677ff] bg-[#1677ff] text-white" : "border-[#d9e1ed] text-[#374151]"}`}
                   >
-                    <span
-                      className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-white ring-1 ${isCurrent ? "bg-[#1677ff] ring-[#1677ff]" : meta.color === "warning" ? "bg-[#f59e0b] ring-[#f59e0b]" : "bg-[#20b26b] ring-[#20b26b]"}`}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <strong className="text-[17px] text-[#1f2937]">
-                          v{version.version.replace(/^v/, "")}
-                        </strong>
-                        {isCurrent ? <Tag color="blue">当前版本</Tag> : null}
-                        <Tag color={meta.color}>{meta.label}</Tag>
-                      </span>
-                      <span className="mt-2 flex flex-wrap items-center gap-3 text-[12px] text-[#697386]">
-                        <span>
-                          <i
-                            aria-hidden="true"
-                            className="app-ui-icon app-ui-icon-calendar mr-1 text-[#8a94a6]"
-                          />
-                          {formatDate(version.createdAt)}
-                        </span>
-                        <span>
-                          <i
-                            aria-hidden="true"
-                            className="app-ui-icon app-ui-icon-user mr-1 text-[#8a94a6]"
-                          />
-                          {version.createdByEmployeeId}
-                        </span>
-                      </span>
-                      <span className="mt-2 block text-[13px] text-[#596579]">
-                        {version.changelog ||
-                          "优化票据识别模型，提升识别准确率；新增增值税电子发票支持。"}
-                      </span>
-                    </span>
-                    <span
-                      className={`hidden shrink-0 self-center rounded-md border px-3 py-1 text-xs sm:block ${isSelected ? "border-[#1677ff] bg-[#1677ff] text-white" : "border-[#d9e1ed] text-[#374151]"}`}
-                    >
-                      {isCurrent ? "查看详情" : "与当前版本对比"}
-                    </span>
-                  </button>
-                );
-              },
-            )}
+                    {isCurrent ? "查看详情" : "与当前版本对比"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <div className="border-t border-[#edf0f5] px-5 py-3 text-[13px] text-[#697386]">
             共 {versions.length || 5} 个版本
@@ -281,70 +290,6 @@ export default function ApplicationVersionsPage() {
     </ApplicationAdminPage>
   );
 }
-
-const fallbackVersions: ApplicationVersionRecord[] = [
-  {
-    applicationId: "app-001",
-    applicationVersionId: "v241",
-    artifactKey: "ocr/2.4.1",
-    artifactSha256: "sha",
-    artifactSignature: null,
-    changelog: "优化票据识别模型，提升识别准确率；新增增值税电子发票支持。",
-    createdAt: "2026-08-01T10:30:00+08:00",
-    createdByEmployeeId: "王芳",
-    scanStatus: "passed",
-    version: "2.4.1",
-  },
-  {
-    applicationId: "app-001",
-    applicationVersionId: "v240",
-    artifactKey: "ocr/2.4.0",
-    artifactSha256: "sha",
-    artifactSignature: null,
-    changelog:
-      "优化票据结构，支持多税种识别；修复部分发票合计金额识别异常问题。",
-    createdAt: "2026-07-15T10:30:00+08:00",
-    createdByEmployeeId: "王芳",
-    scanStatus: "passed",
-    version: "2.4.0",
-  },
-  {
-    applicationId: "app-001",
-    applicationVersionId: "v230",
-    artifactKey: "ocr/2.3.0",
-    artifactSha256: "sha",
-    artifactSignature: null,
-    changelog: "新增火车票识别支持；优化出差报销场景结构化输出。",
-    createdAt: "2026-06-28T10:30:00+08:00",
-    createdByEmployeeId: "李小龙",
-    scanStatus: "passed",
-    version: "2.3.0",
-  },
-  {
-    applicationId: "app-001",
-    applicationVersionId: "v220",
-    artifactKey: "ocr/2.2.0",
-    artifactSha256: "sha",
-    artifactSignature: null,
-    changelog: "新增多语言识别能力；优化移动端体验。",
-    createdAt: "2026-06-10T10:30:00+08:00",
-    createdByEmployeeId: "王芳",
-    scanStatus: "pending",
-    version: "2.2.0",
-  },
-  {
-    applicationId: "app-001",
-    applicationVersionId: "v210",
-    artifactKey: "ocr/2.1.0",
-    artifactSha256: "sha",
-    artifactSignature: null,
-    changelog: "初版：支持增值税发票基本信息识别。",
-    createdAt: "2026-05-28T10:30:00+08:00",
-    createdByEmployeeId: "张伟",
-    scanStatus: "pending",
-    version: "2.1.0",
-  },
-];
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("zh-CN", {

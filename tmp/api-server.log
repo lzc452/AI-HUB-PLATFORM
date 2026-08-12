@@ -1,0 +1,38 @@
+
+> @ai-hub/api@ start D:\HighPowerWorkspace\AI-HUB-PLATFORM\apps\api
+> tsx --tsconfig ../../tsconfig.runtime.json src/main.ts
+
+{"level":30,"time":1786530939265,"service":"@ai-hub/api","data":"Starting Nest application...","params":["NestFactory"],"msg":"Starting Nest application..."}
+{"level":30,"time":1786530939304,"service":"@ai-hub/api","data":"HealthModule dependencies initialized","params":["InstanceLoader"],"msg":"HealthModule dependencies initialized"}
+{"level":30,"time":1786530939304,"service":"@ai-hub/api","data":"ObservabilityModule dependencies initialized","params":["InstanceLoader"],"msg":"ObservabilityModule dependencies initialized"}
+{"level":30,"time":1786530939463,"service":"@ai-hub/api","data":"FeedbackModule dependencies initialized","params":["InstanceLoader"],"msg":"FeedbackModule dependencies initialized"}
+{"level":30,"time":1786530939463,"service":"@ai-hub/api","data":"AnalyticsModule dependencies initialized","params":["InstanceLoader"],"msg":"AnalyticsModule dependencies initialized"}
+{"level":30,"time":1786530939464,"service":"@ai-hub/api","data":"ApplicationModule dependencies initialized","params":["InstanceLoader"],"msg":"ApplicationModule dependencies initialized"}
+{"level":30,"time":1786530939464,"service":"@ai-hub/api","data":"ApiModule dependencies initialized","params":["InstanceLoader"],"msg":"ApiModule dependencies initialized"}
+{"level":30,"time":1786530939464,"service":"@ai-hub/api","data":"IdentityModule dependencies initialized","params":["InstanceLoader"],"msg":"IdentityModule dependencies initialized"}
+{"level":30,"time":1786530939465,"service":"@ai-hub/api","data":"CatalogModule dependencies initialized","params":["InstanceLoader"],"msg":"CatalogModule dependencies initialized"}
+{"level":30,"time":1786530939465,"service":"@ai-hub/api","data":"ApplicationModule dependencies initialized","params":["InstanceLoader"],"msg":"ApplicationModule dependencies initialized"}
+{"level":30,"time":1786530939465,"service":"@ai-hub/api","data":"InteractionModule dependencies initialized","params":["InstanceLoader"],"msg":"InteractionModule dependencies initialized"}
+{"level":30,"time":1786530939466,"service":"@ai-hub/api","data":"CreatorModule dependencies initialized","params":["InstanceLoader"],"msg":"CreatorModule dependencies initialized"}
+{"level":30,"time":1786530939466,"service":"@ai-hub/api","data":"NotificationModule dependencies initialized","params":["InstanceLoader"],"msg":"NotificationModule dependencies initialized"}
+{"level":30,"time":1786530939466,"service":"@ai-hub/api","data":"DemandModule dependencies initialized","params":["InstanceLoader"],"msg":"DemandModule dependencies initialized"}
+D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:187
+            throw new Error(`A circular dependency has been detected (property key: "${key}"). Please, make sure that each side of a bidirectional relationships are using lazy resolvers ("type: () => ClassType").`);
+                  ^
+
+Error: A circular dependency has been detected (property key: "summary"). Please, make sure that each side of a bidirectional relationships are using lazy resolvers ("type: () => ClassType").
+    at SchemaObjectFactory.createNotBuiltInTypeReference (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:187:19)
+    at SchemaObjectFactory.createSchemaMetadata (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:297:25)
+    at SchemaObjectFactory.mergePropertyWithMetadata (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:137:21)
+    at D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:82:35
+    at Array.map (<anonymous>)
+    at SchemaObjectFactory.extractPropertiesFromType (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:81:52)
+    at SchemaObjectFactory.exploreModelSchema (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\schema-object-factory.js:109:41)
+    at ResponseObjectFactory.create (D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\services\response-object-factory.js:46:47)
+    at D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\@nestjs\swagger\dist\explorers\api-response.explorer.js:67:101
+    at D:\HighPowerWorkspace\AI-HUB-PLATFORM\node_modules\lodash\lodash.js:13469:38
+
+Node.js v22.22.2
+D:\HighPowerWorkspace\AI-HUB-PLATFORM\apps\api:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @ai-hub/api@ start: `tsx --tsconfig ../../tsconfig.runtime.json src/main.ts`
+Exit status 1

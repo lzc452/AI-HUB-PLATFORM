@@ -61,10 +61,27 @@ export interface CatalogRepository {
     actorEmployeeId: string;
     actionType: CatalogDeliveryAction;
     channel?: string | null;
+    idempotencyKey?: string | null;
+    status?: "initiated" | "served" | "failed";
   }): Promise<void>;
+  findDelivery(
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<{ entryUrl: string; enabled: boolean } | null>;
+  findDeliveryAssetStorageKey(
+    applicationId: string,
+    channel: DeliveryChannel,
+  ): Promise<string | null>;
   getRiskDescription(applicationId: string): Promise<string | null>;
   upsertRiskDescription(
     applicationId: string,
     description: string,
   ): Promise<void>;
 }
+
+/** 交付解析结果：不同渠道返回不同的可执行目标。 */
+export type DeliveryResolveResult =
+  | { kind: "web_redirect"; url: string }
+  | { kind: "download"; url: string; fileName: string | null }
+  | { kind: "qr"; payload: string }
+  | { kind: "unavailable"; reason: string };

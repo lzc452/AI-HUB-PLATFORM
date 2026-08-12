@@ -97,6 +97,9 @@ vi.mock("../../modules/interaction/useInteraction", () => ({
   useComments: () => ({ data: { items: [], total: 0 }, isPending: false }),
   useHideComment: () => ({ isPending: false, mutate: vi.fn() }),
   useRestoreComment: () => ({ isPending: false, mutate: vi.fn() }),
+  useCreateComment: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useCreateFeedback: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useMyFeedback: () => ({ data: [], isPending: false }),
 }));
 
 function mockEntry(): CatalogEntry {

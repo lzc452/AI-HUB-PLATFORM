@@ -788,9 +788,11 @@ export function buildDemandFixture(anchor: Date): DemandFixtureData {
     const aRef = a.merged_into_demand_id;
     const bRef = b.merged_into_demand_id;
     // a references b's demand_id → b must come first
-    if (typeof aRef === "string" && demandIds.has(aRef) && aRef === b.demand_id) return 1;
+    if (typeof aRef === "string" && demandIds.has(aRef) && aRef === b.demand_id)
+      return 1;
     // b references a's demand_id → a must come first
-    if (typeof bRef === "string" && demandIds.has(bRef) && bRef === a.demand_id) return -1;
+    if (typeof bRef === "string" && demandIds.has(bRef) && bRef === a.demand_id)
+      return -1;
     return 0;
   });
 

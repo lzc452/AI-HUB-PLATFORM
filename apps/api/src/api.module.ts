@@ -8,6 +8,7 @@ import {
   CatalogService,
   InteractionModule,
   InteractionService,
+  FeedbackModule,
   NotificationModule,
   NotificationService,
   CreatorModule,
@@ -82,6 +83,9 @@ export class ApiModule {
         redirectUri: string;
       };
     },
+    storageDirectory?: string,
+    artifactMaxSizeBytes?: number,
+    artifactStorage?: import("@ai-hub/server").DiskObjectStorage,
   ): DynamicModule {
     const metrics = observability.metrics ?? new ObservabilityMetrics();
     return {
@@ -90,9 +94,15 @@ export class ApiModule {
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
         IdentityModule.register(databaseUrl, identityOptions),
-        ApplicationModule.register(databaseUrl, artifactVerification),
-        CatalogModule.register(databaseUrl),
+        ApplicationModule.register(
+          databaseUrl,
+          artifactVerification,
+          storageDirectory,
+          artifactMaxSizeBytes,
+        ),
+        CatalogModule.register(databaseUrl, artifactStorage),
         InteractionModule.register(databaseUrl),
+        FeedbackModule.register(databaseUrl),
         NotificationModule.register(databaseUrl),
         CreatorModule.register(databaseUrl),
         DemandModule.register(databaseUrl),

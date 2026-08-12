@@ -98,8 +98,9 @@ export class InteractionController {
   @Post("comments")
   @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({
-    summary: "官方回复评论",
-    description: "仅应用所有者或维护者可回复。",
+    summary: "发表评论 / 官方回复",
+    description:
+      "parentCommentId 为 null 时创建根评论（普通员工可发）；提供父评论 ID 时仅应用所有者/维护者可进行官方回复。",
   })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -112,10 +113,19 @@ export class InteractionController {
     @Headers("x-session-id") sessionId: string | undefined,
     @Body() body: CommentRequestDto,
   ) {
+    if (body.parentCommentId === null || body.parentCommentId === undefined) {
+      return this.call(async () =>
+        this.interactions.createComment(
+          await this.actor(employeeId, sessionId),
+          { applicationId, body: body.body },
+        ),
+      );
+    }
     return this.call(async () =>
-      this.interactions.reply(await this.actor(employeeId, sessionId), {
+      this.interactions.replyComment(await this.actor(employeeId, sessionId), {
         applicationId,
-        ...body,
+        parentCommentId: body.parentCommentId as string,
+        body: body.body,
       }),
     );
   }

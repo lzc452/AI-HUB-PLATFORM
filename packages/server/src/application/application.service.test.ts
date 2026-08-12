@@ -9,6 +9,8 @@ import type {
   ApplicationRecord,
   ApplicationRepository,
   ApplicationVersionRecord,
+  ArtifactUploadRecord,
+  AssetRecord,
   DeliveryRecord,
   ReviewQueueRecord,
   ReviewRecord,
@@ -42,6 +44,8 @@ class MemoryApplicationRepository implements ApplicationRepository {
   deliveries: DeliveryRecord[] = [];
   reviews: ReviewRecord[] = [];
   reviewQueue: ReviewQueueRecord[] = [];
+  uploads = new Map<string, ArtifactUploadRecord>();
+  assets = new Map<string, AssetRecord>();
   audits: string[] = [];
   events: string[] = [];
   nextId = 1;
@@ -86,6 +90,63 @@ class MemoryApplicationRepository implements ApplicationRepository {
     return [...this.versions.values()].filter(
       (version) => version.applicationId === applicationId,
     );
+  }
+  async createArtifactUpload(
+    input: Omit<ArtifactUploadRecord, "uploadId" | "createdAt" | "completedAt">,
+  ) {
+    const record: ArtifactUploadRecord = {
+      ...input,
+      uploadId: `upload-${this.nextId++}`,
+      createdAt: new Date(),
+      completedAt: null,
+    };
+    this.uploads.set(record.uploadId, record);
+    return record;
+  }
+  async findArtifactUpload(uploadId: string) {
+    return this.uploads.get(uploadId) ?? null;
+  }
+  async updateArtifactUpload(
+    uploadId: string,
+    input: Partial<
+      Pick<
+        ArtifactUploadRecord,
+        | "sha256"
+        | "signature"
+        | "sizeBytes"
+        | "uploadStatus"
+        | "scanStatus"
+        | "errorCode"
+        | "completedAt"
+        | "objectKey"
+      >
+    >,
+  ) {
+    const current = this.uploads.get(uploadId);
+    if (current === undefined) return null;
+    const updated = { ...current, ...input };
+    this.uploads.set(uploadId, updated);
+    return updated;
+  }
+  async createAsset(input: Omit<AssetRecord, "assetId" | "createdAt">) {
+    const record: AssetRecord = {
+      ...input,
+      assetId: `asset-${this.nextId++}`,
+      createdAt: new Date(),
+    };
+    this.assets.set(record.assetId, record);
+    return record;
+  }
+  async listAssets(applicationId: string) {
+    return [...this.assets.values()].filter(
+      (asset) => asset.applicationId === applicationId,
+    );
+  }
+  async findAsset(assetId: string) {
+    return this.assets.get(assetId) ?? null;
+  }
+  async deleteAsset(assetId: string) {
+    this.assets.delete(assetId);
   }
   async setApplicationStatus(
     id: string,

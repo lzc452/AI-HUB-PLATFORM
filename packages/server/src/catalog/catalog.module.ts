@@ -5,6 +5,7 @@ import { IdentityService } from "../identity/identity.service.js";
 import { ApplicationModule } from "../application/application.module.js";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import type { ApplicationService } from "../application/application.service.js";
+import { DiskObjectStorage } from "../application/storage.disk.js";
 import { CatalogController } from "./catalog.controller.js";
 import { KyselyCatalogRepository } from "./catalog.repository.js";
 import { CatalogService } from "./catalog.service.js";
@@ -14,7 +15,10 @@ import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repositor
 
 @Module({})
 export class CatalogModule {
-  static register(databaseUrl: string): DynamicModule {
+  static register(
+    databaseUrl: string,
+    storage?: DiskObjectStorage,
+  ): DynamicModule {
     return {
       module: CatalogModule,
       imports: [
@@ -23,6 +27,9 @@ export class CatalogModule {
       ],
       controllers: [CatalogController],
       providers: [
+        ...(storage === undefined
+          ? []
+          : [{ provide: DiskObjectStorage, useValue: storage }]),
         {
           provide: CATALOG_SERVICE,
           useFactory: () => {

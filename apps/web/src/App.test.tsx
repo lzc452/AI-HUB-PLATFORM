@@ -113,6 +113,34 @@ vi.mock("./modules/application/useApplication", () => {
     useApplicationDeliveries: () => ({ ...settled, data: [] }),
     useApplicationReviews: () => ({ ...settled, data: [] }),
     useApplicationVersions: () => ({ ...settled, data: [publishedVersion] }),
+    useReviewQueue: () => ({ ...settled, data: null }),
+    useClaimReview: () => ({ isPending: false, mutate: vi.fn() }),
+    useReleaseReview: () => ({ isPending: false, mutate: vi.fn() }),
+    useReviewApplicationVersion: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+    }),
+    useConfigureDelivery: () => ({
+      isPending: false,
+      mutateAsync: vi.fn(),
+    }),
+    usePublishApplication: () => ({
+      isPending: false,
+      mutateAsync: vi.fn(),
+    }),
+    useArtifactUpload: () => ({
+      start: { mutateAsync: vi.fn() },
+      complete: { mutateAsync: vi.fn() },
+    }),
+    useArtifactUploadStatus: () => ({ ...settled, data: undefined }),
+    useAssets: () => ({
+      query: { ...settled, data: [] },
+      remove: { mutateAsync: vi.fn() },
+    }),
+    useCreateVersion: () => ({
+      isPending: false,
+      mutateAsync: vi.fn(),
+    }),
     useArchiveApplication: () => ({
       isPending: false,
       mutate: vi.fn(),

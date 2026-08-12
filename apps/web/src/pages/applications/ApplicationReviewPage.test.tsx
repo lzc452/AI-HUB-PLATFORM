@@ -29,15 +29,35 @@ const hoisted = vi.hoisted(() => {
     scanStatus: "passed",
     version: "v2.4.1",
   };
+  const mockReviewQueue = {
+    applicationId: "app-001",
+    applicationVersionId: "ver-1",
+    claimedByEmployeeId: null,
+    claimedAt: null,
+    createdAt: "2026-08-01T10:20:00+08:00",
+    reviewQueueId: "rq-1",
+    slaDueAt: "2026-08-02T10:20:00+08:00",
+    slaStatus: "on_time",
+    status: "available",
+  };
   return {
     mockApp,
     mockVersion,
+    mockReviewQueue,
     settled,
     useApplication: vi.fn((): Query => ({ ...settled, data: mockApp })),
     useApplicationReviews: vi.fn((): Query => ({ ...settled, data: [] })),
     useApplicationVersions: vi.fn(
       (): Query => ({ ...settled, data: [mockVersion] }),
     ),
+    useReviewQueue: vi.fn((): Query => ({ ...settled, data: mockReviewQueue })),
+    useClaimReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+    useReleaseReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+    useReviewApplicationVersion: vi.fn(() => ({
+      isPending: false,
+      mutate: hoisted.reviewMutate,
+    })),
+    reviewMutate: vi.fn(),
   };
 });
 
@@ -45,6 +65,10 @@ vi.mock("../../modules/application/useApplication", () => ({
   useApplication: hoisted.useApplication,
   useApplicationVersions: hoisted.useApplicationVersions,
   useApplicationReviews: hoisted.useApplicationReviews,
+  useReviewQueue: hoisted.useReviewQueue,
+  useClaimReview: hoisted.useClaimReview,
+  useReleaseReview: hoisted.useReleaseReview,
+  useReviewApplicationVersion: hoisted.useReviewApplicationVersion,
 }));
 
 const messageMocks = vi.hoisted(() => ({
@@ -89,6 +113,11 @@ describe("ApplicationReviewPage", () => {
       ...hoisted.settled,
       data: [],
     });
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: hoisted.mockReviewQueue,
+    });
+    hoisted.reviewMutate.mockClear();
     messageMocks.showSuccessMessage.mockClear();
     messageMocks.showWarningMessage.mockClear();
   });
@@ -107,12 +136,10 @@ describe("ApplicationReviewPage", () => {
     expect(screen.getByText("审核意见记录")).toBeInTheDocument();
   });
 
-  it("renders fallback review history when no backend reviews exist", () => {
+  it("shows empty state when no backend reviews exist", () => {
     renderPage();
 
-    // enrichReviews 在没有真实审核记录时返回设计稿占位示例
-    expect(screen.getByText(/建议通过审核并上线/)).toBeInTheDocument();
-    expect(screen.getByText("补充说明")).toBeInTheDocument();
+    expect(screen.getByText("暂无审核记录")).toBeInTheDocument();
   });
 
   it("shows the loading placeholder while queries are pending", () => {
@@ -127,14 +154,16 @@ describe("ApplicationReviewPage", () => {
     expect(screen.queryByText("审核任务信息")).not.toBeInTheDocument();
   });
 
-  it("triggers a success message when approving", () => {
+  it("submits an approve decision through the review mutation", () => {
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "通过审核" }));
 
-    expect(messageMocks.showSuccessMessage).toHaveBeenCalledWith(
-      "已通过审核（只读预览）",
-    );
+    expect(hoisted.reviewMutate).toHaveBeenCalledWith({
+      applicationVersionId: "ver-1",
+      comment: "",
+      decision: "approve",
+    });
   });
 
   it("warns and blocks rejection when the reason is empty", () => {
@@ -145,10 +174,10 @@ describe("ApplicationReviewPage", () => {
     expect(messageMocks.showWarningMessage).toHaveBeenCalledWith(
       "请输入驳回原因",
     );
-    expect(messageMocks.showSuccessMessage).not.toHaveBeenCalled();
+    expect(hoisted.reviewMutate).not.toHaveBeenCalled();
   });
 
-  it("records the rejection reason when provided", () => {
+  it("submits a rejection decision with the provided reason", () => {
     renderPage();
 
     fireEvent.change(screen.getByLabelText("驳回原因"), {
@@ -156,8 +185,10 @@ describe("ApplicationReviewPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "驳回" }));
 
-    expect(messageMocks.showSuccessMessage).toHaveBeenCalledWith(
-      "已驳回并记录原因（只读预览）",
-    );
+    expect(hoisted.reviewMutate).toHaveBeenCalledWith({
+      applicationVersionId: "ver-1",
+      comment: "缺少必要的风险评估材料",
+      decision: "reject",
+    });
   });
 });

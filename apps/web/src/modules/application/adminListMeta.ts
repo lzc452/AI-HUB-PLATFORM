@@ -23,6 +23,7 @@ export interface AdminApplicationRow {
 
 export type AdminApplicationStatus =
   | "published"
+  | "approved"
   | "in_review"
   | "draft"
   | "withdrawn";

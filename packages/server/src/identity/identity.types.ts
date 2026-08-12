@@ -97,6 +97,42 @@ export interface IdentityRepository {
   listDepartments(): Promise<readonly DepartmentSummary[]>;
   listEmployeeDepartmentIds(employeeId: EmployeeId): Promise<readonly string[]>;
   listEmployeeRoles(employeeId: EmployeeId): Promise<readonly RoleRecord[]>;
+  listEmployeesPage(input?: {
+    keyword?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{
+    items: readonly EmployeeSummary[];
+    total: number;
+  }>;
+  updateEmployee(
+    employeeId: EmployeeId,
+    input: {
+      displayName?: string;
+      status?: "pending_binding" | "active" | "disabled" | "archived";
+      primaryDepartmentId?: string;
+    },
+  ): Promise<void>;
+  updateDepartment(
+    departmentId: string,
+    input: { name?: string; parentDepartmentId?: string | null },
+  ): Promise<void>;
+  deleteDepartment(departmentId: string): Promise<number>;
+  countDepartmentMembers(departmentId: string): Promise<number>;
+  setEmployeeRoles(
+    employeeId: EmployeeId,
+    roleCodes: readonly string[],
+  ): Promise<void>;
+  listSyncRuns(limit?: number): Promise<
+    readonly {
+      syncRunId: string;
+      mode: string;
+      status: string;
+      startedAt: Date;
+      completedAt: Date | null;
+      summary: unknown;
+    }[]
+  >;
   findSession(sessionId: string): Promise<SessionRecord | null>;
   createPasswordResetChallenge(input: {
     employeeId: EmployeeId;

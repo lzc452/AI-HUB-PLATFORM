@@ -39,15 +39,6 @@ export interface AuditLogRow {
   traceId: string;
 }
 
-interface SecurityAuditEvent {
-  auditEventId: string;
-  actorEmployeeId: string | null;
-  eventType: string;
-  subjectEmployeeId: string | null;
-  details: unknown;
-  createdAt: string;
-}
-
 /** 设计图逐字数据：前 8 行审计日志。 */
 const VERBATIM_ROWS: AuditLogRow[] = [
   {
@@ -357,36 +348,69 @@ export const SECURITY_AUDIT_DEMO_ROWS: AuditLogRow[] = [
   ...buildGeneratedRows(),
 ];
 
+/** 后端统一安全审计事件。 */
+export interface SecurityAuditApiEvent {
+  auditEventId: string;
+  traceId: string | null;
+  module: string;
+  action: string;
+  actorEmployeeId: string | null;
+  subject: string | null;
+  result: string;
+  risk: string;
+  details: unknown;
+  createdAt: string;
+}
+
+export interface SecurityAuditPage {
+  items: readonly SecurityAuditApiEvent[];
+  total: number;
+}
+
 /**
- * 获取审计日志列表。
- * demo 数据，后端暂无审计 API：直接返回本地演示数据；
- * 后续切换为 apiFetch("/internal/security/audit-logs") 时保持签名不变。
+ * 获取审计日志列表（后端分页，V1 拉取最近 200 条，本地过滤继续生效）。
  */
 export function fetchSecurityAuditLogs(): Promise<AuditLogRow[]> {
-  return apiFetch<SecurityAuditEvent[]>("/internal/security/audit-logs").then(
-    (events) =>
-      events.map((event) => ({
-        actionType: event.eventType,
-        detail: {
-          auditNote: "审计事件已由后端记录。",
-          detailJson:
-            typeof event.details === "object" && event.details !== null
-              ? Object.fromEntries(
-                  Object.entries(event.details).map(([key, value]) => [
-                    key,
-                    String(value),
-                  ]),
-                )
-              : { value: String(event.details ?? "") },
-          impactScope: event.subjectEmployeeId ?? "平台安全范围",
-          riskLevel: "低风险",
-        },
-        module: event.eventType.split(".")[0] ?? "identity",
-        operatorDepartment: "平台安全",
-        operatorName: event.actorEmployeeId ?? "系统",
-        summary: event.eventType,
-        time: event.createdAt.replace("T", " ").replace(".000Z", ""),
-        traceId: event.auditEventId,
-      })),
+  return apiFetch<SecurityAuditPage>(
+    "/internal/security/audit-logs?page=1&pageSize=200",
+  ).then((page) =>
+    page.items.map((event) => ({
+      actionType: event.action,
+      detail: {
+        auditNote: "审计事件已由后端记录。",
+        detailJson:
+          typeof event.details === "object" && event.details !== null
+            ? Object.fromEntries(
+                Object.entries(event.details).map(([key, value]) => [
+                  key,
+                  String(value),
+                ]),
+              )
+            : { value: String(event.details ?? "") },
+        impactScope: event.subject ?? "平台安全范围",
+        riskLevel:
+          event.risk === "high" || event.risk === "critical"
+            ? "高风险"
+            : event.risk === "medium"
+              ? "中风险"
+              : "低风险",
+      },
+      module: event.module,
+      operatorDepartment: "平台安全",
+      operatorName: event.actorEmployeeId ?? "系统",
+      summary: event.action,
+      time: event.createdAt.replace("T", " ").replace(".000Z", ""),
+      traceId: event.traceId ?? event.auditEventId,
+    })),
   );
+}
+
+/** 创建审计导出任务。 */
+export function createAuditExport(
+  filterSnapshot: unknown,
+): Promise<{ accepted: boolean; exportJobId: string; status: string }> {
+  return apiFetch("/internal/security/audit-exports", {
+    body: JSON.stringify({ filterSnapshot }),
+    method: "POST",
+  });
 }

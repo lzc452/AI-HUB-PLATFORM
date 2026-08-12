@@ -110,6 +110,12 @@ export { APPLICATION_SERVICE } from "./application/application.tokens.js";
 export type { ArtifactVerificationPort } from "./application/storage.port.js";
 export { ArtifactPipeline } from "./application/storage.pipeline.js";
 export { MemoryObjectStorage } from "./application/storage.memory.js";
+export { DiskObjectStorage } from "./application/storage.disk.js";
+export {
+  createNoopSecurity,
+  NoopMalwareScanner,
+  NoopSignatureVerifier,
+} from "./application/storage.noop.js";
 export type {
   ApplicationAuthorizationPort,
   ApplicationRepository,
@@ -139,6 +145,10 @@ export { InteractionService } from "./interaction/interaction.service.js";
 export { KyselyInteractionRepository } from "./interaction/interaction.repository.js";
 export { InteractionModule } from "./interaction/interaction.module.js";
 export { InteractionController } from "./interaction/interaction.controller.js";
+export { FeedbackModule } from "./feedback/feedback.module.js";
+export { FeedbackService } from "./feedback/feedback.service.js";
+export { KyselyFeedbackRepository } from "./feedback/feedback.repository.js";
+export { FEEDBACK_SERVICE } from "./feedback/feedback.tokens.js";
 export type {
   ApplicationTeamRecord,
   CommentRecord,

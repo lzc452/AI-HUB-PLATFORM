@@ -9,6 +9,8 @@ import { InMemoryLoginChallengeStore } from "./login-challenge.store.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import { DingTalkApiClient } from "./dingtalk-api.client.js";
 import { SecurityController } from "./security.controller.js";
+import { AuditService } from "../system/security/audit.service.js";
+import { KyselyAuditRepository } from "../system/security/audit.repository.js";
 
 export const IDENTITY_SERVICE = Symbol("IDENTITY_SERVICE");
 
@@ -30,6 +32,10 @@ export class IdentityModule {
   ): DynamicModule {
     const db = createDatabase(databaseUrl);
     const providers: DynamicModule["providers"] = [
+      {
+        provide: AuditService,
+        useValue: new AuditService(new KyselyAuditRepository(db)),
+      },
       PasswordService,
       {
         provide: LoginEncryptionService,
@@ -106,7 +112,21 @@ export class IdentityModule {
     return {
       module: IdentityModule,
       controllers: [IdentityController, SecurityController],
-      providers: [{ provide: IdentityService, useValue: identity }],
+      providers: [
+        { provide: IdentityService, useValue: identity },
+        {
+          provide: AuditService,
+          useValue: {
+            listEvents: async () => ({ items: [], total: 0 }),
+            createExportJob: async () => ({
+              exportJobId: "job-test",
+              status: "queued",
+              createdAt: new Date(),
+            }),
+            recordEvent: async () => undefined,
+          } as unknown as AuditService,
+        },
+      ],
       exports: [IdentityService],
     };
   }

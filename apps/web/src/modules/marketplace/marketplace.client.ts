@@ -74,3 +74,51 @@ export function saveRiskDescription(
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// 交付解析与下载
+// ---------------------------------------------------------------------------
+
+export type DeliveryChannel = "web" | "desktop" | "mobile" | "mini_program";
+
+export type DeliveryResolveResult =
+  | { kind: "web_redirect"; url: string }
+  | { kind: "download"; url: string; fileName: string | null }
+  | { kind: "qr"; payload: string }
+  | { kind: "unavailable"; reason: string };
+
+export function resolveDelivery(
+  applicationId: string,
+  channel: DeliveryChannel,
+): Promise<DeliveryResolveResult> {
+  return apiFetch<DeliveryResolveResult>(
+    `/internal/catalog/${encodeURIComponent(applicationId)}/deliveries/${channel}/resolve`,
+    { method: "POST" },
+  );
+}
+
+/** 下载安装包（带身份头，返回 Blob）。 */
+export async function downloadDeliveryAsset(
+  applicationId: string,
+  channel: DeliveryChannel,
+): Promise<{ blob: Blob; fileName: string }> {
+  const employeeId = localStorage.getItem("ai-hub.employee-id") ?? "";
+  const sessionId = localStorage.getItem("ai-hub.session-id") ?? "";
+  const response = await fetch(
+    `/internal/catalog/${encodeURIComponent(applicationId)}/deliveries/${channel}/asset`,
+    {
+      headers: {
+        "x-employee-id": employeeId,
+        "x-session-id": sessionId,
+      },
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`DOWNLOAD_FAILED:${response.status}`);
+  }
+  const blob = await response.blob();
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  const fileName = match?.[1] ?? `${applicationId}-${channel}.bin`;
+  return { blob, fileName };
+}
