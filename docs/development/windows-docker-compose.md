@@ -2,23 +2,23 @@
 
 ## 环境要求
 
-- Windows 11，Docker Desktop 运行 Linux 容器。
+- Windows 10/11，Rancher Desktop（dockerd 引擎）运行 Linux 容器。Rancher Desktop 可从 [rancherdesktop.io](https://rancherdesktop.io) 免费获取（Apache-2.0）；也可使用 Docker Desktop，但企业需注意其订阅条款。
 - Docker Compose v2（`docker compose`）。
 - Git 配置为按 `.gitattributes` 的要求保持仓库文本文件为 LF。
-- 默认需要的本地端口：`8080`、`5432`、`3900` 与 `3903`。本工作区使用 `5433` 作为 PostgreSQL 端口，因为另一个本地容器已占用 `127.0.0.1:5432`。
+- 默认需要的本地端口：`8080`、`5432`、`3900` 与 `3903`。
 
 Garage 以单节点 S3 兼容开发服务运行，没有数据冗余，不属于生产拓扑。ClamAV、PostgreSQL、Garage、API、worker、Web 与反向代理共享同一个私有 Compose 网络。
 
-## VPN 与 Docker Desktop 代理
+## VPN 与 Rancher Desktop 代理
 
-如果 Windows 使用本地 HTTP 代理访问 VPN，Docker Desktop 必须能从其 Linux 引擎访问该代理。在 Docker Desktop 中打开 **Settings → Resources → Proxies**，为容器代理选择 **Manual configuration（手动配置）**，并使用宿主机网关而不是 `127.0.0.1`：
+如果 Windows 使用本地 HTTP 代理访问 VPN，Rancher Desktop 必须能从其 Linux 虚拟机访问该代理。在 Rancher Desktop 中打开 **Preferences → WSL → Proxy**（实验性功能），为 HTTP/HTTPS 代理使用宿主机网关而不是 `127.0.0.1`：
 
 ```text
-HTTP proxy:  http://host.docker.internal:7897
-HTTPS proxy: http://host.docker.internal:7897
+HTTP proxy:  http://host.rancher-desktop.internal:7897
+HTTPS proxy: http://host.rancher-desktop.internal:7897
 ```
 
-Linux 容器内的 `127.0.0.1` 指向容器/引擎本身，而不是 Windows。Docker 拉取总是使用 Docker Desktop 的容器代理，因此只在 PowerShell 中可用的代理仍可能导致 `docker compose build` 无法拉取基础镜像。首次拉取镜像期间请保持 VPN 开启；镜像缓存后，常规的仅源码重启无需再次下载。
+Linux 虚拟机内的 `127.0.0.1` 指向虚拟机本身，而不是 Windows；`host.rancher-desktop.internal` 由虚拟机解析到宿主机。Docker 拉取总是使用 Rancher Desktop 的虚拟机代理，因此只在 PowerShell 中可用的代理仍可能导致 `docker compose build` 无法拉取基础镜像。首次拉取镜像期间请保持 VPN（代理软件需监听 `0.0.0.0` 或开启 allow-lan）开启；镜像缓存后，常规的仅源码重启无需再次下载。
 
 ## 首次启动
 
@@ -37,13 +37,13 @@ docker compose -f compose.yaml -f compose.dev.yaml ps
 Invoke-RestMethod http://127.0.0.1:8080/internal/health/ready
 ```
 
-Compose 网络仍使用 `postgres:5432` 作为 PostgreSQL 地址；`POSTGRES_PORT` 只改变宿主机侧端口。如果另一台机器的 `5432` 空闲，可在 `.env` 中设置 `POSTGRES_PORT=5432` 或删除本地覆盖。
+Compose 网络仍使用 `postgres:5432` 作为 PostgreSQL 地址；`POSTGRES_PORT` 只改变宿主机侧端口。如果本机 `5432` 被其他程序占用，可在 `.env` 中设置 `POSTGRES_PORT=5433` 并相应调整 `DATABASE_URL`。
 
-打开 `http://127.0.0.1:8080`。Garage 的 S3 API 位于 `http://127.0.0.1:3900`，admin API 位于 `http://127.0.0.1:3903`。本工作区中 PostgreSQL 暴露在 `127.0.0.1:5433`，或使用 `POSTGRES_PORT` 的值。
+打开 `http://127.0.0.1:8080`。Garage 的 S3 API 位于 `http://127.0.0.1:3900`，admin API 位于 `http://127.0.0.1:3903`。本工作区中 PostgreSQL 暴露在 `127.0.0.1:5432`，或使用 `POSTGRES_PORT` 的值。
 
 应用与共享包源码目录通过 bind mount 挂载以支持热重载。修改包清单或 `pnpm-lock.yaml` 后，请重新运行首次启动命令以重建依赖；数据库与对象存储卷会被保留。
 
-> **Windows 用户注意**：Docker Desktop on Windows 无法将宿主机文件变更事件 (inotify) 可靠传递给 Linux 容器。即使 compose.dev.yaml 已配置 bind mount 和 watch 模式，全 Docker 开发模式下文件变更可能不会触发热更新。建议使用下方的「前后端分离开发」模式。
+> **Windows 用户注意**：Rancher Desktop on Windows 无法将宿主机文件变更事件 (inotify) 可靠传递给 Linux 容器。即使 compose.dev.yaml 已配置 bind mount 和 watch 模式，全 Docker 开发模式下文件变更可能不会触发热更新。建议使用下方的「前后端分离开发」模式。
 
 ## 前后端分离开发（推荐 Windows 用户）
 
@@ -53,7 +53,7 @@ Compose 网络仍使用 `postgres:5432` 作为 PostgreSQL 地址；`POSTGRES_POR
 
 - Node.js ≥ 18.18（推荐 24.15.0）已安装
 - pnpm 已安装（`corepack enable && corepack prepare pnpm@10.34.5 --activate`）
-- Docker Desktop 运行中
+- Rancher Desktop 运行中
 
 ### 环境变量
 
@@ -61,7 +61,7 @@ Compose 网络仍使用 `postgres:5432` 作为 PostgreSQL 地址；`POSTGRES_POR
 
 ```powershell
 $env:NODE_ENV = "development"
-$env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5433/ai_hub"
+$env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5432/ai_hub"
 $env:COOKIE_SECRET = "ai-hub-local-cookie-secret-change-me"
 ```
 

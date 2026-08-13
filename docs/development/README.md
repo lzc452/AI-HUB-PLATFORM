@@ -6,7 +6,7 @@
 
 - Node.js ≥ 18.18（推荐 24.15.0）
 - pnpm 10.34.5
-- Docker Desktop（运行 Linux 容器）
+- Rancher Desktop（dockerd 引擎，运行 Linux 容器）
 - Git Bash 或 PowerShell
 
 ### 前后端分离开发（推荐）
@@ -16,7 +16,7 @@
 ```powershell
 # 1. 设置环境变量（三个都必须设置，缺一不可）
 $env:NODE_ENV = "development"
-$env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5433/ai_hub"
+$env:DATABASE_URL = "postgres://ai_hub:ai_hub_local_only@127.0.0.1:5432/ai_hub"
 $env:COOKIE_SECRET = "ai-hub-local-cookie-secret-change-me"
 
 # 2. 启动公共服务（只需一次，保持运行即可）
@@ -61,7 +61,7 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-t
 
 访问：`http://127.0.0.1:8080`
 
-> Windows 用户注意：Docker Desktop 的文件监听不可靠，改代码可能不会自动刷新。建议使用前后端分离模式。
+> Windows 用户注意：Rancher Desktop 的文件监听不可靠，改代码可能不会自动刷新。建议使用前后端分离模式。
 
 ---
 

@@ -30,8 +30,8 @@ corepack pnpm init:dev
 | `DEMO-ORG-ADMIN`   | `organization_admin` | `Demo-OrgAdmin-2026!`   |
 | `DEMO-SUPER-ADMIN` | `super_admin`        | `Demo-SuperAdmin-2026!` |
 
-使用 Windows VPN HTTP 代理时，请在首次拉取前将 Docker Desktop 的容器代理配置为 `http://host.docker.internal:7897`（而不是 `127.0.0.1:7897`）。原因与完整启动检查请参见 [Windows Docker Compose 指南](docs/development/windows-docker-compose.md)。
-同一套 Compose 工作流在 Windows、macOS 与 Linux 上均可通过 Docker Desktop 或基于 Linux 容器的 Docker Engine 运行；完整的初始化与 Codex 配置检查请参见[跨设备开发指南](docs/development/cross-device-development.md)。
+使用 Windows VPN HTTP 代理时，请在首次拉取前将 Rancher Desktop 的容器代理配置为 `http://host.rancher-desktop.internal:7897`（而不是 `127.0.0.1:7897`）。原因与完整启动检查请参见 [Windows Docker Compose 指南](docs/development/windows-docker-compose.md)。
+同一套 Compose 工作流在 Windows、macOS 与 Linux 上均可通过 Rancher Desktop、Docker Desktop 或其他基于 Linux 容器的引擎运行；完整的初始化与 Codex 配置检查请参见[跨设备开发指南](docs/development/cross-device-development.md)。
 
 ## GitHub 交付工作流
 
