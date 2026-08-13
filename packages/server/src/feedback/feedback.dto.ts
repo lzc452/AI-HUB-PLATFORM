@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 /** 创建应用反馈请求。 */
 export class CreateFeedbackRequestDto {
   @ApiProperty({
+    type: String,
     description: "反馈类型",
     enum: ["bug", "suggestion", "content_issue"],
   })
@@ -19,6 +20,7 @@ export class CreateFeedbackRequestDto {
 /** 更新反馈处理状态请求。 */
 export class UpdateFeedbackRequestDto {
   @ApiProperty({
+    type: String,
     description: "处理状态",
     enum: ["open", "in_progress", "resolved", "closed"],
   })
@@ -46,6 +48,7 @@ export class FeedbackDto {
   creatorEmployeeId!: string;
 
   @ApiProperty({
+    type: String,
     description: "反馈类型",
     enum: ["bug", "suggestion", "content_issue"],
   })
@@ -55,6 +58,7 @@ export class FeedbackDto {
   body!: string;
 
   @ApiProperty({
+    type: String,
     description: "处理状态",
     enum: ["open", "in_progress", "resolved", "closed"],
   })

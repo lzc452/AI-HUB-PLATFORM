@@ -100,6 +100,9 @@ class ApiIdentityRepository implements IdentityRepository {
   }
   async updateEmployeePassword(): Promise<void> {}
   async bindDingTalkUser(): Promise<void> {}
+  async claimDingTalkBinding(): Promise<boolean> {
+    return true;
+  }
   async createDingTalkSyncRun() {
     return "sync-1";
   }
@@ -227,6 +230,16 @@ describe("identity endpoints", () => {
       .send({ reason: "admin_action" })
       .expect(200)
       .expect(({ body }) => expect(body).toEqual({ revoked: 0 }));
+
+    await request(app.getHttpServer())
+      .post("/internal/identity/login/password")
+      .send({ employeeId: "E001", password: "禁止明文传输" })
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          code: "LOGIN_ENCRYPTION_INVALID_ENVELOPE",
+        });
+      });
 
     await app.close();
   });

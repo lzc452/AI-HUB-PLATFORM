@@ -55,7 +55,45 @@ function AuthActions() {
   return <button onClick={() => void logout()}>退出登录</button>;
 }
 
+function LoginProbe() {
+  const { error, login } = useAuth();
+  return (
+    <>
+      <button onClick={() => void login("E0001", "secret-password")}>
+        安全登录
+      </button>
+      <output aria-label="登录错误">{error ?? ""}</output>
+    </>
+  );
+}
+
 describe("前端权限与会话恢复", () => {
+  it("加密挑战失败时不自动降级发送明文密码", async () => {
+    setSession(null);
+    const fetchMock = vi.fn(async () =>
+      Response.json({ code: "CHALLENGE_UNAVAILABLE" }, { status: 503 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AuthProvider>
+        <LoginProbe />
+      </AuthProvider>,
+    );
+    screen.getByRole("button", { name: "安全登录" }).click();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("登录错误")).toHaveTextContent(
+        "安全登录失败",
+      );
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/internal/identity/login/challenge",
+      expect.any(Object),
+    );
+  });
+
   it("在已有会话时先恢复 actor，再渲染按权限过滤的菜单", async () => {
     setSession({
       employeeId: employeeActor.employeeId,

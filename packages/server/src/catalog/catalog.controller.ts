@@ -57,8 +57,9 @@ export class CatalogController {
   constructor(
     @Inject(CATALOG_SERVICE) private readonly catalog: CatalogService,
     @Inject(IdentityService) private readonly identity: IdentityService,
+    @Optional()
     @Inject(APPLICATION_SERVICE)
-    private readonly applications: ApplicationService,
+    private readonly applications: ApplicationService | undefined,
     @Optional()
     @Inject(DiskObjectStorage)
     private readonly storage: DiskObjectStorage | undefined,
@@ -250,6 +251,9 @@ export class CatalogController {
         await this.requireActor(employeeId, sessionId),
         applicationId,
       );
+      if (this.applications === undefined) {
+        throw new Error("APPLICATION_SERVICE_UNAVAILABLE");
+      }
       return this.applications.listVersions(applicationId);
     });
   }

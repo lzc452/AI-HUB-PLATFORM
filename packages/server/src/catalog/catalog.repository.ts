@@ -246,6 +246,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
       .select("application_assets.storage_key")
       .where("application_deliveries.application_id", "=", applicationId)
       .where("application_deliveries.channel", "=", channel)
+      .where("application_assets.scan_status", "=", "passed")
       .orderBy("application_delivery_assets.sort_order", "asc")
       .limit(1)
       .executeTakeFirst();

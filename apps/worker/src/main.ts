@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import "reflect-metadata";
 
 // 本地开发时加载根目录 .env；生产环境由 Docker Compose 注入，.env 不存在则跳过
@@ -28,7 +29,11 @@ async function bootstrap() {
     collectOutboxCounts: createOutboxCountCollector(config.databaseUrl),
   });
   const app = await NestFactory.createApplicationContext(
-    WorkerModule.register(config.databaseUrl, metrics),
+    WorkerModule.register(
+      config.databaseUrl,
+      metrics,
+      config.outboxLeaseDurationMs,
+    ),
     { logger: new PinoNestLogger(logger) },
   );
   const metricsListener = await startWorkerMetricsServer(
@@ -37,7 +42,7 @@ async function bootstrap() {
   );
   const { WorkerOutboxRuntime } = await import("./worker.module.js");
   const runtime = app.get(WorkerOutboxRuntime);
-  const workerId = `worker-${process.pid}`;
+  const workerId = randomUUID();
   const retentionRunner = createRetentionRunner(runtime.retention);
   await retentionRunner();
   const retentionTimer = setInterval(

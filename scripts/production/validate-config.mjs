@@ -2,6 +2,7 @@ const requiredSecrets = Object.freeze([
   "COOKIE_SECRET_FILE",
   "DB_PASSWORD_FILE",
   "DATABASE_URL_FILE",
+  "WORKER_DATABASE_URL_FILE",
   "GARAGE_ACCESS_KEY_FILE",
   "GARAGE_SECRET_KEY_FILE",
   "GARAGE_ADMIN_TOKEN_FILE",
@@ -46,7 +47,6 @@ export function validateProductionConfig(environment, composeText) {
   for (const key of [
     "PUBLIC_HOSTNAME",
     "PUBLIC_ORIGIN",
-    "DATABASE_URL",
     ...requiredSecrets,
   ]) {
     if (!environment[key]) {

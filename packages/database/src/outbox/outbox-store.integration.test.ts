@@ -49,7 +49,10 @@ describe("OutboxStore", () => {
     expect(second).toHaveLength(0);
     expect(first[0]?.idempotencyKey).toBe("probe-1");
 
-    await store.complete(first[0]!.id);
+    await store.complete(first[0]!.id, {
+      workerId: "worker-a",
+      attempt: first[0]!.attempts,
+    });
     expect(await store.claim(10, "worker-c")).toHaveLength(0);
   });
 
@@ -197,7 +200,10 @@ describe("OutboxStore", () => {
     );
     expect(event).toBeDefined();
 
-    await store.complete(event!.id);
+    await store.complete(event!.id, {
+      workerId: "worker-complete",
+      attempt: event!.attempts,
+    });
 
     const persisted = await db!
       .selectFrom("outbox_events")
@@ -208,9 +214,12 @@ describe("OutboxStore", () => {
     expect(persisted.completed_at).toBeInstanceOf(Date);
     expect(persisted.claimed_by).toBeNull();
     expect(persisted.claimed_at).toBeNull();
-    await expect(store.complete(event!.id)).rejects.toThrow(
-      "OUTBOX_EVENT_NOT_PROCESSING",
-    );
+    await expect(
+      store.complete(event!.id, {
+        workerId: "worker-complete",
+        attempt: event!.attempts,
+      }),
+    ).rejects.toThrow("OUTBOX_EVENT_NOT_PROCESSING");
   });
 
   it("reschedules a failed processing event below the attempt limit", async () => {
@@ -228,7 +237,12 @@ describe("OutboxStore", () => {
     expect(event?.attempts).toBe(1);
     const nextAvailableAt = new Date("2030-01-02T03:04:05.000Z");
 
-    await store.fail(event!.id, "TRANSIENT_FAILURE", nextAvailableAt);
+    await store.fail(
+      event!.id,
+      { workerId: "worker-retry", attempt: event!.attempts },
+      "TRANSIENT_FAILURE",
+      nextAvailableAt,
+    );
 
     const persisted = await db!
       .selectFrom("outbox_events")
@@ -251,7 +265,12 @@ describe("OutboxStore", () => {
     expect(persisted.claimed_at).toBeNull();
     expect(persisted.last_error).toBe("TRANSIENT_FAILURE");
     await expect(
-      store.fail(event!.id, "TRANSIENT_FAILURE", nextAvailableAt),
+      store.fail(
+        event!.id,
+        { workerId: "worker-retry", attempt: event!.attempts },
+        "TRANSIENT_FAILURE",
+        nextAvailableAt,
+      ),
     ).rejects.toThrow("OUTBOX_EVENT_NOT_PROCESSING");
   });
 
@@ -276,6 +295,7 @@ describe("OutboxStore", () => {
 
     await store.fail(
       event!.id,
+      { workerId: "worker-terminal", attempt: event!.attempts },
       "TERMINAL_FAILURE",
       new Date("2031-01-02T03:04:05.000Z"),
     );
@@ -297,6 +317,39 @@ describe("OutboxStore", () => {
         (candidate) => candidate.id === event!.id,
       ),
     ).toBe(false);
+  });
+
+  it("terminalizes a pending event that already exhausted its attempts", async () => {
+    await store.append({
+      eventType: "system.pending.exhausted",
+      aggregateType: "system",
+      aggregateId: "pending-exhausted",
+      payload: {},
+      idempotencyKey: "pending-exhausted-probe-1",
+    });
+    await db!
+      .updateTable("outbox_events")
+      .set({ attempts: 10 })
+      .where("idempotency_key", "=", "pending-exhausted-probe-1")
+      .execute();
+
+    const claimed = await store.claim(100, "worker-pending-exhausted");
+    expect(
+      claimed.some(
+        (candidate) => candidate.idempotencyKey === "pending-exhausted-probe-1",
+      ),
+    ).toBe(false);
+    await expect(
+      db!
+        .selectFrom("outbox_events")
+        .select(["status", "attempts", "last_error"])
+        .where("idempotency_key", "=", "pending-exhausted-probe-1")
+        .executeTakeFirstOrThrow(),
+    ).resolves.toEqual({
+      status: "failed",
+      attempts: 10,
+      last_error: "OUTBOX_ATTEMPTS_EXHAUSTED",
+    });
   });
 
   it.each([
@@ -325,6 +378,7 @@ describe("OutboxStore", () => {
 
       await store.fail(
         event!.id,
+        { workerId: "worker-sanitize", attempt: event!.attempts },
         errorCode,
         new Date("2032-01-02T03:04:05.000Z"),
       );
@@ -338,6 +392,52 @@ describe("OutboxStore", () => {
     },
   );
 
+  it("重新认领过期 processing 事件并拒绝旧 worker 提交", async () => {
+    await store.append({
+      eventType: "system.lease.requested",
+      aggregateType: "system",
+      aggregateId: "lease",
+      payload: { source: "lease-test" },
+      idempotencyKey: "lease-probe-1",
+    });
+    const firstClaim = await store.claim(100, "worker-lease-old");
+    const event = firstClaim.find(
+      (candidate) => candidate.idempotencyKey === "lease-probe-1",
+    );
+    expect(event).toBeDefined();
+    await db!
+      .updateTable("outbox_events")
+      .set({ claimed_at: sql<Date>`now() - interval '16 minutes'` })
+      .where("id", "=", event!.id)
+      .execute();
+
+    const reclaimed = await store.claim(100, "worker-lease-old");
+    expect(reclaimed).toEqual([
+      expect.objectContaining({
+        id: event!.id,
+        attempts: 2,
+      }),
+    ]);
+    await expect(
+      store.complete(event!.id, {
+        workerId: "worker-lease-old",
+        attempt: event!.attempts,
+      }),
+    ).rejects.toThrow("OUTBOX_EVENT_NOT_PROCESSING");
+    await expect(
+      store.fail(
+        event!.id,
+        { workerId: "worker-lease-old", attempt: event!.attempts },
+        "STALE_WORKER_FAILURE",
+        new Date("2032-01-02T03:04:05.000Z"),
+      ),
+    ).rejects.toThrow("OUTBOX_EVENT_NOT_PROCESSING");
+    await store.complete(event!.id, {
+      workerId: "worker-lease-old",
+      attempt: reclaimed[0]!.attempts,
+    });
+  });
+
   it("installs the claim index in scheduling order", async () => {
     const indexes = await sql<{ indexdef: string }>`
       select indexdef
@@ -350,6 +450,54 @@ describe("OutboxStore", () => {
     expect(indexes.rows[0]?.indexdef).toContain(
       "(status, available_at, created_at)",
     );
+  });
+
+  it("installs the stale processing lease index", async () => {
+    const indexes = await sql<{ indexdef: string }>`
+      select indexdef
+      from pg_indexes
+      where schemaname = 'public'
+        and tablename = 'outbox_events'
+        and indexname = 'outbox_events_stale_claim_idx'
+    `.execute(db!);
+    expect(indexes.rows).toHaveLength(1);
+    expect(indexes.rows[0]?.indexdef).toContain("(claimed_at, created_at)");
+    expect(indexes.rows[0]?.indexdef).toMatch(
+      /where .*status.*=.*'processing'::text/iu,
+    );
+  });
+
+  it("terminalizes an exhausted processing event without a claim timestamp", async () => {
+    await store.append({
+      eventType: "system.lease.exhausted",
+      aggregateType: "system",
+      aggregateId: "lease-exhausted",
+      payload: {},
+      idempotencyKey: "lease-exhausted-null-claim",
+    });
+    const event = (await store.claim(100, "worker-exhausted")).find(
+      (candidate) => candidate.idempotencyKey === "lease-exhausted-null-claim",
+    );
+    await db!
+      .updateTable("outbox_events")
+      .set({ attempts: 10, claimed_at: null })
+      .where("id", "=", event!.id)
+      .execute();
+
+    await store.claim(100, "worker-after-exhausted");
+
+    await expect(
+      db!
+        .selectFrom("outbox_events")
+        .select(["status", "claimed_by", "claimed_at", "last_error"])
+        .where("id", "=", event!.id)
+        .executeTakeFirstOrThrow(),
+    ).resolves.toEqual({
+      status: "failed",
+      claimed_by: null,
+      claimed_at: null,
+      last_error: "OUTBOX_LEASE_EXPIRED",
+    });
   });
 
   it("rejects an outbox status outside the declared state machine", async () => {

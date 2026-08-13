@@ -65,6 +65,7 @@ export type {
 } from "./identity/login-encryption.service.js";
 export { InMemoryLoginChallengeStore } from "./identity/login-challenge.store.js";
 export type { LoginChallengeStore } from "./identity/login-challenge.store.js";
+export { KyselyLoginChallengeRepository } from "./identity/login-challenge.repository.js";
 export { DingTalkSsoService } from "./identity/dingtalk-sso.service.js";
 export type { DingTalkSsoConfig } from "./identity/dingtalk-sso.service.js";
 export { DingTalkApiClient } from "./identity/dingtalk-api.client.js";
@@ -103,11 +104,20 @@ export {
   PasswordService,
 } from "./identity/password.service.js";
 export { ApplicationController } from "./application/application.controller.js";
+export { ArtifactUploadController } from "./application/artifact-upload.controller.js";
 export { ApplicationModule } from "./application/application.module.js";
 export { KyselyApplicationRepository } from "./application/application.repository.js";
 export { ApplicationService } from "./application/application.service.js";
-export { APPLICATION_SERVICE } from "./application/application.tokens.js";
-export type { ArtifactVerificationPort } from "./application/storage.port.js";
+export {
+  APPLICATION_SERVICE,
+  ARTIFACT_MAX_SIZE_BYTES,
+  ARTIFACT_PIPELINE,
+  ARTIFACT_STORAGE,
+} from "./application/application.tokens.js";
+export type {
+  ArtifactVerificationPort,
+  ReadableObjectStoragePort,
+} from "./application/storage.port.js";
 export { ArtifactPipeline } from "./application/storage.pipeline.js";
 export { MemoryObjectStorage } from "./application/storage.memory.js";
 export { DiskObjectStorage } from "./application/storage.disk.js";
@@ -121,6 +131,8 @@ export type {
   ApplicationRepository,
   ApplicationRecord,
   ApplicationVersionRecord,
+  ArtifactUploadRecord,
+  AssetRecord,
   DeliveryChannel,
   DeliveryRecord,
   ReviewDecision,

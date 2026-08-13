@@ -24,6 +24,7 @@ import { createHash, randomBytes } from "crypto";
 
 const sessionTtlMs = 1000 * 60 * 60 * 24 * 14;
 const passwordResetTtlMs = 1000 * 60 * 30;
+const loginChallengeTtlMs = 1000 * 60 * 5;
 
 export class IdentityService {
   constructor(
@@ -534,11 +535,17 @@ export class IdentityService {
   // ── Login encryption ───────────────────────────────────────
 
   /** Generate an encryption challenge (public JWK + nonce). */
-  generateChallenge(): ChallengeContext {
-    if (this.encryption === undefined) {
+  async generateChallenge(): Promise<ChallengeContext> {
+    if (this.encryption === undefined || this.challengeStore === undefined) {
       throw new Error("LOGIN_METHOD_UNAVAILABLE");
     }
-    return this.encryption.createChallenge();
+    const challenge = this.encryption.createChallenge();
+    const expiresAt = await this.challengeStore.issue({
+      nonceHash: challenge.nonceHash,
+      keyId: challenge.keyId,
+      ttlMs: loginChallengeTtlMs,
+    });
+    return { ...challenge, expiresAt };
   }
 
   /** Login with an encrypted envelope. */
@@ -551,10 +558,10 @@ export class IdentityService {
 
     // Consume the nonce (replay protection).
     const nonceHash = createHash("sha256").update(envelope.nonce).digest("hex");
-    const consumed = await this.challengeStore.consume(
+    const consumed = await this.challengeStore.consume({
       nonceHash,
-      new Date(Date.now() + 5 * 60 * 1000),
-    );
+      keyId: envelope.keyId,
+    });
     if (!consumed) {
       throw new Error("LOGIN_REPLAY_DETECTED");
     }

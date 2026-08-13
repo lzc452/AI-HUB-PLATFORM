@@ -331,47 +331,25 @@ export class IdentityController {
   })
   @ApiProblemResponses([400, 401, 409])
   loginWithPassword(@Body() body: LoginRequestDto) {
-    const raw = body as unknown as Record<string, unknown>;
-
-    // Encrypted flow: envelope takes priority.
-    if (raw.envelope !== undefined) {
-      return this.identity
-        .loginWithEncryptedPassword(raw.envelope as EncryptedLoginEnvelope)
-        .catch((error: unknown) => {
-          const msg = error instanceof Error ? error.message : "LOGIN_FAILED";
-          if (msg === "INVALID_CREDENTIALS") {
-            throw new UnauthorizedException("INVALID_CREDENTIALS");
-          }
-          if (msg === "LOGIN_REPLAY_DETECTED") {
-            throw new BadRequestException("LOGIN_REPLAY_DETECTED");
-          }
-          if (msg.startsWith("LOGIN_")) {
-            throw new BadRequestException(msg);
-          }
-          throw error;
-        });
+    if (body.envelope === undefined || typeof body.envelope !== "object") {
+      throw new BadRequestException("LOGIN_ENCRYPTION_INVALID_ENVELOPE");
     }
 
-    // Legacy plaintext flow (backward compatible during transition).
-    if (typeof raw.password === "string") {
-      return this.identity
-        .loginWithPassword({
-          employeeId: body.employeeId,
-          password: raw.password as string,
-          deviceLabel: body.deviceLabel ?? "browser",
-        })
-        .catch((error: unknown) => {
-          if (
-            error instanceof Error &&
-            error.message === "INVALID_CREDENTIALS"
-          ) {
-            throw new UnauthorizedException("INVALID_CREDENTIALS");
-          }
-          throw error;
-        });
-    }
-
-    throw new BadRequestException("LOGIN_ENCRYPTION_INVALID_ENVELOPE");
+    return this.identity
+      .loginWithEncryptedPassword(body.envelope as EncryptedLoginEnvelope)
+      .catch((error: unknown) => {
+        const msg = error instanceof Error ? error.message : "LOGIN_FAILED";
+        if (msg === "INVALID_CREDENTIALS") {
+          throw new UnauthorizedException("INVALID_CREDENTIALS");
+        }
+        if (msg === "LOGIN_REPLAY_DETECTED") {
+          throw new BadRequestException("LOGIN_REPLAY_DETECTED");
+        }
+        if (msg.startsWith("LOGIN_")) {
+          throw new BadRequestException(msg);
+        }
+        throw error;
+      });
   }
 
   @Get("/login/options")
@@ -468,7 +446,10 @@ export class IdentityController {
     type: LoginResponseDto,
   })
   @ApiProblemResponses([400, 401])
-  async completeDingTalkSso(@Req() req: Request) {
+  async completeDingTalkSso(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (this.dingtalkSso === undefined) {
       throw new BadRequestException("DINGTALK_SSO_DISABLED");
     }
@@ -481,19 +462,24 @@ export class IdentityController {
       throw new BadRequestException("DINGTALK_SSO_STATE_INVALID");
     }
 
-    return this.dingtalkSso
-      .completeSso(handoffToken)
-      .catch((error: unknown) => {
-        if (error instanceof Error) {
-          if (error.message === "INVALID_CREDENTIALS") {
-            throw new UnauthorizedException("INVALID_CREDENTIALS");
-          }
-          if (error.message.startsWith("DINGTALK_SSO_")) {
-            throw new BadRequestException(error.message);
-          }
+    try {
+      const result = await this.dingtalkSso.completeSso(handoffToken);
+      res.setHeader(
+        "Set-Cookie",
+        "dingtalk_handoff=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+      );
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        if (error.message === "INVALID_CREDENTIALS") {
+          throw new UnauthorizedException("INVALID_CREDENTIALS");
         }
-        throw error;
-      });
+        if (error.message.startsWith("DINGTALK_SSO_")) {
+          throw new BadRequestException(error.message);
+        }
+      }
+      throw error;
+    }
   }
 
   private async call<T>(operation: () => Promise<T>): Promise<T> {

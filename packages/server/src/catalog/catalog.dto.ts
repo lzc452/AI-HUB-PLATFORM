@@ -3,6 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 /** 记录目录行为请求。 */
 export class CatalogActionRequestDto {
   @ApiProperty({
+    type: String,
     description: "行为类型",
     enum: ["web_redirect", "package_download", "qr_display"],
   })
@@ -97,6 +98,7 @@ export class CatalogEntryDto {
   ratingAverage?: number | null;
 
   @ApiProperty({
+    type: String,
     description: "健康状态",
     enum: ["unknown", "healthy", "degraded", "failed"],
   })

@@ -128,4 +128,58 @@ describe("ArtifactPipeline", () => {
       reason: "ARTIFACT_NOT_VERIFIED",
     });
   });
+
+  it("verifies the bytes stored under the requested key", async () => {
+    const { pipeline, storage } = makePipeline();
+    const payload = bytes("stored payload");
+    await storage.put("quarantine/upload-1", payload);
+
+    await expect(
+      pipeline.verifyStoredArtifact({
+        artifactKey: "quarantine/upload-1",
+        expectedSha256: sha256(payload),
+        signature: "valid",
+      }),
+    ).resolves.toMatchObject({
+      accepted: true,
+      scanStatus: "passed",
+      sha256: sha256(payload),
+    });
+    await expect(
+      pipeline.verifyStoredArtifact({
+        artifactKey: "quarantine/upload-1",
+        expectedSha256: "0".repeat(64),
+        signature: "valid",
+      }),
+    ).resolves.toMatchObject({
+      accepted: false,
+      reason: "DIGEST_MISMATCH",
+    });
+  });
+
+  it("fails closed when the artifact security adapter is unavailable", async () => {
+    const storage = new MemoryObjectStorage();
+    const pipeline = new ArtifactPipeline(storage, {
+      async scan() {
+        throw new Error("CLAMAV_UNAVAILABLE");
+      },
+      async verify() {
+        return true;
+      },
+    });
+    const payload = bytes("stored payload");
+    await storage.put("quarantine/upload-2", payload);
+
+    await expect(
+      pipeline.verifyStoredArtifact({
+        artifactKey: "quarantine/upload-2",
+        expectedSha256: sha256(payload),
+        signature: "valid",
+      }),
+    ).resolves.toMatchObject({
+      accepted: false,
+      scanStatus: "failed",
+      reason: "ARTIFACT_SECURITY_UNAVAILABLE",
+    });
+  });
 });

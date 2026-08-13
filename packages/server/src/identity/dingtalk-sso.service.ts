@@ -55,18 +55,15 @@ export class DingTalkSsoService {
     }
 
     const state = randomBytes(32).toString("base64url");
-    const handoffToken = randomBytes(32).toString("base64url");
     const browserBinding = randomBytes(32).toString("base64url");
 
     const stateHash = sha256hex(state);
     const browserBindingHash = sha256hex(browserBinding);
-    const handoffHash = sha256hex(handoffToken);
     const expiresAt = new Date(Date.now() + SSO_TTL_MS);
 
     await this.repository.createDingTalkSsoTransaction({
       stateHash,
       browserContextBindingHash: browserBindingHash,
-      handoffTokenHash: handoffHash,
       returnTo: returnTo || "/marketplace",
       expiresAt,
     });
@@ -135,11 +132,30 @@ export class DingTalkSsoService {
     // Get user info from DingTalk.
     const userInfo = await this.api.getUserInfo(token.accessToken);
 
-    // Store dingtalk_user_id on the transaction.
-    await this.repository.updateDingTalkSsoTransactionAfterCallback(
-      transaction.transactionId,
+    const employeeNumber = this.identityService.standardizeEmployeeNumber(
+      userInfo.employeeNumber,
+    );
+    if (employeeNumber.length === 0) {
+      throw new Error("DINGTALK_SSO_USER_NOT_FOUND");
+    }
+    const employee =
+      await this.repository.findEmployeeByEmployeeNumber(employeeNumber);
+    if (employee === null) {
+      throw new Error("DINGTALK_SSO_USER_NOT_FOUND");
+    }
+    if (employee.status === "disabled" || employee.status === "archived") {
+      throw new Error("DINGTALK_SSO_ACCOUNT_DISABLED");
+    }
+
+    const alreadyBound = await this.repository.findEmployeeByDingTalkUserId(
       userInfo.dingtalkUserId,
     );
+    if (
+      alreadyBound !== null &&
+      alreadyBound.employeeId !== employee.employeeId
+    ) {
+      throw new Error("DINGTALK_SSO_ALREADY_BOUND");
+    }
 
     // Generate fresh handoff token.
     const handoffToken = randomBytes(32).toString("base64url");
@@ -148,12 +164,22 @@ export class DingTalkSsoService {
     // Update transaction with new handoff and short expiry.
     // Note: we re-create the transaction with handoff hash for the complete step.
     const handoffExpiresAt = new Date(Date.now() + HANDOFF_TTL_MS);
-    await this.repository.createDingTalkSsoTransaction({
-      stateHash: sha256hex(handoffToken), // reuse state_hash field for handoff lookup
-      browserContextBindingHash: transaction.browserContextBindingHash,
-      handoffTokenHash: handoffHash,
-      returnTo: transaction.returnTo,
-      expiresAt: handoffExpiresAt,
+    await this.repository.withTransaction(async (repository) => {
+      const consumed = await repository.consumeDingTalkSsoTransaction(
+        transaction.transactionId,
+      );
+      if (!consumed) {
+        throw new Error("DINGTALK_SSO_STATE_INVALID");
+      }
+      await repository.createDingTalkSsoTransaction({
+        stateHash: sha256hex(handoffToken),
+        browserContextBindingHash: transaction.browserContextBindingHash,
+        handoffTokenHash: handoffHash,
+        returnTo: transaction.returnTo,
+        dingtalkUserId: userInfo.dingtalkUserId,
+        employeeId: employee.employeeId,
+        expiresAt: handoffExpiresAt,
+      });
     });
 
     return {
@@ -167,96 +193,75 @@ export class DingTalkSsoService {
    */
   async completeSso(handoffToken: string): Promise<LoginResult> {
     const handoffHash = sha256hex(handoffToken);
+    const login = await this.repository.withTransaction(async (repository) => {
+      const transaction =
+        await repository.findDingTalkSsoTransactionByHandoffHash(handoffHash);
+      if (
+        transaction === null ||
+        transaction.consumedAt !== null ||
+        transaction.expiresAt.getTime() <= Date.now() ||
+        transaction.dingtalkUserId === null ||
+        transaction.employeeId === null
+      ) {
+        throw new Error("DINGTALK_SSO_STATE_INVALID");
+      }
 
-    const transaction =
-      await this.repository.findDingTalkSsoTransactionByHandoffHash(
-        handoffHash,
+      const alreadyBound = await repository.findEmployeeByDingTalkUserId(
+        transaction.dingtalkUserId,
       );
+      if (
+        alreadyBound !== null &&
+        alreadyBound.employeeId !== transaction.employeeId
+      ) {
+        throw new Error("DINGTALK_SSO_ALREADY_BOUND");
+      }
 
-    if (transaction === null) {
-      throw new Error("DINGTALK_SSO_STATE_INVALID");
-    }
+      const employee = await repository.findEmployee(transaction.employeeId);
+      if (employee === null) {
+        throw new Error("DINGTALK_SSO_USER_NOT_FOUND");
+      }
+      if (employee.status === "disabled" || employee.status === "archived") {
+        throw new Error("DINGTALK_SSO_ACCOUNT_DISABLED");
+      }
 
-    if (transaction.consumedAt !== null) {
-      throw new Error("DINGTALK_SSO_STATE_INVALID");
-    }
-
-    if (transaction.expiresAt.getTime() <= Date.now()) {
-      throw new Error("DINGTALK_SSO_STATE_INVALID");
-    }
-
-    if (transaction.dingtalkUserId === null) {
-      throw new Error("DINGTALK_SSO_STATE_INVALID");
-    }
-
-    // Check if this DingTalk user is already bound to someone else.
-    const alreadyBound = await this.repository.findEmployeeByDingTalkUserId(
-      transaction.dingtalkUserId,
-    );
-    if (alreadyBound !== null) {
-      throw new Error("DINGTALK_SSO_ALREADY_BOUND");
-    }
-
-    // Look up employee by standardized employee_number.
-    const standardized = this.identityService.standardizeEmployeeNumber(
-      transaction.dingtalkUserId,
-    );
-
-    // For now, search by dingtalkUserId matching employee_id directly
-    // (since employee_number column may not be populated yet).
-    const employee = await this.repository.findEmployee(standardized);
-
-    if (employee === null) {
-      throw new Error("DINGTALK_SSO_USER_NOT_FOUND");
-    }
-
-    if (employee.status === "disabled" || employee.status === "archived") {
-      throw new Error("DINGTALK_SSO_ACCOUNT_DISABLED");
-    }
-
-    // Consume the transaction atomically.
-    const consumed = await this.repository.consumeDingTalkSsoTransaction(
-      transaction.transactionId,
-    );
-    if (!consumed) {
-      throw new Error("DINGTALK_SSO_STATE_INVALID");
-    }
-
-    // Activate if pending_binding.
-    if (employee.status === "pending_binding") {
-      await this.repository.activateEmployee(employee.employeeId);
-    }
-
-    // Bind DingTalk user ID.
-    await this.repository.bindDingTalkUser(
-      employee.employeeId,
-      transaction.dingtalkUserId,
-    );
-
-    // Create session.
-    const session = await this.repository.createSession({
-      employeeId: employee.employeeId,
-      deviceLabel: "dingtalk_sso",
-      expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+      const consumed = await repository.consumeDingTalkSsoTransaction(
+        transaction.transactionId,
+      );
+      if (!consumed) {
+        throw new Error("DINGTALK_SSO_STATE_INVALID");
+      }
+      if (employee.status === "pending_binding") {
+        await repository.activateEmployee(employee.employeeId);
+      }
+      const bindingClaimed = await repository.claimDingTalkBinding(
+        employee.employeeId,
+        transaction.dingtalkUserId!,
+      );
+      if (!bindingClaimed) {
+        throw new Error("DINGTALK_SSO_ALREADY_BOUND");
+      }
+      const created = await repository.createSession({
+        employeeId: employee.employeeId,
+        deviceLabel: "dingtalk_sso",
+        expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+      });
+      await repository.recordAudit({
+        actorEmployeeId: employee.employeeId,
+        eventType: "identity.dingtalk.sso.login",
+        subjectEmployeeId: employee.employeeId,
+        details: {
+          dingtalkUserId: transaction.dingtalkUserId,
+          sessionId: created.sessionId,
+        },
+      });
+      return { employeeId: employee.employeeId, session: created };
     });
 
-    // Build actor context.
     const actor = await this.identityService.getActorContext(
-      employee.employeeId,
-      session.sessionId,
+      login.employeeId,
+      login.session.sessionId,
     );
 
-    // Audit.
-    await this.repository.recordAudit({
-      actorEmployeeId: employee.employeeId,
-      eventType: "identity.dingtalk.sso.login",
-      subjectEmployeeId: employee.employeeId,
-      details: {
-        dingtalkUserId: transaction.dingtalkUserId,
-        sessionId: session.sessionId,
-      },
-    });
-
-    return { actor, session };
+    return { actor, session: login.session };
   }
 }

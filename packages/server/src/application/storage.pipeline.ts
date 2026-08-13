@@ -132,23 +132,79 @@ export class ArtifactPipeline implements ArtifactVerificationPort {
     return result;
   }
 
-  /**
-   * 注册一个已通过校验的 artifact（大文件单请求上传路径使用）。
-   * 上传完成时由外部完成 digest/scan/verify 校验后调用，使后续 createVersion 的
-   * verifyArtifact 可以命中，避免大文件经内存 chunk Map 承载。
-   */
-  async registerVerifiedArtifact(input: {
+  /** 扫描已落盘的资产内容（用于把资产置为 passed）。
+   * 生产环境无真实安全适配器时 scan 抛错，被捕获为失败关闭；
+   * 非生产环境（createArtifactVerification 注入接受桩）scan 恒返回 clean。 */
+  async scanStoredAsset(input: {
+    assetKey: string;
+  }): Promise<{ scanStatus: "passed" | "failed"; sha256: string; reason?: string }> {
+    try {
+      const content = await this.storage.get(input.assetKey);
+      if (content === null) {
+        return { scanStatus: "failed", sha256: "", reason: "ARTIFACT_NOT_FOUND" };
+      }
+      const sha256 = createHash("sha256").update(content).digest("hex");
+      if ((await this.security.scan(content)) === "infected") {
+        return { scanStatus: "failed", sha256, reason: "MALWARE_DETECTED" };
+      }
+      return { scanStatus: "passed", sha256 };
+    } catch {
+      return {
+        scanStatus: "failed",
+        sha256: "",
+        reason: "ARTIFACT_SECURITY_UNAVAILABLE",
+      };
+    }
+  }
+
+  async verifyStoredArtifact(input: {
     artifactKey: string;
-    sha256: string;
+    expectedSha256: string;
     signature: string;
   }): Promise<ArtifactVerificationResult> {
-    const result = {
-      accepted: true,
-      scanStatus: "passed",
-      sha256: input.sha256,
-    } as const;
-    this.verifications.set(input.artifactKey, result);
-    this.verifiedSignatures.set(input.artifactKey, input.signature);
-    return result;
+    try {
+      const content = await this.storage.get(input.artifactKey);
+      if (content === null) {
+        return {
+          accepted: false,
+          scanStatus: "failed",
+          sha256: "",
+          reason: "ARTIFACT_NOT_FOUND",
+        };
+      }
+      const sha256 = createHash("sha256").update(content).digest("hex");
+      if (sha256 !== input.expectedSha256) {
+        return {
+          accepted: false,
+          scanStatus: "failed",
+          sha256,
+          reason: "DIGEST_MISMATCH",
+        };
+      }
+      if ((await this.security.scan(content)) === "infected") {
+        return {
+          accepted: false,
+          scanStatus: "failed",
+          sha256,
+          reason: "MALWARE_DETECTED",
+        };
+      }
+      if (!(await this.security.verify(content, input.signature))) {
+        return {
+          accepted: false,
+          scanStatus: "failed",
+          sha256,
+          reason: "INVALID_SIGNATURE",
+        };
+      }
+      return { accepted: true, scanStatus: "passed", sha256 };
+    } catch {
+      return {
+        accepted: false,
+        scanStatus: "failed",
+        sha256: "",
+        reason: "ARTIFACT_SECURITY_UNAVAILABLE",
+      };
+    }
   }
 }

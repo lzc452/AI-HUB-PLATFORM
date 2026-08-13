@@ -12,6 +12,8 @@ import { startPostgresTestContainer } from "@ai-hub/testing";
 import {
   IdentityService,
   KyselyIdentityRepository,
+  KyselyLoginChallengeRepository,
+  LoginEncryptionService,
   PasswordService,
 } from "@ai-hub/server";
 import { ApiModule } from "../src/api.module.js";
@@ -29,6 +31,64 @@ const BASE_EMPLOYEE_PERMISSIONS = [
   "demand.read",
   "notification.read",
 ] as const;
+
+interface ChallengeResponse {
+  keyId: string;
+  jwk: JsonWebKey;
+  nonce: string;
+  expiresAt: string;
+}
+
+interface EncryptedLoginEnvelope {
+  encryptedPayload: string;
+  wrappedKey: string;
+  iv: string;
+  aad: string;
+  keyId: string;
+  nonce: string;
+}
+
+async function buildEnvelope(
+  employeeId: string,
+  password: string,
+  challenge: ChallengeResponse,
+): Promise<EncryptedLoginEnvelope> {
+  const aesKey = await crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "wrapKey"],
+  );
+  const rsaKey = await crypto.subtle.importKey(
+    "jwk",
+    challenge.jwk as JsonWebKey,
+    { name: "RSA-OAEP", hash: "SHA-256" },
+    false,
+    ["wrapKey"],
+  );
+  const aad = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(challenge.keyId + challenge.nonce),
+  );
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encryptedPayload = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: new Uint8Array(aad) },
+    aesKey,
+    new TextEncoder().encode(
+      JSON.stringify({ employeeId, password, deviceLabel: "browser" }),
+    ),
+  );
+  const wrappedKey = await crypto.subtle.wrapKey("raw", aesKey, rsaKey, {
+    name: "RSA-OAEP",
+  });
+  return {
+    encryptedPayload: Buffer.from(encryptedPayload).toString("base64url"),
+    wrappedKey: Buffer.from(wrappedKey).toString("base64url"),
+    iv: Buffer.from(iv).toString("base64url"),
+    aad: Buffer.from(aad).toString("base64url"),
+    keyId: challenge.keyId,
+    nonce: challenge.nonce,
+  };
+}
 
 describe("real demo account login", () => {
   let db: ReturnType<typeof createDatabase>;
@@ -50,9 +110,13 @@ describe("real demo account login", () => {
     }
     await seedDemoAccounts(db, passwordHashes);
 
+    const encryption = await LoginEncryptionService.generateDev();
     const identity = new IdentityService(
       new KyselyIdentityRepository(db),
       passwordService,
+      undefined,
+      encryption,
+      new KyselyLoginChallengeRepository(db),
     );
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -106,11 +170,20 @@ describe("real demo account login", () => {
   );
 
   it("logs in through the password login endpoint", async () => {
+    const challengeResponse = await request(app.getHttpServer())
+      .get("/internal/identity/login/challenge")
+      .expect(200);
+    const envelope = await buildEnvelope(
+      "DEMO-ORG-ADMIN",
+      DEMO_PASSWORDS["DEMO-ORG-ADMIN"],
+      challengeResponse.body as ChallengeResponse,
+    );
+
     await request(app.getHttpServer())
       .post("/internal/identity/login/password")
       .send({
         employeeId: "DEMO-ORG-ADMIN",
-        password: DEMO_PASSWORDS["DEMO-ORG-ADMIN"],
+        envelope,
       })
       .expect(201)
       .expect(({ body }) => {

@@ -12,7 +12,6 @@ import {
   Param,
   Post,
   Put,
-  Req,
 } from "@nestjs/common";
 import {
   ApiBody,
@@ -24,7 +23,6 @@ import {
 } from "@nestjs/swagger";
 import { createHash, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import type { Request } from "express";
 import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
 import {
   Authenticated,
@@ -38,7 +36,7 @@ import {
   ARTIFACT_STORAGE,
 } from "./application.tokens.js";
 import { ArtifactPipeline } from "./storage.pipeline.js";
-import { DiskObjectStorage } from "./storage.disk.js";
+import type { ReadableObjectStoragePort } from "./storage.port.js";
 import {
   ApiIdentityHeaders,
   ApiProblemResponses,
@@ -49,6 +47,8 @@ import {
   AssetDto,
   CompleteArtifactUploadRequestDto,
   CreateAssetRequestDto,
+  LinkDeliveryAssetRequestDto,
+  LinkDeliveryAssetResponseDto,
 } from "./application.dto.js";
 
 const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
@@ -58,9 +58,11 @@ const UPLOAD_TTL_MS = 24 * 60 * 60 * 1000;
 @Authenticated()
 export class ArtifactUploadController {
   constructor(
+    @Inject(KyselyApplicationRepository)
     private readonly repository: KyselyApplicationRepository,
     @Inject(IdentityService) private readonly identity: IdentityService,
-    @Inject(ARTIFACT_STORAGE) private readonly storage: DiskObjectStorage,
+    @Inject(ARTIFACT_STORAGE)
+    private readonly storage: ReadableObjectStoragePort,
     @Inject(ARTIFACT_PIPELINE) private readonly pipeline: ArtifactPipeline,
     @Inject(ARTIFACT_MAX_SIZE_BYTES)
     private readonly maxSizeBytes: number,
@@ -85,9 +87,7 @@ export class ArtifactUploadController {
   ): Promise<ArtifactUploadDto> {
     const actor = await this.requireActor(employeeId, sessionId, "update");
     this.assertSize(body.sizeBytes);
-    const application = await this.repository.findApplication(applicationId);
-    if (application === null)
-      throw new NotFoundException("APPLICATION_NOT_FOUND");
+    await this.requireApplicationOwner(applicationId, actor);
 
     const uploadId = randomUUID();
     const objectKey = `applications/${applicationId}/uploads/${uploadId}/content`;
@@ -123,23 +123,26 @@ export class ArtifactUploadController {
     @Param("uploadId") uploadId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Req() request: Request,
+    @Body() rawBody: Buffer,
   ): Promise<ArtifactUploadDto> {
-    await this.requireActor(employeeId, sessionId, "update");
+    const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
     const upload = await this.requireUpload(applicationId, uploadId);
+    this.assertUploader(upload, actor);
     if (upload.uploadStatus !== "uploading") {
       throw new BadRequestException("UPLOAD_ALREADY_COMPLETED");
     }
-    const rawBody = (request as Request & { rawBody?: Buffer }).rawBody;
-    if (rawBody === undefined || rawBody.byteLength === 0) {
+    if (!Buffer.isBuffer(rawBody) || rawBody.byteLength === 0) {
       throw new BadRequestException("UPLOAD_BODY_EMPTY");
     }
     this.assertSize(rawBody.byteLength);
+    if (rawBody.byteLength !== upload.sizeBytes) {
+      throw new BadRequestException("UPLOAD_SIZE_MISMATCH");
+    }
 
     const sha256 = createHash("sha256").update(rawBody).digest("hex");
     await this.storage.putStream(upload.objectKey, Readable.from(rawBody));
     const updated = await this.repository.updateArtifactUpload(uploadId, {
-      sizeBytes: rawBody.byteLength,
       sha256,
     });
     if (updated === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
@@ -166,8 +169,10 @@ export class ArtifactUploadController {
     @Headers("x-session-id") sessionId: string | undefined,
     @Body() body: CompleteArtifactUploadRequestDto,
   ): Promise<ArtifactUploadDto> {
-    await this.requireActor(employeeId, sessionId, "update");
+    const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
     const upload = await this.requireUpload(applicationId, uploadId);
+    this.assertUploader(upload, actor);
     if (upload.uploadStatus !== "uploading") {
       throw new BadRequestException("UPLOAD_ALREADY_COMPLETED");
     }
@@ -177,9 +182,9 @@ export class ArtifactUploadController {
 
     const finalKey = `applications/${applicationId}/artifacts/${uploadId}`;
     const signature = body.signature ?? "";
-    const result = await this.pipeline.registerVerifiedArtifact({
-      artifactKey: finalKey,
-      sha256: upload.sha256,
+    const result = await this.pipeline.verifyStoredArtifact({
+      artifactKey: upload.objectKey,
+      expectedSha256: upload.sha256,
       signature,
     });
     if (!result.accepted) {
@@ -192,7 +197,6 @@ export class ArtifactUploadController {
     }
 
     await this.storage.copy(upload.objectKey, finalKey);
-    await this.storage.delete(upload.objectKey);
     const updated = await this.repository.updateArtifactUpload(uploadId, {
       uploadStatus: "completed",
       scanStatus: "passed",
@@ -201,6 +205,7 @@ export class ArtifactUploadController {
       objectKey: finalKey,
     });
     if (updated === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
+    await this.storage.delete(upload.objectKey).catch(() => undefined);
     return this.toDto(updated);
   }
 
@@ -218,8 +223,10 @@ export class ArtifactUploadController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ): Promise<ArtifactUploadDto> {
-    await this.requireActor(employeeId, sessionId, "read");
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    await this.requireApplicationOwner(applicationId, actor);
     const upload = await this.requireUpload(applicationId, uploadId);
+    this.assertUploader(upload, actor);
     return this.toDto(upload);
   }
 
@@ -235,7 +242,8 @@ export class ArtifactUploadController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ): Promise<AssetDto[]> {
-    await this.requireActor(employeeId, sessionId, "read");
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    await this.requireApplicationOwner(applicationId, actor);
     const assets = await this.repository.listAssets(applicationId);
     return assets.map((asset) => this.toAssetDto(asset));
   }
@@ -255,6 +263,8 @@ export class ArtifactUploadController {
     @Body() body: CreateAssetRequestDto,
   ): Promise<AssetDto> {
     const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
+    this.assertApplicationStorageKey(applicationId, body.storageKey);
     const asset = await this.repository.createAsset({
       applicationId,
       applicationVersionId: null,
@@ -285,7 +295,8 @@ export class ArtifactUploadController {
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ): Promise<void> {
-    await this.requireActor(employeeId, sessionId, "update");
+    const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
     const asset = await this.repository.findAsset(assetId);
     if (asset === null) throw new NotFoundException("ASSET_NOT_FOUND");
     if (asset.applicationId !== applicationId) {
@@ -294,9 +305,139 @@ export class ArtifactUploadController {
     await this.repository.deleteAsset(assetId);
   }
 
+  @Post(":applicationId/deliveries/:channel/assets")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @ApiOperation({
+    summary: "关联资产到交付渠道",
+    description:
+      "把已通过安全扫描的资产挂接到某交付渠道（如 desktop/mobile），使该渠道在目录中可提供安装包下载。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({
+    name: "channel",
+    description: "交付渠道",
+    enum: ["web", "desktop", "mobile", "mini_program"],
+  })
+  @ApiBody({ type: LinkDeliveryAssetRequestDto })
+  @ApiCreatedResponse({
+    description: "关联结果",
+    type: LinkDeliveryAssetResponseDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async linkDeliveryAsset(
+    @Param("applicationId") applicationId: string,
+    @Param("channel")
+    channel: "web" | "desktop" | "mobile" | "mini_program",
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: LinkDeliveryAssetRequestDto,
+  ): Promise<LinkDeliveryAssetResponseDto> {
+    const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
+    const asset = await this.repository.findAsset(body.assetId);
+    if (asset === null) throw new NotFoundException("ASSET_NOT_FOUND");
+    if (asset.applicationId !== applicationId) {
+      throw new BadRequestException("ASSET_APPLICATION_MISMATCH");
+    }
+    await this.repository.linkDeliveryAsset({
+      applicationId,
+      channel,
+      assetId: body.assetId,
+      ...(body.sortOrder === undefined ? {} : { sortOrder: body.sortOrder }),
+      ...(body.version === undefined ? {} : { version: body.version }),
+    });
+    return { linked: true };
+  }
+
+  @Post(":applicationId/assets/:assetId/scan")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "扫描资产并置通过",
+    description:
+      "对资产存储内容执行安全扫描；通过后 scan_status=passed 并回写 sha256，方可关联到交付渠道下载。生产环境无真实安全适配器时失败关闭。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "assetId", description: "资产 ID" })
+  @ApiOkResponse({ description: "扫描后的资产", type: AssetDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async scanAsset(
+    @Param("applicationId") applicationId: string,
+    @Param("assetId") assetId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ): Promise<AssetDto> {
+    const actor = await this.requireActor(employeeId, sessionId, "update");
+    await this.requireApplicationOwner(applicationId, actor);
+    const asset = await this.repository.findAsset(assetId);
+    if (asset === null) throw new NotFoundException("ASSET_NOT_FOUND");
+    if (asset.applicationId !== applicationId) {
+      throw new BadRequestException("ASSET_APPLICATION_MISMATCH");
+    }
+    const result = await this.pipeline.scanStoredAsset({
+      assetKey: asset.storageKey,
+    });
+    if (result.scanStatus !== "passed") {
+      const updated = await this.repository.updateAsset(assetId, {
+        scanStatus: "failed",
+        sha256: result.sha256,
+      });
+      throw new BadRequestException(result.reason ?? "ASSET_SCAN_FAILED");
+    }
+    const updated = await this.repository.updateAsset(assetId, {
+      scanStatus: "passed",
+      sha256: result.sha256,
+    });
+    if (updated === null) throw new NotFoundException("ASSET_NOT_FOUND");
+    return this.toAssetDto(updated);
+  }
+
   private assertSize(sizeBytes: number): void {
-    if (sizeBytes > this.maxSizeBytes) {
+    if (
+      !Number.isSafeInteger(sizeBytes) ||
+      sizeBytes <= 0 ||
+      sizeBytes > this.maxSizeBytes
+    ) {
       throw new BadRequestException("ARTIFACT_TOO_LARGE");
+    }
+  }
+
+  private assertUploader(
+    upload: import("./application.types.js").ArtifactUploadRecord,
+    actor: ActorContext,
+  ): void {
+    if (upload.uploadedByEmployeeId !== actor.employeeId) {
+      throw new ForbiddenException("ARTIFACT_UPLOADER_REQUIRED");
+    }
+  }
+
+  private assertApplicationStorageKey(
+    applicationId: string,
+    storageKey: string,
+  ): void {
+    const prefix = `applications/${applicationId}/`;
+    if (
+      !storageKey.startsWith(prefix) ||
+      storageKey.length === prefix.length ||
+      storageKey.includes("..") ||
+      storageKey.includes("\\")
+    ) {
+      throw new BadRequestException("ASSET_STORAGE_KEY_INVALID");
+    }
+  }
+
+  private async requireApplicationOwner(
+    applicationId: string,
+    actor: ActorContext,
+  ): Promise<void> {
+    const application = await this.repository.findApplication(applicationId);
+    if (application === null) {
+      throw new NotFoundException("APPLICATION_NOT_FOUND");
+    }
+    if (application.ownerEmployeeId !== actor.employeeId) {
+      throw new ForbiddenException("APPLICATION_OWNER_REQUIRED");
     }
   }
 

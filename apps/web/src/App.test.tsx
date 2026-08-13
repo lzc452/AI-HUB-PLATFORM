@@ -110,6 +110,16 @@ vi.mock("./modules/application/useApplication", () => {
       ...settled,
       data: applicationId ? application : undefined,
     }),
+    useApplicationWorkspace: () => ({
+      ...settled,
+      data: {
+        application,
+        deliveries: [],
+        reviewQueue: null,
+        reviews: [],
+        versions: [publishedVersion],
+      },
+    }),
     useApplicationDeliveries: () => ({ ...settled, data: [] }),
     useApplicationReviews: () => ({ ...settled, data: [] }),
     useApplicationVersions: () => ({ ...settled, data: [publishedVersion] }),
@@ -123,6 +133,10 @@ vi.mock("./modules/application/useApplication", () => {
     useConfigureDelivery: () => ({
       isPending: false,
       mutateAsync: vi.fn(),
+    }),
+    useSubmitApplicationReview: () => ({
+      isPending: false,
+      mutate: vi.fn(),
     }),
     usePublishApplication: () => ({
       isPending: false,
@@ -341,7 +355,7 @@ describe("App", () => {
       ).toBeGreaterThan(0);
     }
     expect(
-      screen.getByText("数据已通过内部 API 接入；当前界面不提供写操作。"),
+      screen.getByText("数据已通过内部 API 接入；可用操作受身份与权限控制。"),
     ).toBeInTheDocument();
   });
 

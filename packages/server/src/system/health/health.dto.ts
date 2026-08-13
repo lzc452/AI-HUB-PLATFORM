@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 
 /** 健康检查快照。 */
 export class HealthSnapshotDto {
-  @ApiProperty({ description: "整体状态", enum: ["ok", "degraded"] })
+  @ApiProperty({ type: String, description: "整体状态", enum: ["ok", "degraded"] })
   status!: "ok" | "degraded";
 
   @ApiProperty({

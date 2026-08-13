@@ -5,6 +5,11 @@ export interface ObjectStoragePort {
   delete(key: string): Promise<void>;
 }
 
+export interface ReadableObjectStoragePort extends ObjectStoragePort {
+  openReadStream(key: string): Promise<NodeJS.ReadableStream | null>;
+  putStream(key: string, stream: NodeJS.ReadableStream): Promise<number>;
+}
+
 export interface MalwareScannerPort {
   scan(content: Uint8Array): Promise<"clean" | "infected">;
 }
@@ -21,7 +26,9 @@ export interface ArtifactVerificationResult {
     | "DIGEST_MISMATCH"
     | "MALWARE_DETECTED"
     | "INVALID_SIGNATURE"
-    | "ARTIFACT_NOT_VERIFIED";
+    | "ARTIFACT_NOT_FOUND"
+    | "ARTIFACT_NOT_VERIFIED"
+    | "ARTIFACT_SECURITY_UNAVAILABLE";
 }
 
 export interface ArtifactVerificationPort {

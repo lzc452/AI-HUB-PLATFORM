@@ -13,13 +13,20 @@ const schema = z.object({
   COOKIE_SECRET: z.string().min(32),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().min(100).default(1000),
+  OUTBOX_LEASE_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .default(15 * 60 * 1000),
   WORKER_METRICS_PORT: z.coerce.number().int().min(1).max(65535).default(9464),
+  ARTIFACT_UPLOAD_ENABLED: booleanFromEnv,
   STORAGE_DIRECTORY: z.string().default(".storage/artifacts"),
   ARTIFACT_MAX_SIZE_BYTES: z.coerce
     .number()
     .int()
     .min(1)
-    .default(2 * 1024 * 1024 * 1024),
+    .max(64 * 1024 * 1024)
+    .default(64 * 1024 * 1024),
   ENABLE_API_DOCS: booleanFromEnv,
   DEMO_DATA_ENABLED: booleanFromEnv,
   DEMO_MODE: booleanFromEnv,
@@ -38,7 +45,9 @@ export interface RuntimeConfig {
   cookieSecret: string;
   logLevel: "debug" | "info" | "warn" | "error";
   outboxPollIntervalMs: number;
+  outboxLeaseDurationMs: number;
   workerMetricsPort: number;
+  artifactUploadEnabled: boolean;
   storageDirectory: string;
   artifactMaxSizeBytes: number;
   enableApiDocs: boolean;
@@ -94,6 +103,10 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     );
   }
 
+  if (value.NODE_ENV === "production" && value.ARTIFACT_UPLOAD_ENABLED) {
+    throw new Error("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
+  }
+
   // DingTalk SSO: if enabled, all required fields must be present.
   const dingtalkSsoEnabled = value.DINGTALK_SSO_ENABLED === "true";
   if (dingtalkSsoEnabled) {
@@ -140,7 +153,9 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     cookieSecret: value.COOKIE_SECRET,
     logLevel: value.LOG_LEVEL,
     outboxPollIntervalMs: value.OUTBOX_POLL_INTERVAL_MS,
+    outboxLeaseDurationMs: value.OUTBOX_LEASE_DURATION_MS,
     workerMetricsPort: value.WORKER_METRICS_PORT,
+    artifactUploadEnabled: value.ARTIFACT_UPLOAD_ENABLED,
     storageDirectory: value.STORAGE_DIRECTORY,
     artifactMaxSizeBytes: value.ARTIFACT_MAX_SIZE_BYTES,
     enableApiDocs: value.ENABLE_API_DOCS,

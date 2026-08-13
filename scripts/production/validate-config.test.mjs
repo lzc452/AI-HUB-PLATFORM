@@ -9,6 +9,7 @@ const validEnvironment = {
   PUBLIC_ORIGIN: "https://ai-hub.internal.example",
   DATABASE_URL: "postgres://ai_hub@postgres:5432/ai_hub",
   DATABASE_URL_FILE: "/run/secrets/database_url",
+  WORKER_DATABASE_URL_FILE: "/run/secrets/worker_database_url",
   COOKIE_SECRET_FILE: "/run/secrets/cookie_secret",
   DB_PASSWORD_FILE: "/run/secrets/db_password",
   GARAGE_ACCESS_KEY_FILE: "/run/secrets/garage_access_key",
@@ -40,6 +41,13 @@ test("accepts a complete production environment with digest-pinned images", () =
     validateProductionConfig(validEnvironment, "services: {}"),
     true,
   );
+});
+
+test("accepts file-only API and Worker database credentials", () => {
+  const environment = { ...validEnvironment };
+  delete environment.DATABASE_URL;
+
+  assert.equal(validateProductionConfig(environment, "services: {}"), true);
 });
 
 test("rejects missing production secrets and node role", () => {
@@ -99,5 +107,7 @@ test("production Compose exposes only the proxy and uses external secrets", asyn
   assert.doesNotMatch(compose, /image:\s*[^\n]*:latest/);
   assert.doesNotMatch(compose, /ports:\s*\[[^\]]*(?:5432|3900|3901)/);
   assert.match(compose, /DATABASE_URL_FILE/);
+  assert.match(compose, /WORKER_DATABASE_URL_FILE/);
   assert.match(compose, /COOKIE_SECRET_FILE/);
+  assert.match(compose, /worker_database_url/);
 });

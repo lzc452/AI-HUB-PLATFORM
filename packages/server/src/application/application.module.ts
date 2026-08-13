@@ -24,8 +24,8 @@ const unavailableArtifactVerifier: ArtifactVerificationPort = {
   },
 };
 
-/** V1 默认上传大小上限（2GB），避免内存 raw body 溢出。 */
-const DEFAULT_ARTIFACT_MAX_SIZE_BYTES = 2 * 1024 * 1024 * 1024;
+/** V1 单请求 raw body 上限；与运行时配置默认值保持一致。 */
+const DEFAULT_ARTIFACT_MAX_SIZE_BYTES = 64 * 1024 * 1024;
 
 function createRepositoryProvider(databaseUrl: string): Provider {
   return {
@@ -70,14 +70,21 @@ function createUploadProviders(
     artifactVerifier instanceof ArtifactPipeline
       ? artifactVerifier
       : new ArtifactPipeline(storage, {
-          scan: () => Promise.resolve("clean"),
-          verify: () => Promise.resolve(true),
+          scan: () => Promise.reject(new Error("ARTIFACT_SECURITY_UNAVAILABLE")),
+          verify: () =>
+            Promise.reject(new Error("ARTIFACT_SECURITY_UNAVAILABLE")),
         });
   return [
     { provide: ARTIFACT_STORAGE, useValue: storage },
     { provide: ARTIFACT_PIPELINE, useValue: pipeline },
     { provide: ARTIFACT_MAX_SIZE_BYTES, useValue: maxSizeBytes },
   ];
+}
+
+function createUploadControllers(
+  storageDirectory: string | undefined,
+): (typeof ArtifactUploadController)[] {
+  return storageDirectory === undefined ? [] : [ArtifactUploadController];
 }
 
 @Module({})
@@ -106,7 +113,10 @@ export class ApplicationModule {
     return {
       module: ApplicationModule,
       imports: [IdentityModule.register(databaseUrl)],
-      controllers: [ApplicationController, ArtifactUploadController],
+      controllers: [
+        ApplicationController,
+        ...createUploadControllers(storageDirectory),
+      ],
       providers: [
         createRepositoryProvider(databaseUrl),
         createApplicationServiceProvider(databaseUrl, artifactVerifier),
@@ -128,7 +138,10 @@ export class ApplicationModule {
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      controllers: [ApplicationController, ArtifactUploadController],
+      controllers: [
+        ApplicationController,
+        ...createUploadControllers(storageDirectory),
+      ],
       providers: [
         { provide: APPLICATION_SERVICE, useValue: application },
         { provide: IdentityService, useValue: identity },

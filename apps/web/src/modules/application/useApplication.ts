@@ -23,12 +23,14 @@ import {
   publishApplication,
   releaseReview,
   reviewApplicationVersion,
+  submitApplicationReview,
   type ArtifactUploadRecord,
   type CreateVersionInput,
   type ConfigureDeliveryInput,
   withdrawApplication,
 } from "./application.client";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
+import { toApplicationErrorMessage } from "./application.errors";
 
 export function useApplication(applicationId: string | undefined) {
   return useQuery({
@@ -138,7 +140,8 @@ export function useCreateVersion(applicationId: string | undefined) {
   return useMutation({
     mutationFn: (input: CreateVersionInput) =>
       createVersion(applicationId as string, input),
-    onError: (error) => showErrorMessage(error, "创建版本失败"),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "创建版本失败"),
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("版本已创建");
@@ -156,10 +159,25 @@ export function useConfigureDelivery(applicationId: string | undefined) {
       channel: DeliveryChannel;
       input: ConfigureDeliveryInput;
     }) => configureDelivery(applicationId as string, channel, input),
-    onError: (error) => showErrorMessage(error, "保存交付配置失败"),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "保存交付配置失败"),
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("交付配置已保存");
+    },
+  });
+}
+
+export function useSubmitApplicationReview() {
+  const invalidateCaches = useInvalidateApplicationCaches();
+  return useMutation({
+    mutationFn: (applicationVersionId: string) =>
+      submitApplicationReview(applicationVersionId),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "提交版本审核失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("版本已提交审核");
     },
   });
 }
@@ -215,7 +233,8 @@ export function usePublishApplication(applicationId: string | undefined) {
   return useMutation({
     mutationFn: (applicationVersionId: string) =>
       publishApplication(applicationId as string, applicationVersionId),
-    onError: (error) => showErrorMessage(error, "发布失败"),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "发布失败"),
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("应用已发布到市场");
@@ -239,7 +258,8 @@ export function useArtifactUpload(applicationId: string | undefined) {
       mimeType: string;
       sizeBytes: number;
     }) => createArtifactUpload(applicationId as string, input),
-    onError: (error) => showErrorMessage(error, "创建上传会话失败"),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "创建上传会话失败"),
   });
   const complete = useMutation({
     mutationFn: ({
@@ -249,7 +269,8 @@ export function useArtifactUpload(applicationId: string | undefined) {
       uploadId: string;
       signature: string;
     }) => completeArtifactUpload(applicationId as string, uploadId, signature),
-    onError: (error) => showErrorMessage(error, "完成上传失败"),
+    onError: (error) =>
+      showErrorMessage(toApplicationErrorMessage(error), "完成上传失败"),
     onSuccess: async () => {
       await invalidateCaches();
     },

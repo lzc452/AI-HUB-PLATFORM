@@ -17,7 +17,6 @@ import type {
   ReviewQueueRecord,
   ReviewQueueView,
 } from "./application.types.js";
-import type { ArtifactVerificationPort } from "./storage.port.js";
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
@@ -62,7 +61,7 @@ export class ApplicationService {
   constructor(
     private readonly repository: ApplicationRepository,
     private readonly authorization: ApplicationAuthorizationPort,
-    private readonly artifactVerifier: ArtifactVerificationPort,
+    _artifactVerifier: import("./storage.port.js").ArtifactVerificationPort,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
@@ -117,16 +116,13 @@ export class ApplicationService {
     if (input.scanStatus !== "passed") {
       throw new Error("ARTIFACT_NOT_VERIFIED");
     }
-    const verification = await this.artifactVerifier.verifyArtifact({
-      artifactKey: input.artifactKey,
-      expectedSha256: input.artifactSha256,
+    const verifiedUpload = await this.repository.findVerifiedArtifact({
+      applicationId,
+      objectKey: input.artifactKey,
+      sha256: input.artifactSha256,
       signature: input.artifactSignature,
     });
-    if (
-      !verification.accepted ||
-      verification.scanStatus !== "passed" ||
-      verification.sha256 !== input.artifactSha256
-    ) {
+    if (verifiedUpload === null) {
       throw new Error("ARTIFACT_NOT_VERIFIED");
     }
     const versions = await this.repository.listVersions(applicationId);
@@ -354,6 +350,11 @@ export class ApplicationService {
         "published",
         applicationVersionId,
       );
+      await repository.registerToCatalog({
+        applicationId: application.applicationId,
+        name: application.name,
+        summary: application.summary,
+      });
       await this.recordChange(
         repository,
         "application.published",

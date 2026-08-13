@@ -318,6 +318,26 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return row === undefined ? null : this.mapArtifactUpload(row);
   }
 
+  async findVerifiedArtifact(input: {
+    applicationId: string;
+    objectKey: string;
+    sha256: string;
+    signature: string;
+  }): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .selectFrom("application_artifact_uploads")
+      .selectAll()
+      .where("application_id", "=", input.applicationId)
+      .where("object_key", "=", input.objectKey)
+      .where("sha256", "=", input.sha256)
+      .where("signature", "=", input.signature)
+      .where("upload_status", "=", "completed")
+      .where("scan_status", "=", "passed")
+      .where("completed_at", "is not", null)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
   async updateArtifactUpload(
     uploadId: string,
     input: Partial<
@@ -611,6 +631,99 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .execute();
   }
 
+  async registerToCatalog(input: {
+    applicationId: string;
+    name: string;
+    summary: string;
+    categoryId?: string;
+    applicationType?: string;
+  }): Promise<void> {
+    const categoryId = input.categoryId ?? "productivity";
+    const applicationType = input.applicationType ?? "web_app";
+    await this.db
+      .insertInto("application_audiences")
+      .values({
+        audience_id: input.applicationId,
+        application_id: input.applicationId,
+        audience_type: "all",
+        department_id: null,
+        employee_id: null,
+        include_children: false,
+      })
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+    await this.db
+      .insertInto("application_catalog_metadata")
+      .values({
+        application_id: input.applicationId,
+        category_id: categoryId,
+        application_type: applicationType,
+        search_name: input.name,
+        search_summary: input.summary,
+        search_pinyin: "",
+        search_initials: "",
+        recommendation_rank: 0,
+        health_status: "unknown",
+        deprecated_reason: null,
+        replacement_application_id: null,
+      })
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+  }
+
+  async linkDeliveryAsset(input: {
+    applicationId: string;
+    channel: DeliveryChannel;
+    assetId: string;
+    sortOrder?: number;
+    version?: string | null;
+  }): Promise<void> {
+    const delivery = await this.db
+      .selectFrom("application_deliveries")
+      .select("delivery_id")
+      .where("application_id", "=", input.applicationId)
+      .where("channel", "=", input.channel)
+      .executeTakeFirst();
+    if (delivery === undefined) {
+      throw new Error("DELIVERY_NOT_FOUND");
+    }
+    await this.db
+      .insertInto("application_delivery_assets")
+      .values({
+        delivery_id: delivery.delivery_id,
+        platform: input.channel,
+        asset_id: input.assetId,
+        version: input.version ?? null,
+        sort_order: input.sortOrder ?? 0,
+      })
+      .onConflict((oc) =>
+        oc.columns(["delivery_id", "platform", "asset_id"]).doNothing(),
+      )
+      .execute();
+  }
+
+  async updateAsset(
+    assetId: string,
+    input: Partial<Pick<AssetRecord, "scanStatus" | "sha256" | "sizeBytes">>,
+  ): Promise<AssetRecord | null> {
+    const row = await this.db
+      .updateTable("application_assets")
+      .set({
+        ...(input.scanStatus === undefined
+          ? {}
+          : { scan_status: input.scanStatus }),
+        ...(input.sha256 === undefined ? {} : { sha256: input.sha256 }),
+        ...(input.sizeBytes === undefined
+          ? {}
+          : { size_bytes: input.sizeBytes }),
+        updated_at: new Date(),
+      })
+      .where("asset_id", "=", assetId)
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapAsset(row);
+  }
+
   private mapApplication(row: Selectable<DatabaseSchema["applications"]>) {
     return {
       applicationId: row.application_id,
@@ -690,7 +803,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       objectKey: row.object_key,
       fileName: row.file_name,
       mimeType: row.mime_type,
-      sizeBytes: row.size_bytes,
+      sizeBytes: Number(row.size_bytes),
       sha256: row.sha256,
       signature: row.signature,
       partCount: row.part_count,
@@ -714,7 +827,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       name: row.name,
       storageKey: row.storage_key,
       mimeType: row.mime_type,
-      sizeBytes: row.size_bytes,
+      sizeBytes: Number(row.size_bytes),
       sortOrder: row.sort_order,
       sha256: row.sha256,
       scanStatus: row.scan_status,

@@ -23,19 +23,28 @@ describe("toProblemDetails", () => {
     expect(JSON.stringify(problem)).not.toContain("secret");
   });
 
-  it("uses a stable code for Nest HTTP exceptions", () => {
+  it("preserves a safe domain code for Nest HTTP exceptions", () => {
     expect(
       toProblemDetails(
-        new BadRequestException("password=do-not-return-this"),
+        new BadRequestException("RATING_STARS_INVALID"),
         traceId,
       ),
     ).toEqual({
       type: "about:blank",
       title: "Bad Request",
       status: 400,
-      code: "BAD_REQUEST",
+      code: "RATING_STARS_INVALID",
       traceId,
     });
+  });
+
+  it("does not expose an unsafe HTTP exception message", () => {
+    expect(
+      toProblemDetails(
+        new BadRequestException("password=do-not-return-this"),
+        traceId,
+      ),
+    ).toMatchObject({ code: "BAD_REQUEST" });
   });
 
   it("maps Zod issues to field errors", () => {

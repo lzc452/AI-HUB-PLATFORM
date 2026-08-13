@@ -45,7 +45,7 @@ export class DemandDraftRequestDto {
   })
   desiredOutcome!: string;
 
-  @ApiProperty({ description: "受众类型", enum: AUDIENCE_TYPE })
+  @ApiProperty({ type: String, description: "受众类型", enum: AUDIENCE_TYPE })
   audienceType!: (typeof AUDIENCE_TYPE)[number];
 
   @ApiPropertyOptional({
@@ -89,7 +89,7 @@ export class SaveDemandDraftRequestDto extends DemandDraftRequestDto {
 
 /** 需求评审请求。 */
 export class DemandReviewRequestDto {
-  @ApiProperty({ description: "评审结论", enum: ["publish", "reject"] })
+  @ApiProperty({ type: String, description: "评审结论", enum: ["publish", "reject"] })
   decision!: "publish" | "reject";
 
   @ApiPropertyOptional({
@@ -119,7 +119,7 @@ export class DemandCollaboratorRequestDto {
   })
   employeeId!: string;
 
-  @ApiProperty({ description: "协作角色", enum: COLLABORATOR_ROLE })
+  @ApiProperty({ type: String, description: "协作角色", enum: COLLABORATOR_ROLE })
   role!: (typeof COLLABORATOR_ROLE)[number];
 
   @ApiProperty({
@@ -132,7 +132,7 @@ export class DemandCollaboratorRequestDto {
 
 /** 调整协作成员角色请求。 */
 export class DemandCollaboratorRoleUpdateRequestDto {
-  @ApiProperty({ description: "协作角色", enum: COLLABORATOR_ROLE })
+  @ApiProperty({ type: String, description: "协作角色", enum: COLLABORATOR_ROLE })
   role!: (typeof COLLABORATOR_ROLE)[number];
 
   @ApiProperty({
@@ -174,7 +174,7 @@ export class DemandStatusRequestDto {
   })
   expectedVersion!: number;
 
-  @ApiProperty({ description: "下一状态", enum: DEMAND_STATUS })
+  @ApiProperty({ type: String, description: "下一状态", enum: DEMAND_STATUS })
   nextStatus!: (typeof DEMAND_STATUS)[number];
 
   @ApiPropertyOptional({
@@ -268,7 +268,7 @@ export class DemandLinkApplicationRequestDto {
   @ApiProperty({ type: String, description: "应用 ID" })
   applicationId!: string;
 
-  @ApiProperty({ description: "关联角色", enum: APPLICATION_ROLE })
+  @ApiProperty({ type: String, description: "关联角色", enum: APPLICATION_ROLE })
   role!: (typeof APPLICATION_ROLE)[number];
 
   @ApiPropertyOptional({
@@ -316,7 +316,7 @@ export class DemandCreateApplicationRequestDto {
   })
   departmentId?: string;
 
-  @ApiProperty({ description: "关联角色", enum: APPLICATION_ROLE })
+  @ApiProperty({ type: String, description: "关联角色", enum: APPLICATION_ROLE })
   role!: (typeof APPLICATION_ROLE)[number];
 
   @ApiPropertyOptional({
@@ -377,7 +377,7 @@ export class DemandReportRequestDto {
 
 /** 处理需求举报请求。 */
 export class DemandReportResolveRequestDto {
-  @ApiProperty({ description: "处理结果", enum: REPORT_STATUS })
+  @ApiProperty({ type: String, description: "处理结果", enum: REPORT_STATUS })
   status!: (typeof REPORT_STATUS)[number];
 }
 
@@ -429,10 +429,10 @@ export class DemandEntryDto {
   })
   desiredOutcome!: string;
 
-  @ApiProperty({ description: "需求状态", enum: DEMAND_STATUS })
+  @ApiProperty({ type: String, description: "需求状态", enum: DEMAND_STATUS })
   status!: (typeof DEMAND_STATUS)[number];
 
-  @ApiProperty({ description: "受众类型", enum: AUDIENCE_TYPE })
+  @ApiProperty({ type: String, description: "受众类型", enum: AUDIENCE_TYPE })
   audienceType!: (typeof AUDIENCE_TYPE)[number];
 
   @ApiPropertyOptional({
@@ -589,7 +589,7 @@ export class DemandCollaboratorDto {
   })
   employeeId!: string;
 
-  @ApiProperty({ description: "协作角色", enum: COLLABORATOR_ROLE })
+  @ApiProperty({ type: String, description: "协作角色", enum: COLLABORATOR_ROLE })
   role!: (typeof COLLABORATOR_ROLE)[number];
 
   @ApiProperty({
@@ -615,7 +615,7 @@ export class DemandProgressDto {
   })
   authorEmployeeId!: string;
 
-  @ApiProperty({ description: "进度对应状态", enum: DEMAND_STATUS })
+  @ApiProperty({ type: String, description: "进度对应状态", enum: DEMAND_STATUS })
   status!: (typeof DEMAND_STATUS)[number];
 
   @ApiProperty({
@@ -684,7 +684,7 @@ export class DemandPilotDto {
   })
   outcome?: string | null;
 
-  @ApiProperty({ description: "试点状态", enum: PILOT_STATUS })
+  @ApiProperty({ type: String, description: "试点状态", enum: PILOT_STATUS })
   status!: (typeof PILOT_STATUS)[number];
 
   @ApiProperty({
@@ -717,7 +717,7 @@ export class DemandApplicationLinkDto {
   @ApiProperty({ type: String, description: "应用 ID" })
   applicationId!: string;
 
-  @ApiProperty({ description: "关联角色", enum: APPLICATION_ROLE })
+  @ApiProperty({ type: String, description: "关联角色", enum: APPLICATION_ROLE })
   role!: (typeof APPLICATION_ROLE)[number];
 
   @ApiProperty({ type: Boolean, description: "是否主解决方案", example: false })
@@ -843,7 +843,7 @@ export class DemandReportDto {
   })
   reason!: string;
 
-  @ApiProperty({ description: "处理状态", enum: REPORT_STATUS })
+  @ApiProperty({ type: String, description: "处理状态", enum: REPORT_STATUS })
   status!: (typeof REPORT_STATUS)[number];
 
   @ApiPropertyOptional({

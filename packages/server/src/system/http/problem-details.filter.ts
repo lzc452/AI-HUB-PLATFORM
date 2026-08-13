@@ -41,6 +41,26 @@ const STATUS_DETAILS: Readonly<
   },
 };
 
+const SAFE_DOMAIN_CODE = /^[A-Z][A-Z0-9_]{2,63}$/u;
+
+function httpExceptionCode(exception: HttpException, fallback: string): string {
+  const response = exception.getResponse();
+  if (typeof response === "string" && SAFE_DOMAIN_CODE.test(response)) {
+    return response;
+  }
+  if (
+    typeof response === "object" &&
+    response !== null &&
+    "message" in response
+  ) {
+    const message = response.message;
+    if (typeof message === "string" && SAFE_DOMAIN_CODE.test(message)) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
 function zodFieldErrors(error: ZodError): Record<string, string[]> {
   const fieldErrors: Record<string, string[]> = {};
   for (const issue of error.issues) {
@@ -75,7 +95,7 @@ export function toProblemDetails(
       type: "about:blank",
       title: details.title,
       status,
-      code: details.code,
+      code: httpExceptionCode(exception, details.code),
       traceId,
     };
   }
@@ -108,6 +128,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
           traceId,
           errorType:
             exception instanceof Error ? exception.name : typeof exception,
+          errorMessage:
+            exception instanceof Error ? exception.message : String(exception),
+          stack: exception instanceof Error ? exception.stack : undefined,
         },
         "Unhandled request error",
       );

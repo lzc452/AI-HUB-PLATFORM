@@ -1,0 +1,167 @@
+==> 1. create application
+{
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "ownerEmployeeId": "DEMO-APP-ADMIN",
+  "maintainerEmployeeId": "DEMO-APP-ADMIN",
+  "departmentId": "demo-rnd",
+  "name": "E2E Validation App",
+  "summary": "End-to-end validation application",
+  "status": "draft",
+  "currentVersionId": null
+}
+==> 2. init artifact upload
+{
+  "uploadId": "6ec4ce9f-1235-411e-8d85-635c8fe791c6",
+  "objectKey": "applications/863b62b5-67d9-4bde-8ba3-1133ad43aa82/uploads/c2f3a096-91da-4abf-b0cc-687ba0d1b691/content",
+  "fileName": "e2e.zip",
+  "mimeType": "application/zip",
+  "sizeBytes": 28,
+  "uploadStatus": "uploading",
+  "scanStatus": "pending",
+  "sha256": null,
+  "errorCode": null,
+  "expiresAt": "2026-08-14T01:14:19.390Z"
+}
+==> 3. upload artifact content
+{
+  "uploadId": "6ec4ce9f-1235-411e-8d85-635c8fe791c6",
+  "objectKey": "applications/863b62b5-67d9-4bde-8ba3-1133ad43aa82/uploads/c2f3a096-91da-4abf-b0cc-687ba0d1b691/content",
+  "fileName": "e2e.zip",
+  "mimeType": "application/zip",
+  "sizeBytes": 28,
+  "uploadStatus": "uploading",
+  "scanStatus": "pending",
+  "sha256": "e3d30354016308a78cdead07df97360a450ccb59fbd6212121b845bc1788e1f4",
+  "errorCode": null,
+  "expiresAt": "2026-08-14T01:14:19.390Z"
+}
+==> 4. complete artifact upload
+{
+  "uploadId": "6ec4ce9f-1235-411e-8d85-635c8fe791c6",
+  "objectKey": "applications/863b62b5-67d9-4bde-8ba3-1133ad43aa82/artifacts/6ec4ce9f-1235-411e-8d85-635c8fe791c6",
+  "fileName": "e2e.zip",
+  "mimeType": "application/zip",
+  "sizeBytes": 28,
+  "uploadStatus": "completed",
+  "scanStatus": "passed",
+  "sha256": "e3d30354016308a78cdead07df97360a450ccb59fbd6212121b845bc1788e1f4",
+  "errorCode": null,
+  "expiresAt": "2026-08-14T01:14:19.390Z"
+}
+==> 5. create version
+{
+  "applicationVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b",
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "version": "1.0.0",
+  "changelog": "Initial release",
+  "artifactKey": "applications/863b62b5-67d9-4bde-8ba3-1133ad43aa82/artifacts/6ec4ce9f-1235-411e-8d85-635c8fe791c6",
+  "artifactSha256": "e3d30354016308a78cdead07df97360a450ccb59fbd6212121b845bc1788e1f4",
+  "artifactSignature": "",
+  "scanStatus": "passed",
+  "createdByEmployeeId": "DEMO-APP-ADMIN",
+  "createdAt": "2026-08-13T01:14:21.114Z"
+}
+==> 6. configure delivery channels
+{"deliveryId":"4bf27806-8434-48e2-9ea5-cca79289b92b","applicationId":"863b62b5-67d9-4bde-8ba3-1133ad43aa82","channel":"web","entryUrl":"https://example.com/e2e-app/web","minClientVersion":null,"enabled":true}
+{"deliveryId":"187fe13b-c455-459b-944b-9f1df24f67df","applicationId":"863b62b5-67d9-4bde-8ba3-1133ad43aa82","channel":"desktop","entryUrl":"https://example.com/e2e-app/desktop","minClientVersion":null,"enabled":true}
+{"deliveryId":"fc3d06c7-baaa-496b-a37c-c4f50fbe296d","applicationId":"863b62b5-67d9-4bde-8ba3-1133ad43aa82","channel":"mobile","entryUrl":"https://example.com/e2e-app/mobile","minClientVersion":null,"enabled":true}
+{"deliveryId":"d6f6e303-38f8-4ac9-bc0a-4facc82b25b3","applicationId":"863b62b5-67d9-4bde-8ba3-1133ad43aa82","channel":"mini_program","entryUrl":"https://example.com/e2e-app/mini_program","minClientVersion":null,"enabled":true}
+==> 7. submit for review
+{
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "ownerEmployeeId": "DEMO-APP-ADMIN",
+  "maintainerEmployeeId": "DEMO-APP-ADMIN",
+  "departmentId": "demo-rnd",
+  "name": "E2E Validation App",
+  "summary": "End-to-end validation application",
+  "status": "in_review",
+  "currentVersionId": null
+}
+==> 8. claim review
+{
+  "reviewQueueId": "89e2eeec-eaeb-4f4e-ad73-fb07b4976867",
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "applicationVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b",
+  "status": "claimed",
+  "claimedByEmployeeId": "DEMO-SUPER-ADMIN",
+  "claimedAt": "2026-08-13T01:14:23.594Z",
+  "slaDueAt": "2026-08-14T01:14:23.260Z",
+  "createdAt": "2026-08-13T01:14:23.258Z"
+}
+==> 9. approve review
+{
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "ownerEmployeeId": "DEMO-APP-ADMIN",
+  "maintainerEmployeeId": "DEMO-APP-ADMIN",
+  "departmentId": "demo-rnd",
+  "name": "E2E Validation App",
+  "summary": "End-to-end validation application",
+  "status": "approved",
+  "currentVersionId": null
+}
+==> 10. publish application
+{
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "ownerEmployeeId": "DEMO-APP-ADMIN",
+  "maintainerEmployeeId": "DEMO-APP-ADMIN",
+  "departmentId": "demo-rnd",
+  "name": "E2E Validation App",
+  "summary": "End-to-end validation application",
+  "status": "published",
+  "currentVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b"
+}
+==> 11. resolve delivery
+{
+  "type": "about:blank",
+  "title": "Not Found",
+  "status": 404,
+  "code": "CATALOG_APPLICATION_NOT_FOUND",
+  "traceId": "01KZWAYJ12WP147MQQEY9CC11V"
+}
+==> 12. download delivery asset
+{"type":"about:blank","title":"Not Found","status":404,"code":"CATALOG_APPLICATION_NOT_FOUND","traceId":"01KZWAYJBDWB2RX7YHFAS3D27B"}
+HTTP_STATUS:404
+==> 13. create comment
+{
+  "commentId": "aa06e075-d580-44c8-b8a2-0b033ffff50f",
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "applicationVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b",
+  "parentCommentId": null,
+  "authorEmployeeId": "DEMO-EMPLOYEE",
+  "body": "Great app!",
+  "displayAnonymously": false,
+  "commentKind": "user",
+  "hiddenAt": null,
+  "createdAt": "2026-08-13T01:14:25.217Z",
+  "updatedAt": "2026-08-13T01:14:25.217Z"
+}
+==> 14. official reply comment
+{
+  "commentId": "0ccfa7f2-0c9f-454b-a742-d8f648cf39b0",
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "applicationVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b",
+  "parentCommentId": "aa06e075-d580-44c8-b8a2-0b033ffff50f",
+  "authorEmployeeId": "DEMO-APP-ADMIN",
+  "body": "Thank you!",
+  "displayAnonymously": false,
+  "commentKind": "official",
+  "hiddenAt": null,
+  "createdAt": "2026-08-13T01:14:25.998Z",
+  "updatedAt": "2026-08-13T01:14:25.998Z"
+}
+==> 15. create feedback
+{
+  "feedbackId": "05ea84da-ffda-477b-a62b-4235406e1d46",
+  "applicationId": "863b62b5-67d9-4bde-8ba3-1133ad43aa82",
+  "applicationVersionId": "ff288b0f-20fd-4e1f-af18-3d2d33a69b7b",
+  "creatorEmployeeId": "DEMO-EMPLOYEE",
+  "type": "suggestion",
+  "body": "Please add dark mode.",
+  "status": "open",
+  "assigneeEmployeeId": null,
+  "resolution": null,
+  "createdAt": "2026-08-13T01:14:26.409Z",
+  "updatedAt": "2026-08-13T01:14:26.409Z",
+  "resolvedAt": null
+}
+==> E2E validation completed.

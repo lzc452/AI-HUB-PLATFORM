@@ -11,6 +11,7 @@ export interface OutboxCounts {
   pending: number;
   processing: number;
   failed: number;
+  quarantined: number;
 }
 
 export interface ObservabilityMetricsOptions {
@@ -27,15 +28,28 @@ export function createOutboxCountCollector(
         .selectFrom("outbox_events")
         .select("status")
         .select(({ fn }) => fn.countAll<string>().as("count"))
-        .where("status", "in", ["pending", "processing", "failed"])
+        .where("status", "in", [
+          "pending",
+          "processing",
+          "failed",
+          "quarantined",
+        ])
         .groupBy("status")
         .execute();
-      const counts: OutboxCounts = { pending: 0, processing: 0, failed: 0 };
+      const counts: OutboxCounts = {
+        pending: 0,
+        processing: 0,
+        failed: 0,
+        quarantined: 0,
+      };
 
       for (const row of rows) {
         if (row.status === "pending") counts.pending = Number(row.count);
         if (row.status === "processing") counts.processing = Number(row.count);
         if (row.status === "failed") counts.failed = Number(row.count);
+        if (row.status === "quarantined") {
+          counts.quarantined = Number(row.count);
+        }
       }
       return counts;
     } finally {
@@ -50,7 +64,7 @@ export interface HttpMetricLabels {
   statusCode: number;
 }
 
-export type WorkerHandlerOutcome = "completed" | "failed" | "missing";
+export type WorkerHandlerOutcome = "completed" | "failed" | "quarantined";
 
 export interface WorkerMetricsPort {
   recordWorkerHandler(
@@ -102,6 +116,10 @@ export class ObservabilityMetrics implements WorkerMetricsPort {
         this.outboxEvents.set({ status: "pending" }, counts.pending);
         this.outboxEvents.set({ status: "processing" }, counts.processing);
         this.outboxEvents.set({ status: "failed" }, counts.failed);
+        this.outboxEvents.set(
+          { status: "quarantined" },
+          counts.quarantined,
+        );
       },
     });
     this.workerDuration = new Histogram({

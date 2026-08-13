@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Drawer,
   Form,
@@ -15,6 +16,7 @@ import {
   uploadArtifactContent,
   type ArtifactUploadRecord,
 } from "../../modules/application/application.client";
+import { getArtifactUploadErrorMessage } from "../../modules/application/application.errors";
 import {
   useArtifactUpload,
   useCreateVersion,
@@ -46,7 +48,9 @@ export function UploadVersionDrawer({
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
   const [form] = Form.useForm<VersionFormValues>();
+  const busy = uploading || creating;
 
   const reset = () => {
     setFileList([]);
@@ -54,6 +58,7 @@ export function UploadVersionDrawer({
     setProgress(0);
     setUploading(false);
     setCreating(false);
+    setProcessError(null);
     form.resetFields();
   };
 
@@ -64,17 +69,18 @@ export function UploadVersionDrawer({
       return;
     }
     setUploading(true);
+    setProgress(0);
+    setProcessError(null);
     try {
       const session = await upload.start.mutateAsync({
         fileName: file.name,
         mimeType: file.type || "application/octet-stream",
         sizeBytes: file.size,
       });
-      const content = await file.arrayBuffer();
       await uploadArtifactContent(
         applicationId,
         session.uploadId,
-        content,
+        file,
         setProgress,
       );
       const completed = await upload.complete.mutateAsync({
@@ -82,18 +88,39 @@ export function UploadVersionDrawer({
         signature: "",
       });
       setUploadRecord(completed);
-      message.success("上传完成，扫描校验通过");
+      if (
+        completed.uploadStatus === "completed" &&
+        completed.scanStatus === "passed" &&
+        completed.sha256 !== null
+      ) {
+        message.success("上传完成，扫描校验通过");
+      } else if (
+        completed.uploadStatus === "failed" ||
+        completed.scanStatus === "failed"
+      ) {
+        setProcessError(
+          `扫描失败：${getArtifactUploadErrorMessage(completed.errorCode)}`,
+        );
+      } else {
+        setProcessError("制品上传或扫描尚未完成，请稍后重试");
+      }
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "上传失败");
+      const detail = error instanceof Error ? error.message : "上传失败";
+      setProcessError(detail);
+      message.error(detail);
     } finally {
       setUploading(false);
     }
   };
 
   const handleCreateVersion = async () => {
-    if (uploadRecord === null) return;
-    const values = await form.validateFields();
-    if (uploadRecord.sha256 === null) return;
+    if (!isVerifiedUpload(uploadRecord)) return;
+    let values: VersionFormValues;
+    try {
+      values = await form.validateFields();
+    } catch {
+      return;
+    }
     setCreating(true);
     try {
       await createVersion.mutateAsync({
@@ -114,21 +141,31 @@ export function UploadVersionDrawer({
 
   return (
     <Drawer
+      closable={!busy}
       destroyOnClose
+      keyboard={!busy}
+      maskClosable={!busy}
       onClose={() => {
+        if (busy) return;
         reset();
         onClose();
       }}
       open={open}
+      size={480}
       title="上传新版本"
-      width={480}
     >
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
         <Upload
           beforeUpload={() => false}
+          disabled={uploading || creating}
           fileList={fileList}
           maxCount={1}
-          onChange={({ fileList: next }) => setFileList(next)}
+          onChange={({ fileList: next }) => {
+            setFileList(next);
+            setUploadRecord(null);
+            setProgress(0);
+            setProcessError(null);
+          }}
         >
           <Button disabled={uploading} icon={<span>⬆</span>}>
             选择安装包
@@ -159,6 +196,7 @@ export function UploadVersionDrawer({
             <div className="break-all">
               SHA-256：<code>{uploadRecord.sha256 ?? "-"}</code>
             </div>
+            <div>上传状态：{uploadRecord.uploadStatus}</div>
             <div>
               扫描状态：
               {uploadRecord.scanStatus === "passed"
@@ -168,7 +206,11 @@ export function UploadVersionDrawer({
           </div>
         ) : null}
 
-        {uploadRecord?.scanStatus === "passed" ? (
+        {processError ? (
+          <Alert showIcon title={processError} type="error" />
+        ) : null}
+
+        {isVerifiedUpload(uploadRecord) ? (
           <Form form={form} layout="vertical" name="create-version">
             <Form.Item
               label="版本号"
@@ -195,5 +237,16 @@ export function UploadVersionDrawer({
         ) : null}
       </Space>
     </Drawer>
+  );
+}
+
+function isVerifiedUpload(
+  upload: ArtifactUploadRecord | null,
+): upload is ArtifactUploadRecord & { sha256: string } {
+  return (
+    upload !== null &&
+    upload.uploadStatus === "completed" &&
+    upload.scanStatus === "passed" &&
+    upload.sha256 !== null
   );
 }

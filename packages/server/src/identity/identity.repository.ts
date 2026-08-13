@@ -54,6 +54,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .insertInto("employees")
       .values({
         employee_id: input.employeeId,
+        employee_number: input.employeeNumber ?? input.employeeId,
         display_name: input.displayName,
         status: input.status ?? "pending_binding",
         primary_department_id: input.primaryDepartmentId,
@@ -92,6 +93,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
 
     return {
       employeeId: row.employee_id,
+      employeeNumber: row.employee_number,
       displayName: row.display_name,
       status: row.status,
       primaryDepartmentId: row.primary_department_id,
@@ -229,6 +231,28 @@ export class KyselyIdentityRepository implements IdentityRepository {
       })
       .where("employee_id", "=", employeeId)
       .execute();
+
+    if (input.primaryDepartmentId !== undefined) {
+      await this.db
+        .updateTable("department_memberships")
+        .set({ is_primary: false })
+        .where("employee_id", "=", employeeId)
+        .where("department_id", "!=", input.primaryDepartmentId)
+        .execute();
+      await this.db
+        .insertInto("department_memberships")
+        .values({
+          employee_id: employeeId,
+          department_id: input.primaryDepartmentId,
+          is_primary: true,
+        })
+        .onConflict((conflict) =>
+          conflict.columns(["employee_id", "department_id"]).doUpdateSet({
+            is_primary: true,
+          }),
+        )
+        .execute();
+    }
   }
 
   async updateDepartment(
@@ -268,23 +292,21 @@ export class KyselyIdentityRepository implements IdentityRepository {
     employeeId: EmployeeId,
     roleCodes: readonly string[],
   ): Promise<void> {
-    await this.db.transaction().execute(async (transaction) => {
-      await transaction
-        .deleteFrom("employee_roles")
-        .where("employee_id", "=", employeeId)
+    await this.db
+      .deleteFrom("employee_roles")
+      .where("employee_id", "=", employeeId)
+      .execute();
+    if (roleCodes.length > 0) {
+      await this.db
+        .insertInto("employee_roles")
+        .values(
+          roleCodes.map((roleCode) => ({
+            employee_id: employeeId,
+            role_code: roleCode,
+          })),
+        )
         .execute();
-      if (roleCodes.length > 0) {
-        await transaction
-          .insertInto("employee_roles")
-          .values(
-            roleCodes.map((roleCode) => ({
-              employee_id: employeeId,
-              role_code: roleCode,
-            })),
-          )
-          .execute();
-      }
-    });
+    }
   }
 
   async listSyncRuns(limit = 20): Promise<
@@ -418,6 +440,24 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .execute();
   }
 
+  async claimDingTalkBinding(
+    employeeId: EmployeeId,
+    dingtalkUserId: string,
+  ): Promise<boolean> {
+    await this.db
+      .insertInto("dingtalk_bindings")
+      .values({ employee_id: employeeId, dingtalk_user_id: dingtalkUserId })
+      .onConflict((conflict) => conflict.doNothing())
+      .execute();
+    const exact = await this.db
+      .selectFrom("dingtalk_bindings")
+      .select("employee_id")
+      .where("employee_id", "=", employeeId)
+      .where("dingtalk_user_id", "=", dingtalkUserId)
+      .executeTakeFirst();
+    return exact !== undefined;
+  }
+
   async createDingTalkSyncRun(mode: DingTalkSyncMode): Promise<string> {
     const row = await this.db
       .insertInto("dingtalk_sync_runs")
@@ -536,11 +576,12 @@ export class KyselyIdentityRepository implements IdentityRepository {
     const row = await this.db
       .selectFrom("employees")
       .selectAll()
-      .where("employee_id", "=", employeeNumber)
+      .where(sql`upper(trim(employee_number))`, "=", employeeNumber)
       .executeTakeFirst();
     if (row === undefined) return null;
     return {
       employeeId: row.employee_id,
+      employeeNumber: row.employee_number,
       displayName: row.display_name,
       status: row.status,
       primaryDepartmentId: row.primary_department_id,
@@ -565,6 +606,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
     if (row === undefined) return null;
     return {
       employeeId: row.employee_id,
+      employeeNumber: row.employee_number,
       displayName: row.display_name,
       status: row.status,
       primaryDepartmentId: row.primary_department_id,
@@ -578,6 +620,8 @@ export class KyselyIdentityRepository implements IdentityRepository {
     browserContextBindingHash: string;
     handoffTokenHash?: string;
     returnTo: string;
+    dingtalkUserId?: string;
+    employeeId?: string;
     expiresAt: Date;
   }): Promise<import("./identity.types.js").DingTalkSsoTransactionRecord> {
     const row = await this.db
@@ -587,6 +631,8 @@ export class KyselyIdentityRepository implements IdentityRepository {
         browser_context_binding_hash: input.browserContextBindingHash,
         handoff_token_hash: input.handoffTokenHash ?? null,
         return_to: input.returnTo,
+        dingtalk_user_id: input.dingtalkUserId ?? null,
+        employee_id: input.employeeId ?? null,
         expires_at: input.expiresAt,
       })
       .returningAll()
@@ -650,17 +696,6 @@ export class KyselyIdentityRepository implements IdentityRepository {
       expiresAt: row.expires_at,
       consumedAt: row.consumed_at,
     };
-  }
-
-  async updateDingTalkSsoTransactionAfterCallback(
-    transactionId: string,
-    dingtalkUserId: string,
-  ): Promise<void> {
-    await this.db
-      .updateTable("dingtalk_sso_transactions")
-      .set({ dingtalk_user_id: dingtalkUserId })
-      .where("transaction_id", "=", transactionId)
-      .execute();
   }
 
   async consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean> {

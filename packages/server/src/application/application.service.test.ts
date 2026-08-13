@@ -11,6 +11,7 @@ import type {
   ApplicationVersionRecord,
   ArtifactUploadRecord,
   AssetRecord,
+  DeliveryChannel,
   DeliveryRecord,
   ReviewQueueRecord,
   ReviewRecord,
@@ -48,6 +49,14 @@ class MemoryApplicationRepository implements ApplicationRepository {
   assets = new Map<string, AssetRecord>();
   audits: string[] = [];
   events: string[] = [];
+  catalogRegistrations: string[] = [];
+  deliveryAssets: Array<{
+    applicationId: string;
+    channel: DeliveryChannel;
+    assetId: string;
+    sortOrder?: number;
+    version?: string | null;
+  }> = [];
   nextId = 1;
 
   async withTransaction<T>(
@@ -73,6 +82,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
       currentVersionId: null,
     };
     this.applications.set(application.applicationId, application);
+    registerVerifiedUpload(this, application.applicationId);
     return application;
   }
   async findApplication(id: string) {
@@ -105,6 +115,24 @@ class MemoryApplicationRepository implements ApplicationRepository {
   }
   async findArtifactUpload(uploadId: string) {
     return this.uploads.get(uploadId) ?? null;
+  }
+  async findVerifiedArtifact(input: {
+    applicationId: string;
+    objectKey: string;
+    sha256: string;
+    signature: string;
+  }) {
+    return (
+      [...this.uploads.values()].find(
+        (upload) =>
+          upload.applicationId === input.applicationId &&
+          upload.objectKey === input.objectKey &&
+          upload.sha256 === input.sha256 &&
+          upload.signature === input.signature &&
+          upload.uploadStatus === "completed" &&
+          upload.scanStatus === "passed",
+      ) ?? null
+    );
   }
   async updateArtifactUpload(
     uploadId: string,
@@ -238,6 +266,34 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async emitOutbox(input: { eventType: string }) {
     this.events.push(input.eventType);
   }
+  async registerToCatalog(input: {
+    applicationId: string;
+    name: string;
+    summary: string;
+    categoryId?: string;
+    applicationType?: string;
+  }) {
+    this.catalogRegistrations.push(input.applicationId);
+  }
+  async linkDeliveryAsset(input: {
+    applicationId: string;
+    channel: DeliveryChannel;
+    assetId: string;
+    sortOrder?: number;
+    version?: string | null;
+  }) {
+    this.deliveryAssets.push(input);
+  }
+  async updateAsset(
+    assetId: string,
+    input: Partial<Pick<AssetRecord, "scanStatus" | "sha256" | "sizeBytes">>,
+  ) {
+    const asset = this.assets.get(assetId);
+    if (asset === null) return null;
+    const updated = { ...asset, ...input } as AssetRecord;
+    this.assets.set(assetId, updated);
+    return updated;
+  }
 }
 
 const allowAll = async (): Promise<AuthorizationDecision> => ({
@@ -291,6 +347,31 @@ function makeService() {
     ),
     analyticsEvents,
   };
+}
+
+function registerVerifiedUpload(
+  repository: MemoryApplicationRepository,
+  applicationId: string,
+  input = versionInput,
+): void {
+  repository.uploads.set(`verified-${applicationId}-${input.version}`, {
+    uploadId: `verified-${applicationId}-${input.version}`,
+    applicationId,
+    uploadedByEmployeeId: owner.employeeId,
+    objectKey: input.artifactKey,
+    fileName: "artifact.zip",
+    mimeType: "application/zip",
+    sizeBytes: 1,
+    sha256: input.artifactSha256,
+    signature: input.artifactSignature,
+    partCount: 1,
+    uploadStatus: "completed",
+    scanStatus: "passed",
+    errorCode: null,
+    expiresAt: new Date("2099-01-01"),
+    completedAt: new Date(),
+    createdAt: new Date(),
+  });
 }
 
 async function configureAllDeliveryChannels(
@@ -381,6 +462,24 @@ describe("ApplicationService", () => {
       } as never),
     ).rejects.toThrow("ARTIFACT_NOT_VERIFIED");
     expect(repository.versions).toHaveLength(0);
+  });
+
+  it("requires persistent completed and passed upload evidence", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const key = `verified-${application.applicationId}-${versionInput.version}`;
+    repository.uploads.set(key, {
+      ...repository.uploads.get(key)!,
+      uploadStatus: "uploading",
+      scanStatus: "pending",
+    });
+
+    await expect(
+      service.createVersion(owner, application.applicationId, versionInput),
+    ).rejects.toThrow("ARTIFACT_NOT_VERIFIED");
   });
 
   it("creates and claims a review queue item with an SLA notification", async () => {
@@ -546,7 +645,15 @@ describe("ApplicationService", () => {
     const second = await service.createVersion(
       owner,
       application.applicationId,
-      { ...versionInput, version: "2.0.0", changelog: "Second release" },
+      (() => {
+        const input = {
+          ...versionInput,
+          version: "2.0.0",
+          changelog: "Second release",
+        };
+        registerVerifiedUpload(repository, application.applicationId, input);
+        return input;
+      })(),
     );
     expect(await service.listVersions(application.applicationId)).toHaveLength(
       2,

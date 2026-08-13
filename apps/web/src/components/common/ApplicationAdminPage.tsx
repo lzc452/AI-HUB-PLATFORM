@@ -118,7 +118,6 @@ export function ApplicationAdminPage({
   const isDetail = title === "应用详情";
   const isVersions = title === "版本管理";
   const isReview = title === "审核工作台";
-  const isDelivery = title === "交付配置";
   const displayStatus = isReview
     ? { color: "warning", label: "待审核" }
     : status;
@@ -147,10 +146,10 @@ export function ApplicationAdminPage({
                   : `${isVersions ? "版本历史" : title} — ${appName}`}
               </h2>
               {isDetail ? <Tag color="magenta">推荐</Tag> : null}
-              {!isVersions && !isDelivery ? (
+              {!isVersions && title !== "交付配置" ? (
                 <Tag color={displayStatus.color}>{displayStatus.label}</Tag>
               ) : null}
-              {!isVersions && !isDelivery ? (
+              {!isVersions && title !== "交付配置" ? (
                 <Tag color="blue">Web 应用</Tag>
               ) : null}
               {isReview ? <Tag color="error">高优先级</Tag> : null}
@@ -254,23 +253,6 @@ export function ApplicationAdminPage({
               </div>
             </div>
           ) : null}
-          {title === "交付配置" ? (
-            <>
-              <Button
-                onClick={() =>
-                  showWarningMessage("预览交付功能将在下一版本开放")
-                }
-              >
-                预览交付
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => showWarningMessage("请先保存交付配置")}
-              >
-                提交审核
-              </Button>
-            </>
-          ) : null}
         </div>
       </section>
 
@@ -279,9 +261,9 @@ export function ApplicationAdminPage({
       <span className="sr-only">{description}</span>
       <Alert
         className="sr-only"
-        description="数据已通过内部 API 接入；当前界面不提供写操作。"
+        description="数据已通过内部 API 接入；可用操作受身份与权限控制。"
         showIcon
-        title="只读预览"
+        title="内部 API 数据"
         type="info"
       />
       {location.pathname.endsWith("/reviews") ||

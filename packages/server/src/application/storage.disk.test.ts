@@ -42,6 +42,18 @@ describe("DiskObjectStorage", () => {
     await expect(storage.get("tmp/key.bin")).resolves.toEqual(bytes("hello"));
   });
 
+  it("does not truncate an existing destination when copy fails", async () => {
+    const storage = makeStorage();
+    await storage.put("final/key.bin", bytes("existing"));
+
+    await expect(
+      storage.copy("missing/key.bin", "final/key.bin"),
+    ).rejects.toThrow();
+    await expect(storage.get("final/key.bin")).resolves.toEqual(
+      bytes("existing"),
+    );
+  });
+
   it("rejects path traversal keys", async () => {
     const storage = makeStorage();
     for (const key of [

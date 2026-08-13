@@ -69,6 +69,25 @@ describe("real application lifecycle API", () => {
   let db: ReturnType<typeof createDatabase>;
   let app: INestApplication;
   let artifactSha256: string;
+  let pipeline: ArtifactPipeline;
+
+  const registerArtifact = async (
+    uploadId: string,
+    artifactKey: string,
+    signature: string,
+  ) => {
+    const content = Buffer.from("phase-3-real-artifact");
+    await pipeline.putChunk(uploadId, 0, content);
+    const artifact = await pipeline.completeUpload({
+      uploadId,
+      expectedChunks: 1,
+      objectKey: `tmp/${uploadId}`,
+      finalObjectKey: artifactKey,
+      expectedSha256: artifactSha256,
+      signature,
+    });
+    expect(artifact.accepted).toBe(true);
+  };
 
   beforeAll(async () => {
     const container = await startPostgresTestContainer();
@@ -85,7 +104,7 @@ describe("real application lifecycle API", () => {
     `.execute(db);
 
     const identity = new IdentityService(identityRepository);
-    const pipeline = new ArtifactPipeline(new MemoryObjectStorage(), {
+    pipeline = new ArtifactPipeline(new MemoryObjectStorage(), {
       async scan() {
         return "clean";
       },
@@ -98,16 +117,11 @@ describe("real application lifecycle API", () => {
       .createHash("sha256")
       .update(content)
       .digest("hex");
-    await pipeline.putChunk("upload-1", 0, content);
-    const artifact = await pipeline.completeUpload({
-      uploadId: "upload-1",
-      expectedChunks: 1,
-      objectKey: "tmp/upload-1",
-      finalObjectKey: "applications/phase-3/artifact.zip",
-      expectedSha256: artifactSha256,
-      signature: "signature-1",
-    });
-    expect(artifact.accepted).toBe(true);
+    await registerArtifact(
+      "upload-1",
+      "applications/phase-3/artifact.zip",
+      "signature-1",
+    );
 
     const service = new ApplicationService(
       new KyselyApplicationRepository(db),
@@ -206,15 +220,17 @@ describe("real application lifecycle API", () => {
       .send({ applicationVersionId: firstVersionId })
       .expect(200);
 
+    const secondArtifactKey = "applications/phase-3/artifact-v2.zip";
+    await registerArtifact("upload-2", secondArtifactKey, "signature-2");
     const secondVersionResponse = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
       .set(ownerHeaders)
       .send({
         version: "2.0.0",
         changelog: "Second release",
-        artifactKey: "applications/phase-3/artifact.zip",
+        artifactKey: secondArtifactKey,
         artifactSha256,
-        artifactSignature: "signature-1",
+        artifactSignature: "signature-2",
         scanStatus: "passed",
       })
       .expect(201);
@@ -283,15 +299,17 @@ describe("real application lifecycle API", () => {
       .send({ name: "Rejectable", summary: "Reject path" })
       .expect(201);
     const applicationId = createResponse.body.applicationId as string;
+    const rejectedArtifactKey = "applications/phase-3/rejectable.zip";
+    await registerArtifact("upload-rejectable", rejectedArtifactKey, "signature-rejectable");
     const versionResponse = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
       .set(actorHeaders("E100"))
       .send({
         version: "1.0.0",
         changelog: "Reject me",
-        artifactKey: "applications/phase-3/artifact.zip",
+        artifactKey: rejectedArtifactKey,
         artifactSha256,
-        artifactSignature: "signature-1",
+        artifactSignature: "signature-rejectable",
         scanStatus: "passed",
       })
       .expect(201);

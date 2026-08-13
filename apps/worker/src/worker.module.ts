@@ -76,6 +76,7 @@ export class WorkerModule {
   static register(
     databaseUrl: string,
     metrics: ObservabilityMetrics = new ObservabilityMetrics(),
+    outboxLeaseDurationMs = 15 * 60 * 1000,
   ) {
     return {
       module: WorkerModule,
@@ -86,7 +87,9 @@ export class WorkerModule {
           useFactory: () => {
             const database = createDatabase(databaseUrl);
             const outboxWorker = new OutboxWorker(
-              new OutboxStore(database),
+              new OutboxStore(database, {
+                leaseDurationMs: outboxLeaseDurationMs,
+              }),
               createOutboxHandlers(database),
               undefined,
               metrics,

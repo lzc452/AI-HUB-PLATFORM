@@ -6,6 +6,7 @@ import { IdentityService } from "./identity.service.js";
 import { PasswordService } from "./password.service.js";
 import { LoginEncryptionService } from "./login-encryption.service.js";
 import { InMemoryLoginChallengeStore } from "./login-challenge.store.js";
+import { KyselyLoginChallengeRepository } from "./login-challenge.repository.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import { DingTalkApiClient } from "./dingtalk-api.client.js";
 import { SecurityController } from "./security.controller.js";
@@ -50,7 +51,7 @@ export class IdentityModule {
       },
       {
         provide: InMemoryLoginChallengeStore,
-        useClass: InMemoryLoginChallengeStore,
+        useValue: new KyselyLoginChallengeRepository(db),
       },
       {
         provide: IdentityService,

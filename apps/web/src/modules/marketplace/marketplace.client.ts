@@ -5,7 +5,7 @@ import type {
   RiskDescription,
 } from "@ai-hub/contracts";
 
-import { apiFetch } from "../../shared/api/client";
+import { apiFetch, apiFetchBlob } from "../../shared/api/client";
 
 export interface CatalogListResult {
   items: CatalogEntry[];
@@ -102,23 +102,11 @@ export async function downloadDeliveryAsset(
   applicationId: string,
   channel: DeliveryChannel,
 ): Promise<{ blob: Blob; fileName: string }> {
-  const employeeId = localStorage.getItem("ai-hub.employee-id") ?? "";
-  const sessionId = localStorage.getItem("ai-hub.session-id") ?? "";
-  const response = await fetch(
+  const response = await apiFetchBlob(
     `/internal/catalog/${encodeURIComponent(applicationId)}/deliveries/${channel}/asset`,
-    {
-      headers: {
-        "x-employee-id": employeeId,
-        "x-session-id": sessionId,
-      },
-    },
   );
-  if (!response.ok) {
-    throw new Error(`DOWNLOAD_FAILED:${response.status}`);
-  }
-  const blob = await response.blob();
-  const disposition = response.headers.get("content-disposition") ?? "";
-  const match = /filename="?([^";]+)"?/.exec(disposition);
-  const fileName = match?.[1] ?? `${applicationId}-${channel}.bin`;
-  return { blob, fileName };
+  return {
+    blob: response.blob,
+    fileName: response.fileName ?? `${applicationId}-${channel}.bin`,
+  };
 }

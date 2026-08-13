@@ -1,22 +1,30 @@
-import { Button, Empty, Input, Spin, Tag, Typography } from "antd";
-import type { DeliveryChannel } from "@ai-hub/contracts";
+import type { ApplicationStatus, DeliveryChannel } from "@ai-hub/contracts";
+import { Alert, Button, Empty, Input, Spin, Switch, Tag } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
-import type { AssetRecord } from "../../modules/application/application.client";
+import type {
+  AssetRecord,
+  DeliveryRecord,
+} from "../../modules/application/application.client";
 import {
-  useApplicationDeliveries,
+  useApplicationWorkspace,
   useAssets,
   useConfigureDelivery,
+  useSubmitApplicationReview,
 } from "../../modules/application/useApplication";
-import { MessageError, showSuccessMessage } from "../../shared/ui/message";
+import { MessageError } from "../../shared/ui/message";
 
-const { Text } = Typography;
+interface DeliveryDraft {
+  entryUrl: string;
+  minClientVersion: string;
+  enabled: boolean;
+}
 
-type AssetItem = AssetRecord;
+type DeliveryDrafts = Record<DeliveryChannel, DeliveryDraft>;
 
-const channels: Array<{
+const channels: ReadonlyArray<{
   channel: DeliveryChannel;
   label: string;
   icon: string;
@@ -27,37 +35,107 @@ const channels: Array<{
   { channel: "mini_program", label: "小程序", icon: "app-ui-icon-mini" },
 ];
 
+function emptyDeliveryDrafts(): DeliveryDrafts {
+  return {
+    web: { enabled: false, entryUrl: "", minClientVersion: "" },
+    desktop: { enabled: false, entryUrl: "", minClientVersion: "" },
+    mobile: { enabled: false, entryUrl: "", minClientVersion: "" },
+    mini_program: { enabled: false, entryUrl: "", minClientVersion: "" },
+  };
+}
+
+function toDeliveryDraft(delivery: DeliveryRecord): DeliveryDraft {
+  return {
+    enabled: delivery.enabled,
+    entryUrl: delivery.entryUrl,
+    minClientVersion: delivery.minClientVersion ?? "",
+  };
+}
+
 export default function ApplicationDeliveryPage() {
   const { applicationId } = useParams();
-  const deliveriesQuery = useApplicationDeliveries(applicationId);
-  const assetsQuery = useAssets(applicationId);
+  const workspaceQuery = useApplicationWorkspace(applicationId);
+  const assets = useAssets(applicationId);
   const configure = useConfigureDelivery(applicationId);
+  const submitReview = useSubmitApplicationReview();
   const [activeChannel, setActiveChannel] = useState<DeliveryChannel>("web");
-  const [webUrl, setWebUrl] = useState("https://ocr.company.com");
-  const deliveryMap = useMemo(
-    () =>
-      new Map((deliveriesQuery.data ?? []).map((item) => [item.channel, item])),
-    [deliveriesQuery.data],
+  const [drafts, setDrafts] = useState<DeliveryDrafts>(emptyDeliveryDrafts);
+  const [dirtyChannels, setDirtyChannels] = useState<Set<DeliveryChannel>>(
+    () => new Set(),
   );
-  const activeDelivery = deliveryMap.get(activeChannel);
 
-  // 读取真实交付记录后回填 Web 地址。
+  const workspace = workspaceQuery.data;
+  const deliveries = workspace?.deliveries;
+
   useEffect(() => {
-    const web = deliveryMap.get("web");
-    if (web?.entryUrl) setWebUrl(web.entryUrl);
-  }, [deliveryMap]);
+    setDrafts(emptyDeliveryDrafts());
+    setDirtyChannels(new Set());
+  }, [applicationId]);
 
-  const handleSave = () => {
-    const enabled = activeDelivery?.enabled ?? false;
-    void configure.mutateAsync({
-      channel: activeChannel,
-      input: { entryUrl: webUrl, enabled: !enabled },
+  useEffect(() => {
+    if (deliveries === undefined) return;
+    setDrafts((current) => {
+      const next = { ...current };
+      for (const delivery of deliveries) {
+        if (!dirtyChannels.has(delivery.channel)) {
+          next[delivery.channel] = toDeliveryDraft(delivery);
+        }
+      }
+      return next;
     });
+  }, [deliveries, dirtyChannels]);
+
+  const activeDraft = drafts[activeChannel];
+  const latestVersion = workspace?.versions[0];
+  const reviewReadiness = getReviewReadiness(
+    workspace?.application.status,
+    latestVersion?.scanStatus,
+    latestVersion !== undefined,
+    workspace?.application.status === "published" &&
+      latestVersion?.applicationVersionId ===
+        workspace.application.currentVersionId,
+  );
+  const enabledCount = useMemo(
+    () => Object.values(drafts).filter((draft) => draft.enabled).length,
+    [drafts],
+  );
+
+  const updateDraft = (patch: Partial<DeliveryDraft>) => {
+    setDrafts((current) => ({
+      ...current,
+      [activeChannel]: { ...current[activeChannel], ...patch },
+    }));
+    setDirtyChannels((current) => new Set(current).add(activeChannel));
+  };
+
+  const handleSave = async () => {
+    if (applicationId === undefined) return;
+    try {
+      const saved = await configure.mutateAsync({
+        channel: activeChannel,
+        input: {
+          enabled: activeDraft.enabled,
+          entryUrl: activeDraft.entryUrl.trim(),
+          minClientVersion: activeDraft.minClientVersion.trim() || null,
+        },
+      });
+      setDrafts((current) => ({
+        ...current,
+        [activeChannel]: toDeliveryDraft(saved),
+      }));
+      setDirtyChannels((current) => {
+        const next = new Set(current);
+        next.delete(activeChannel);
+        return next;
+      });
+    } catch {
+      // mutation hook 已统一展示错误；保留当前草稿供用户修正后重试。
+    }
   };
 
   return (
     <ApplicationAdminPage
-      description="配置 Web、桌面端、移动端和小程序的交付入口。"
+      description="配置四个独立交付渠道并提交最新版本审核。"
       showNavigation={false}
       title="交付配置"
     >
@@ -71,10 +149,7 @@ export default function ApplicationDeliveryPage() {
               </div>
               <div className="text-[13px] text-[#596579]">
                 已启用交付渠道：
-                <strong className="text-[#1f2937]">
-                  {deliveriesQuery.data?.filter((item) => item.enabled)
-                    .length ?? 0}
-                </strong>
+                <strong className="text-[#1f2937]">{enabledCount}</strong> / 4
               </div>
             </div>
             <div className="flex flex-wrap gap-2 px-5 py-3">
@@ -98,259 +173,219 @@ export default function ApplicationDeliveryPage() {
             </div>
           </section>
 
-          {activeChannel === "web" ? (
-            <WebDeliveryCard
-              value={webUrl}
-              onChange={setWebUrl}
-              configured={activeDelivery?.enabled ?? false}
-            />
-          ) : null}
-          {activeChannel === "desktop" ? (
-            <DesktopDeliveryCard assets={assetsQuery.query.data ?? []} />
-          ) : null}
-          {activeChannel === "mobile" ? (
-            <MobileDeliveryCard assets={assetsQuery.query.data ?? []} />
-          ) : null}
-          {activeChannel === "mini_program" ? <MiniProgramCard /> : null}
-          <div className="flex justify-end gap-2 rounded-lg border border-[#e2e8f0] bg-white px-5 py-3">
-            <Button loading={configure.isPending} onClick={handleSave}>
-              {activeDelivery?.enabled ? "停用渠道" : "保存并启用"}
-            </Button>
-            <Button
-              type="primary"
-              onClick={() =>
-                showSuccessMessage(
-                  "提交审核请在版本管理页由负责人发起（本页只负责交付配置）",
-                )
-              }
-            >
-              提交审核
-            </Button>
+          <DeliveryEditor
+            assets={assets.query.data ?? []}
+            channel={activeChannel}
+            draft={activeDraft}
+            onChange={updateDraft}
+          />
+
+          <div className="space-y-3 rounded-lg border border-[#e2e8f0] bg-white px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[14px] font-semibold text-[#1f2937]">
+                  最新版本
+                  {latestVersion
+                    ? ` v${latestVersion.version.replace(/^v/, "")}`
+                    : ""}
+                </div>
+                <div className="mt-1 text-[12px] text-[#697386]">
+                  {reviewReadiness.message}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  disabled={!activeDraft.entryUrl.trim()}
+                  loading={configure.isPending}
+                  onClick={() => void handleSave()}
+                >
+                  保存配置
+                </Button>
+                <Button
+                  disabled={
+                    !reviewReadiness.ready || latestVersion === undefined
+                  }
+                  loading={submitReview.isPending}
+                  type="primary"
+                  onClick={() => {
+                    if (latestVersion !== undefined) {
+                      submitReview.mutate(latestVersion.applicationVersionId);
+                    }
+                  }}
+                >
+                  提交审核
+                </Button>
+              </div>
+            </div>
+            {enabledCount < 4 ? (
+              <Alert
+                title="审核通过后，发布前仍需启用全部四个交付渠道。"
+                showIcon
+                type="info"
+              />
+            ) : null}
           </div>
         </main>
 
         <aside className="space-y-3">
-          <SideCard title="自动校验规则">
-            {[
-              ["扩展名", "仅允许白名单扩展名"],
-              ["文件类型", "校验 MIME 类型一致性"],
-              ["大小限制", "不超过上传限制配置"],
-              ["签名校验", "验证数字签名有效性"],
-              ["二维码解析", "验证二维码可识别"],
-            ].map(([label, value]) => (
-              <div className="flex items-center gap-3 text-[13px]" key={label}>
-                <i
-                  aria-hidden="true"
-                  className="app-ui-icon app-ui-icon-check text-[#20b26b]"
-                />
-                <span className="w-[80px] text-[#596579]">{label}</span>
-                <span className="text-[#697386]">{value}</span>
+          <SideCard title="渠道状态">
+            {channels.map(({ channel, label }) => (
+              <div className="flex items-center justify-between" key={channel}>
+                <span className="text-[13px] text-[#596579]">{label}</span>
+                <Tag color={drafts[channel].enabled ? "success" : "default"}>
+                  {drafts[channel].enabled ? "已启用" : "未启用"}
+                </Tag>
               </div>
             ))}
+          </SideCard>
+          <SideCard title="发布门禁">
+            <Gate
+              label="制品扫描通过"
+              passed={latestVersion?.scanStatus === "passed"}
+            />
+            <Gate
+              label="已创建可审核版本"
+              passed={latestVersion !== undefined}
+            />
+            <Gate label="四个渠道全部启用" passed={enabledCount === 4} />
           </SideCard>
           <SideCard title="上传限制">
-            {[
-              ["图标 / 封面 / 二维码", "5 MB"],
-              ["截图", "10 MB（最多 6 张）"],
-              ["安装包", "2 GB"],
-              ["合计", "5 GB"],
-            ].map(([label, value]) => (
-              <div className="flex justify-between text-[13px]" key={label}>
-                <span className="text-[#596579]">{label}</span>
-                <strong className="font-medium text-[#374151]">{value}</strong>
-              </div>
-            ))}
-          </SideCard>
-          <SideCard title="最近交付记录">
-            <div className="relative space-y-4 pl-5 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-[#bfd2f2]">
-              {[
-                ["保存草稿（Web 应用配置）", "张伟 10 分钟前", "#1677ff"],
-                ["上传 Windows 安装包 v2.4.1", "张伟 20 分钟前", "#1677ff"],
-                ["保存草稿（移动端应用配置）", "张伟 35 分钟前", "#20b26b"],
-              ].map(([label, desc, color]) => (
-                <div className="relative" key={label}>
-                  <span
-                    className="absolute -left-5 top-1 h-3 w-3 rounded-full border-2 border-white"
-                    style={{
-                      background: color,
-                      boxShadow: `0 0 0 1px ${color}`,
-                    }}
-                  />
-                  <div className="text-[13px] text-[#374151]">{label}</div>
-                  <div className="text-[12px] text-[#8a94a6]">{desc}</div>
-                </div>
-              ))}
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#596579]">安装包</span>
+              <strong className="font-medium text-[#374151]">2 GB</strong>
+            </div>
+            <div className="text-[12px] leading-5 text-[#8a94a6]">
+              桌面端和移动端的资产绑定写接口尚未提供；当前入口地址作为下载或跳转兜底。
             </div>
           </SideCard>
         </aside>
       </div>
-      {deliveriesQuery.isPending ? <Spin aria-label="交付配置加载中" /> : null}
+      {workspaceQuery.isPending ? <Spin aria-label="交付配置加载中" /> : null}
       <MessageError
-        active={deliveriesQuery.isError}
-        cause={deliveriesQuery.error}
+        active={workspaceQuery.isError}
+        cause={workspaceQuery.error}
         title="交付配置加载失败"
+      />
+      <MessageError
+        active={assets.query.isError}
+        cause={assets.query.error}
+        title="交付资产加载失败"
       />
     </ApplicationAdminPage>
   );
 }
 
-function WebDeliveryCard({
-  value,
+function getReviewReadiness(
+  status: ApplicationStatus | undefined,
+  scanStatus: "pending" | "passed" | "failed" | undefined,
+  hasVersion: boolean,
+  isCurrentPublishedVersion: boolean,
+): { ready: boolean; message: string } {
+  if (!hasVersion) return { ready: false, message: "请先创建版本" };
+  if (isCurrentPublishedVersion) {
+    return { ready: false, message: "请先创建一个尚未发布的新版本" };
+  }
+  if (scanStatus !== "passed") {
+    return { ready: false, message: "最新版本制品校验未通过" };
+  }
+  if (status === "in_review") {
+    return { ready: false, message: "最新版本正在审核中" };
+  }
+  if (status === "approved") {
+    return { ready: false, message: "应用已通过审核，等待发布" };
+  }
+  if (status !== "draft" && status !== "published") {
+    return { ready: false, message: "当前应用状态不允许提交审核" };
+  }
+  return { ready: true, message: "最新版本已通过制品校验，可以提交审核" };
+}
+
+function DeliveryEditor({
+  assets,
+  channel,
+  draft,
   onChange,
-  configured,
 }: {
-  value: string;
-  onChange: (value: string) => void;
-  configured: boolean;
+  assets: AssetRecord[];
+  channel: DeliveryChannel;
+  draft: DeliveryDraft;
+  onChange: (patch: Partial<DeliveryDraft>) => void;
 }) {
+  const meta = channels.find((item) => item.channel === channel)!;
+  const needsClientVersion = channel === "desktop" || channel === "mobile";
+  const entryLabel =
+    channel === "mini_program"
+      ? "小程序入口或二维码内容"
+      : needsClientVersion
+        ? "下载或启动地址"
+        : "企业内网地址";
+
   return (
     <section className="app-admin-card overflow-hidden">
-      <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
-        <i
-          aria-hidden="true"
-          className="app-ui-icon app-ui-icon-web mr-2 text-[#1677ff]"
-        />
-        Web 应用
-      </h3>
-      <div className="grid gap-4 px-5 py-4 md:grid-cols-[1fr_1fr_150px]">
-        <Field label="企业内网地址">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf0f5] px-5 py-3">
+        <h3 className="m-0 text-[16px] font-semibold">
+          <i
+            aria-hidden="true"
+            className={`app-ui-icon ${meta.icon} mr-2 text-[#1677ff]`}
+          />
+          {meta.label}
+        </h3>
+        <label className="flex items-center gap-2 text-[13px] text-[#596579]">
+          启用当前渠道
+          <Switch
+            aria-label="启用当前渠道"
+            checked={draft.enabled}
+            onChange={(enabled) => onChange({ enabled })}
+          />
+        </label>
+      </div>
+      <div
+        className={`grid gap-4 px-5 py-4 ${needsClientVersion ? "md:grid-cols-2" : ""}`}
+      >
+        <Field label="入口地址">
           <Input
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            suffix={
-              <i
-                aria-hidden="true"
-                className="app-ui-icon app-ui-icon-check text-[#20b26b]"
-              />
-            }
+            aria-label="入口地址"
+            placeholder={entryLabel}
+            value={draft.entryUrl}
+            onChange={(event) => onChange({ entryUrl: event.target.value })}
           />
         </Field>
-        <Field label="回调地址">
-          <Input
-            defaultValue="https://ocr.company.com/callback"
-            suffix={
-              <i
-                aria-hidden="true"
-                className="app-ui-icon app-ui-icon-check text-[#20b26b]"
-              />
-            }
-          />
-        </Field>
-        <Field label="可访问网络">
-          <Tag>企业内网</Tag>
-        </Field>
+        {needsClientVersion ? (
+          <Field label="最低客户端版本">
+            <Input
+              aria-label="最低客户端版本"
+              placeholder="例如：1.0.0"
+              value={draft.minClientVersion}
+              onChange={(event) =>
+                onChange({ minClientVersion: event.target.value })
+              }
+            />
+          </Field>
+        ) : null}
       </div>
-      <div className="flex items-center gap-2 px-5 pb-4 text-[13px] text-[#20a267]">
-        <i aria-hidden="true" className="app-ui-icon app-ui-icon-check" />
-        域名校验通过 {configured ? "已启用" : "待启用"}
-      </div>
+      {needsClientVersion ? (
+        <div className="border-t border-[#edf0f5] px-5 py-4">
+          <div className="mb-2 text-[13px] font-medium text-[#374151]">
+            可用资产（尚未绑定到当前渠道）
+          </div>
+          {assets.length === 0 ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无安装包资产"
+            />
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {assets.map((asset) => (
+                <Tag key={asset.assetId}>{asset.name}</Tag>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function DesktopDeliveryCard({ assets }: { assets: AssetItem[] }) {
-  return (
-    <section className="app-admin-card overflow-hidden">
-      <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
-        <i
-          aria-hidden="true"
-          className="app-ui-icon app-ui-icon-desktop mr-2 text-[#1677ff]"
-        />
-        桌面端应用
-      </h3>
-      <div className="grid gap-3 p-4 md:grid-cols-2">
-        {assets.length === 0 ? (
-          <Empty description="暂无安装包资产，请在版本管理页上传后选择" />
-        ) : (
-          assets
-            .slice(0, 2)
-            .map((asset) => (
-              <UploadCard
-                key={asset.assetId}
-                name={asset.name}
-                size={`${(asset.sizeBytes / 1024 / 1024).toFixed(1)} MB`}
-                title={asset.assetType === "attachment" ? "安装包" : asset.name}
-                icon="app-ui-icon-desktop"
-              />
-            ))
-        )}
-      </div>
-    </section>
-  );
-}
-function MobileDeliveryCard({ assets }: { assets: AssetItem[] }) {
-  return (
-    <section className="app-admin-card overflow-hidden">
-      <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
-        <i
-          aria-hidden="true"
-          className="app-ui-icon app-ui-icon-mobile mr-2 text-[#1677ff]"
-        />
-        移动端应用
-      </h3>
-      <div className="grid gap-3 p-4 md:grid-cols-2">
-        {assets.length === 0 ? (
-          <Empty description="暂无安装包资产，请在版本管理页上传后选择" />
-        ) : (
-          assets
-            .slice(0, 2)
-            .map((asset) => (
-              <UploadCard
-                key={asset.assetId}
-                name={asset.name}
-                size={`${(asset.sizeBytes / 1024 / 1024).toFixed(1)} MB`}
-                title={asset.assetType === "attachment" ? "安装包" : asset.name}
-                icon="app-ui-icon-mobile"
-              />
-            ))
-        )}
-      </div>
-    </section>
-  );
-}
-function MiniProgramCard() {
-  return (
-    <section className="app-admin-card overflow-hidden">
-      <h3 className="border-b border-[#edf0f5] px-5 py-3 text-[16px] font-semibold">
-        <i
-          aria-hidden="true"
-          className="app-ui-icon app-ui-icon-mini mr-2 text-[#1677ff]"
-        />
-        小程序应用
-      </h3>
-      <div className="grid gap-3 p-4 md:grid-cols-3">
-        {[
-          ["微信小程序", "wx1234567890abcdef"],
-          ["钉钉小程序", "ding1234567890abcdef"],
-          ["支付宝小程序", "2021003124654678"],
-        ].map(([title, value]) => (
-          <div className="rounded-lg border border-[#e4eaf2] p-3" key={title}>
-            <div className="flex justify-between text-[13px] font-semibold">
-              <span>{title}</span>
-              <span className="text-[#697386]">二维码</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <Text className="text-xs">小程序 ID</Text>
-                <Input
-                  className="mt-1"
-                  defaultValue={value}
-                  suffix={
-                    <i
-                      aria-hidden="true"
-                      className="app-ui-icon app-ui-icon-check text-[#20b26b]"
-                    />
-                  }
-                />
-              </div>
-              <QrGraphic />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
 function Field({
   label,
   children,
@@ -365,40 +400,21 @@ function Field({
     </label>
   );
 }
-function UploadCard({
-  title,
-  name,
-  size,
-  icon,
-}: {
-  title: string;
-  name: string;
-  size: string;
-  icon: string;
-}) {
+
+function Gate({ label, passed }: { label: string; passed: boolean }) {
   return (
-    <div className="rounded-lg border border-[#e4eaf2] p-3">
-      <div className="text-[13px] font-semibold">{title}</div>
-      <div className="mt-3 flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-[#e9f2ff] text-lg text-[#1677ff]">
-          <i aria-hidden="true" className={`app-ui-icon ${icon}`} />
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[13px]">{name}</span>
-        <Tag color="success">已上传</Tag>
-      </div>
-      <div className="mt-2 text-[12px] text-[#8a94a6]">
-        版本号：v2.4.1 / 大小：{size} / 更新时间：2024-05-01 10:20
-      </div>
+    <div className="flex items-center gap-2 text-[13px]">
+      <i
+        aria-hidden="true"
+        className={`app-ui-icon ${passed ? "app-ui-icon-check text-[#20b26b]" : "app-ui-icon-close text-[#8a94a6]"}`}
+      />
+      <span className={passed ? "text-[#374151]" : "text-[#8a94a6]"}>
+        {label}
+      </span>
     </div>
   );
 }
-function QrGraphic() {
-  return (
-    <span className="qr-graphic" aria-label="二维码">
-      <span className="qr-pattern" />
-    </span>
-  );
-}
+
 function SideCard({
   title,
   children,

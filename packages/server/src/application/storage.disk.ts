@@ -61,7 +61,14 @@ export class DiskObjectStorage implements ObjectStoragePort {
     const source = this.resolveKey(sourceKey);
     const destination = this.resolveKey(destinationKey);
     await fs.mkdir(dirname(destination), { recursive: true });
-    await pipeline(createReadStream(source), createWriteStream(destination));
+    const temporary = `${destination}.tmp-${process.pid}-${Date.now()}`;
+    try {
+      await pipeline(createReadStream(source), createWriteStream(temporary));
+      await fs.rename(temporary, destination);
+    } catch (error) {
+      await fs.unlink(temporary).catch(() => undefined);
+      throw error;
+    }
   }
 
   async delete(key: string): Promise<void> {

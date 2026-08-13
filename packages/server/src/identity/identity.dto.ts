@@ -1,5 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
+/** 登录加密信封。 */
+export class EncryptedLoginEnvelopeDto {
+  @ApiProperty({ type: String })
+  encryptedPayload!: string;
+
+  @ApiProperty({ type: String })
+  wrappedKey!: string;
+
+  @ApiProperty({ type: String })
+  iv!: string;
+
+  @ApiProperty({ type: String })
+  aad!: string;
+
+  @ApiProperty({ type: String })
+  keyId!: string;
+
+  @ApiProperty({ type: String })
+  nonce!: string;
+}
+
 /** 密码登录请求。 */
 export class LoginRequestDto {
   @ApiProperty({
@@ -10,11 +31,10 @@ export class LoginRequestDto {
   employeeId!: string;
 
   @ApiProperty({
-    type: String,
-    description: "登录密码",
-    example: "Demo-Employee-2026!",
+    type: EncryptedLoginEnvelopeDto,
+    description: "一次性登录加密信封",
   })
-  password!: string;
+  envelope!: EncryptedLoginEnvelopeDto;
 
   @ApiPropertyOptional({
     type: String,
@@ -134,6 +154,7 @@ export class EmployeeSummaryDto {
   displayName!: string;
 
   @ApiProperty({
+    type: String,
     description: "员工状态",
     enum: ["pending_binding", "active", "disabled", "archived"],
   })
@@ -159,7 +180,11 @@ export class DepartmentSummaryDto {
   })
   parentDepartmentId?: string | null;
 
-  @ApiProperty({ description: "数据来源", enum: ["local", "dingtalk"] })
+  @ApiProperty({
+    type: String,
+    description: "数据来源",
+    enum: ["local", "dingtalk"],
+  })
   source!: "local" | "dingtalk";
 }
 
@@ -258,6 +283,6 @@ export class SyncRunDto {
   @ApiPropertyOptional({ type: String, nullable: true })
   completedAt?: string | null;
 
-  @ApiPropertyOptional({ description: "同步摘要" })
+  @ApiPropertyOptional({ type: Object, description: "同步摘要" })
   summary?: unknown;
 }

@@ -1,6 +1,6 @@
 import type { ApplicationStatus, DeliveryChannel } from "@ai-hub/contracts";
 
-import { apiFetch } from "../../shared/api/client";
+import { apiFetch, apiUpload } from "../../shared/api/client";
 
 export interface ApplicationRecord {
   applicationId: string;
@@ -331,39 +331,14 @@ export function createArtifactUpload(
 export function uploadArtifactContent(
   applicationId: string,
   uploadId: string,
-  content: ArrayBuffer,
+  content: Blob | ArrayBuffer,
   onProgress?: (percent: number) => void,
 ): Promise<ArtifactUploadRecord> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open(
-      "PUT",
-      `/internal/applications/${encodeURIComponent(applicationId)}/artifact-uploads/${encodeURIComponent(uploadId)}/content`,
-    );
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
-    xhr.setRequestHeader(
-      "x-employee-id",
-      localStorage.getItem("ai-hub.employee-id") ?? "",
-    );
-    xhr.setRequestHeader(
-      "x-session-id",
-      localStorage.getItem("ai-hub.session-id") ?? "",
-    );
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onProgress !== undefined) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText) as ArtifactUploadRecord);
-      } else {
-        reject(new Error(`UPLOAD_FAILED:${xhr.status}`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("UPLOAD_NETWORK_ERROR"));
-    xhr.send(content);
-  });
+  return apiUpload<ArtifactUploadRecord>(
+    `/internal/applications/${encodeURIComponent(applicationId)}/artifact-uploads/${encodeURIComponent(uploadId)}/content`,
+    content,
+    onProgress,
+  );
 }
 
 export function completeArtifactUpload(

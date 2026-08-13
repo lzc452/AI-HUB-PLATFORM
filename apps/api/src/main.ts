@@ -22,10 +22,10 @@ import {
   createProductionSecurityMiddleware,
   ArtifactPipeline,
   DiskObjectStorage,
-  createNoopSecurity,
 } from "@ai-hub/server";
 
 import { ApiModule } from "./api.module.js";
+import { configureApiBodyParsers } from "./body-parser.js";
 import { configureSwagger, shouldEnableApiDocs } from "./swagger.js";
 
 async function bootstrap() {
@@ -63,16 +63,21 @@ async function bootstrap() {
     };
   }
 
-  const artifactStorage = new DiskObjectStorage(config.storageDirectory);
+  const artifactStorage = config.artifactUploadEnabled
+    ? new DiskObjectStorage(config.storageDirectory)
+    : undefined;
   const app = await NestFactory.create<NestExpressApplication>(
     ApiModule.register(
       config.databaseUrl,
       { logger, metrics },
-      createArtifactVerification(artifactStorage),
+      artifactStorage === undefined
+        ? undefined
+        : createArtifactVerification(artifactStorage, config.nodeEnv !== "production"),
       identityOptions,
-      config.storageDirectory,
+      config.artifactUploadEnabled ? config.storageDirectory : undefined,
       config.artifactMaxSizeBytes,
       artifactStorage,
+      config.nodeEnv !== "production",
     ),
     { logger: new PinoNestLogger(logger) },
   );
@@ -91,20 +96,35 @@ async function bootstrap() {
     enabled: shouldEnableApiDocs(config.nodeEnv, config.enableApiDocs),
   });
   app.enableShutdownHooks(["SIGTERM"]);
-  app.useBodyParser("json", { limit: "2.5gb" });
-  app.useBodyParser("raw", {
-    limit: "2.5gb",
-    type: ["application/octet-stream"],
-  });
+  configureApiBodyParsers(app, config.artifactMaxSizeBytes);
 
   await app.listen(config.apiPort);
 }
 
-/** 生产装配：Disk 对象存储 + Noop 安全组件 → ArtifactPipeline（V1 先行实现）。 */
+/** 本地直传仅保留隔离链路；生产环境未接入真实扫描与签名 adapter 时必须失败关闭。
+ * 非生产环境（本地开发/验证）使用接受桩，使发布链可在无安全适配器时跑通。 */
 function createArtifactVerification(
   storage: DiskObjectStorage,
+  acceptInDevelopment: boolean,
 ): ArtifactPipeline {
-  return new ArtifactPipeline(storage, createNoopSecurity());
+  if (acceptInDevelopment) {
+    return new ArtifactPipeline(storage, {
+      async scan() {
+        return "clean";
+      },
+      async verify() {
+        return true;
+      },
+    });
+  }
+  return new ArtifactPipeline(storage, {
+    async scan() {
+      throw new Error("ARTIFACT_SECURITY_UNAVAILABLE");
+    },
+    async verify() {
+      throw new Error("ARTIFACT_SECURITY_UNAVAILABLE");
+    },
+  });
 }
 
 await bootstrap();

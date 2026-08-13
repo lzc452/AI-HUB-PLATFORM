@@ -17,6 +17,7 @@ describe("OutboxWorker", () => {
       ]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
     const handler = vi.fn().mockResolvedValue(undefined);
     const worker = new OutboxWorker(store, {
@@ -26,12 +27,14 @@ describe("OutboxWorker", () => {
     await expect(worker.runOnce("worker-a")).resolves.toBe(1);
 
     expect(handler).toHaveBeenCalledOnce();
-    expect(store.complete).toHaveBeenCalledWith("event-1");
+    expect(store.complete).toHaveBeenCalledWith("event-1", {
+      workerId: "worker-a",
+      attempt: 1,
+    });
     expect(store.fail).not.toHaveBeenCalled();
   });
 
-  it("fails an event whose handler is missing", async () => {
-    const now = new Date("2026-07-31T00:00:00.000Z");
+  it("quarantines an event whose type is unsupported without retrying it", async () => {
     const store = {
       claim: vi.fn().mockResolvedValue([
         {
@@ -46,16 +49,18 @@ describe("OutboxWorker", () => {
       ]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
-    const worker = new OutboxWorker(store, {}, () => now);
+    const worker = new OutboxWorker(store, {});
 
     await worker.runOnce("worker-a");
 
-    expect(store.fail).toHaveBeenCalledWith(
+    expect(store.quarantine).toHaveBeenCalledWith(
       "event-1",
-      "OUTBOX_HANDLER_MISSING",
-      new Date("2026-07-31T00:00:01.000Z"),
+      { workerId: "worker-a", attempt: 1 },
+      "OUTBOX_EVENT_TYPE_UNSUPPORTED",
     );
+    expect(store.fail).not.toHaveBeenCalled();
     expect(store.complete).not.toHaveBeenCalled();
   });
 
@@ -75,6 +80,7 @@ describe("OutboxWorker", () => {
       ]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
     const worker = new OutboxWorker(
       store,
@@ -90,6 +96,7 @@ describe("OutboxWorker", () => {
 
     expect(store.fail).toHaveBeenCalledWith(
       "event-1",
+      { workerId: "worker-a", attempt: 1 },
       "OUTBOX_HANDLER_FAILED",
       new Date("2026-07-31T00:00:01.000Z"),
     );
@@ -122,6 +129,7 @@ describe("OutboxWorker", () => {
       ]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
     const worker = new OutboxWorker(store, {
       "system.first": firstHandler,
@@ -131,20 +139,24 @@ describe("OutboxWorker", () => {
     await worker.runOnce("worker-a");
 
     expect(secondHandler).toHaveBeenCalledOnce();
-    expect(store.complete).toHaveBeenCalledWith("event-2");
+    expect(store.complete).toHaveBeenCalledWith("event-2", {
+      workerId: "worker-a",
+      attempt: 1,
+    });
   });
 
-  it("claims at most 20 events and returns the claimed count", async () => {
+  it("claims one event at a time so queued work cannot consume its lease", async () => {
     const store = {
       claim: vi.fn().mockResolvedValue([]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
     const worker = new OutboxWorker(store, {});
 
     await expect(worker.runOnce("worker-a")).resolves.toBe(0);
 
-    expect(store.claim).toHaveBeenCalledWith(20, "worker-a");
+    expect(store.claim).toHaveBeenCalledWith(1, "worker-a");
   });
 
   it("records successful and failed handler outcomes", async () => {
@@ -171,6 +183,7 @@ describe("OutboxWorker", () => {
       ]),
       complete: vi.fn().mockResolvedValue(undefined),
       fail: vi.fn().mockResolvedValue(undefined),
+      quarantine: vi.fn().mockResolvedValue(undefined),
     };
     const metrics = { recordWorkerHandler: vi.fn() };
     const worker = new OutboxWorker(

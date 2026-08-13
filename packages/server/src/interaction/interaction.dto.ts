@@ -50,6 +50,7 @@ export class ReportRequestDto {
 /** 处理举报请求。 */
 export class ResolveReportRequestDto {
   @ApiProperty({
+    type: String,
     description: "处理结果",
     enum: ["dismissed", "hidden", "restored"],
   })
@@ -193,6 +194,7 @@ export class ReportRecordDto {
   reason!: string;
 
   @ApiProperty({
+    type: String,
     description: "处理状态",
     enum: ["open", "dismissed", "hidden", "restored"],
   })

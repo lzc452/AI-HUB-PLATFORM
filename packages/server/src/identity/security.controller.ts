@@ -10,6 +10,7 @@ import {
   Query,
 } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation } from "@nestjs/swagger";
+import { ApiPropertyOptional } from "@nestjs/swagger/dist/decorators/api-property.decorator.js";
 import { PERMISSIONS } from "@ai-hub/contracts";
 import {
   ApiIdentityHeaders,
@@ -24,6 +25,7 @@ import { AuditService } from "../system/security/audit.service.js";
 
 /** 审计导出请求。 */
 export class AuditExportRequestDto {
+  @ApiPropertyOptional({ type: Object, description: "导出过滤条件快照" })
   filterSnapshot!: unknown;
 }
 

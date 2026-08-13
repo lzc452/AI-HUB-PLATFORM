@@ -1,0 +1,17 @@
+APP={"applicationId":"23989655-372d-47b6-ac01-0ab38ecc1ad9","ownerEmployeeId":"DEMO-APP-ADMIN","maintainerEmployeeId":"DEMO-APP-ADMIN","departmentId":"demo-rnd","name":"Repro3","summary":"repro3","status":"draft","currentVersionId":null}
+APP_ID=23989655-372d-47b6-ac01-0ab38ecc1ad9
+UP={"uploadId":"c0666b40-0700-4dcd-a100-296f4201531f","objectKey":"applications/23989655-372d-47b6-ac01-0ab38ecc1ad9/uploads/0e7d1300-f1d0-496b-84f8-269d96586f9f/content","fileName":"e2e.zip","mimeType":"application/zip","sizeBytes":"28","uploadStatus":"uploading","scanStatus":"pending","sha256":null,"errorCode":null,"expiresAt":"2026-08-14T01:07:56.145Z"}
+UP_ID=c0666b40-0700-4dcd-a100-296f4201531f
+=== PUT raw content (response + headers) ===
+HTTP/1.1 400 Bad Request
+X-Powered-By: Express
+x-request-id: 01KZWAJPV5YG7H9AYH0JBSEZ3A
+Content-Type: application/problem+json; charset=utf-8
+Content-Length: 126
+ETag: W/"7e-wBFQm68z14Y97dsfGM8KvKVbAL4"
+Date: Thu, 13 Aug 2026 01:07:56 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"type":"about:blank","title":"Bad Request","status":400,"code":"UPLOAD_SIZE_MISMATCH","traceId":"01KZWAJPV5YG7H9AYH0JBSEZ3A"}
+=== end ===

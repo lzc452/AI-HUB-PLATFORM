@@ -5,10 +5,14 @@ import type {
   WorkerMetricsPort,
 } from "../observability/metrics.js";
 
-const OUTBOX_BATCH_SIZE = 20;
+// 在 handler 具备硬超时或 lease heartbeat 前，每次只领取一条，避免排队事件尚未执行就耗尽 lease。
+const OUTBOX_BATCH_SIZE = 1;
 const RETRY_DELAY_MS = 1_000;
 
-type OutboxStore = Pick<OutboxStorePort, "claim" | "complete" | "fail">;
+type OutboxStore = Pick<
+  OutboxStorePort,
+  "claim" | "complete" | "fail" | "quarantine"
+>;
 
 export type OutboxHandler = (event: ClaimedOutboxEvent) => Promise<void>;
 export type OutboxHandlerMap = Readonly<Record<string, OutboxHandler>>;
@@ -25,32 +29,43 @@ export class OutboxWorker {
     const events = await this.store.claim(OUTBOX_BATCH_SIZE, workerId);
 
     for (const event of events) {
-      await this.handleEvent(event);
+      await this.handleEvent(event, workerId);
     }
 
     return events.length;
   }
 
-  private async handleEvent(event: ClaimedOutboxEvent): Promise<void> {
+  private async handleEvent(
+    event: ClaimedOutboxEvent,
+    workerId: string,
+  ): Promise<void> {
     const handler = this.handlers[event.eventType];
-    const errorCode = handler
-      ? "OUTBOX_HANDLER_FAILED"
-      : "OUTBOX_HANDLER_MISSING";
     const startedAt = process.hrtime.bigint();
-    let outcome: WorkerHandlerOutcome = handler ? "failed" : "missing";
+    let outcome: WorkerHandlerOutcome = handler ? "failed" : "quarantined";
+    const claim = { workerId, attempt: event.attempts };
 
     try {
       if (!handler) {
-        throw new Error(errorCode);
+        await this.store.quarantine(
+          event.id,
+          claim,
+          "OUTBOX_EVENT_TYPE_UNSUPPORTED",
+        );
+        return;
       }
 
       await handler(event);
-      await this.store.complete(event.id);
+      await this.store.complete(event.id, claim);
       outcome = "completed";
     } catch {
       try {
         const nextAvailableAt = new Date(this.now().getTime() + RETRY_DELAY_MS);
-        await this.store.fail(event.id, errorCode, nextAvailableAt);
+        await this.store.fail(
+          event.id,
+          claim,
+          "OUTBOX_HANDLER_FAILED",
+          nextAvailableAt,
+        );
       } catch {
         // 存储失败不得阻止已认领批次中的其余事件继续运行。
       }

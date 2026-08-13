@@ -7,7 +7,7 @@ export interface OutboxEventsTable {
   aggregate_id: string;
   payload: unknown;
   idempotency_key: string;
-  status: "pending" | "processing" | "completed" | "failed";
+  status: "pending" | "processing" | "completed" | "failed" | "quarantined";
   attempts: number;
   available_at: ColumnType<Date, Date | undefined, Date>;
   claimed_by: string | null;
@@ -97,6 +97,14 @@ export interface RequestReplayNoncesTable {
   route: string;
   created_at: ColumnType<Date, Date | undefined, never>;
   expires_at: Date;
+}
+
+export interface LoginChallengesTable {
+  nonce_hash: string;
+  key_id: string;
+  expires_at: Date;
+  consumed_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
 }
 
 export interface DingTalkBindingsTable {
@@ -665,6 +673,7 @@ export interface DatabaseSchema {
   user_sessions: UserSessionsTable;
   password_reset_challenges: PasswordResetChallengesTable;
   request_replay_nonces: RequestReplayNoncesTable;
+  login_challenges: LoginChallengesTable;
   dingtalk_bindings: DingTalkBindingsTable;
   dingtalk_sync_runs: DingTalkSyncRunsTable;
   identity_sync_run_items: IdentitySyncRunItemsTable;

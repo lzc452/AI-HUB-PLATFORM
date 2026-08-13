@@ -141,7 +141,13 @@ export class ApiModule {
             ]),
         ...(options.catalog === undefined || options.identity === undefined
           ? []
-          : [CatalogModule.forTest(options.catalog, options.identity)]),
+          : [
+              CatalogModule.forTest(
+                options.catalog,
+                options.identity,
+                options.application,
+              ),
+            ]),
         ...(options.interaction === undefined || options.identity === undefined
           ? []
           : [InteractionModule.forTest(options.interaction, options.identity)]),

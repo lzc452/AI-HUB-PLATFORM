@@ -16,12 +16,27 @@ export interface ClaimedOutboxEvent<TPayload = unknown> {
   attempts: number;
 }
 
+export interface OutboxClaim {
+  workerId: string;
+  attempt: number;
+}
+
 export interface OutboxStorePort {
   append(input: OutboxEventInput): Promise<boolean>;
   claim(
     limit: number,
     workerId: string,
   ): Promise<readonly ClaimedOutboxEvent[]>;
-  complete(id: string): Promise<void>;
-  fail(id: string, errorCode: string, nextAvailableAt: Date): Promise<void>;
+  complete(id: string, claim: OutboxClaim): Promise<void>;
+  fail(
+    id: string,
+    claim: OutboxClaim,
+    errorCode: string,
+    nextAvailableAt: Date,
+  ): Promise<void>;
+  quarantine(
+    id: string,
+    claim: OutboxClaim,
+    reasonCode: string,
+  ): Promise<void>;
 }

@@ -188,6 +188,12 @@ export interface ApplicationRepository {
     input: Omit<ArtifactUploadRecord, "uploadId" | "createdAt" | "completedAt">,
   ): Promise<ArtifactUploadRecord>;
   findArtifactUpload(uploadId: string): Promise<ArtifactUploadRecord | null>;
+  findVerifiedArtifact(input: {
+    applicationId: string;
+    objectKey: string;
+    sha256: string;
+    signature: string;
+  }): Promise<ArtifactUploadRecord | null>;
   updateArtifactUpload(
     uploadId: string,
     input: Partial<
@@ -249,6 +255,24 @@ export interface ApplicationRepository {
     applicationVersionId?: string | null;
     eventType: string;
   }): Promise<void>;
+  registerToCatalog(input: {
+    applicationId: string;
+    name: string;
+    summary: string;
+    categoryId?: string;
+    applicationType?: string;
+  }): Promise<void>;
+  linkDeliveryAsset(input: {
+    applicationId: string;
+    channel: DeliveryChannel;
+    assetId: string;
+    sortOrder?: number;
+    version?: string | null;
+  }): Promise<void>;
+  updateAsset(
+    assetId: string,
+    input: Partial<Pick<AssetRecord, "scanStatus" | "sha256" | "sizeBytes">>,
+  ): Promise<AssetRecord | null>;
 }
 
 export type ApplicationActor = ActorContext;

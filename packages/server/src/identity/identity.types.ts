@@ -10,6 +10,7 @@ import type {
 export type EmployeeStatus = EmployeeSummary["status"];
 
 export interface EmployeeRecord extends EmployeeSummary {
+  employeeNumber?: string | null;
   passwordHash: string | null;
   passwordResetRequired: boolean;
 }
@@ -55,6 +56,7 @@ export interface DingTalkDirectoryPort {
 
 export interface CreateEmployeeInput {
   employeeId: EmployeeId;
+  employeeNumber?: string;
   displayName: string;
   primaryDepartmentId: string;
   status?: EmployeeStatus;
@@ -151,6 +153,10 @@ export interface IdentityRepository {
     employeeId: EmployeeId,
     dingtalkUserId: string,
   ): Promise<void>;
+  claimDingTalkBinding(
+    employeeId: EmployeeId,
+    dingtalkUserId: string,
+  ): Promise<boolean>;
   createDingTalkSyncRun(mode: DingTalkSyncMode): Promise<string>;
   completeDingTalkSyncRun(
     syncRunId: string,
@@ -180,6 +186,8 @@ export interface IdentityRepository {
     browserContextBindingHash: string;
     handoffTokenHash?: string;
     returnTo: string;
+    dingtalkUserId?: string;
+    employeeId?: string;
     expiresAt: Date;
   }): Promise<DingTalkSsoTransactionRecord>;
   findDingTalkSsoTransactionByStateHash(
@@ -188,10 +196,6 @@ export interface IdentityRepository {
   findDingTalkSsoTransactionByHandoffHash(
     handoffHash: string,
   ): Promise<DingTalkSsoTransactionRecord | null>;
-  updateDingTalkSsoTransactionAfterCallback(
-    transactionId: string,
-    dingtalkUserId: string,
-  ): Promise<void>;
   consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean>;
   activateEmployee(employeeId: EmployeeId): Promise<void>;
 }

@@ -19,6 +19,10 @@ import * as applicationWorkspace from "./migrations/0017_application_workspace.j
 import * as organizationSyncFields from "./migrations/0018_organization_sync_fields.js";
 import * as artifactUploads from "./migrations/0019_artifact_uploads.js";
 import * as securityAuditFeedback from "./migrations/0020_security_audit_feedback.js";
+import * as identityAuthorizationIntegrity from "./migrations/0021_identity_authorization_integrity.js";
+import * as outboxClaimLease from "./migrations/0022_outbox_claim_lease.js";
+import * as loginChallenges from "./migrations/0023_login_challenges.js";
+import * as outboxQuarantine from "./migrations/0024_outbox_quarantine.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -42,6 +46,10 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0018_organization_sync_fields": organizationSyncFields,
   "0019_artifact_uploads": artifactUploads,
   "0020_security_audit_feedback": securityAuditFeedback,
+  "0021_identity_authorization_integrity": identityAuthorizationIntegrity,
+  "0022_outbox_claim_lease": outboxClaimLease,
+  "0023_login_challenges": loginChallenges,
+  "0024_outbox_quarantine": outboxQuarantine,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

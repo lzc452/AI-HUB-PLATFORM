@@ -14,7 +14,7 @@ const DASHBOARD_KEYS = [
 
 /** 分析导出请求。 */
 export class AnalyticsExportRequestDto {
-  @ApiProperty({ description: "看板目标", enum: DASHBOARD_KEYS })
+  @ApiProperty({ type: String, description: "看板目标", enum: DASHBOARD_KEYS })
   target!: (typeof DASHBOARD_KEYS)[number];
 
   @ApiProperty({
@@ -76,7 +76,7 @@ export class DailyAggregateDto {
 
 /** 分析看板结果。 */
 export class DashboardResultDto {
-  @ApiProperty({ description: "看板键", enum: DASHBOARD_KEYS })
+  @ApiProperty({ type: String, description: "看板键", enum: DASHBOARD_KEYS })
   dashboardKey!: (typeof DASHBOARD_KEYS)[number];
 
   @ApiProperty({ type: String, description: "起始日期", example: "2026-07-01" })
@@ -121,7 +121,7 @@ export class AnalyticsExportResultDto {
   @ApiProperty({ type: String, description: "导出任务 ID" })
   exportId!: string;
 
-  @ApiProperty({ description: "看板目标", enum: DASHBOARD_KEYS })
+  @ApiProperty({ type: String, description: "看板目标", enum: DASHBOARD_KEYS })
   target!: (typeof DASHBOARD_KEYS)[number];
 
   @ApiProperty({ type: String, description: "起始日期", example: "2026-07-01" })
@@ -149,7 +149,7 @@ export class AnalyticsDownloadResultDto {
 
 /** 分析助手响应。 */
 export class AnalyticsAssistantResultDto {
-  @ApiProperty({ description: "响应状态", enum: ["ok", "degraded"] })
+  @ApiProperty({ type: String, description: "响应状态", enum: ["ok", "degraded"] })
   status!: "ok" | "degraded";
 
   @ApiProperty({

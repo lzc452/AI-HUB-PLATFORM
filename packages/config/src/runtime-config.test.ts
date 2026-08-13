@@ -26,6 +26,7 @@ describe("parseRuntimeConfig", () => {
         COOKIE_SECRET: "12345678901234567890123456789012",
         LOG_LEVEL: "warn",
         OUTBOX_POLL_INTERVAL_MS: "750",
+        OUTBOX_LEASE_DURATION_MS: "901000",
         WORKER_METRICS_PORT: "9465",
         ENABLE_API_DOCS: "true",
       }),
@@ -36,7 +37,11 @@ describe("parseRuntimeConfig", () => {
       cookieSecret: "12345678901234567890123456789012",
       logLevel: "warn",
       outboxPollIntervalMs: 750,
+      outboxLeaseDurationMs: 901000,
       workerMetricsPort: 9465,
+      storageDirectory: ".storage/artifacts",
+      artifactUploadEnabled: false,
+      artifactMaxSizeBytes: 64 * 1024 * 1024,
       enableApiDocs: true,
       demoDataEnabled: false,
       demoMode: false,
@@ -57,6 +62,47 @@ describe("parseRuntimeConfig", () => {
         COOKIE_SECRET: "12345678901234567890123456789012",
       }).enableApiDocs,
     ).toBe(false);
+  });
+
+  it("defaults the Outbox lease to fifteen minutes", () => {
+    expect(
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+      }).outboxLeaseDurationMs,
+    ).toBe(900_000);
+  });
+
+  it("rejects an Outbox lease shorter than one minute", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+        OUTBOX_LEASE_DURATION_MS: "59999",
+      }),
+    ).toThrow(/OUTBOX_LEASE_DURATION_MS/u);
+  });
+
+  it("rejects the local artifact adapter in production", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "production",
+        ARTIFACT_UPLOAD_ENABLED: "true",
+        LOGIN_ENCRYPTION_PRIVATE_KEY_FILE:
+          "./test-fixtures/encryption-key.pem",
+      }),
+    ).toThrow("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
+  });
+
+  it("rejects a direct-upload limit above 64 MiB", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+        ARTIFACT_MAX_SIZE_BYTES: String(64 * 1024 * 1024 + 1),
+      }),
+    ).toThrow(/ARTIFACT_MAX_SIZE_BYTES/u);
   });
 
   it("reads production secrets from mounted files", () => {

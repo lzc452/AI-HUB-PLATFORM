@@ -60,7 +60,7 @@ export class CreateVersionRequestDto {
   })
   artifactSignature!: string;
 
-  @ApiProperty({ description: "扫描状态", enum: ["passed"] })
+  @ApiProperty({ type: String, description: "扫描状态", enum: ["passed"] })
   scanStatus!: "passed";
 }
 
@@ -87,6 +87,7 @@ export class ConfigureDeliveryRequestDto {
 /** 提交评审结论请求。 */
 export class ReviewRequestDto {
   @ApiProperty({
+    type: String,
     description: "评审结论",
     enum: ["approve", "reject", "request_changes"],
   })
@@ -124,11 +125,12 @@ export class RollbackRequestDto {
 
 /** 应用管理列表行。 */
 export class ApplicationAdminListRowDto {
-  @ApiProperty() applicationId!: string;
-  @ApiProperty() name!: string;
-  @ApiProperty() summary!: string;
-  @ApiProperty() categoryId!: string;
+  @ApiProperty({ type: String }) applicationId!: string;
+  @ApiProperty({ type: String }) name!: string;
+  @ApiProperty({ type: String }) summary!: string;
+  @ApiProperty({ type: String }) categoryId!: string;
   @ApiProperty({
+    type: String,
     enum: [
       "draft",
       "in_review",
@@ -139,23 +141,23 @@ export class ApplicationAdminListRowDto {
     ],
   })
   status!: string;
-  @ApiProperty() currentVersion!: string;
-  @ApiProperty({ nullable: true }) currentVersionId!: string | null;
-  @ApiProperty() ownerName!: string;
-  @ApiProperty() departmentName!: string;
+  @ApiProperty({ type: String }) currentVersion!: string;
+  @ApiProperty({ type: String, nullable: true }) currentVersionId!: string | null;
+  @ApiProperty({ type: String }) ownerName!: string;
+  @ApiProperty({ type: String }) departmentName!: string;
   @ApiProperty({ type: String, isArray: true }) deliveryChannels!: string[];
-  @ApiProperty() updatedAt!: string;
-  @ApiProperty() isMine!: boolean;
-  @ApiProperty() needsMyReview!: boolean;
+  @ApiProperty({ type: String }) updatedAt!: string;
+  @ApiProperty({ type: Boolean }) isMine!: boolean;
+  @ApiProperty({ type: Boolean }) needsMyReview!: boolean;
 }
 
 /** 应用管理分页结果。 */
 export class ApplicationAdminListResultDto {
   @ApiProperty({ type: ApplicationAdminListRowDto, isArray: true })
   items!: ApplicationAdminListRowDto[];
-  @ApiProperty() page!: number;
-  @ApiProperty() pageSize!: number;
-  @ApiProperty() total!: number;
+  @ApiProperty({ type: Number }) page!: number;
+  @ApiProperty({ type: Number }) pageSize!: number;
+  @ApiProperty({ type: Number }) total!: number;
 }
 
 /** 应用记录。 */
@@ -203,6 +205,7 @@ export class ApplicationDto {
   summary!: string;
 
   @ApiProperty({
+    type: String,
     description: "应用状态",
     enum: [
       "draft",
@@ -265,6 +268,7 @@ export class ApplicationVersionDto {
   artifactSignature!: string;
 
   @ApiProperty({
+    type: String,
     description: "扫描状态",
     enum: ["pending", "passed", "failed"],
   })
@@ -294,6 +298,7 @@ export class DeliveryDto {
   applicationId!: string;
 
   @ApiProperty({
+    type: String,
     description: "交付渠道",
     enum: ["web", "desktop", "mobile", "mini_program"],
   })
@@ -344,6 +349,7 @@ export class ReviewDto {
   applicationOwnerEmployeeId!: string;
 
   @ApiProperty({
+    type: String,
     description: "评审结论",
     enum: ["approve", "reject", "request_changes"],
   })
@@ -375,7 +381,7 @@ export class ReviewQueueDto {
   @ApiProperty({ type: String, description: "应用版本 ID" })
   applicationVersionId!: string;
 
-  @ApiProperty({ description: "队列状态", enum: ["available", "claimed"] })
+  @ApiProperty({ type: String, description: "队列状态", enum: ["available", "claimed"] })
   status!: "available" | "claimed";
 
   @ApiPropertyOptional({
@@ -408,7 +414,7 @@ export class ReviewQueueDto {
   })
   createdAt!: string;
 
-  @ApiProperty({ description: "SLA 状态", enum: ["on_time", "overdue"] })
+  @ApiProperty({ type: String, description: "SLA 状态", enum: ["on_time", "overdue"] })
   slaStatus!: "on_time" | "overdue";
 }
 
@@ -468,12 +474,14 @@ export class ArtifactUploadDto {
   sizeBytes!: number;
 
   @ApiProperty({
+    type: String,
     description: "上传状态",
     enum: ["uploading", "completed", "failed"],
   })
   uploadStatus!: "uploading" | "completed" | "failed";
 
   @ApiProperty({
+    type: String,
     description: "扫描状态",
     enum: ["pending", "passed", "failed"],
   })
@@ -526,7 +534,7 @@ export class AssetDto {
   @ApiProperty({ type: String, nullable: true, description: "SHA-256" })
   sha256!: string | null;
 
-  @ApiProperty({ description: "扫描状态" })
+  @ApiProperty({ type: String, description: "扫描状态" })
   scanStatus!: "pending" | "passed" | "failed";
 
   @ApiProperty({ type: String, description: "创建时间（ISO 8601）" })
@@ -555,4 +563,31 @@ export class CreateAssetRequestDto {
 
   @ApiPropertyOptional({ type: Number, description: "排序" })
   sortOrder?: number;
+}
+
+/** 关联资产到交付渠道请求。 */
+export class LinkDeliveryAssetRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "资产 ID（须属于该应用）",
+  })
+  assetId!: string;
+
+  @ApiPropertyOptional({
+    type: Number,
+    description: "排序（值越小越靠前）",
+  })
+  sortOrder?: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "关联版本号（如 1.0.0），缺省关联到最新发布版本",
+  })
+  version?: string;
+}
+
+/** 关联资产到交付渠道结果。 */
+export class LinkDeliveryAssetResponseDto {
+  @ApiProperty({ type: Boolean, description: "是否已关联", example: true })
+  linked!: boolean;
 }

@@ -9,6 +9,7 @@ describe("ObservabilityMetrics", () => {
         pending: 2,
         processing: 1,
         failed: 3,
+        quarantined: 0,
       }),
     });
     const finish = metrics.trackHttpRequest();

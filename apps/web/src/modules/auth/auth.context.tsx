@@ -13,7 +13,6 @@ import {
   fetchActor,
   fetchLoginChallenge,
   loginWithEnvelope,
-  loginWithPassword,
   logoutSession,
   startDingTalkSso,
   completeDingTalkSso,
@@ -31,6 +30,7 @@ import {
   type AuthSession,
 } from "./session.store";
 import { showSuccessMessage } from "../../shared/ui/message";
+import { ApiError } from "../../shared/api/client";
 
 function sessionKey(session: Pick<AuthSession, "employeeId" | "sessionId">) {
   return `${session.employeeId}:${session.sessionId}`;
@@ -197,30 +197,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setIsLoading(false);
         showSuccessMessage("登录成功");
         return true;
-      } catch {
+      } catch (cause: unknown) {
         if (requestVersion === requestVersionRef.current) {
-          // Fall back to legacy plaintext login if encryption fails.
-          try {
-            const response = await loginWithPassword(employeeId, password);
-            if (requestVersion !== requestVersionRef.current) return false;
-            const nextSession = {
-              employeeId: response.actor.employeeId,
-              sessionId: response.actor.sessionId,
-            };
-            hydratedSessionKeyRef.current = sessionKey(nextSession);
-            setActor(response.actor);
-            setSession(nextSession);
-            setIsLoading(false);
-            showSuccessMessage("登录成功");
-            return true;
-          } catch {
-            if (requestVersion === requestVersionRef.current) {
-              setError("工号或密码错误（用户名或密码错误）");
-              setActor(null);
-              setIsLoading(false);
-            }
-            return false;
-          }
+          const code = cause instanceof ApiError ? cause.code : "";
+          setError(
+            code === "INVALID_CREDENTIALS"
+              ? "工号或密码错误"
+              : "安全登录失败，请刷新页面后重试",
+          );
+          setActor(null);
+          setIsLoading(false);
         }
         return false;
       }

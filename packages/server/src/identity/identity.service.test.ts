@@ -35,6 +35,7 @@ class MemoryIdentityRepository implements IdentityRepository {
   async createEmployee(input: CreateEmployeeInput): Promise<void> {
     this.employees.set(input.employeeId, {
       employeeId: input.employeeId,
+      employeeNumber: input.employeeNumber ?? input.employeeId,
       displayName: input.displayName,
       status: input.status ?? "pending_binding",
       primaryDepartmentId: input.primaryDepartmentId,
@@ -237,6 +238,25 @@ class MemoryIdentityRepository implements IdentityRepository {
     this.dingtalkBindings.set(dingtalkUserId, employeeId);
   }
 
+  async claimDingTalkBinding(
+    employeeId: EmployeeId,
+    dingtalkUserId: string,
+  ): Promise<boolean> {
+    const employeeBinding = [...this.dingtalkBindings.entries()].find(
+      ([, boundEmployeeId]) => boundEmployeeId === employeeId,
+    );
+    const dingtalkBinding = this.dingtalkBindings.get(dingtalkUserId);
+    if (
+      (employeeBinding !== undefined &&
+        employeeBinding[0] !== dingtalkUserId) ||
+      (dingtalkBinding !== undefined && dingtalkBinding !== employeeId)
+    ) {
+      return false;
+    }
+    this.dingtalkBindings.set(dingtalkUserId, employeeId);
+    return true;
+  }
+
   async createDingTalkSyncRun(): Promise<string> {
     return "sync-1";
   }
@@ -292,6 +312,8 @@ class MemoryIdentityRepository implements IdentityRepository {
     browserContextBindingHash: string;
     handoffTokenHash?: string;
     returnTo: string;
+    dingtalkUserId?: string;
+    employeeId?: string;
     expiresAt: Date;
   }): Promise<DingTalkSsoTransactionRecord> {
     const record: DingTalkSsoTransactionRecord = {
@@ -300,8 +322,8 @@ class MemoryIdentityRepository implements IdentityRepository {
       browserContextBindingHash: input.browserContextBindingHash,
       handoffTokenHash: input.handoffTokenHash ?? null,
       returnTo: input.returnTo,
-      dingtalkUserId: null,
-      employeeId: null,
+      dingtalkUserId: input.dingtalkUserId ?? null,
+      employeeId: input.employeeId ?? null,
       expiresAt: input.expiresAt,
       consumedAt: null,
     };
@@ -324,18 +346,6 @@ class MemoryIdentityRepository implements IdentityRepository {
       this.ssoTransactions.find((tx) => tx.handoffTokenHash === handoffHash) ??
       null
     );
-  }
-
-  async updateDingTalkSsoTransactionAfterCallback(
-    transactionId: string,
-    dingtalkUserId: string,
-  ): Promise<void> {
-    const tx = this.ssoTransactions.find(
-      (t) => t.transactionId === transactionId,
-    );
-    if (tx !== undefined) {
-      tx.dingtalkUserId = dingtalkUserId;
-    }
   }
 
   async consumeDingTalkSsoTransaction(transactionId: string): Promise<boolean> {
