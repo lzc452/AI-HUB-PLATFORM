@@ -2,6 +2,8 @@ import {
   hasPermission,
   PERMISSIONS,
   type ActorContext,
+  type ApplicationDraft,
+  type ApplicationDraftRecord,
 } from "@ai-hub/contracts";
 import type {
   ApplicationAuthorizationPort,
@@ -19,6 +21,7 @@ import type {
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
+import { assertSafeRichText } from "./content-security.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -41,6 +44,12 @@ export interface CreateDeliveryInput {
   entryUrl: string;
   minClientVersion?: string;
   enabled: boolean;
+}
+
+/** 提交完整性校验问题。 */
+export interface DraftValidationIssue {
+  code: string;
+  message: string;
 }
 
 const allowedActions = {
@@ -95,6 +104,58 @@ export class ApplicationService {
       actor.employeeId,
     );
     return application;
+  }
+
+  async saveDraft(
+    actor: ActorContext,
+    applicationId: string,
+    draft: ApplicationDraft,
+  ): Promise<ApplicationDraftRecord> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const application = await this.requireApplication(applicationId);
+    if (application.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    if (
+      application.status === "archived" ||
+      application.status === "withdrawn"
+    ) {
+      throw new Error("APPLICATION_NOT_EDITABLE");
+    }
+    assertSafeRichText(draft.summaryHtml);
+    if (draft.manualHtml !== null) assertSafeRichText(draft.manualHtml);
+    if (draft.examplesHtml !== null) assertSafeRichText(draft.examplesHtml);
+    await this.repository.upsertDraft(applicationId, draft);
+    return {
+      applicationId,
+      status: application.status,
+      ownerEmployeeId: application.ownerEmployeeId,
+      draft,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  async getDraft(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<ApplicationDraftRecord> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const application = await this.requireApplication(applicationId);
+    if (
+      application.ownerEmployeeId !== actor.employeeId &&
+      !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
+      throw new Error("APPLICATION_ACCESS_FORBIDDEN");
+    }
+    const result = await this.repository.findDraft(applicationId);
+    if (result === null) throw new Error("DRAFT_NOT_FOUND");
+    return {
+      applicationId,
+      status: application.status,
+      ownerEmployeeId: application.ownerEmployeeId,
+      draft: result.draft,
+      updatedAt: result.updatedAt.toISOString(),
+    };
   }
 
   async createVersion(
@@ -718,4 +779,111 @@ export class ApplicationService {
       eventType,
     });
   }
+}
+
+/**
+ * 提交完整性门禁（纯函数，可单测）。
+ *
+ * 返回问题列表；为空数组即表示草稿可提交。与前端 `superRefine` 采用同一套规则，
+ * 服务端为最终权威，避免前端被绕过。
+ */
+export function validateDraftCompleteness(
+  draft: ApplicationDraft,
+): DraftValidationIssue[] {
+  const issues: DraftValidationIssue[] = [];
+  const fail = (code: string, message: string): void => {
+    issues.push({ code, message });
+  };
+
+  if (typeof draft.name !== "string" || draft.name.trim().length === 0) {
+    fail("DRAFT_NAME_REQUIRED", "应用名称不能为空");
+  } else if (draft.name.length > 160) {
+    fail("DRAFT_NAME_TOO_LONG", "应用名称不能超过 160 字");
+  }
+  if (typeof draft.departmentId !== "string" || draft.departmentId.length === 0) {
+    fail("DRAFT_DEPARTMENT_REQUIRED", "归属部门不能为空");
+  }
+  if (typeof draft.categoryId !== "string" || draft.categoryId.length === 0) {
+    fail("DRAFT_CATEGORY_REQUIRED", "分类不能为空");
+  }
+  if (
+    !Array.isArray(draft.maintainerEmployeeIds) ||
+    draft.maintainerEmployeeIds.length === 0
+  ) {
+    fail("DRAFT_MAINTAINER_REQUIRED", "至少指定一名维护人");
+  }
+
+  const icon = draft.icon;
+  if (icon === undefined || icon === null) {
+    fail("DRAFT_ICON_REQUIRED", "应用图标不能为空");
+  } else if (icon.mode === "auto") {
+    if (typeof icon.text !== "string" || icon.text.length === 0) {
+      fail("DRAFT_ICON_TEXT_REQUIRED", "自动图标需指定展示字符");
+    }
+  } else if (icon.mode === "upload") {
+    if (typeof icon.assetId !== "string" || icon.assetId.length === 0) {
+      fail("DRAFT_ICON_ASSET_REQUIRED", "上传图标需指定图标资产");
+    }
+  } else {
+    fail("DRAFT_ICON_MODE_INVALID", "图标模式非法");
+  }
+
+  if (
+    !Array.isArray(draft.screenshotAssetIds) ||
+    draft.screenshotAssetIds.length < 1 ||
+    draft.screenshotAssetIds.length > 6
+  ) {
+    fail("DRAFT_SCREENSHOTS_COUNT", "截图数量需在 1–6 张之间");
+  }
+
+  if (typeof draft.summaryHtml !== "string" || draft.summaryHtml.trim().length === 0) {
+    fail("DRAFT_SUMMARY_REQUIRED", "简介不能为空");
+  }
+  const hasManual =
+    (typeof draft.manualHtml === "string" && draft.manualHtml.trim().length > 0) ||
+    (typeof draft.manualAssetId === "string" && draft.manualAssetId.length > 0);
+  if (!hasManual) {
+    fail("DRAFT_MANUAL_REQUIRED", "操作手册需提供富文本或附件");
+  }
+  const hasExamples =
+    (typeof draft.examplesHtml === "string" &&
+      draft.examplesHtml.trim().length > 0) ||
+    (typeof draft.examplesAssetId === "string" && draft.examplesAssetId.length > 0);
+  if (!hasExamples) {
+    fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件");
+  }
+
+  if (!Array.isArray(draft.audience) || draft.audience.length === 0) {
+    fail("DRAFT_AUDIENCE_REQUIRED", "受众规则至少一条");
+  }
+
+  const risk = draft.risk;
+  if (risk === undefined || risk === null) {
+    fail("DRAFT_RISK_REQUIRED", "AI 风险声明不能为空");
+  } else {
+    const booleans = [
+      risk.handlesSensitiveData,
+      risk.sendsDataExternally,
+      risk.retainsConversations,
+      risk.affectsHighRiskDecisions,
+    ];
+    if (booleans.some((value) => typeof value !== "boolean")) {
+      fail("DRAFT_RISK_OPTION_REQUIRED", "AI 风险选项需逐项选择是/否");
+    }
+    if (!Array.isArray(risk.modelProviders) || risk.modelProviders.length === 0) {
+      fail("DRAFT_RISK_PROVIDER_REQUIRED", "需选择模型 / AI 提供方");
+    }
+    if (
+      typeof risk.inputRestrictionDisclaimer !== "string" ||
+      risk.inputRestrictionDisclaimer.trim().length === 0
+    ) {
+      fail("DRAFT_RISK_DISCLAIMER_REQUIRED", "免责声明不能为空");
+    }
+  }
+
+  if (!Array.isArray(draft.deliveries) || draft.deliveries.length === 0) {
+    fail("DRAFT_DELIVERY_REQUIRED", "交付配置不能为空");
+  }
+
+  return issues;
 }

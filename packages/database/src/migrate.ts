@@ -23,6 +23,8 @@ import * as identityAuthorizationIntegrity from "./migrations/0021_identity_auth
 import * as outboxClaimLease from "./migrations/0022_outbox_claim_lease.js";
 import * as loginChallenges from "./migrations/0023_login_challenges.js";
 import * as outboxQuarantine from "./migrations/0024_outbox_quarantine.js";
+import * as applicationDraft from "./migrations/0025_application_draft.js";
+import * as unifiedUpload from "./migrations/0026_unified_upload.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -50,6 +52,8 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0022_outbox_claim_lease": outboxClaimLease,
   "0023_login_challenges": loginChallenges,
   "0024_outbox_quarantine": outboxQuarantine,
+  "0025_application_draft": applicationDraft,
+  "0026_unified_upload": unifiedUpload,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

@@ -14,7 +14,7 @@ import type {
   ApplicationAdminListResult,
   DeliveryChannel,
 } from "./application.types.js";
-import type { ActorContext } from "@ai-hub/contracts";
+import type { ActorContext, ApplicationDraft } from "@ai-hub/contracts";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -61,6 +61,35 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .executeTakeFirst();
     return row === undefined ? null : this.mapApplication(row);
+  }
+
+  async upsertDraft(
+    applicationId: string,
+    draft: ApplicationDraft,
+  ): Promise<void> {
+    await this.db
+      .insertInto("application_drafts")
+      .values({ application_id: applicationId, draft })
+      .onConflict((oc) =>
+        oc.column("application_id").doUpdateSet({
+          draft,
+          updated_at: new Date(),
+        }),
+      )
+      .execute();
+  }
+
+  async findDraft(
+    applicationId: string,
+  ): Promise<{ draft: ApplicationDraft; updatedAt: Date } | null> {
+    const row = await this.db
+      .selectFrom("application_drafts")
+      .select(["draft", "updated_at"])
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : { draft: row.draft as ApplicationDraft, updatedAt: row.updated_at };
   }
 
   async listAdmin(
@@ -294,6 +323,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         file_name: input.fileName,
         mime_type: input.mimeType,
         size_bytes: input.sizeBytes,
+        kind: input.kind,
         sha256: input.sha256,
         signature: input.signature,
         part_count: input.partCount,
@@ -804,6 +834,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       fileName: row.file_name,
       mimeType: row.mime_type,
       sizeBytes: Number(row.size_bytes),
+      kind: row.kind as ArtifactUploadRecord["kind"],
       sha256: row.sha256,
       signature: row.signature,
       partCount: row.part_count,

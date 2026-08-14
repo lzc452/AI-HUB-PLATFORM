@@ -4,6 +4,7 @@ import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { ApplicationController } from "./application.controller.js";
 import { ArtifactUploadController } from "./artifact-upload.controller.js";
+import { UnifiedUploadController } from "./unified-upload.controller.js";
 import { KyselyApplicationRepository } from "./application.repository.js";
 import { ApplicationService } from "./application.service.js";
 import {
@@ -83,8 +84,10 @@ function createUploadProviders(
 
 function createUploadControllers(
   storageDirectory: string | undefined,
-): (typeof ArtifactUploadController)[] {
-  return storageDirectory === undefined ? [] : [ArtifactUploadController];
+): (typeof ArtifactUploadController | typeof UnifiedUploadController)[] {
+  return storageDirectory === undefined
+    ? []
+    : [ArtifactUploadController, UnifiedUploadController];
 }
 
 @Module({})

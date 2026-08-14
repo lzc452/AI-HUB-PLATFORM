@@ -206,7 +206,7 @@ export interface ApplicationAssetsTable {
   asset_id: Generated<string>;
   application_id: string;
   application_version_id: string | null;
-  asset_type: "icon" | "screenshot" | "attachment";
+  asset_type: "icon" | "screenshot" | "cover" | "attachment" | "qr";
   name: string;
   storage_key: string;
   mime_type: string;
@@ -232,6 +232,7 @@ export interface ApplicationArtifactUploadsTable {
   file_name: string;
   mime_type: string;
   size_bytes: number;
+  kind: ColumnType<string, string | undefined, string>;
   sha256: string | null;
   signature: string | null;
   part_count: number;
@@ -721,6 +722,7 @@ export interface DatabaseSchema {
   analytics_audit_events: AnalyticsAuditEventsTable;
   analytics_export_jobs: AnalyticsExportJobsTable;
   dingtalk_sso_transactions: DingTalkSsoTransactionsTable;
+  application_drafts: ApplicationDraftsTable;
 }
 
 export interface DingTalkSsoTransactionsTable {
@@ -734,4 +736,11 @@ export interface DingTalkSsoTransactionsTable {
   expires_at: Date;
   consumed_at: Date | null;
   created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface ApplicationDraftsTable {
+  application_id: string;
+  draft: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }

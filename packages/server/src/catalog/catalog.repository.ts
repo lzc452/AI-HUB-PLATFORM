@@ -272,4 +272,26 @@ export class KyselyCatalogRepository implements CatalogRepository {
       .where("application_id", "=", applicationId)
       .execute();
   }
+
+  async listCategories() {
+    const rows = await this.db
+      .selectFrom("catalog_categories")
+      .select(["category_id", "name"])
+      .where("enabled", "=", true)
+      .orderBy("sort_order", "asc")
+      .execute();
+    return rows.map((row) => ({
+      categoryId: row.category_id,
+      name: row.name,
+    }));
+  }
+
+  async listTags() {
+    const rows = await this.db
+      .selectFrom("catalog_tags")
+      .select(["tag_id", "name"])
+      .where("enabled", "=", true)
+      .execute();
+    return rows.map((row) => ({ tagId: row.tag_id, name: row.name }));
+  }
 }

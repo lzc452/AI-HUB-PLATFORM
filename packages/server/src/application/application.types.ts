@@ -1,7 +1,9 @@
 import type {
   ActorContext,
+  ApplicationDraft,
   AuthorizationDecision,
   AuthorizationRequest,
+  UploadKind,
 } from "@ai-hub/contracts";
 
 export type ApplicationStatus =
@@ -50,6 +52,7 @@ export interface ArtifactUploadRecord {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  kind: UploadKind;
   sha256: string | null;
   signature: string | null;
   partCount: number;
@@ -61,11 +64,13 @@ export interface ArtifactUploadRecord {
   createdAt: Date;
 }
 
+export type AssetType = "icon" | "screenshot" | "cover" | "attachment" | "qr";
+
 export interface AssetRecord {
   assetId: string;
   applicationId: string;
   applicationVersionId: string | null;
-  assetType: "icon" | "screenshot" | "attachment";
+  assetType: AssetType;
   name: string;
   storageKey: string;
   mimeType: string;
@@ -171,6 +176,10 @@ export interface ApplicationRepository {
     summary: string;
   }): Promise<ApplicationRecord>;
   findApplication(applicationId: string): Promise<ApplicationRecord | null>;
+  upsertDraft(applicationId: string, draft: ApplicationDraft): Promise<void>;
+  findDraft(
+    applicationId: string,
+  ): Promise<{ draft: ApplicationDraft; updatedAt: Date } | null>;
   listAdmin?(
     actor: ActorContext,
     input: ApplicationAdminListInput,

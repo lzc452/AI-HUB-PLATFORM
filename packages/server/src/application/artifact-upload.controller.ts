@@ -98,6 +98,7 @@ export class ArtifactUploadController {
       fileName: body.fileName,
       mimeType: body.mimeType,
       sizeBytes: body.sizeBytes,
+      kind: "artifact",
       sha256: null,
       signature: null,
       partCount: 1,

@@ -34,6 +34,17 @@ export type {
   DeliveryConfig,
   ReviewDecision,
   ReviewQueueStatus,
+  AiRiskDeclaration,
+  AiRiskModelProvider,
+  UploadKind,
+  IconMode,
+  ApplicationType,
+  ApplicationIcon,
+  FaqEntry,
+  AudienceRule,
+  DeliveryDraftItem,
+  ApplicationDraft,
+  ApplicationDraftRecord,
 } from "./application.js";
 export type {
   CatalogEntry,

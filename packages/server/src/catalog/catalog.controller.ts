@@ -41,8 +41,10 @@ import {
   CatalogActionRequestDto,
   CatalogEntryDto,
   CatalogListResultDto,
+  CategorySummaryDto,
   RiskDescriptionDto,
   SaveRiskDescriptionRequestDto,
+  TagSummaryDto,
 } from "./catalog.dto.js";
 import { RecordActionResultDto } from "../system/http/simple-results.dto.js";
 import {
@@ -119,6 +121,26 @@ export class CatalogController {
       ...(applicationType === undefined ? {} : { applicationType }),
     };
     return this.call(() => this.catalog.list(input));
+  }
+
+  @Get("categories")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "分类列表", description: "返回启用的单层主分类。" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "分类列表", type: CategorySummaryDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403])
+  async listCategories() {
+    return this.call(() => this.catalog.listCategories());
+  }
+
+  @Get("tags")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "标签列表", description: "返回启用的标签。" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "标签列表", type: TagSummaryDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403])
+  async listTags() {
+    return this.call(() => this.catalog.listTags());
   }
 
   @Get(":applicationId")

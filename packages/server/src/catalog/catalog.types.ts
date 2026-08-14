@@ -49,8 +49,20 @@ export interface CatalogListResult {
   pageSize: number;
 }
 
+export interface CategorySummary {
+  categoryId: string;
+  name: string;
+}
+
+export interface TagSummary {
+  tagId: string;
+  name: string;
+}
+
 export interface CatalogRepository {
   listVisible(input: CatalogSearchInput): Promise<readonly CatalogEntry[]>;
+  listCategories(): Promise<readonly CategorySummary[]>;
+  listTags(): Promise<readonly TagSummary[]>;
   findVisible(
     actor: ActorContext,
     applicationId: string,

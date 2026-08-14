@@ -32,6 +32,7 @@ import { ApplicationService } from "./application.service.js";
 import {
   ApplicationDto,
   ApplicationAdminListResultDto,
+  ApplicationDraftRecordDto,
   ApplicationVersionDto,
   ApplicationWorkspaceDto,
   ConfigureDeliveryRequestDto,
@@ -43,8 +44,10 @@ import {
   ReviewQueueDto,
   ReviewRequestDto,
   RollbackRequestDto,
+  SaveApplicationDraftRequestDto,
   WithdrawRequestDto,
 } from "./application.dto.js";
+import type { ApplicationDraft } from "@ai-hub/contracts";
 import {
   ApiIdentityHeaders,
   ApiProblemResponses,
@@ -76,6 +79,50 @@ export class ApplicationController {
       this.applications.createApplication(
         await this.requireActor(employeeId, sessionId, "create"),
         body,
+      ),
+    );
+  }
+
+  @Put(":applicationId/draft")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "保存应用草稿", description: "整表单一份 draft，全量幂等保存。" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: SaveApplicationDraftRequestDto })
+  @ApiOkResponse({ description: "保存后的草稿记录", type: ApplicationDraftRecordDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async saveDraft(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: SaveApplicationDraftRequestDto,
+  ) {
+    return this.call(async () =>
+      this.applications.saveDraft(
+        await this.requireActor(employeeId, sessionId, "update"),
+        applicationId,
+        body as unknown as ApplicationDraft,
+      ),
+    );
+  }
+
+  @Get(":applicationId/draft")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @ApiOperation({ summary: "读取应用草稿", description: "回显整表单草稿内容。" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "草稿记录", type: ApplicationDraftRecordDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getDraft(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.applications.getDraft(
+        await this.requireActor(employeeId, sessionId, "update"),
+        applicationId,
       ),
     );
   }

@@ -19,6 +19,14 @@ export class CatalogService {
     return this.query(input);
   }
 
+  async listCategories() {
+    return this.repository.listCategories();
+  }
+
+  async listTags() {
+    return this.repository.listTags();
+  }
+
   async search(input: CatalogSearchInput): Promise<CatalogListResult> {
     return this.query(input);
   }

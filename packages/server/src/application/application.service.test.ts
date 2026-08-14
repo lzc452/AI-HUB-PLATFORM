@@ -88,6 +88,13 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async findApplication(id: string) {
     return this.applications.get(id) ?? null;
   }
+  drafts = new Map<string, { draft: import("@ai-hub/contracts").ApplicationDraft; updatedAt: Date }>();
+  async upsertDraft(applicationId: string, draft: import("@ai-hub/contracts").ApplicationDraft) {
+    this.drafts.set(applicationId, { draft, updatedAt: new Date() });
+  }
+  async findDraft(applicationId: string) {
+    return this.drafts.get(applicationId) ?? null;
+  }
   async createVersion(input: Omit<ApplicationVersionRecord, "createdAt">) {
     const version = { ...input, createdAt: new Date() };
     this.versions.set(version.applicationVersionId, version);
@@ -362,6 +369,7 @@ function registerVerifiedUpload(
     fileName: "artifact.zip",
     mimeType: "application/zip",
     sizeBytes: 1,
+    kind: "artifact",
     sha256: input.artifactSha256,
     signature: input.artifactSignature,
     partCount: 1,

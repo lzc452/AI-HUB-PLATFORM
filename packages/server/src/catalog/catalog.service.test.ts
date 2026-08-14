@@ -118,6 +118,14 @@ class MemoryCatalogRepository implements CatalogRepository {
   async upsertRiskDescription(): Promise<void> {
     // no-op in memory repository
   }
+
+  async listCategories() {
+    return [];
+  }
+
+  async listTags() {
+    return [];
+  }
 }
 
 describe("CatalogService", () => {

@@ -15,6 +15,7 @@ export const ROUTES = {
   security: "/security",
   notifications: "/notifications",
   creator: "/creator/:applicationId",
+  creatorCreate: "/creator/create",
   assistant: "/assistant",
 } as const;
 

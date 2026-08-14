@@ -517,7 +517,7 @@ export class AssetDto {
   assetId!: string;
 
   @ApiProperty({ type: String, description: "资产类型" })
-  assetType!: "icon" | "screenshot" | "attachment";
+  assetType!: "icon" | "screenshot" | "cover" | "attachment" | "qr";
 
   @ApiProperty({ type: String, description: "资产名称" })
   name!: string;
@@ -544,7 +544,7 @@ export class AssetDto {
 /** 创建资产请求。 */
 export class CreateAssetRequestDto {
   @ApiProperty({ type: String, description: "资产类型" })
-  assetType!: "icon" | "screenshot" | "attachment";
+  assetType!: "icon" | "screenshot" | "cover" | "attachment" | "qr";
 
   @ApiProperty({ type: String, description: "资产名称" })
   name!: string;
@@ -590,4 +590,183 @@ export class LinkDeliveryAssetRequestDto {
 export class LinkDeliveryAssetResponseDto {
   @ApiProperty({ type: Boolean, description: "是否已关联", example: true })
   linked!: boolean;
+}
+
+/** AI 风险声明（6 项）。 */
+export class AiRiskDeclarationDto {
+  @ApiProperty({ type: Boolean, description: "是否处理员工个人信息/企业敏感数据" })
+  handlesSensitiveData!: boolean;
+
+  @ApiProperty({ type: Boolean, description: "是否发送至企业外部/第三方模型供应商" })
+  sendsDataExternally!: boolean;
+
+  @ApiProperty({ type: Boolean, description: "是否保存输入/文件/对话" })
+  retainsConversations!: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "保留周期" })
+  retentionPeriod?: string | null;
+
+  @ApiProperty({
+    type: [String],
+    description: "模型 / AI 提供方",
+    example: ["deepseek"],
+  })
+  modelProviders!: string[];
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "提供方补充说明" })
+  providerNote?: string | null;
+
+  @ApiProperty({ type: Boolean, description: "是否影响人事/财务/法务等高风险决策" })
+  affectsHighRiskDecisions!: boolean;
+
+  @ApiProperty({ type: String, description: "用户输入限制与免责声明" })
+  inputRestrictionDisclaimer!: string;
+}
+
+/** 保存应用草稿请求（整表单一份 draft）。 */
+export class SaveApplicationDraftRequestDto {
+  @ApiProperty({ type: String, description: "应用名称", example: "智能考勤助手" })
+  name!: string;
+
+  @ApiProperty({ type: String, description: "归属部门 ID" })
+  departmentId!: string;
+
+  @ApiProperty({ type: [String], description: "维护人工号列表" })
+  maintainerEmployeeIds!: string[];
+
+  @ApiProperty({ type: String, description: "分类 ID" })
+  categoryId!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "应用类型",
+    enum: ["web_app", "desktop_app", "mobile_app", "mini_program"],
+  })
+  applicationType!: string;
+
+  @ApiProperty({ type: [String], description: "标签 ID 列表" })
+  tagIds!: string[];
+
+  @ApiProperty({
+    type: "object",
+    description: "应用图标（mode: auto|upload；auto 需 backgroundColor+text，upload 需 assetId）",
+  })
+  icon!: object;
+
+  @ApiProperty({ type: [String], description: "截图资产 ID（1–6）" })
+  screenshotAssetIds!: string[];
+
+  @ApiProperty({ type: String, description: "简介富文本（已受限白名单）" })
+  summaryHtml!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "操作手册富文本" })
+  manualHtml?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "操作手册附件资产 ID" })
+  manualAssetId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "使用示例富文本" })
+  examplesHtml?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true, description: "使用示例附件资产 ID" })
+  examplesAssetId?: string | null;
+
+  @ApiProperty({ type: "array", description: "常见问题列表（选填）" })
+  faq!: object[];
+
+  @ApiProperty({ type: "array", description: "受众规则列表" })
+  audience!: object[];
+
+  @ApiProperty({ type: () => AiRiskDeclarationDto, description: "AI 风险声明" })
+  risk!: AiRiskDeclarationDto;
+
+  @ApiProperty({ type: "array", description: "交付配置列表" })
+  deliveries!: object[];
+
+  @ApiProperty({ type: String, description: "版本号", example: "1.0.0" })
+  version!: string;
+
+  @ApiProperty({ type: String, description: "变更说明", example: "首次发布" })
+  changelog!: string;
+}
+
+/** 应用草稿回显。 */
+export class ApplicationDraftRecordDto {
+  @ApiProperty({ type: String, description: "应用 ID" })
+  applicationId!: string;
+
+  @ApiProperty({ type: String, description: "应用状态" })
+  status!: string;
+
+  @ApiProperty({ type: String, description: "责任人员工工号" })
+  ownerEmployeeId!: string;
+
+  @ApiProperty({ type: () => SaveApplicationDraftRequestDto, description: "草稿内容" })
+  draft!: SaveApplicationDraftRequestDto;
+
+  @ApiProperty({ type: String, description: "最后更新时间（ISO 8601）" })
+  updatedAt!: string;
+}
+
+/** 统一上传会话初始化请求。 */
+export class UnifiedUploadInitRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "上传类型",
+    enum: ["icon", "screenshot", "cover", "attachment", "qr", "artifact"],
+  })
+  kind!: string;
+
+  @ApiProperty({ type: String, description: "文件名", example: "icon.png" })
+  fileName!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型", example: "image/png" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  sizeBytes!: number;
+}
+
+/** 统一上传会话。 */
+export class UnifiedUploadDto {
+  @ApiProperty({ type: String, description: "上传会话 ID" })
+  uploadId!: string;
+
+  @ApiProperty({ type: String, description: "上传类型" })
+  kind!: string;
+
+  @ApiProperty({ type: String, description: "临时对象键" })
+  objectKey!: string;
+
+  @ApiProperty({ type: String, description: "文件名" })
+  fileName!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  sizeBytes!: number;
+
+  @ApiProperty({
+    type: String,
+    description: "上传状态",
+    enum: ["uploading", "completed", "failed"],
+  })
+  uploadStatus!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "扫描状态",
+    enum: ["pending", "passed", "failed"],
+  })
+  scanStatus!: string;
+
+  @ApiProperty({ type: String, nullable: true, description: "SHA-256" })
+  sha256!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "错误码" })
+  errorCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "关联资产 ID（complete 后返回）" })
+  assetId!: string | null;
 }

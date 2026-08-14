@@ -150,3 +150,21 @@ export class SaveRiskDescriptionRequestDto {
   @ApiProperty({ type: String, description: "风险说明内容" })
   riskDescription!: string;
 }
+
+/** 分类摘要。 */
+export class CategorySummaryDto {
+  @ApiProperty({ type: String, description: "分类 ID", example: "productivity" })
+  categoryId!: string;
+
+  @ApiProperty({ type: String, description: "分类名称", example: "效率工具" })
+  name!: string;
+}
+
+/** 标签摘要。 */
+export class TagSummaryDto {
+  @ApiProperty({ type: String, description: "标签 ID", example: "ai-assistant" })
+  tagId!: string;
+
+  @ApiProperty({ type: String, description: "标签名称", example: "AI 助手" })
+  name!: string;
+}

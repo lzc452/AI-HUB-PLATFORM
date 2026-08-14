@@ -29,6 +29,9 @@ const NotificationsPage = lazy(
 const CreatorCenterPage = lazy(
   () => import("../pages/creator/CreatorCenterPage"),
 );
+const ApplicationCreateWizardPage = lazy(
+  () => import("../pages/creator/ApplicationCreateWizardPage"),
+);
 const ApplicationsPage = lazy(
   () => import("../pages/applications/ApplicationsPage"),
 );
@@ -92,6 +95,14 @@ export function createRouter() {
                 </RequirePermission>
               ),
               path: ROUTES.notifications,
+            },
+            {
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.creator}>
+                  <ApplicationCreateWizardPage />
+                </RequirePermission>
+              ),
+              path: ROUTES.creatorCreate,
             },
             {
               element: (
