@@ -52,6 +52,14 @@ export interface DraftValidationIssue {
   message: string;
 }
 
+/** 提交校验失败（携带问题列表，供 400 响应返回）。 */
+export class DraftValidationError extends Error {
+  constructor(public readonly issues: readonly DraftValidationIssue[]) {
+    super("DRAFT_VALIDATION_FAILED");
+    this.name = "DraftValidationError";
+  }
+}
+
 const allowedActions = {
   create: "create",
   update: "update",
@@ -65,6 +73,16 @@ const requiredDeliveryChannels: readonly DeliveryChannel[] = [
   "mobile",
   "mini_program",
 ];
+
+/** 按应用类型映射发布所需的交付渠道；未知类型回退到四类齐全（保守）。 */
+const requiredChannelsByType: Readonly<
+  Record<string, readonly DeliveryChannel[]>
+> = {
+  web_app: ["web"],
+  desktop_app: ["desktop"],
+  mobile_app: ["mobile"],
+  mini_program: ["mini_program"],
+};
 
 export class ApplicationService {
   constructor(
@@ -156,6 +174,95 @@ export class ApplicationService {
       draft: result.draft,
       updatedAt: result.updatedAt.toISOString(),
     };
+  }
+
+  /** 提交草稿进入审核：完整性校验 → 规范化落库 → 创建无安装包版本 → 进入审核队列。 */
+  async submitDraft(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<ApplicationRecord> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const application = await this.requireApplication(applicationId);
+    if (application.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    if (application.status !== "draft" && application.status !== "published") {
+      throw new Error("INVALID_APPLICATION_TRANSITION");
+    }
+    const result = await this.repository.findDraft(applicationId);
+    if (result === null) throw new Error("DRAFT_NOT_FOUND");
+    const draft = result.draft;
+
+    const issues = validateDraftCompleteness(draft);
+    if (issues.length > 0) throw new DraftValidationError(issues);
+
+    const existingVersions = await this.repository.listVersions(applicationId);
+    if (existingVersions.some((v) => v.version === draft.version)) {
+      throw new Error("VERSION_ALREADY_EXISTS");
+    }
+
+    const plainSummary = draft.summaryHtml.replace(/<[^>]*>/g, "").trim();
+
+    return this.repository.withTransaction(async (repository) => {
+      await repository.updateApplicationContent(applicationId, {
+        name: draft.name,
+        summary: plainSummary,
+      });
+      await repository.upsertCatalogMetadata(applicationId, {
+        categoryId: draft.categoryId,
+        applicationType: draft.applicationType,
+      });
+      await repository.replaceTagLinks(applicationId, draft.tagIds);
+      await repository.replaceAudiences(applicationId, draft.audience);
+
+      const version = await repository.createVersion({
+        applicationVersionId: randomUUID(),
+        applicationId,
+        version: draft.version,
+        changelog: draft.changelog,
+        artifactKey: null,
+        artifactSha256: null,
+        artifactSignature: null,
+        scanStatus: "passed",
+        createdByEmployeeId: actor.employeeId,
+      });
+      await repository.snapshotVersionContent(version.applicationVersionId, draft);
+
+      const updated = await repository.setApplicationStatus(
+        applicationId,
+        "in_review",
+      );
+      await repository.createReviewQueue({
+        applicationId,
+        applicationVersionId: version.applicationVersionId,
+        status: "available",
+        claimedByEmployeeId: null,
+        claimedAt: null,
+        slaDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      await this.recordChange(
+        repository,
+        "application.submitted",
+        applicationId,
+        version.applicationVersionId,
+        actor.employeeId,
+      );
+      await this.recordChange(
+        repository,
+        "application.review.requested",
+        applicationId,
+        version.applicationVersionId,
+        actor.employeeId,
+      );
+      await this.recordChange(
+        repository,
+        "application.review.sla.created",
+        applicationId,
+        version.applicationVersionId,
+        actor.employeeId,
+      );
+      return updated;
+    });
   }
 
   async createVersion(
@@ -395,8 +502,16 @@ export class ApplicationService {
     const deliveries = await this.repository.listDeliveries(
       application.applicationId,
     );
+    const applicationType = await this.repository.getApplicationType(
+      application.applicationId,
+    );
+    const requiredChannels =
+      applicationType !== null &&
+      requiredChannelsByType[applicationType] !== undefined
+        ? requiredChannelsByType[applicationType]
+        : requiredDeliveryChannels;
     if (
-      requiredDeliveryChannels.some(
+      requiredChannels.some(
         (channel) =>
           !deliveries.some(
             (delivery) => delivery.channel === channel && delivery.enabled,

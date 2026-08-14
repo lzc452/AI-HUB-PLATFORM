@@ -2,6 +2,7 @@ export {
   createApplicationDraft,
   getApplicationDraft,
   saveApplicationDraft,
+  submitApplicationDraft,
   uploadAsset,
   listCategories,
   listTags,

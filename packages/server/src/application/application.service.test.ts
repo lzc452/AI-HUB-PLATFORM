@@ -50,6 +50,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
   audits: string[] = [];
   events: string[] = [];
   catalogRegistrations: string[] = [];
+  catalogTypes = new Map<string, string>();
   deliveryAssets: Array<{
     applicationId: string;
     channel: DeliveryChannel;
@@ -94,6 +95,36 @@ class MemoryApplicationRepository implements ApplicationRepository {
   }
   async findDraft(applicationId: string) {
     return this.drafts.get(applicationId) ?? null;
+  }
+  async updateApplicationContent(
+    applicationId: string,
+    input: { name: string; summary: string },
+  ) {
+    const current = this.applications.get(applicationId);
+    if (current !== undefined) {
+      this.applications.set(applicationId, { ...current, ...input });
+    }
+  }
+  async upsertCatalogMetadata(
+    applicationId: string,
+    input: { categoryId: string; applicationType: string },
+  ) {
+    this.catalogTypes.set(applicationId, input.applicationType);
+  }
+  async replaceTagLinks(_applicationId: string, _tagIds: readonly string[]) {
+    // no-op in memory repository
+  }
+  async replaceAudiences(
+    _applicationId: string,
+    _audience: readonly import("@ai-hub/contracts").AudienceRule[],
+  ) {
+    // no-op in memory repository
+  }
+  async snapshotVersionContent(_applicationVersionId: string, _payload: unknown) {
+    // no-op in memory repository
+  }
+  async getApplicationType(applicationId: string) {
+    return this.catalogTypes.get(applicationId) ?? null;
   }
   async createVersion(input: Omit<ApplicationVersionRecord, "createdAt">) {
     const version = { ...input, createdAt: new Date() };
@@ -393,6 +424,54 @@ async function configureAllDeliveryChannels(
       enabled: true,
     });
   }
+}
+
+function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
+  return {
+    name: "智能考勤助手",
+    departmentId: "dept-rnd",
+    maintainerEmployeeIds: ["E200"],
+    categoryId: "productivity",
+    applicationType: "web_app",
+    tagIds: ["ai"],
+    icon: { mode: "auto", backgroundColor: "#185FA5", text: "智", assetId: null },
+    screenshotAssetIds: ["asset-1"],
+    summaryHtml: "<p>简介</p>",
+    manualHtml: "<p>手册</p>",
+    manualAssetId: null,
+    examplesHtml: "<p>示例</p>",
+    examplesAssetId: null,
+    faq: [],
+    audience: [
+      {
+        audienceType: "all",
+        departmentId: null,
+        employeeId: null,
+        includeChildren: false,
+      },
+    ],
+    risk: {
+      handlesSensitiveData: false,
+      sendsDataExternally: false,
+      retainsConversations: false,
+      retentionPeriod: null,
+      modelProviders: ["local"],
+      providerNote: null,
+      affectsHighRiskDecisions: false,
+      inputRestrictionDisclaimer: "请勿输入敏感信息",
+    },
+    deliveries: [
+      {
+        channel: "web",
+        entryUrl: "https://apps.example.com",
+        minClientVersion: null,
+        enabled: true,
+        assetIds: [],
+      },
+    ],
+    version: "1.0.0",
+    changelog: "首次发布",
+  };
 }
 
 describe("ApplicationService", () => {
@@ -737,5 +816,61 @@ describe("ApplicationService", () => {
       applicationVersionId: version.applicationVersionId,
       status: "available",
     });
+  });
+
+  it("submits a draft into review with an artifact-less version", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, completeDraft());
+
+    const updated = await service.submitDraft(owner, application.applicationId);
+
+    expect(updated.status).toBe("in_review");
+    expect(repository.versions.size).toBe(1);
+    const [version] = [...repository.versions.values()];
+    expect(version?.artifactKey).toBeNull();
+    expect(repository.events).toContain("application.submitted");
+    expect(repository.events).toContain("application.review.requested");
+  });
+
+  it("rejects an incomplete draft submission", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      name: "",
+    });
+
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).rejects.toThrow("DRAFT_VALIDATION_FAILED");
+  });
+
+  it("publishes a draft-submitted web app with only its web channel", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, completeDraft());
+    await service.submitDraft(owner, application.applicationId);
+
+    const version = [...repository.versions.values()][0]!;
+    await service.claimReview(reviewer, version.applicationVersionId);
+    await service.review(reviewer, version.applicationVersionId, "approve", "ok");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+
+    const published = await service.publish(owner, version.applicationVersionId);
+    expect(published.status).toBe("published");
   });
 });

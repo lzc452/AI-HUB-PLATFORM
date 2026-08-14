@@ -38,6 +38,17 @@ export function saveApplicationDraft(
   });
 }
 
+/** 提交草稿进入审核；校验失败返回 400 并携带 issues 列表。 */
+export function submitApplicationDraft(applicationId: string): Promise<{
+  applicationId: string;
+  status: string;
+}> {
+  return apiFetch<{ applicationId: string; status: string }>(
+    `/internal/applications/${encodeURIComponent(applicationId)}/submit-draft`,
+    { method: "POST" },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 资产上传（复用 artifact-upload + asset 端点）
 // ---------------------------------------------------------------------------

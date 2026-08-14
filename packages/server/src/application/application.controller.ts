@@ -28,7 +28,7 @@ import {
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
-import { ApplicationService } from "./application.service.js";
+import { ApplicationService, DraftValidationError } from "./application.service.js";
 import {
   ApplicationDto,
   ApplicationAdminListResultDto,
@@ -121,6 +121,31 @@ export class ApplicationController {
   ) {
     return this.call(async () =>
       this.applications.getDraft(
+        await this.requireActor(employeeId, sessionId, "update"),
+        applicationId,
+      ),
+    );
+  }
+
+  @Post(":applicationId/submit-draft")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "提交草稿进入审核",
+    description:
+      "完整性校验通过后规范化落库、创建无安装包版本并进入人工审核队列；校验失败返回 400 与问题列表。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({ description: "提交后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async submitDraft(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.applications.submitDraft(
         await this.requireActor(employeeId, sessionId, "update"),
         applicationId,
       ),
@@ -584,6 +609,13 @@ export class ApplicationController {
   }
 
   private rethrow(error: unknown): never {
+    if (error instanceof DraftValidationError) {
+      throw new BadRequestException({
+        code: "DRAFT_VALIDATION_FAILED",
+        detail: "草稿未通过提交校验",
+        issues: error.issues,
+      });
+    }
     const code =
       error instanceof Error ? error.message : "APPLICATION_REQUEST_FAILED";
     if (code.endsWith("_NOT_FOUND")) throw new NotFoundException(code);

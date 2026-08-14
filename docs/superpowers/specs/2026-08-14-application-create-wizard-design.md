@@ -225,9 +225,14 @@ GET  /internal/applications/:id/uploads/:uploadId
 - `packages/server/src/application/application.dto.ts` / `application.controller.ts` —— `SaveApplicationDraftRequestDto` + `PUT/GET /:id/draft` 路由
 - `packages/server/src/catalog/catalog.types.ts` / `repository.ts` / `service.ts` / `dto.ts` / `controller.ts` —— 新增 `GET /internal/catalog/categories`、`GET /internal/catalog/tags`（分类/标签数据源）
 - 前端 `ApplicationCreateWizardPage` —— 用 TanStack Query 接入部门/员工（复用 `useIdentity`）+ 分类/标签（`listCategories`/`listTags`），注入 `createWizardSteps` options
+- `packages/database/src/migrations/0027_version_artifact_nullable.ts` —— `application_versions` 制品字段可空（Web/小程序无安装包）
+- `packages/server/src/application/application.service.ts` —— `submitDraft` 用例（完整性校验 → 规范化落库 → 创建无安装包版本 → 进入审核队列），`DraftValidationError` 携带校验问题
+- `packages/server/src/application/application.repository.ts` —— `updateApplicationContent`/`upsertCatalogMetadata`/`replaceTagLinks`/`replaceAudiences`/`snapshotVersionContent`
+- `packages/server/src/application/application.controller.ts` —— `POST /:id/submit-draft` 路由（校验失败返回 400 + issues）
+- 前端 `publishing.client.ts` `submitApplicationDraft` + 页面「提交审核」接入
+- `packages/server/src/application/application.service.ts` `publish` + `repository.getApplicationType` —— 发布按 `application_type` 校验所需交付渠道（web_app→web、desktop_app→desktop 等，未知类型回退四类齐全）
 
 **尚未接入（下一增量）**
-- 提交审核深链（版本/制品/审核队列）—— 当前提交 = 完整性校验 + 保存草稿
 - 图片重编码去元数据 / 二维码内容解析 —— 当前统一上传已做魔数 + 扩展名 + SVG 清洗，重编码与二维码解码待接入专用库
 
 ---

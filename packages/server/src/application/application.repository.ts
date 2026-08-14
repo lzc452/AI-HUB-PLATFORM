@@ -14,7 +14,11 @@ import type {
   ApplicationAdminListResult,
   DeliveryChannel,
 } from "./application.types.js";
-import type { ActorContext, ApplicationDraft } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  ApplicationDraft,
+  AudienceRule,
+} from "@ai-hub/contracts";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -90,6 +94,104 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return row === undefined
       ? null
       : { draft: row.draft as ApplicationDraft, updatedAt: row.updated_at };
+  }
+
+  async updateApplicationContent(
+    applicationId: string,
+    input: { name: string; summary: string },
+  ): Promise<void> {
+    await this.db
+      .updateTable("applications")
+      .set({ name: input.name, summary: input.summary, updated_at: new Date() })
+      .where("application_id", "=", applicationId)
+      .execute();
+  }
+
+  async upsertCatalogMetadata(
+    applicationId: string,
+    input: { categoryId: string; applicationType: string },
+  ): Promise<void> {
+    await this.db
+      .insertInto("application_catalog_metadata")
+      .values({
+        application_id: applicationId,
+        category_id: input.categoryId,
+        application_type: input.applicationType,
+        search_name: "",
+        search_summary: "",
+        search_pinyin: "",
+        search_initials: "",
+        recommendation_rank: 0,
+        health_status: "unknown",
+        deprecated_reason: null,
+        replacement_application_id: null,
+      })
+      .onConflict((oc) =>
+        oc.column("application_id").doUpdateSet({
+          category_id: input.categoryId,
+          application_type: input.applicationType,
+        }),
+      )
+      .execute();
+  }
+
+  async replaceTagLinks(
+    applicationId: string,
+    tagIds: readonly string[],
+  ): Promise<void> {
+    await this.db
+      .deleteFrom("application_tag_links")
+      .where("application_id", "=", applicationId)
+      .execute();
+    if (tagIds.length > 0) {
+      await this.db
+        .insertInto("application_tag_links")
+        .values(tagIds.map((tagId) => ({ application_id: applicationId, tag_id: tagId })))
+        .execute();
+    }
+  }
+
+  async replaceAudiences(
+    applicationId: string,
+    audience: readonly AudienceRule[],
+  ): Promise<void> {
+    await this.db
+      .deleteFrom("application_audiences")
+      .where("application_id", "=", applicationId)
+      .execute();
+    if (audience.length > 0) {
+      await this.db
+        .insertInto("application_audiences")
+        .values(
+          audience.map((rule) => ({
+            application_id: applicationId,
+            audience_type: rule.audienceType,
+            department_id: rule.departmentId,
+            employee_id: rule.employeeId,
+            include_children: rule.includeChildren,
+          })),
+        )
+        .execute();
+    }
+  }
+
+  async snapshotVersionContent(
+    applicationVersionId: string,
+    payload: unknown,
+  ): Promise<void> {
+    await this.db
+      .insertInto("application_version_snapshots")
+      .values({ application_version_id: applicationVersionId, payload })
+      .execute();
+  }
+
+  async getApplicationType(applicationId: string): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("application_catalog_metadata")
+      .select("application_type")
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    return row?.application_type ?? null;
   }
 
   async listAdmin(

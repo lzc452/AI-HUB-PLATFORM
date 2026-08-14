@@ -181,9 +181,9 @@ export interface ApplicationVersionsTable {
   application_id: string;
   version: string;
   changelog: string;
-  artifact_key: string;
-  artifact_sha256: string;
-  artifact_signature: string;
+  artifact_key: string | null;
+  artifact_sha256: string | null;
+  artifact_signature: string | null;
   scan_status: "pending" | "passed" | "failed";
   created_by_employee_id: string;
   created_at: ColumnType<Date, Date | undefined, never>;

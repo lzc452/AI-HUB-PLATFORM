@@ -1,6 +1,7 @@
 import type {
   ActorContext,
   ApplicationDraft,
+  AudienceRule,
   AuthorizationDecision,
   AuthorizationRequest,
   UploadKind,
@@ -36,9 +37,9 @@ export interface ApplicationVersionRecord {
   applicationId: string;
   version: string;
   changelog: string;
-  artifactKey: string;
-  artifactSha256: string;
-  artifactSignature: string;
+  artifactKey: string | null;
+  artifactSha256: string | null;
+  artifactSignature: string | null;
   scanStatus: ApplicationVersionScanStatus;
   createdByEmployeeId: string;
   createdAt: Date;
@@ -180,6 +181,27 @@ export interface ApplicationRepository {
   findDraft(
     applicationId: string,
   ): Promise<{ draft: ApplicationDraft; updatedAt: Date } | null>;
+  updateApplicationContent(
+    applicationId: string,
+    input: { name: string; summary: string },
+  ): Promise<void>;
+  upsertCatalogMetadata(
+    applicationId: string,
+    input: { categoryId: string; applicationType: string },
+  ): Promise<void>;
+  replaceTagLinks(
+    applicationId: string,
+    tagIds: readonly string[],
+  ): Promise<void>;
+  replaceAudiences(
+    applicationId: string,
+    audience: readonly AudienceRule[],
+  ): Promise<void>;
+  snapshotVersionContent(
+    applicationVersionId: string,
+    payload: unknown,
+  ): Promise<void>;
+  getApplicationType(applicationId: string): Promise<string | null>;
   listAdmin?(
     actor: ActorContext,
     input: ApplicationAdminListInput,

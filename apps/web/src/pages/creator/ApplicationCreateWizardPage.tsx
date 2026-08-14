@@ -14,6 +14,7 @@ import {
   listCategories,
   listTags,
   saveApplicationDraft,
+  submitApplicationDraft,
   type PublishingOptions,
 } from "../../modules/publishing";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
@@ -110,7 +111,8 @@ export default function ApplicationCreateWizardPage() {
   const handleSubmit = async (values: FieldValues) => {
     if (!applicationId) return;
     await saveApplicationDraft(applicationId, values as ApplicationDraft);
-    message.success("已通过完整性校验并保存草稿");
+    await submitApplicationDraft(applicationId);
+    message.success("已提交审核");
   };
 
   if (loading) {
