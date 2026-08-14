@@ -9,6 +9,18 @@
 
 Garage 以单节点 S3 兼容开发服务运行，没有数据冗余，不属于生产拓扑。ClamAV、PostgreSQL、Garage、API、worker、Web 与反向代理共享同一个私有 Compose 网络。
 
+## 从 Docker Desktop 迁移到 Rancher Desktop
+
+已在使用 Docker Desktop 的环境（数据库、数据卷与镜像）可用一键脚本备份并在 Rancher Desktop 上恢复，无需手动导出：
+
+```bash
+bash scripts/dev/docker-engine-migration.sh backup   # 在 Docker Desktop 上：备份数据库、数据卷与镜像
+bash scripts/dev/docker-engine-migration.sh restore  # 在 Rancher Desktop 上：恢复数据与镜像
+bash scripts/dev/docker-engine-migration.sh verify   # 验证引擎、compose 与数据库（--tests 运行 Testcontainers 测试）
+```
+
+备份目录默认 `$HOME/docker-migration-backup`，跨设备迁移时用 `BACKUP_DIR` 环境变量覆盖。脚本头部注释包含无法脚本化的手动步骤（安装 Rancher Desktop、配置代理、卸载 Docker Desktop）与回滚方案。
+
 ## VPN 与 Rancher Desktop 代理
 
 如果 Windows 使用本地 HTTP 代理访问 VPN，Rancher Desktop 必须能从其 Linux 虚拟机访问该代理。在 Rancher Desktop 中打开 **Preferences → WSL → Proxy**（实验性功能），为 HTTP/HTTPS 代理使用宿主机网关而不是 `127.0.0.1`：
