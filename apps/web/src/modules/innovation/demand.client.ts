@@ -6,7 +6,7 @@ import type {
   DemandStatus,
 } from "@ai-hub/contracts";
 
-import { apiFetch } from "../../shared/api/client";
+import { apiFetch, apiUploadRaw } from "../../shared/api/client";
 
 export type DemandSort = "recent" | "priority" | "hot";
 
@@ -467,6 +467,137 @@ export function removeDemandApplication(
       : `?expectedVersion=${encodeURIComponent(String(expectedVersion))}`;
   return apiFetch<void>(
     `/internal/demands/${encodedDemandId(demandId)}/applications/${encodeURIComponent(applicationId)}${suffix}`,
+    { method: "DELETE" },
+  );
+}
+
+export interface DemandClaimProposalRecord {
+  proposalId: string;
+  demandId: string;
+  proposerEmployeeId: string;
+  ownerEmployeeId: string;
+  collaboratorEmployeeIds: string[];
+  approach: string;
+  estimatedValidationDuration: string;
+  resourceNeeds: string;
+  preference: string | null;
+  status: "proposed" | "selected" | "rejected" | "withdrawn";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function submitDemandClaimProposal(
+  demandId: string,
+  input: {
+    ownerEmployeeId: string;
+    collaboratorEmployeeIds: string[];
+    approach: string;
+    estimatedValidationDuration: string;
+    resourceNeeds: string;
+    preference?: string;
+  },
+) {
+  return apiFetch<DemandClaimProposalRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/claim-proposals`,
+    { body: JSON.stringify(input), method: "POST" },
+  );
+}
+
+export function listDemandClaimProposals(
+  demandId: string,
+): Promise<DemandClaimProposalRecord[]> {
+  return apiFetch<DemandClaimProposalRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/claim-proposals`,
+  );
+}
+
+export function withdrawDemandClaimProposal(
+  demandId: string,
+  proposalId: string,
+) {
+  return apiFetch<DemandClaimProposalRecord>(
+    `/internal/demands/${encodedDemandId(demandId)}/claim-proposals/${encodeURIComponent(proposalId)}/withdraw`,
+    { body: JSON.stringify({}), method: "POST" },
+  );
+}
+
+export function confirmDemandClaim(
+  demandId: string,
+  proposalId: string,
+  expectedVersion: number,
+) {
+  return apiFetch<import("@ai-hub/contracts").DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/claim-proposals/${encodeURIComponent(proposalId)}/confirm`,
+    { body: JSON.stringify({ expectedVersion }), method: "POST" },
+  );
+}
+
+export function releaseDemandClaim(
+  demandId: string,
+  expectedVersion: number,
+  reason?: string,
+) {
+  return apiFetch<import("@ai-hub/contracts").DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/release-claim`,
+    {
+      body: JSON.stringify({ expectedVersion, ...(reason ? { reason } : {}) }),
+      method: "POST",
+    },
+  );
+}
+
+export function confirmDemandPriority(
+  demandId: string,
+  input: {
+    expectedVersion: number;
+    confirmedPriority: "high" | "medium" | "low";
+    adjustmentReason?: string;
+  },
+) {
+  return apiFetch<import("@ai-hub/contracts").DemandEntry>(
+    `/internal/demands/${encodedDemandId(demandId)}/priority/confirm`,
+    { body: JSON.stringify(input), method: "POST" },
+  );
+}
+
+export interface DemandAttachmentRecord {
+  attachmentId: string;
+  demandId: string | null;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByEmployeeId: string;
+  createdAt: string;
+}
+
+export function uploadDemandAttachment(
+  file: File,
+): Promise<DemandAttachmentRecord> {
+  return apiUploadRaw<DemandAttachmentRecord>(
+    "/internal/demands/uploads",
+    file,
+    "POST",
+    {
+      "x-file-name": encodeURIComponent(file.name),
+      "x-file-mime": file.type || "application/octet-stream",
+    },
+  );
+}
+
+export function listDemandAttachments(
+  demandId: string,
+): Promise<DemandAttachmentRecord[]> {
+  return apiFetch<DemandAttachmentRecord[]>(
+    `/internal/demands/${encodedDemandId(demandId)}/attachments`,
+  );
+}
+
+export function deleteDemandAttachment(
+  demandId: string,
+  attachmentId: string,
+) {
+  return apiFetch<void>(
+    `/internal/demands/${encodedDemandId(demandId)}/attachments/${encodeURIComponent(attachmentId)}`,
     { method: "DELETE" },
   );
 }

@@ -4,10 +4,11 @@ const DEMAND_STATUS = [
   "draft",
   "pending_review",
   "rejected",
-  "published",
-  "in_progress",
+  "pending_claim",
+  "claimed",
+  "validating",
   "pilot",
-  "completed",
+  "converted",
   "closed",
   "merged",
 ] as const;
@@ -21,6 +22,15 @@ const APPLICATION_ROLE = ["candidate", "pilot", "solution"] as const;
 const REPORT_STATUS = ["open", "dismissed", "hidden", "restored"] as const;
 
 const PILOT_STATUS = ["planned", "running", "completed", "cancelled"] as const;
+
+const PRIORITY_LEVEL = ["high", "medium", "low"] as const;
+
+const CLAIM_PROPOSAL_STATUS = [
+  "proposed",
+  "selected",
+  "rejected",
+  "withdrawn",
+] as const;
 
 /** 创建需求草稿请求。 */
 export class DemandDraftRequestDto {
@@ -40,10 +50,52 @@ export class DemandDraftRequestDto {
 
   @ApiProperty({
     type: String,
+    description: "业务场景与当前流程",
+    example: "研发团队每周人工汇总多个系统的效能数据，形成周报。",
+  })
+  businessScenario!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "影响对象、发生频率与耗时",
+    example: "研发经理，每周一次，每次约 3 小时。",
+  })
+  impact!: string;
+
+  @ApiProperty({
+    type: String,
     description: "期望结果",
     example: "一个可配置的研发效能看板",
   })
   desiredOutcome!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "当前替代方案",
+    example: "手工拼装 Excel，或用多个工具分别查看。",
+  })
+  currentWorkaround!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "数据类型与敏感程度",
+    example: "研发过程数据，涉及少量员工绩效，中等敏感。",
+  })
+  dataSensitivity!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "AI 方案设想",
+    example: "用大模型自动汇总并生成自然语言周报。",
+  })
+  aiSolutionIdea?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: "附件 ID 列表",
+    example: ["attachment-1"],
+  })
+  attachmentIds?: string[];
 
   @ApiProperty({ type: String, description: "受众类型", enum: AUDIENCE_TYPE })
   audienceType!: (typeof AUDIENCE_TYPE)[number];
@@ -155,14 +207,51 @@ export class DemandPriorityRequestDto {
   @ApiProperty({ type: Number, description: "业务价值（1-5）", example: 5 })
   businessValue!: number;
 
-  @ApiProperty({ type: Number, description: "实施成本（1-5）", example: 3 })
+  @ApiProperty({ type: Number, description: "影响人数（1-5）", example: 4 })
+  impactedHeadcount!: number;
+
+  @ApiProperty({ type: Number, description: "使用频率（1-5）", example: 3 })
+  usageFrequency!: number;
+
+  @ApiProperty({ type: Number, description: "战略匹配度（1-5）", example: 4 })
+  strategicFit!: number;
+
+  @ApiProperty({ type: Number, description: "技术可行性（1-5）", example: 4 })
+  technicalFeasibility!: number;
+
+  @ApiProperty({
+    type: Number,
+    description: "数据与合规风险（1-5，反向）",
+    example: 2,
+  })
+  dataComplianceRisk!: number;
+
+  @ApiProperty({ type: Number, description: "预计实施成本（1-5，反向）", example: 3 })
   implementationCost!: number;
+}
 
-  @ApiProperty({ type: Number, description: "风险等级（1-5）", example: 2 })
-  riskLevel!: number;
+/** 确认需求优先级（高/中/低）请求。 */
+export class DemandPriorityConfirmRequestDto {
+  @ApiProperty({
+    type: Number,
+    description: "期望版本号（乐观锁）",
+    example: 1,
+  })
+  expectedVersion!: number;
 
-  @ApiProperty({ type: Number, description: "管理员优先级（1-5）", example: 4 })
-  adminPriority!: number;
+  @ApiProperty({
+    type: String,
+    description: "确认后的优先级",
+    enum: PRIORITY_LEVEL,
+  })
+  confirmedPriority!: (typeof PRIORITY_LEVEL)[number];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "调整原因",
+    example: "与年度战略高度一致，上调为高优先级。",
+  })
+  adjustmentReason?: string;
 }
 
 /** 推进需求状态请求。 */
@@ -422,12 +511,47 @@ export class DemandEntryDto {
   })
   problemStatement!: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    description: "业务场景与当前流程",
+    nullable: true,
+  })
+  businessScenario?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "影响对象、发生频率与耗时",
+    nullable: true,
+  })
+  impact?: string | null;
+
   @ApiProperty({
     type: String,
     description: "期望结果",
     example: "一个可配置的研发效能看板",
   })
   desiredOutcome!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "当前替代方案",
+    nullable: true,
+  })
+  currentWorkaround?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "数据类型与敏感程度",
+    nullable: true,
+  })
+  dataSensitivity?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "AI 方案设想",
+    nullable: true,
+  })
+  aiSolutionIdea?: string | null;
 
   @ApiProperty({ type: String, description: "需求状态", enum: DEMAND_STATUS })
   status!: (typeof DEMAND_STATUS)[number];
@@ -484,25 +608,46 @@ export class DemandEntryDto {
   businessValue?: number | null;
 
   @ApiPropertyOptional({
-    description: "实施成本（1-5）",
+    description: "影响人数（1-5）",
+    type: Number,
+    nullable: true,
+  })
+  impactedHeadcount?: number | null;
+
+  @ApiPropertyOptional({
+    description: "使用频率（1-5）",
+    type: Number,
+    nullable: true,
+  })
+  usageFrequency?: number | null;
+
+  @ApiPropertyOptional({
+    description: "战略匹配度（1-5）",
+    type: Number,
+    nullable: true,
+  })
+  strategicFit?: number | null;
+
+  @ApiPropertyOptional({
+    description: "技术可行性（1-5）",
+    type: Number,
+    nullable: true,
+  })
+  technicalFeasibility?: number | null;
+
+  @ApiPropertyOptional({
+    description: "数据与合规风险（1-5，反向）",
+    type: Number,
+    nullable: true,
+  })
+  dataComplianceRisk?: number | null;
+
+  @ApiPropertyOptional({
+    description: "预计实施成本（1-5，反向）",
     type: Number,
     nullable: true,
   })
   implementationCost?: number | null;
-
-  @ApiPropertyOptional({
-    description: "风险等级（1-5）",
-    type: Number,
-    nullable: true,
-  })
-  riskLevel?: number | null;
-
-  @ApiPropertyOptional({
-    description: "管理员优先级（1-5）",
-    type: Number,
-    nullable: true,
-  })
-  adminPriority?: number | null;
 
   @ApiPropertyOptional({
     description: "优先级得分",
@@ -517,6 +662,20 @@ export class DemandEntryDto {
     nullable: true,
   })
   priorityExplanation?: string | null;
+
+  @ApiPropertyOptional({
+    description: "确认后的优先级（高/中/低）",
+    enum: PRIORITY_LEVEL,
+    nullable: true,
+  })
+  confirmedPriority?: (typeof PRIORITY_LEVEL)[number] | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "优先级调整原因",
+    nullable: true,
+  })
+  priorityAdjustmentReason?: string | null;
 
   @ApiPropertyOptional({
     type: String,
@@ -876,4 +1035,167 @@ export class DemandMergeResultDto {
 
   @ApiProperty({ description: "目标需求", type: () => DemandEntryDto })
   target!: DemandEntryDto;
+}
+
+/** 提交认领方案请求。 */
+export class DemandClaimProposalRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "拟定负责人员工工号",
+    example: "DEMO-INNOVATION",
+  })
+  ownerEmployeeId!: string;
+
+  @ApiProperty({
+    type: [String],
+    description: "拟定协作者员工工号列表",
+    example: ["DEMO-EMPLOYEE"],
+  })
+  collaboratorEmployeeIds!: string[];
+
+  @ApiProperty({
+    type: String,
+    description: "初步思路",
+    example: "先基于现有数据中台做原型，验证自动汇总可行性。",
+  })
+  approach!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "预计验证时间",
+    example: "4 周",
+  })
+  estimatedValidationDuration!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "资源需求",
+    example: "2 名后端 + 1 名前端，0.5 个数据接口资源。",
+  })
+  resourceNeeds!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "提交人偏好说明",
+    example: "希望优先验证自动汇总这一最小闭环。",
+  })
+  preference?: string;
+}
+
+/** 认领方案记录。 */
+export class DemandClaimProposalDto {
+  @ApiProperty({ type: String, description: "方案 ID" })
+  proposalId!: string;
+
+  @ApiProperty({ type: String, description: "需求 ID" })
+  demandId!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "方案提交人",
+    example: "DEMO-EMPLOYEE",
+  })
+  proposerEmployeeId!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "拟定负责人",
+    example: "DEMO-INNOVATION",
+  })
+  ownerEmployeeId!: string;
+
+  @ApiProperty({ type: [String], description: "拟定协作者" })
+  collaboratorEmployeeIds!: string[];
+
+  @ApiProperty({ type: String, description: "初步思路" })
+  approach!: string;
+
+  @ApiProperty({ type: String, description: "预计验证时间" })
+  estimatedValidationDuration!: string;
+
+  @ApiProperty({ type: String, description: "资源需求" })
+  resourceNeeds!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "提交人偏好说明",
+    nullable: true,
+  })
+  preference?: string | null;
+
+  @ApiProperty({ type: String, description: "方案状态", enum: CLAIM_PROPOSAL_STATUS })
+  status!: (typeof CLAIM_PROPOSAL_STATUS)[number];
+
+  @ApiProperty({
+    description: "创建时间（ISO 8601）",
+    type: String,
+    format: "date-time",
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    description: "更新时间（ISO 8601）",
+    type: String,
+    format: "date-time",
+  })
+  updatedAt!: string;
+}
+
+/** 确认认领方案请求。 */
+export class DemandClaimConfirmRequestDto {
+  @ApiProperty({
+    type: Number,
+    description: "期望版本号（乐观锁）",
+    example: 1,
+  })
+  expectedVersion!: number;
+}
+
+/** 解除认领请求。 */
+export class DemandReleaseRequestDto {
+  @ApiProperty({
+    type: Number,
+    description: "期望版本号（乐观锁）",
+    example: 1,
+  })
+  expectedVersion!: number;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "解除原因",
+    example: "长期无进展，重新开放认领。",
+  })
+  reason?: string;
+}
+
+/** 需求附件记录。 */
+export class DemandAttachmentDto {
+  @ApiProperty({ type: String, description: "附件 ID" })
+  attachmentId!: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "所属需求 ID，未提交前为 null",
+    nullable: true,
+  })
+  demandId?: string | null;
+
+  @ApiProperty({ type: String, description: "文件名" })
+  fileName!: string;
+
+  @ApiProperty({ type: String, description: "MIME 类型" })
+  mimeType!: string;
+
+  @ApiProperty({ type: Number, description: "大小（字节）" })
+  sizeBytes!: number;
+
+  @ApiProperty({ type: String, description: "上传员工工号" })
+  uploadedByEmployeeId!: string;
+
+  @ApiProperty({
+    description: "创建时间（ISO 8601）",
+    type: String,
+    format: "date-time",
+  })
+  createdAt!: string;
 }

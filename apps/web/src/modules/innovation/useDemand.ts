@@ -7,13 +7,18 @@ import {
   addDemandProgress,
   advanceDemandStatus,
   claimDemand,
+  confirmDemandClaim,
+  confirmDemandPriority,
   createApplicationFromDemand,
   createDemandDraft,
   createDemandPilot,
+  deleteDemandAttachment,
   getDemand,
   likeDemand,
   likeDemandComment,
   listDemandApplications,
+  listDemandAttachments,
+  listDemandClaimProposals,
   listDemandCollaborators,
   listDemandComments,
   listDemandProgress,
@@ -21,6 +26,7 @@ import {
   listDemandReports,
   listDemands,
   lookupAnonymousAuthor,
+  releaseDemandClaim,
   removeDemandApplication,
   removeDemandCollaborator,
   linkDemandApplication,
@@ -29,10 +35,13 @@ import {
   resolveDemandReport,
   reviewDemand,
   setDemandPriority,
+  submitDemandClaimProposal,
   submitDemandForReview,
   updateDemandDraft,
   updateDemandCollaboratorRole,
   updateDemandPilot,
+  uploadDemandAttachment,
+  withdrawDemandClaimProposal,
   type DemandListQuery,
 } from "./demand.client";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
@@ -274,6 +283,93 @@ export function useSetDemandPriority(demandId?: string) {
       setDemandPriority(demandId as string, input),
     onSuccess: async () => invalidateDemand(queryClient, demandId),
     onError: (error) => showErrorMessage(error, "保存优先级失败"),
+  });
+}
+
+export function useConfirmDemandPriority(demandId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof confirmDemandPriority>[1]) =>
+      confirmDemandPriority(demandId as string, input),
+    onSuccess: async () => invalidateDemand(queryClient, demandId),
+    onError: (error) => showErrorMessage(error, "确认优先级失败"),
+  });
+}
+
+export function useDemandClaimProposals(demandId?: string, enabled = false) {
+  return useQuery({
+    enabled: Boolean(demandId) && enabled,
+    queryKey: ["demands", "claim-proposals", demandId],
+    queryFn: () => listDemandClaimProposals(demandId as string),
+  });
+}
+
+export function useSubmitDemandClaimProposal(demandId?: string) {
+  return useGovernanceMutation(
+    demandId,
+    (input: Parameters<typeof submitDemandClaimProposal>[1]) =>
+      submitDemandClaimProposal(demandId as string, input),
+    "提交认领方案失败",
+  );
+}
+
+export function useWithdrawDemandClaimProposal(demandId?: string) {
+  return useGovernanceMutation(
+    demandId,
+    (input: { proposalId: string }) =>
+      withdrawDemandClaimProposal(demandId as string, input.proposalId),
+    "撤回认领方案失败",
+  );
+}
+
+export function useConfirmDemandClaim(demandId?: string) {
+  return useGovernanceMutation(
+    demandId,
+    (input: { proposalId: string; expectedVersion: number }) =>
+      confirmDemandClaim(demandId as string, input.proposalId, input.expectedVersion),
+    "确认认领方案失败",
+  );
+}
+
+export function useReleaseDemandClaim(demandId?: string) {
+  return useGovernanceMutation(
+    demandId,
+    (input: { expectedVersion: number; reason?: string }) =>
+      releaseDemandClaim(demandId as string, input.expectedVersion, input.reason),
+    "解除认领失败",
+  );
+}
+
+export function useDemandAttachments(demandId?: string, enabled = false) {
+  return useQuery({
+    enabled: Boolean(demandId) && enabled,
+    queryKey: ["demands", "attachments", demandId],
+    queryFn: () => listDemandAttachments(demandId as string),
+  });
+}
+
+export function useUploadDemandAttachment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => uploadDemandAttachment(file),
+    onError: (error) => showErrorMessage(error, "附件上传失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["demands", "attachments"] });
+    },
+  });
+}
+
+export function useDeleteDemandAttachment(demandId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attachmentId: string) =>
+      deleteDemandAttachment(demandId as string, attachmentId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["demands", "attachments", demandId],
+      });
+    },
+    onError: (error) => showErrorMessage(error, "删除附件失败"),
   });
 }
 

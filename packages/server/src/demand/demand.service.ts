@@ -4,12 +4,15 @@ import {
   type ActorContext,
   type DemandApplicationRole,
   type DemandPriorityInput,
+  type DemandPriorityLevel,
   type DemandStatus,
 } from "@ai-hub/contracts";
 import type {
   DemandAuthorizationPort,
   DemandCommentRecord,
   DemandCollaboratorRecord,
+  DemandClaimProposalRecord,
+  DemandAttachmentRecord,
   DemandDraftInput,
   DemandEntry,
   DemandListResult,
@@ -29,10 +32,11 @@ const statusTransitions: Readonly<
   draft: [],
   pending_review: [],
   rejected: [],
-  published: ["in_progress", "closed"],
-  in_progress: ["pilot", "completed", "closed"],
-  pilot: ["completed", "closed"],
-  completed: ["closed"],
+  pending_claim: ["claimed", "closed"],
+  claimed: ["validating", "pilot", "converted", "closed"],
+  validating: ["pilot", "converted", "closed"],
+  pilot: ["converted", "closed"],
+  converted: ["closed"],
   closed: [],
   merged: [],
 };
@@ -51,18 +55,27 @@ export class DemandService {
   ): Promise<DemandEntry> {
     await this.assertAllowed(actor, "create");
     const normalized = this.normalizeInput(input);
+    const attachmentIds = input.attachmentIds ?? [];
     return this.repository.withTransaction(async (repository) => {
       const demand = await repository.createDraft({
         requesterEmployeeId: actor.employeeId,
         title: normalized.title,
         problemStatement: normalized.problemStatement,
+        businessScenario: normalized.businessScenario,
+        impact: normalized.impact,
         desiredOutcome: normalized.desiredOutcome,
+        currentWorkaround: normalized.currentWorkaround,
+        dataSensitivity: normalized.dataSensitivity,
+        aiSolutionIdea: normalized.aiSolutionIdea,
         audienceType: normalized.audienceType,
         departmentId: normalized.departmentId,
         employeeId: normalized.employeeId,
         includeChildren: normalized.includeChildren,
         displayAnonymously: normalized.displayAnonymously,
       });
+      for (const attachmentId of attachmentIds) {
+        await repository.linkAttachmentToDemand(attachmentId, demand.demandId);
+      }
       await this.recordMutation(repository, demand, actor, "demand.created");
       return demand;
     });
@@ -137,7 +150,7 @@ export class DemandService {
       throw new Error("DEMAND_REJECTION_REASON_REQUIRED");
     }
     const nextStatus: DemandStatus =
-      decision === "publish" ? "published" : "rejected";
+      decision === "publish" ? "pending_claim" : "rejected";
     return this.repository.withTransaction(async (repository) => {
       const reviewed = await repository.transitionStatus(
         demandId,
@@ -170,7 +183,7 @@ export class DemandService {
       throw new Error("DEMAND_CONFLICT");
     }
     if (
-      !new Set<DemandStatus>(["published", "in_progress", "pilot"]).has(
+      !new Set<DemandStatus>(["pending_claim", "claimed", "pilot"]).has(
         current.status,
       )
     ) {
@@ -187,6 +200,244 @@ export class DemandService {
       });
       return claimed;
     });
+  }
+
+  async submitClaimProposal(
+    actor: ActorContext,
+    demandId: string,
+    input: {
+      ownerEmployeeId: string;
+      collaboratorEmployeeIds: string[];
+      approach: string;
+      estimatedValidationDuration: string;
+      resourceNeeds: string;
+      preference?: string;
+    },
+  ): Promise<DemandClaimProposalRecord> {
+    await this.assertAllowed(actor, "claim", demandId);
+    const current = await this.requireDemand(demandId);
+    if (current.status !== "pending_claim") {
+      throw new Error("DEMAND_CLAIM_INVALID_STATE");
+    }
+    const approach = input.approach.trim();
+    const estimatedValidationDuration = input.estimatedValidationDuration.trim();
+    const resourceNeeds = input.resourceNeeds.trim();
+    const preference = input.preference?.trim() || null;
+    if (
+      approach.length < 5 ||
+      approach.length > 5000 ||
+      estimatedValidationDuration.length < 1 ||
+      estimatedValidationDuration.length > 200 ||
+      resourceNeeds.length < 1 ||
+      resourceNeeds.length > 2000
+    ) {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_INVALID");
+    }
+    const collaboratorIds = [
+      ...new Set(input.collaboratorEmployeeIds.filter((id) => id.trim())),
+    ];
+    if (collaboratorIds.length > 20) {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const proposal = await repository.createClaimProposal({
+        demandId,
+        proposerEmployeeId: actor.employeeId,
+        ownerEmployeeId: input.ownerEmployeeId.trim(),
+        collaboratorEmployeeIds: collaboratorIds,
+        approach,
+        estimatedValidationDuration,
+        resourceNeeds,
+        preference,
+      });
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.claim_proposal.created",
+        details: { proposalId: proposal.proposalId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.claim_proposal.created",
+      });
+      return proposal;
+    });
+  }
+
+  async listClaimProposals(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandClaimProposalRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listClaimProposals(demandId);
+  }
+
+  async withdrawClaimProposal(
+    actor: ActorContext,
+    demandId: string,
+    proposalId: string,
+  ): Promise<DemandClaimProposalRecord> {
+    await this.assertAllowed(actor, "claim", demandId);
+    const proposal = await this.repository.findClaimProposal(proposalId);
+    if (proposal === null || proposal.demandId !== demandId) {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_NOT_FOUND");
+    }
+    if (proposal.proposerEmployeeId !== actor.employeeId) {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_FORBIDDEN");
+    }
+    if (proposal.status !== "proposed") {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_INVALID_STATE");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const withdrawn = await repository.updateClaimProposalStatus(
+        proposalId,
+        "withdrawn",
+      );
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.claim_proposal.withdrawn",
+        details: { proposalId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.claim_proposal.withdrawn",
+      });
+      return withdrawn;
+    });
+  }
+
+  async confirmClaim(
+    actor: ActorContext,
+    demandId: string,
+    proposalId: string,
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "manage", demandId);
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_MANAGE)) {
+      throw new Error("DEMAND_CLAIM_CONFIRM_FORBIDDEN");
+    }
+    const proposal = await this.repository.findClaimProposal(proposalId);
+    if (proposal === null || proposal.demandId !== demandId) {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_NOT_FOUND");
+    }
+    if (proposal.status !== "proposed") {
+      throw new Error("DEMAND_CLAIM_PROPOSAL_INVALID_STATE");
+    }
+    const current = await this.requireDemand(demandId);
+    if (current.status !== "pending_claim") {
+      throw new Error("DEMAND_CLAIM_INVALID_STATE");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const claimed = await repository.confirmClaim(
+        demandId,
+        proposal.ownerEmployeeId,
+        proposal.collaboratorEmployeeIds,
+        expectedVersion,
+      );
+      await repository.updateClaimProposalStatus(proposalId, "selected");
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.claim.confirmed",
+        details: {
+          proposalId,
+          ownerEmployeeId: proposal.ownerEmployeeId,
+        },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.claim.confirmed",
+      });
+      return claimed;
+    });
+  }
+
+  async releaseClaim(
+    actor: ActorContext,
+    demandId: string,
+    expectedVersion: number,
+    reason?: string,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "manage", demandId);
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_MANAGE)) {
+      throw new Error("DEMAND_CLAIM_CONFIRM_FORBIDDEN");
+    }
+    const current = await this.requireDemand(demandId);
+    if (
+      !new Set<DemandStatus>(["claimed", "validating", "pilot"]).has(
+        current.status,
+      )
+    ) {
+      throw new Error("DEMAND_RELEASE_INVALID_STATE");
+    }
+    const releaseReason = reason?.trim() || null;
+    return this.repository.withTransaction(async (repository) => {
+      const released = await repository.releaseClaim(demandId, expectedVersion);
+      await this.recordMutation(repository, released, actor, "demand.claim.released", {
+        reason: releaseReason,
+      });
+      return released;
+    });
+  }
+
+  async createAttachment(
+    actor: ActorContext,
+    input: {
+      storageKey: string;
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      sha256: string;
+    },
+  ): Promise<DemandAttachmentRecord> {
+    await this.assertAllowed(actor, "create");
+    return this.repository.createAttachment({
+      storageKey: input.storageKey,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      sha256: input.sha256,
+      uploadedByEmployeeId: actor.employeeId,
+    });
+  }
+
+  async deleteAttachment(
+    actor: ActorContext,
+    demandId: string,
+    attachmentId: string,
+  ): Promise<void> {
+    await this.assertAllowed(actor, "update", demandId);
+    const current = await this.requireDemand(demandId);
+    this.assertRequester(actor, current);
+    if (!reviewableStatuses.has(current.status)) {
+      throw new Error("DEMAND_DRAFT_NOT_EDITABLE");
+    }
+    const attachments = await this.repository.listAttachments(demandId);
+    if (!attachments.some((item) => item.attachmentId === attachmentId)) {
+      throw new Error("DEMAND_ATTACHMENT_NOT_FOUND");
+    }
+    await this.repository.withTransaction(async (repository) => {
+      await repository.deleteAttachment(attachmentId);
+      await repository.recordAudit({
+        demandId,
+        actorEmployeeId: actor.employeeId,
+        eventType: "demand.attachment.removed",
+        details: { attachmentId },
+      });
+      await repository.emitOutbox({
+        demandId,
+        eventType: "demand.attachment.removed",
+      });
+    });
+  }
+
+  async listAttachments(
+    actor: ActorContext,
+    demandId: string,
+  ): Promise<readonly DemandAttachmentRecord[]> {
+    await this.getDetail(actor, demandId);
+    return this.repository.listAttachments(demandId);
   }
 
   async addCollaborator(
@@ -286,17 +537,23 @@ export class DemandService {
     }
     const score = Number(
       (
-        input.businessValue * 0.4 +
-        input.adminPriority * 0.3 +
-        (6 - input.implementationCost) * 0.15 +
-        (6 - input.riskLevel) * 0.15
+        input.businessValue * 0.2 +
+        input.impactedHeadcount * 0.15 +
+        input.usageFrequency * 0.1 +
+        input.strategicFit * 0.15 +
+        input.technicalFeasibility * 0.1 +
+        (6 - input.dataComplianceRisk) * 0.15 +
+        (6 - input.implementationCost) * 0.15
       ).toFixed(1),
     );
     const explanation =
-      `0.40*businessValue=${input.businessValue} + ` +
-      `0.30*adminPriority=${input.adminPriority} + ` +
-      `0.15*(6-implementationCost=${input.implementationCost}) + ` +
-      `0.15*(6-riskLevel=${input.riskLevel}) = ${score}`;
+      `0.20*businessValue=${input.businessValue} + ` +
+      `0.15*impactedHeadcount=${input.impactedHeadcount} + ` +
+      `0.10*usageFrequency=${input.usageFrequency} + ` +
+      `0.15*strategicFit=${input.strategicFit} + ` +
+      `0.10*technicalFeasibility=${input.technicalFeasibility} + ` +
+      `0.15*(6-dataComplianceRisk=${input.dataComplianceRisk}) + ` +
+      `0.15*(6-implementationCost=${input.implementationCost}) = ${score}`;
     return this.repository.withTransaction(async (repository) => {
       const prioritized = await repository.setPriority(
         demandId,
@@ -317,6 +574,43 @@ export class DemandService {
         },
       );
       return prioritized;
+    });
+  }
+
+  async confirmPriority(
+    actor: ActorContext,
+    demandId: string,
+    expectedVersion: number,
+    confirmedPriority: DemandPriorityLevel,
+    adjustmentReason?: string,
+  ): Promise<DemandEntry> {
+    await this.assertAllowed(actor, "prioritize", demandId);
+    if (!hasPermission(actor, PERMISSIONS.DEMAND_PRIORITIZE)) {
+      throw new Error("DEMAND_PRIORITY_FORBIDDEN");
+    }
+    const current = await this.requireDemand(demandId);
+    if (current.priorityScore === null) {
+      throw new Error("DEMAND_PRIORITY_NOT_SCORED");
+    }
+    const reason = adjustmentReason?.trim() || null;
+    if (reason !== null && (reason.length < 3 || reason.length > 2000)) {
+      throw new Error("DEMAND_PRIORITY_ADJUSTMENT_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const confirmed = await repository.confirmPriority(
+        demandId,
+        confirmedPriority,
+        reason,
+        expectedVersion,
+      );
+      await this.recordMutation(
+        repository,
+        confirmed,
+        actor,
+        "demand.priority.confirmed",
+        { confirmedPriority, adjustmentReason: reason },
+      );
+      return confirmed;
     });
   }
 
@@ -419,7 +713,7 @@ export class DemandService {
     await this.assertAllowed(actor, "progress", demandId);
     const current = await this.requireDemand(demandId);
     this.assertProgressActor(actor, current);
-    if (current.status !== "in_progress" && current.status !== "pilot") {
+    if (current.status !== "claimed" && current.status !== "pilot") {
       throw new Error("DEMAND_PILOT_INVALID_STATE");
     }
     const name = input.name.trim();
@@ -595,7 +889,7 @@ export class DemandService {
     const demand = await this.requireDemand(demandId);
     this.assertProgressActor(actor, demand);
     if (
-      !new Set<DemandStatus>(["in_progress", "pilot", "completed"]).has(
+      !new Set<DemandStatus>(["claimed", "validating", "pilot", "converted"]).has(
         demand.status,
       )
     ) {
@@ -1097,20 +1391,37 @@ export class DemandService {
       DemandDraftInput,
       | "title"
       | "problemStatement"
+      | "businessScenario"
+      | "impact"
       | "desiredOutcome"
+      | "currentWorkaround"
+      | "dataSensitivity"
       | "audienceType"
       | "includeChildren"
       | "displayAnonymously"
     >
-  > & { departmentId: string | null; employeeId: string | null } {
+  > & {
+    departmentId: string | null;
+    employeeId: string | null;
+    aiSolutionIdea: string | null;
+  } {
     const title = input.title.trim();
     const problemStatement = input.problemStatement.trim();
+    const businessScenario = input.businessScenario.trim();
+    const impact = input.impact.trim();
     const desiredOutcome = input.desiredOutcome.trim();
+    const currentWorkaround = input.currentWorkaround.trim();
+    const dataSensitivity = input.dataSensitivity.trim();
+    const aiSolutionIdea = input.aiSolutionIdea?.trim() || null;
     if (
       title.length < 3 ||
       title.length > 200 ||
       problemStatement.length < 10 ||
-      desiredOutcome.length < 10
+      businessScenario.length < 5 ||
+      impact.length < 5 ||
+      desiredOutcome.length < 10 ||
+      currentWorkaround.length < 2 ||
+      dataSensitivity.length < 2
     ) {
       throw new Error("DEMAND_FIELD_INVALID");
     }
@@ -1135,7 +1446,12 @@ export class DemandService {
     return {
       title,
       problemStatement,
+      businessScenario,
+      impact,
       desiredOutcome,
+      currentWorkaround,
+      dataSensitivity,
+      aiSolutionIdea,
       audienceType: input.audienceType,
       departmentId: input.departmentId?.trim() ?? null,
       employeeId: input.employeeId?.trim() ?? null,
@@ -1151,13 +1467,23 @@ export class DemandService {
     const draft: DemandDraftInput = {
       title: input.title ?? current.title,
       problemStatement: input.problemStatement ?? current.problemStatement,
+      businessScenario: input.businessScenario ?? current.businessScenario ?? "",
+      impact: input.impact ?? current.impact ?? "",
       desiredOutcome: input.desiredOutcome ?? current.desiredOutcome,
+      currentWorkaround:
+        input.currentWorkaround ?? current.currentWorkaround ?? "",
+      dataSensitivity: input.dataSensitivity ?? current.dataSensitivity ?? "",
       audienceType: input.audienceType ?? current.audienceType,
       includeChildren:
         input.includeChildren ?? current.includeChildren ?? false,
       displayAnonymously:
         input.displayAnonymously ?? current.displayAnonymously,
     };
+    const aiSolutionIdea =
+      input.aiSolutionIdea ?? current.aiSolutionIdea ?? null;
+    if (aiSolutionIdea !== null) {
+      draft.aiSolutionIdea = aiSolutionIdea;
+    }
     if (input.departmentId !== undefined) {
       draft.departmentId = input.departmentId;
     } else if (current.audienceDepartmentId !== null) {

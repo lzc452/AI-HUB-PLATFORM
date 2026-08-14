@@ -2,9 +2,13 @@ import type {
   ActorContext,
   AuthorizationDecision,
   CreateDemandInput,
+  DemandAttachment,
   DemandCollaboratorRole,
   DemandApplicationRole,
   DemandStatus,
+  DemandPriorityInput,
+  DemandPriorityLevel,
+  DemandClaimProposalStatus,
 } from "@ai-hub/contracts";
 import type { ApplicationRepository } from "../application/application.types.js";
 
@@ -15,7 +19,12 @@ export interface DemandEntry {
   requesterDisplayName?: string | null;
   title: string;
   problemStatement: string;
+  businessScenario?: string | null;
+  impact?: string | null;
   desiredOutcome: string;
+  currentWorkaround?: string | null;
+  dataSensitivity?: string | null;
+  aiSolutionIdea?: string | null;
   status: DemandStatus;
   audienceType: CreateDemandInput["audienceType"];
   audienceDepartmentId: string | null;
@@ -27,11 +36,16 @@ export interface DemandEntry {
   commentCount: number;
   likedByCurrentActor?: boolean;
   businessValue?: number | null;
+  impactedHeadcount?: number | null;
+  usageFrequency?: number | null;
+  strategicFit?: number | null;
+  technicalFeasibility?: number | null;
+  dataComplianceRisk?: number | null;
   implementationCost?: number | null;
-  riskLevel?: number | null;
-  adminPriority?: number | null;
   priorityScore: number | null;
   priorityExplanation: string | null;
+  confirmedPriority?: DemandPriorityLevel | null;
+  priorityAdjustmentReason?: string | null;
   ownerEmployeeId: string | null;
   ownerDisplayName?: string | null;
   primarySolutionApplicationId: string | null;
@@ -67,7 +81,12 @@ export interface DemandRepository {
     requesterEmployeeId: string;
     title: string;
     problemStatement: string;
+    businessScenario: string;
+    impact: string;
     desiredOutcome: string;
+    currentWorkaround: string;
+    dataSensitivity: string;
+    aiSolutionIdea: string | null;
     audienceType: CreateDemandInput["audienceType"];
     departmentId: string | null;
     employeeId: string | null;
@@ -93,7 +112,12 @@ export interface DemandRepository {
     input: Partial<{
       title: string;
       problemStatement: string;
+      businessScenario: string;
+      impact: string;
       desiredOutcome: string;
+      currentWorkaround: string;
+      dataSensitivity: string;
+      aiSolutionIdea: string | null;
       audienceType: CreateDemandInput["audienceType"];
       departmentId: string | null;
       employeeId: string | null;
@@ -112,6 +136,13 @@ export interface DemandRepository {
     employeeId: string,
     expectedVersion: number,
   ): Promise<DemandEntry>;
+  confirmClaim(
+    demandId: string,
+    ownerEmployeeId: string,
+    collaboratorEmployeeIds: string[],
+    expectedVersion: number,
+  ): Promise<DemandEntry>;
+  releaseClaim(demandId: string, expectedVersion: number): Promise<DemandEntry>;
   assignCollaborator(
     demandId: string,
     employeeId: string,
@@ -134,15 +165,16 @@ export interface DemandRepository {
   ): Promise<void>;
   setPriority(
     demandId: string,
-    input: {
-      businessValue: number;
-      implementationCost: number;
-      riskLevel: number;
-      adminPriority: number;
-    },
+    input: DemandPriorityInput,
     expectedVersion: number,
     score: number,
     explanation: string,
+  ): Promise<DemandEntry>;
+  confirmPriority(
+    demandId: string,
+    confirmedPriority: DemandPriorityLevel,
+    adjustmentReason: string | null,
+    expectedVersion: number,
   ): Promise<DemandEntry>;
   createProgressUpdate(input: {
     demandId: string;
@@ -223,6 +255,40 @@ export interface DemandRepository {
   ): Promise<DemandReportRecord>;
   listPilots(demandId: string): Promise<readonly DemandPilotRecord[]>;
   listReports(demandId: string): Promise<readonly DemandReportRecord[]>;
+  createClaimProposal(input: {
+    demandId: string;
+    proposerEmployeeId: string;
+    ownerEmployeeId: string;
+    collaboratorEmployeeIds: string[];
+    approach: string;
+    estimatedValidationDuration: string;
+    resourceNeeds: string;
+    preference: string | null;
+  }): Promise<DemandClaimProposalRecord>;
+  listClaimProposals(
+    demandId: string,
+  ): Promise<readonly DemandClaimProposalRecord[]>;
+  findClaimProposal(
+    proposalId: string,
+  ): Promise<DemandClaimProposalRecord | null>;
+  updateClaimProposalStatus(
+    proposalId: string,
+    status: DemandClaimProposalStatus,
+  ): Promise<DemandClaimProposalRecord>;
+  createAttachment(input: {
+    storageKey: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    sha256: string;
+    uploadedByEmployeeId: string;
+  }): Promise<DemandAttachmentRecord>;
+  linkAttachmentToDemand(
+    attachmentId: string,
+    demandId: string,
+  ): Promise<void>;
+  listAttachments(demandId: string): Promise<readonly DemandAttachmentRecord[]>;
+  deleteAttachment(attachmentId: string): Promise<void>;
   recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -236,6 +302,31 @@ export interface DemandCollaboratorRecord {
   demandId: string;
   employeeId: string;
   role: DemandCollaboratorRole;
+  createdAt: Date;
+}
+
+export interface DemandClaimProposalRecord {
+  proposalId: string;
+  demandId: string;
+  proposerEmployeeId: string;
+  ownerEmployeeId: string;
+  collaboratorEmployeeIds: string[];
+  approach: string;
+  estimatedValidationDuration: string;
+  resourceNeeds: string;
+  preference: string | null;
+  status: DemandClaimProposalStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DemandAttachmentRecord {
+  attachmentId: string;
+  demandId: string | null;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedByEmployeeId: string;
   createdAt: Date;
 }
 
@@ -319,10 +410,16 @@ export interface DemandAuthorizationPort {
 export interface DemandDraftInput {
   title: string;
   problemStatement: string;
+  businessScenario: string;
+  impact: string;
   desiredOutcome: string;
+  currentWorkaround: string;
+  dataSensitivity: string;
+  aiSolutionIdea?: string;
   audienceType: CreateDemandInput["audienceType"];
   departmentId?: string;
   employeeId?: string;
   includeChildren?: boolean;
   displayAnonymously?: boolean;
+  attachmentIds?: string[];
 }

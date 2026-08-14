@@ -26,6 +26,7 @@ import * as outboxQuarantine from "./migrations/0024_outbox_quarantine.js";
 import * as applicationDraft from "./migrations/0025_application_draft.js";
 import * as unifiedUpload from "./migrations/0026_unified_upload.js";
 import * as versionArtifactNullable from "./migrations/0027_version_artifact_nullable.js";
+import * as demandClaimProposalAndPriority from "./migrations/0028_demand_claim_proposal_and_priority.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -56,6 +57,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0025_application_draft": applicationDraft,
   "0026_unified_upload": unifiedUpload,
   "0027_version_artifact_nullable": versionArtifactNullable,
+  "0028_demand_claim_proposal_and_priority": demandClaimProposalAndPriority,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

@@ -3,18 +3,19 @@ import { Module, type DynamicModule } from "@nestjs/common";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import { ApplicationModule } from "../application/application.module.js";
 import type { ApplicationService } from "../application/application.service.js";
+import { DiskObjectStorage } from "../application/storage.disk.js";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { DemandController } from "./demand.controller.js";
 import { KyselyDemandRepository } from "./demand.repository.js";
 import { DemandService } from "./demand.service.js";
-import { DEMAND_SERVICE } from "./demand.tokens.js";
+import { DEMAND_SERVICE, DEMAND_STORAGE } from "./demand.tokens.js";
 import { AnalyticsEventService } from "../analytics/analytics.service.js";
 import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 @Module({})
 export class DemandModule {
-  static register(databaseUrl: string): DynamicModule {
+  static register(databaseUrl: string, storageDirectory?: string): DynamicModule {
     return {
       module: DemandModule,
       imports: [
@@ -39,6 +40,14 @@ export class DemandModule {
             ),
           inject: [IdentityService, APPLICATION_SERVICE],
         },
+        ...(storageDirectory === undefined
+          ? []
+          : [
+              {
+                provide: DEMAND_STORAGE,
+                useValue: new DiskObjectStorage(storageDirectory),
+              },
+            ]),
       ],
       exports: [DEMAND_SERVICE],
     };

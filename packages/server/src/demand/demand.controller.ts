@@ -8,6 +8,7 @@ import {
   Headers,
   Inject,
   NotFoundException,
+  Optional,
   Param,
   Patch,
   Post,
@@ -22,13 +23,21 @@ import {
   ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
+import { createHash, randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
 import {
   Authenticated,
   RequiresPermissions,
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
-import { DEMAND_SERVICE } from "./demand.tokens.js";
+import type { ReadableObjectStoragePort } from "../application/storage.port.js";
+import {
+  assertMagicMatches,
+  assertUploadAllowed,
+  fileExtension,
+} from "../application/upload-policy.js";
+import { DEMAND_SERVICE, DEMAND_STORAGE } from "./demand.tokens.js";
 import { DemandService } from "./demand.service.js";
 import {
   DemandApplicationLinkDto,
@@ -48,6 +57,7 @@ import {
   DemandPilotRequestDto,
   DemandPilotUpdateRequestDto,
   DemandPriorityRequestDto,
+  DemandPriorityConfirmRequestDto,
   DemandProgressDto,
   DemandProgressRequestDto,
   DemandReportDto,
@@ -57,6 +67,11 @@ import {
   DemandStatusRequestDto,
   SaveDemandDraftRequestDto,
   DemandLinkApplicationRequestDto,
+  DemandClaimProposalRequestDto,
+  DemandClaimProposalDto,
+  DemandClaimConfirmRequestDto,
+  DemandReleaseRequestDto,
+  DemandAttachmentDto,
 } from "./demand.dto.js";
 import {
   EmployeeIdResultDto,
@@ -74,6 +89,9 @@ export class DemandController {
   constructor(
     @Inject(DEMAND_SERVICE) private readonly demands: DemandService,
     @Inject(IdentityService) private readonly identity: IdentityService,
+    @Optional()
+    @Inject(DEMAND_STORAGE)
+    private readonly storage?: ReadableObjectStoragePort,
   ) {}
 
   @Post()
@@ -181,6 +199,236 @@ export class DemandController {
         await this.actor(employeeId, sessionId),
         demandId,
         body.expectedVersion,
+      ),
+    );
+  }
+
+  @Post(":demandId/claim-proposals")
+  @RequiresPermissions(PERMISSIONS.DEMAND_CLAIM)
+  @ApiOperation({ summary: "提交认领方案" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandClaimProposalRequestDto })
+  @ApiCreatedResponse({ description: "认领方案记录", type: DemandClaimProposalDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  submitClaimProposal(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: DemandClaimProposalRequestDto,
+  ) {
+    return this.call(async () =>
+      this.demands.submitClaimProposal(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body,
+      ),
+    );
+  }
+
+  @Get(":demandId/claim-proposals")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
+  @ApiOperation({ summary: "认领方案列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "认领方案列表",
+    type: DemandClaimProposalDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  listClaimProposals(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listClaimProposals(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
+  @Post(":demandId/claim-proposals/:proposalId/withdraw")
+  @RequiresPermissions(PERMISSIONS.DEMAND_CLAIM)
+  @ApiOperation({ summary: "撤回认领方案" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "proposalId", description: "方案 ID" })
+  @ApiCreatedResponse({ description: "撤回后的方案记录", type: DemandClaimProposalDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  withdrawClaimProposal(
+    @Param("demandId") demandId: string,
+    @Param("proposalId") proposalId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.withdrawClaimProposal(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        proposalId,
+      ),
+    );
+  }
+
+  @Post(":demandId/claim-proposals/:proposalId/confirm")
+  @RequiresPermissions(PERMISSIONS.DEMAND_MANAGE)
+  @ApiOperation({ summary: "确认认领方案" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "proposalId", description: "方案 ID" })
+  @ApiBody({ type: DemandClaimConfirmRequestDto })
+  @ApiCreatedResponse({ description: "确认后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  confirmClaim(
+    @Param("demandId") demandId: string,
+    @Param("proposalId") proposalId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: DemandClaimConfirmRequestDto,
+  ) {
+    return this.call(async () =>
+      this.demands.confirmClaim(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        proposalId,
+        body.expectedVersion,
+      ),
+    );
+  }
+
+  @Post(":demandId/release-claim")
+  @RequiresPermissions(PERMISSIONS.DEMAND_MANAGE)
+  @ApiOperation({ summary: "解除认领并重新开放" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandReleaseRequestDto })
+  @ApiCreatedResponse({ description: "解除后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  releaseClaim(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: DemandReleaseRequestDto,
+  ) {
+    return this.call(async () =>
+      this.demands.releaseClaim(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.expectedVersion,
+        body.reason,
+      ),
+    );
+  }
+
+  @Post("uploads")
+  @RequiresPermissions(PERMISSIONS.DEMAND_CREATE)
+  @ApiOperation({
+    summary: "上传需求附件",
+    description: "raw body（application/octet-stream）+ x-file-name / x-file-mime 头。",
+  })
+  @ApiIdentityHeaders()
+  @ApiCreatedResponse({ description: "附件记录", type: DemandAttachmentDto })
+  @ApiProblemResponses([400, 401, 403])
+  uploadAttachment(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Headers("x-file-name") fileName: string | undefined,
+    @Headers("x-file-mime") fileMime: string | undefined,
+    @Body() rawBody: Buffer,
+  ) {
+    return this.call(async () => {
+      const actor = await this.actor(employeeId, sessionId);
+      if (this.storage === undefined) {
+        throw new BadRequestException("DEMAND_ATTACHMENT_UNAVAILABLE");
+      }
+      if (
+        fileName === undefined ||
+        fileName.trim().length === 0 ||
+        !Buffer.isBuffer(rawBody) ||
+        rawBody.byteLength === 0
+      ) {
+        throw new BadRequestException("DEMAND_ATTACHMENT_INVALID");
+      }
+      const decodedName = (() => {
+        try {
+          return decodeURIComponent(fileName.trim());
+        } catch {
+          return fileName.trim();
+        }
+      })();
+      const mimeType = fileMime ?? "application/octet-stream";
+      try {
+        assertUploadAllowed({
+          kind: "attachment",
+          fileName: decodedName,
+          mimeType,
+          sizeBytes: rawBody.byteLength,
+        });
+        assertMagicMatches(rawBody, fileExtension(decodedName));
+      } catch (error) {
+        const code =
+          error instanceof Error ? error.message : "DEMAND_ATTACHMENT_INVALID";
+        throw new BadRequestException(code);
+      }
+      const sha256 = createHash("sha256").update(rawBody).digest("hex");
+      const storageKey = `demands/attachments/${randomUUID()}`;
+      await this.storage.putStream(storageKey, Readable.from(rawBody));
+      return this.demands.createAttachment(actor, {
+        storageKey,
+        fileName: decodedName,
+        mimeType,
+        sizeBytes: rawBody.byteLength,
+        sha256,
+      });
+    });
+  }
+
+  @Get(":demandId/attachments")
+  @RequiresPermissions(PERMISSIONS.DEMAND_READ)
+  @ApiOperation({ summary: "需求附件列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiOkResponse({
+    description: "附件记录列表",
+    type: DemandAttachmentDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  listAttachments(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.listAttachments(
+        await this.actor(employeeId, sessionId),
+        demandId,
+      ),
+    );
+  }
+
+  @Delete(":demandId/attachments/:attachmentId")
+  @RequiresPermissions(PERMISSIONS.DEMAND_UPDATE)
+  @ApiOperation({ summary: "删除需求附件" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiParam({ name: "attachmentId", description: "附件 ID" })
+  @ApiOkResponse({ description: "附件已删除" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  deleteAttachment(
+    @Param("demandId") demandId: string,
+    @Param("attachmentId") attachmentId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.demands.deleteAttachment(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        attachmentId,
       ),
     );
   }
@@ -314,6 +562,31 @@ export class DemandController {
         demandId,
         expectedVersion,
         input,
+      ),
+    );
+  }
+
+  @Post(":demandId/priority/confirm")
+  @RequiresPermissions(PERMISSIONS.DEMAND_PRIORITIZE)
+  @ApiOperation({ summary: "确认需求优先级（高/中/低）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "demandId", description: "需求 ID" })
+  @ApiBody({ type: DemandPriorityConfirmRequestDto })
+  @ApiCreatedResponse({ description: "确认后的需求条目", type: DemandEntryDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  confirmPriority(
+    @Param("demandId") demandId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: DemandPriorityConfirmRequestDto,
+  ) {
+    return this.call(async () =>
+      this.demands.confirmPriority(
+        await this.actor(employeeId, sessionId),
+        demandId,
+        body.expectedVersion,
+        body.confirmedPriority,
+        body.adjustmentReason,
       ),
     );
   }
@@ -912,13 +1185,21 @@ export class DemandController {
     } catch (error) {
       const code =
         error instanceof Error ? error.message : "DEMAND_REQUEST_FAILED";
-      if (code === "DEMAND_NOT_FOUND") throw new NotFoundException(code);
+      if (
+        code === "DEMAND_NOT_FOUND" ||
+        code === "DEMAND_CLAIM_PROPOSAL_NOT_FOUND" ||
+        code === "DEMAND_ATTACHMENT_NOT_FOUND"
+      ) {
+        throw new NotFoundException(code);
+      }
       if (
         code === "DEMAND_REVIEW_FORBIDDEN" ||
         code === "DEMAND_MODERATION_FORBIDDEN" ||
         code === "DEMAND_OWNER_REQUIRED" ||
         code === "DEMAND_PRIORITY_FORBIDDEN" ||
         code === "DEMAND_PROGRESS_FORBIDDEN" ||
+        code === "DEMAND_CLAIM_CONFIRM_FORBIDDEN" ||
+        code === "DEMAND_CLAIM_PROPOSAL_FORBIDDEN" ||
         code === "DEMAND_NOT_AUTHORIZED"
       ) {
         throw new ForbiddenException(code);

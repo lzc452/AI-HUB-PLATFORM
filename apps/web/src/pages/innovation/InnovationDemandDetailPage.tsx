@@ -5,6 +5,7 @@ import {
   LikeOutlined,
   MessageOutlined,
   MoreOutlined,
+  PaperClipOutlined,
   SendOutlined,
   SmileOutlined,
 } from "@ant-design/icons";
@@ -37,6 +38,7 @@ import {
 import {
   useAddDemandComment,
   useDemand,
+  useDemandAttachments,
   useDemandComments,
   useLikeDemand,
   useLikeDemandComment,
@@ -67,6 +69,12 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
+}
+
+function formatSize(sizeBytes: number) {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Metric({
@@ -170,8 +178,10 @@ export default function InnovationDemandDetailPage() {
   const { demandId } = useParams();
   const demandQuery = useDemand(demandId);
   const commentsQuery = useDemandComments(demandId);
+  const attachmentsQuery = useDemandAttachments(demandId, true);
   const demand = demandQuery.data as DemandView | undefined;
   const comments = (commentsQuery.data ?? []) as CommentView[];
+  const attachments = attachmentsQuery.data ?? [];
   const likeDemand = useLikeDemand(demandId);
   const likeComment = useLikeDemandComment(demandId);
   const addComment = useAddDemandComment(demandId);
@@ -319,11 +329,46 @@ export default function InnovationDemandDetailPage() {
               {demand.problemStatement}
             </Paragraph>
           </Card>
+          {demand.businessScenario ? (
+            <Card className="rounded-2xl border-[#edf0f5]" title="业务场景与当前流程">
+              <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
+                {demand.businessScenario}
+              </Paragraph>
+            </Card>
+          ) : null}
+          {demand.impact ? (
+            <Card className="rounded-2xl border-[#edf0f5]" title="影响对象、发生频率与耗时">
+              <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
+                {demand.impact}
+              </Paragraph>
+            </Card>
+          ) : null}
           <Card className="rounded-2xl border-[#edf0f5]" title="期望结果">
             <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
               {demand.desiredOutcome}
             </Paragraph>
           </Card>
+          {demand.currentWorkaround ? (
+            <Card className="rounded-2xl border-[#edf0f5]" title="当前替代方案">
+              <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
+                {demand.currentWorkaround}
+              </Paragraph>
+            </Card>
+          ) : null}
+          {demand.dataSensitivity ? (
+            <Card className="rounded-2xl border-[#edf0f5]" title="数据类型与敏感程度">
+              <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
+                {demand.dataSensitivity}
+              </Paragraph>
+            </Card>
+          ) : null}
+          {demand.aiSolutionIdea ? (
+            <Card className="rounded-2xl border-[#edf0f5]" title="AI 方案设想">
+              <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
+                {demand.aiSolutionIdea}
+              </Paragraph>
+            </Card>
+          ) : null}
           <Card className="rounded-2xl border-[#edf0f5]" title="优先级评估">
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <Metric
@@ -332,28 +377,70 @@ export default function InnovationDemandDetailPage() {
                 value={demand.businessValue}
               />
               <Metric
-                label="管理优先级"
+                label="影响人数"
+                tone="text-[#1677ff]"
+                value={demand.impactedHeadcount}
+              />
+              <Metric
+                label="使用频率"
+                tone="text-[#1677ff]"
+                value={demand.usageFrequency}
+              />
+              <Metric
+                label="战略匹配度"
                 tone="text-[#722ed1]"
-                value={demand.adminPriority}
+                value={demand.strategicFit}
+              />
+              <Metric
+                label="技术可行性"
+                tone="text-[#595959]"
+                value={demand.technicalFeasibility}
+              />
+              <Metric
+                label="数据合规风险"
+                tone="text-[#ff7a45]"
+                value={demand.dataComplianceRisk}
               />
               <Metric
                 label="实施成本"
                 tone="text-[#595959]"
                 value={demand.implementationCost}
               />
-              <Metric
-                label="风险等级"
-                tone="text-[#ff7a45]"
-                value={demand.riskLevel}
-              />
             </div>
             {demand.priorityScore !== null &&
             demand.priorityScore !== undefined ? (
               <div className="mt-4 flex items-center justify-between rounded-xl bg-[#f7faff] px-4 py-3">
-                <Text type="secondary">综合优先级</Text>
+                <Text type="secondary">系统建议分</Text>
                 <Text className="text-xl font-semibold text-[#1677ff]">
                   {demand.priorityScore.toFixed(1)} / 5.0
                 </Text>
+              </div>
+            ) : null}
+            {demand.confirmedPriority ? (
+              <div className="mt-3 rounded-xl border border-[#edf0f5] px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <Text type="secondary">运营确认优先级</Text>
+                  <Tag
+                    color={
+                      demand.confirmedPriority === "high"
+                        ? "red"
+                        : demand.confirmedPriority === "medium"
+                          ? "orange"
+                          : "default"
+                    }
+                  >
+                    {demand.confirmedPriority === "high"
+                      ? "高"
+                      : demand.confirmedPriority === "medium"
+                        ? "中"
+                        : "低"}
+                  </Tag>
+                </div>
+                {demand.priorityAdjustmentReason ? (
+                  <Text className="mt-1 block text-xs" type="secondary">
+                    调整原因：{demand.priorityAdjustmentReason}
+                  </Text>
+                ) : null}
               </div>
             ) : null}
           </Card>
@@ -384,6 +471,31 @@ export default function InnovationDemandDetailPage() {
                 </div>
               </div>
             </div>
+          </Card>
+          <Card
+            className="rounded-2xl border-[#edf0f5]"
+            title={`附件 (${attachments.length})`}
+          >
+            {attachments.length ? (
+              <ul className="space-y-2 text-sm">
+                {attachments.map((item) => (
+                  <li
+                    className="flex items-center justify-between gap-3"
+                    key={item.attachmentId}
+                  >
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <PaperClipOutlined className="text-[#8c8c8c]" />
+                      <span className="truncate">{item.fileName}</span>
+                    </span>
+                    <Text className="shrink-0" type="secondary">
+                      {formatSize(item.sizeBytes)}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Text type="secondary">暂无附件</Text>
+            )}
           </Card>
           <Card className="rounded-2xl border-[#edf0f5]" title="治理说明">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-[#595959]">

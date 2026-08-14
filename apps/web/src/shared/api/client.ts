@@ -171,6 +171,56 @@ export function apiUpload<T>(
   });
 }
 
+export function apiUploadRaw<T>(
+  path: string,
+  content: Blob | ArrayBuffer,
+  method: "POST" | "PUT",
+  extraHeaders: Record<string, string> = {},
+  onProgress?: (percent: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open(method, `${BASE}${path}`);
+    for (const [name, value] of Object.entries(
+      createApiHeaders(undefined, "application/octet-stream", method),
+    )) {
+      request.setRequestHeader(name, value);
+    }
+    for (const [name, value] of Object.entries(extraHeaders)) {
+      request.setRequestHeader(name, value);
+    }
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress !== undefined) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    request.onload = () => {
+      if (request.status === 401) setSession(null);
+      if (request.status >= 200 && request.status < 300) {
+        resolve(JSON.parse(request.responseText) as T);
+        return;
+      }
+      let body: ErrorBody = {};
+      try {
+        body = JSON.parse(request.responseText) as ErrorBody;
+      } catch {
+        // 非 JSON 错误响应统一映射为 UNKNOWN。
+      }
+      reject(
+        new ApiError(
+          request.status,
+          body.code ?? "UNKNOWN",
+          body.detail,
+          body.traceId,
+        ),
+      );
+    };
+    request.onerror = () =>
+      reject(new ApiError(0, "NETWORK_ERROR", "网络请求失败"));
+    request.send(content);
+  });
+}
+
 function parseContentDispositionFileName(value: string | null): string | null {
   if (value === null) return null;
 

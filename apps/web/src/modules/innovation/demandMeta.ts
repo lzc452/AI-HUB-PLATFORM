@@ -2,25 +2,27 @@ import type { DemandStatus } from "@ai-hub/contracts";
 
 export const demandStatusText: Record<DemandStatus, string> = {
   closed: "已关闭",
-  completed: "已完成",
+  converted: "已转化为应用",
   draft: "草稿",
-  in_progress: "进行中",
+  claimed: "已认领",
+  validating: "方案验证中",
   merged: "已合并",
   pending_review: "待审核",
+  pending_claim: "待认领",
   pilot: "试点中",
-  published: "已发布",
   rejected: "已驳回",
 };
 
 export const demandStatusColor: Record<DemandStatus, string> = {
   closed: "default",
-  completed: "success",
+  converted: "success",
   draft: "default",
-  in_progress: "processing",
+  claimed: "processing",
+  validating: "cyan",
   merged: "default",
   pending_review: "warning",
-  pilot: "blue",
-  published: "blue",
+  pending_claim: "blue",
+  pilot: "geekblue",
   rejected: "error",
 };
 

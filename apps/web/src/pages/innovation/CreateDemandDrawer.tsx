@@ -6,20 +6,28 @@ import {
   Drawer,
   Form,
   Input,
+  List,
   Radio,
   Select,
   Space,
   Typography,
+  Upload,
 } from "antd";
-import { useMemo } from "react";
+import { DeleteOutlined, PaperClipOutlined, UploadOutlined } from "@ant-design/icons";
+import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 import { submitDemandForReview } from "../../modules/innovation/demand.client";
-import { useCreateDemandDraft } from "../../modules/innovation/useDemand";
+import { useCreateDemandDraft, useUploadDemandAttachment } from "../../modules/innovation/useDemand";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
+
+interface PendingAttachment {
+  attachmentId: string;
+  fileName: string;
+}
 
 const schema = z
   .object({
@@ -29,7 +37,12 @@ const schema = z
       .min(3, "标题至少 3 个字")
       .max(200, "标题不能超过 200 个字"),
     problemStatement: z.string().trim().min(10, "问题描述至少 10 个字"),
+    businessScenario: z.string().trim().min(5, "业务场景至少 5 个字"),
+    impact: z.string().trim().min(5, "影响说明至少 5 个字"),
     desiredOutcome: z.string().trim().min(10, "期望结果至少 10 个字"),
+    currentWorkaround: z.string().trim().min(2, "替代方案至少 2 个字"),
+    dataSensitivity: z.string().trim().min(2, "数据说明至少 2 个字"),
+    aiSolutionIdea: z.string().trim().optional(),
     audienceType: z.enum(["all", "department", "employee"]),
     departmentId: z.string().optional(),
     employeeId: z.string().optional(),
@@ -65,6 +78,9 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
   const departments = useDepartments();
   const employees = useEmployees();
   const createDraft = useCreateDemandDraft();
+  const uploadAttachment = useUploadDemandAttachment();
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const {
     control,
     formState: { errors, isSubmitting },
@@ -78,7 +94,12 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
       includeChildren: false,
       title: "",
       problemStatement: "",
+      businessScenario: "",
+      impact: "",
       desiredOutcome: "",
+      currentWorkaround: "",
+      dataSensitivity: "",
+      aiSolutionIdea: "",
     },
     resolver: zodResolver(schema),
   });
@@ -103,14 +124,43 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
 
   const closeAndReset = () => {
     reset();
+    setAttachments([]);
     onClose();
+  };
+
+  const handleFiles = async (fileList: File[]) => {
+    if (fileList.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: PendingAttachment[] = [];
+      for (const file of fileList) {
+        const attachment = await uploadAttachment.mutateAsync(file);
+        uploaded.push({
+          attachmentId: attachment.attachmentId,
+          fileName: attachment.fileName,
+        });
+      }
+      setAttachments((prev) => [...prev, ...uploaded]);
+      showSuccessMessage(`已上传 ${uploaded.length} 个附件`);
+    } catch {
+      // mutation hook 已展示错误提示。
+    } finally {
+      setUploading(false);
+    }
   };
 
   const submit = async (values: FormValues, submitForReview: boolean) => {
     const payload: CreateDemandInput = {
       title: values.title.trim(),
       problemStatement: values.problemStatement.trim(),
+      businessScenario: values.businessScenario.trim(),
+      impact: values.impact.trim(),
       desiredOutcome: values.desiredOutcome.trim(),
+      currentWorkaround: values.currentWorkaround.trim(),
+      dataSensitivity: values.dataSensitivity.trim(),
+      ...(values.aiSolutionIdea?.trim()
+        ? { aiSolutionIdea: values.aiSolutionIdea.trim() }
+        : {}),
       audienceType: values.audienceType,
       ...(values.audienceType === "department" && values.departmentId
         ? { departmentId: values.departmentId }
@@ -121,6 +171,9 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
       includeChildren:
         values.audienceType === "department" ? values.includeChildren : false,
       displayAnonymously: values.displayAnonymously,
+      ...(attachments.length
+        ? { attachmentIds: attachments.map((item) => item.attachmentId) }
+        : {}),
     };
 
     try {
@@ -216,6 +269,42 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
           />
         </Form.Item>
         <Form.Item
+          help={errors.businessScenario?.message ?? ""}
+          label="业务场景与当前流程"
+          validateStatus={errors.businessScenario ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="businessScenario"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="业务场景与当前流程"
+                autoSize={{ minRows: 3, maxRows: 7 }}
+                showCount
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          help={errors.impact?.message ?? ""}
+          label="影响对象、发生频率和耗时"
+          validateStatus={errors.impact ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="impact"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="影响对象、发生频率和耗时"
+                autoSize={{ minRows: 3, maxRows: 7 }}
+                showCount
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
           help={errors.desiredOutcome?.message ?? ""}
           label="期望结果"
           validateStatus={errors.desiredOutcome ? "error" : ""}
@@ -228,6 +317,60 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
                 {...field}
                 aria-label="期望结果"
                 autoSize={{ minRows: 4, maxRows: 8 }}
+                showCount
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          help={errors.currentWorkaround?.message ?? ""}
+          label="当前替代方案"
+          validateStatus={errors.currentWorkaround ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="currentWorkaround"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="当前替代方案"
+                autoSize={{ minRows: 3, maxRows: 7 }}
+                showCount
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          help={errors.dataSensitivity?.message ?? ""}
+          label="数据类型与敏感程度"
+          validateStatus={errors.dataSensitivity ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="dataSensitivity"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="数据类型与敏感程度"
+                autoSize={{ minRows: 3, maxRows: 7 }}
+                showCount
+              />
+            )}
+          />
+        </Form.Item>
+        <Form.Item
+          help={errors.aiSolutionIdea?.message ?? ""}
+          label="AI 方案设想（可选）"
+          validateStatus={errors.aiSolutionIdea ? "error" : ""}
+        >
+          <Controller
+            control={control}
+            name="aiSolutionIdea"
+            render={({ field }) => (
+              <Input.TextArea
+                {...field}
+                aria-label="AI 方案设想"
+                autoSize={{ minRows: 3, maxRows: 7 }}
                 showCount
               />
             )}
@@ -325,6 +468,58 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
             </Checkbox>
           )}
         />
+        <Form.Item label="附件（可选）">
+          <Upload
+            beforeUpload={() => false}
+            fileList={[]}
+            multiple
+            onChange={({ fileList }) => {
+              const files = fileList
+                .map((item) => item.originFileObj)
+                .filter((file): file is NonNullable<typeof file> => file !== undefined);
+              void handleFiles(files);
+            }}
+            showUploadList={false}
+          >
+            <Button icon={<UploadOutlined />} loading={uploading}>
+              选择并上传附件
+            </Button>
+          </Upload>
+          {attachments.length > 0 ? (
+            <List
+              className="mt-2"
+              dataSource={attachments}
+              locale={{ emptyText: "暂无附件" }}
+              renderItem={(item) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      aria-label={`移除附件 ${item.fileName}`}
+                      danger
+                      icon={<DeleteOutlined />}
+                      key="remove"
+                      onClick={() =>
+                        setAttachments((prev) =>
+                          prev.filter(
+                            (it) => it.attachmentId !== item.attachmentId,
+                          ),
+                        )
+                      }
+                      size="small"
+                      type="text"
+                    />,
+                  ]}
+                >
+                  <Typography.Text className="inline-flex items-center gap-2">
+                    <PaperClipOutlined />
+                    {item.fileName}
+                  </Typography.Text>
+                </List.Item>
+              )}
+              size="small"
+            />
+          ) : null}
+        </Form.Item>
       </form>
     </Drawer>
   );

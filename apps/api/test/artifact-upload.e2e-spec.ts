@@ -208,7 +208,7 @@ describe("artifact upload API", () => {
     "x-session-id": "session-E100",
   };
 
-  async function createUpload(sizeBytes: number) {
+  function createUpload(sizeBytes: number) {
     return request(app.getHttpServer())
       .post("/internal/applications/app-1/artifact-uploads")
       .set(ownerHeaders)

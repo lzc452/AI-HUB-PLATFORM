@@ -47,10 +47,11 @@ const PAGE_SIZE = 6;
 
 const statusOptions: { label: string; value: DemandStatus }[] = [
   { label: "待审核", value: "pending_review" },
-  { label: "进行中", value: "in_progress" },
+  { label: "待认领", value: "pending_claim" },
+  { label: "已认领", value: "claimed" },
+  { label: "方案验证中", value: "validating" },
   { label: "试点中", value: "pilot" },
-  { label: "已完成", value: "completed" },
-  { label: "已发布", value: "published" },
+  { label: "已转化为应用", value: "converted" },
 ];
 
 const audienceOptions: { label: string; value: DemandAudienceType }[] = [
@@ -210,8 +211,8 @@ function DemandCard({
               />
               <MetricDots
                 color="#ff7a45"
-                label="风险"
-                value={demand.riskLevel}
+                label="数据合规风险"
+                value={demand.dataComplianceRisk}
               />
             </div>
             {demand.priorityScore !== null &&

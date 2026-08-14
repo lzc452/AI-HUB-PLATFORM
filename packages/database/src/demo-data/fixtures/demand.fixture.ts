@@ -145,7 +145,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "开发智能排班系统，支持自动冲突检测、资源优化分配和可视化甘特图。",
     requesterEmployeeId: EMP.appAdmin,
-    status: "published",
+    status: "pending_claim",
     audienceType: "all",
     audienceDepartmentId: null,
     audienceEmployeeId: null,
@@ -158,7 +158,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "提供自动化的合规审计工具，覆盖全部业务流程，支持自定义审计规则。",
     requesterEmployeeId: EMP.employee,
-    status: "published",
+    status: "pending_claim",
     audienceType: "department",
     audienceDepartmentId: DEPT.admin,
     audienceEmployeeId: null,
@@ -174,7 +174,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "基于历史项目数据和机器学习模型，自动识别风险因子并给出评估建议。",
     requesterEmployeeId: EMP.appAdmin,
-    status: "in_progress",
+    status: "claimed",
     audienceType: "all",
     audienceDepartmentId: null,
     audienceEmployeeId: null,
@@ -188,7 +188,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "企业级多语言翻译平台，支持AI初译+人工校对模式，术语库统一管理。",
     requesterEmployeeId: EMP.employee,
-    status: "in_progress",
+    status: "claimed",
     audienceType: "department",
     audienceDepartmentId: DEPT.rnd,
     audienceEmployeeId: null,
@@ -202,7 +202,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "统一的研发效能度量平台，支持自定义指标体系、趋势分析和团队对比。",
     requesterEmployeeId: EMP.appAdmin,
-    status: "in_progress",
+    status: "claimed",
     audienceType: "employee",
     audienceDepartmentId: null,
     audienceEmployeeId: EMP.innovation,
@@ -234,7 +234,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "基于AI的工单智能分配，综合考虑客服技能、负载和优先级，提升首次解决率。",
     requesterEmployeeId: EMP.appAdmin,
-    status: "completed",
+    status: "converted",
     audienceType: "all",
     audienceDepartmentId: null,
     audienceEmployeeId: null,
@@ -248,7 +248,7 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
     desiredOutcome:
       "构建数据血缘追踪系统，可视化展示数据流向，支持影响分析和根因定位。",
     requesterEmployeeId: EMP.employee,
-    status: "completed",
+    status: "converted",
     audienceType: "department",
     audienceDepartmentId: DEPT.rnd,
     audienceEmployeeId: null,
@@ -306,100 +306,139 @@ const DEMAND_DEFS: readonly DemandDef[] = Object.freeze([
 
 interface PriorityDef {
   businessValue: number;
+  impactedHeadcount: number;
+  usageFrequency: number;
+  strategicFit: number;
+  technicalFeasibility: number;
+  dataComplianceRisk: number;
   implementationCost: number;
-  riskLevel: number;
-  adminPriority: number;
+  confirmedPriority?: "high" | "medium" | "low";
 }
 
 /**
  * Priority score formula (from DemandService.setPriority):
- *   score = businessValue*0.4 + adminPriority*0.3
- *         + (6-implementationCost)*0.15 + (6-riskLevel)*0.15
+ *   score = businessValue*0.20 + impactedHeadcount*0.15 + usageFrequency*0.10
+ *         + strategicFit*0.15 + technicalFeasibility*0.10
+ *         + (6-dataComplianceRisk)*0.15 + (6-implementationCost)*0.15
  */
 function computePriority(def: PriorityDef): {
   businessValue: number;
+  impactedHeadcount: number;
+  usageFrequency: number;
+  strategicFit: number;
+  technicalFeasibility: number;
+  dataComplianceRisk: number;
   implementationCost: number;
-  riskLevel: number;
-  adminPriority: number;
+  confirmedPriority: "high" | "medium" | "low" | null;
   priorityScore: number;
   priorityExplanation: string;
 } {
   const score = Number(
     (
-      def.businessValue * 0.4 +
-      def.adminPriority * 0.3 +
-      (6 - def.implementationCost) * 0.15 +
-      (6 - def.riskLevel) * 0.15
+      def.businessValue * 0.2 +
+      def.impactedHeadcount * 0.15 +
+      def.usageFrequency * 0.1 +
+      def.strategicFit * 0.15 +
+      def.technicalFeasibility * 0.1 +
+      (6 - def.dataComplianceRisk) * 0.15 +
+      (6 - def.implementationCost) * 0.15
     ).toFixed(1),
   );
   const explanation =
-    `0.40*businessValue=${def.businessValue} + ` +
-    `0.30*adminPriority=${def.adminPriority} + ` +
-    `0.15*(6-implementationCost=${def.implementationCost}) + ` +
-    `0.15*(6-riskLevel=${def.riskLevel}) = ${score}`;
+    `0.20*businessValue=${def.businessValue} + ` +
+    `0.15*impactedHeadcount=${def.impactedHeadcount} + ` +
+    `0.10*usageFrequency=${def.usageFrequency} + ` +
+    `0.15*strategicFit=${def.strategicFit} + ` +
+    `0.10*technicalFeasibility=${def.technicalFeasibility} + ` +
+    `0.15*(6-dataComplianceRisk=${def.dataComplianceRisk}) + ` +
+    `0.15*(6-implementationCost=${def.implementationCost}) = ${score}`;
   return {
     businessValue: def.businessValue,
+    impactedHeadcount: def.impactedHeadcount,
+    usageFrequency: def.usageFrequency,
+    strategicFit: def.strategicFit,
+    technicalFeasibility: def.technicalFeasibility,
+    dataComplianceRisk: def.dataComplianceRisk,
     implementationCost: def.implementationCost,
-    riskLevel: def.riskLevel,
-    adminPriority: def.adminPriority,
+    confirmedPriority: def.confirmedPriority ?? null,
     priorityScore: score,
     priorityExplanation: explanation,
   };
 }
 
-// Priority for published, in_progress, pilot, completed, closed, merged demands
+// Priority for pending_claim, claimed, pilot, converted, closed, merged demands
 const PRIORITIES: ReadonlyMap<
   number,
   ReturnType<typeof computePriority>
 > = new Map([
-  // Published 1 (index 7): medium priority
+  // Pending claim 1 (index 7): medium priority
   [
     7,
     computePriority({
       businessValue: 4,
+      impactedHeadcount: 3,
+      usageFrequency: 3,
+      strategicFit: 3,
+      technicalFeasibility: 4,
+      dataComplianceRisk: 2,
       implementationCost: 2,
-      riskLevel: 2,
-      adminPriority: 3,
+      confirmedPriority: "medium",
     }),
   ],
-  // Published 2 (index 8): lower priority
+  // Pending claim 2 (index 8): lower priority
   [
     8,
     computePriority({
       businessValue: 3,
+      impactedHeadcount: 2,
+      usageFrequency: 2,
+      strategicFit: 2,
+      technicalFeasibility: 3,
+      dataComplianceRisk: 3,
       implementationCost: 3,
-      riskLevel: 3,
-      adminPriority: 2,
+      confirmedPriority: "low",
     }),
   ],
-  // In Progress 1 (index 9): high business value
+  // Claimed 1 (index 9): high business value
   [
     9,
     computePriority({
       businessValue: 5,
+      impactedHeadcount: 5,
+      usageFrequency: 4,
+      strategicFit: 5,
+      technicalFeasibility: 4,
+      dataComplianceRisk: 1,
       implementationCost: 2,
-      riskLevel: 1,
-      adminPriority: 5,
+      confirmedPriority: "high",
     }),
   ],
-  // In Progress 2 (index 10): medium priority
+  // Claimed 2 (index 10): medium priority
   [
     10,
     computePriority({
       businessValue: 4,
+      impactedHeadcount: 3,
+      usageFrequency: 3,
+      strategicFit: 3,
+      technicalFeasibility: 3,
+      dataComplianceRisk: 2,
       implementationCost: 4,
-      riskLevel: 2,
-      adminPriority: 3,
+      confirmedPriority: "medium",
     }),
   ],
-  // In Progress 3 (index 11): lower priority
+  // Claimed 3 (index 11): lower priority
   [
     11,
     computePriority({
       businessValue: 3,
+      impactedHeadcount: 2,
+      usageFrequency: 3,
+      strategicFit: 4,
+      technicalFeasibility: 3,
+      dataComplianceRisk: 3,
       implementationCost: 2,
-      riskLevel: 3,
-      adminPriority: 4,
+      confirmedPriority: "medium",
     }),
   ],
   // Pilot 1 (index 12): high priority
@@ -407,39 +446,55 @@ const PRIORITIES: ReadonlyMap<
     12,
     computePriority({
       businessValue: 5,
+      impactedHeadcount: 4,
+      usageFrequency: 4,
+      strategicFit: 4,
+      technicalFeasibility: 5,
+      dataComplianceRisk: 2,
       implementationCost: 1,
-      riskLevel: 2,
-      adminPriority: 4,
+      confirmedPriority: "high",
     }),
   ],
-  // Completed 1 (index 13): high priority
+  // Converted 1 (index 13): high priority
   [
     13,
     computePriority({
       businessValue: 5,
+      impactedHeadcount: 5,
+      usageFrequency: 5,
+      strategicFit: 5,
+      technicalFeasibility: 5,
+      dataComplianceRisk: 1,
       implementationCost: 2,
-      riskLevel: 1,
-      adminPriority: 5,
+      confirmedPriority: "high",
     }),
   ],
-  // Completed 2 (index 14): medium priority
+  // Converted 2 (index 14): medium priority
   [
     14,
     computePriority({
       businessValue: 4,
+      impactedHeadcount: 3,
+      usageFrequency: 3,
+      strategicFit: 3,
+      technicalFeasibility: 4,
+      dataComplianceRisk: 2,
       implementationCost: 3,
-      riskLevel: 2,
-      adminPriority: 3,
+      confirmedPriority: "medium",
     }),
   ],
-  // Closed 1 (index 15): medium priority
+  // Closed 1 (index 15): lower priority
   [
     15,
     computePriority({
       businessValue: 3,
+      impactedHeadcount: 2,
+      usageFrequency: 2,
+      strategicFit: 2,
+      technicalFeasibility: 3,
+      dataComplianceRisk: 4,
       implementationCost: 2,
-      riskLevel: 4,
-      adminPriority: 2,
+      confirmedPriority: "low",
     }),
   ],
   // Merged 1 - source (index 16): medium-high
@@ -447,9 +502,13 @@ const PRIORITIES: ReadonlyMap<
     16,
     computePriority({
       businessValue: 4,
+      impactedHeadcount: 3,
+      usageFrequency: 3,
+      strategicFit: 3,
+      technicalFeasibility: 3,
+      dataComplianceRisk: 3,
       implementationCost: 2,
-      riskLevel: 3,
-      adminPriority: 3,
+      confirmedPriority: "medium",
     }),
   ],
   // Merged 2 - target (index 17): high priority (accumulated from merge)
@@ -457,9 +516,13 @@ const PRIORITIES: ReadonlyMap<
     17,
     computePriority({
       businessValue: 5,
+      impactedHeadcount: 5,
+      usageFrequency: 4,
+      strategicFit: 5,
+      technicalFeasibility: 5,
+      dataComplianceRisk: 2,
       implementationCost: 1,
-      riskLevel: 2,
-      adminPriority: 5,
+      confirmedPriority: "high",
     }),
   ],
 ]);
@@ -764,11 +827,15 @@ export function buildDemandFixture(anchor: Date): DemandFixtureData {
         display_anonymously: def.displayAnonymously,
         review_reason: reviewReason,
         business_value: priority?.businessValue ?? null,
+        impacted_headcount: priority?.impactedHeadcount ?? null,
+        usage_frequency: priority?.usageFrequency ?? null,
+        strategic_fit: priority?.strategicFit ?? null,
+        technical_feasibility: priority?.technicalFeasibility ?? null,
+        data_compliance_risk: priority?.dataComplianceRisk ?? null,
         implementation_cost: priority?.implementationCost ?? null,
-        risk_level: priority?.riskLevel ?? null,
-        admin_priority: priority?.adminPriority ?? null,
         priority_score: priority?.priorityScore ?? null,
         priority_explanation: priority?.priorityExplanation ?? null,
+        confirmed_priority: priority?.confirmedPriority ?? null,
         owner_employee_id: state.ownerEmployeeId,
         version: state.version,
         merged_into_demand_id: state.mergedIntoDemandId,

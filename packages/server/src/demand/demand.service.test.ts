@@ -52,7 +52,7 @@ function baseDemand(demandId: string): DemandEntry {
     title: "协同知识助手",
     problemStatement: "团队需要统一、可追溯的内部知识查询能力。",
     desiredOutcome: "员工能在一分钟内获得经过审核的答案。",
-    status: "published",
+    status: "pending_claim",
     audienceType: "all",
     audienceDepartmentId: null,
     displayAnonymously: false,
@@ -106,7 +106,11 @@ describe("DemandService submission lifecycle", () => {
     const draft = await service.createDraft(requester, {
       title: "  Internal knowledge assistant  ",
       problemStatement: "Teams cannot find approved internal guidance quickly.",
+      businessScenario: "Teams maintain guidance across many disconnected tools.",
+      impact: "All engineers, daily, several minutes per lookup.",
       desiredOutcome: "Return cited guidance in under one minute.",
+      currentWorkaround: "Manual search across wikis and shared drives.",
+      dataSensitivity: "Internal documentation, low sensitivity.",
       audienceType: "all",
     });
     expect(draft.title).toBe("Internal knowledge assistant");
@@ -115,7 +119,11 @@ describe("DemandService submission lifecycle", () => {
       service.createDraft(requester, {
         title: " ",
         problemStatement: "too short",
+        businessScenario: "x",
+        impact: "y",
         desiredOutcome: "too short",
+        currentWorkaround: "z",
+        dataSensitivity: "w",
         audienceType: "all",
       }),
     ).rejects.toThrow("DEMAND_FIELD_INVALID");
@@ -191,7 +199,7 @@ describe("DemandService submission lifecycle", () => {
 
     demand.status = "pending_review";
     await service.review(reviewer, demand.demandId, "publish");
-    expect(demand.status).toBe("published");
+    expect(demand.status).toBe("pending_claim");
   });
 });
 
@@ -229,11 +237,14 @@ describe("DemandService innovation extension", () => {
     await expect(
       makeService(repository).setPriority(operator, demand.demandId, 1, {
         businessValue: 5,
-        adminPriority: 4,
+        impactedHeadcount: 4,
+        usageFrequency: 4,
+        strategicFit: 4,
+        technicalFeasibility: 4,
+        dataComplianceRisk: 1,
         implementationCost: 2,
-        riskLevel: 1,
       }),
-    ).resolves.toMatchObject({ priorityScore: 4.6 });
+    ).resolves.toMatchObject({ priorityScore: 4.3 });
   });
 
   it("allows read users to sort the visible list by priority", async () => {
@@ -526,7 +537,7 @@ describe("DemandService innovation-square interactions", () => {
       title: "Public demand",
       problemStatement: "Teams need a governed internal assistant.",
       desiredOutcome: "A reviewed assistant is available to every team.",
-      status: "published" as const,
+      status: "pending_claim" as const,
       audienceType: "all" as const,
       audienceDepartmentId: null,
       displayAnonymously: true,
@@ -596,7 +607,7 @@ describe("DemandService innovation-square interactions", () => {
         title: "Public demand",
         problemStatement: "Teams need a governed internal assistant.",
         desiredOutcome: "A reviewed assistant is available to every team.",
-        status: "published" as const,
+        status: "pending_claim" as const,
         audienceType: "all" as const,
         audienceDepartmentId: null,
         displayAnonymously: false,
@@ -721,7 +732,7 @@ describe("DemandService ownership and collaboration", () => {
       title: "Claimable demand",
       problemStatement: "A team needs a governed assistant.",
       desiredOutcome: "A reviewed assistant is delivered.",
-      status: "published",
+      status: "pending_claim",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,
@@ -779,7 +790,7 @@ describe("DemandService ownership and collaboration", () => {
       title: "Collaborative demand",
       problemStatement: "A team needs a governed assistant.",
       desiredOutcome: "A reviewed assistant is delivered.",
-      status: "published",
+      status: "pending_claim",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,
@@ -869,7 +880,7 @@ describe("DemandService explainable priority", () => {
       title: "Prioritizable demand",
       problemStatement: "A team needs a governed assistant.",
       desiredOutcome: "A reviewed assistant is delivered.",
-      status: "published",
+      status: "pending_claim",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,
@@ -905,9 +916,12 @@ describe("DemandService explainable priority", () => {
         _demandId: string,
         input: {
           businessValue: number;
+          impactedHeadcount: number;
+          usageFrequency: number;
+          strategicFit: number;
+          technicalFeasibility: number;
+          dataComplianceRisk: number;
           implementationCost: number;
-          riskLevel: number;
-          adminPriority: number;
         },
         expectedVersion: number,
         score: number,
@@ -916,9 +930,12 @@ describe("DemandService explainable priority", () => {
         if (expectedVersion !== demand.version)
           throw new Error("DEMAND_CONFLICT");
         demand.businessValue = input.businessValue;
+        demand.impactedHeadcount = input.impactedHeadcount;
+        demand.usageFrequency = input.usageFrequency;
+        demand.strategicFit = input.strategicFit;
+        demand.technicalFeasibility = input.technicalFeasibility;
+        demand.dataComplianceRisk = input.dataComplianceRisk;
         demand.implementationCost = input.implementationCost;
-        demand.riskLevel = input.riskLevel;
-        demand.adminPriority = input.adminPriority;
         demand.priorityScore = score;
         demand.priorityExplanation = explanation;
         demand.version += 1;
@@ -932,18 +949,24 @@ describe("DemandService explainable priority", () => {
     await expect(
       service.setPriority(operator, demand.demandId, 1, {
         businessValue: 5,
+        impactedHeadcount: 4,
+        usageFrequency: 4,
+        strategicFit: 4,
+        technicalFeasibility: 4,
+        dataComplianceRisk: 1,
         implementationCost: 2,
-        riskLevel: 1,
-        adminPriority: 4,
       }),
-    ).resolves.toMatchObject({ priorityScore: 4.6 });
+    ).resolves.toMatchObject({ priorityScore: 4.3 });
     expect(demand.priorityExplanation).toContain("businessValue=5");
     await expect(
       service.setPriority(requester, demand.demandId, 2, {
         businessValue: 6,
+        impactedHeadcount: 4,
+        usageFrequency: 4,
+        strategicFit: 4,
+        technicalFeasibility: 4,
+        dataComplianceRisk: 1,
         implementationCost: 2,
-        riskLevel: 1,
-        adminPriority: 4,
       }),
     ).rejects.toThrow("DEMAND_PRIORITY_FORBIDDEN");
   });
@@ -957,7 +980,7 @@ describe("DemandService progress and pilot lifecycle", () => {
       title: "Progress demand",
       problemStatement: "A team needs a governed assistant.",
       desiredOutcome: "A reviewed assistant is delivered.",
-      status: "published",
+      status: "pending_claim",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,
@@ -1025,17 +1048,17 @@ describe("DemandService progress and pilot lifecycle", () => {
     const service = makeService(repository);
 
     await expect(
-      service.advanceStatus(operator, demand.demandId, 1, "in_progress"),
-    ).resolves.toMatchObject({ status: "in_progress", version: 2 });
+      service.advanceStatus(operator, demand.demandId, 1, "claimed"),
+    ).resolves.toMatchObject({ status: "claimed", version: 2 });
     await expect(
-      service.advanceStatus(operator, demand.demandId, 2, "published"),
+      service.advanceStatus(operator, demand.demandId, 2, "pending_claim"),
     ).rejects.toThrow("DEMAND_STATUS_TRANSITION_INVALID");
     await expect(
       service.addProgressUpdate(operator, demand.demandId, {
         title: "Implementation started",
         body: "The first governed workflow is being tested.",
       }),
-    ).resolves.toMatchObject({ status: "in_progress" });
+    ).resolves.toMatchObject({ status: "claimed" });
     await expect(
       service.createPilot(operator, demand.demandId, {
         name: "R&D pilot",
@@ -1054,7 +1077,7 @@ describe("DemandService merge and application links", () => {
       title: "Duplicate demand",
       problemStatement: "A team needs a governed assistant.",
       desiredOutcome: "A reviewed assistant is delivered.",
-      status: "published",
+      status: "pending_claim",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,
@@ -1165,7 +1188,7 @@ describe("DemandService merge and application links", () => {
       title: "Governed assistant",
       problemStatement: "Teams need an approved assistant.",
       desiredOutcome: "A formally published application.",
-      status: "in_progress",
+      status: "claimed",
       audienceType: "all",
       audienceDepartmentId: null,
       displayAnonymously: false,

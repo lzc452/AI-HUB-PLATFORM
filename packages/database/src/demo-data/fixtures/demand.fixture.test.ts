@@ -40,16 +40,16 @@ describe("buildDemandFixture", () => {
     expect(count).toBe(2);
   });
 
-  it("has exactly 2 published demands", () => {
+  it("has exactly 2 pending_claim demands", () => {
     const count = fixture.demands.filter(
-      (d) => d.status === "published",
+      (d) => d.status === "pending_claim",
     ).length;
     expect(count).toBe(2);
   });
 
-  it("has exactly 3 in_progress demands", () => {
+  it("has exactly 3 claimed demands", () => {
     const count = fixture.demands.filter(
-      (d) => d.status === "in_progress",
+      (d) => d.status === "claimed",
     ).length;
     expect(count).toBe(3);
   });
@@ -59,9 +59,9 @@ describe("buildDemandFixture", () => {
     expect(count).toBe(1);
   });
 
-  it("has exactly 2 completed demands", () => {
+  it("has exactly 2 converted demands", () => {
     const count = fixture.demands.filter(
-      (d) => d.status === "completed",
+      (d) => d.status === "converted",
     ).length;
     expect(count).toBe(2);
   });
@@ -76,16 +76,16 @@ describe("buildDemandFixture", () => {
     expect(count).toBe(2);
   });
 
-  it("covers all 9 demand statuses", () => {
+  it("covers all 10 demand statuses", () => {
     const statuses = new Set(fixture.demands.map((d) => d.status));
     const expected: DemandStatus[] = [
       "draft",
       "pending_review",
       "rejected",
-      "published",
-      "in_progress",
+      "pending_claim",
+      "claimed",
       "pilot",
-      "completed",
+      "converted",
       "closed",
       "merged",
     ];
@@ -163,8 +163,10 @@ describe("buildDemandFixture", () => {
     expect(rejectCandidate).toBeDefined();
   });
 
-  it("provides published demands with no owner for demand.claim.available", () => {
-    const published = fixture.demands.filter((d) => d.status === "published");
+  it("provides pending_claim demands with no owner for demand.claim.available", () => {
+    const published = fixture.demands.filter(
+      (d) => d.status === "pending_claim",
+    );
     expect(published.length).toBe(2);
     for (const d of published) {
       expect(d.owner_employee_id).toBeNull();
@@ -172,9 +174,9 @@ describe("buildDemandFixture", () => {
     }
   });
 
-  it("provides in_progress demands for demand.status.transition", () => {
+  it("provides claimed demands for demand.status.transition", () => {
     const inProgress = fixture.demands.filter(
-      (d) => d.status === "in_progress",
+      (d) => d.status === "claimed",
     );
     expect(inProgress.length).toBe(3);
     for (const d of inProgress) {
@@ -220,12 +222,12 @@ describe("buildDemandFixture", () => {
 
   // ── priority scores on relevant statuses ───────────────────────────────────
 
-  it("sets priority fields on published, in_progress, pilot, completed, closed, merged demands", () => {
+  it("sets priority fields on pending_claim, claimed, pilot, converted, closed, merged demands", () => {
     const priorityStatuses = new Set([
-      "published",
-      "in_progress",
+      "pending_claim",
+      "claimed",
       "pilot",
-      "completed",
+      "converted",
       "closed",
       "merged",
     ]);
@@ -236,12 +238,18 @@ describe("buildDemandFixture", () => {
     for (const d of withPriority) {
       expect(d.business_value).toBeGreaterThanOrEqual(1);
       expect(d.business_value).toBeLessThanOrEqual(5);
+      expect(d.impacted_headcount).toBeGreaterThanOrEqual(1);
+      expect(d.impacted_headcount).toBeLessThanOrEqual(5);
+      expect(d.usage_frequency).toBeGreaterThanOrEqual(1);
+      expect(d.usage_frequency).toBeLessThanOrEqual(5);
+      expect(d.strategic_fit).toBeGreaterThanOrEqual(1);
+      expect(d.strategic_fit).toBeLessThanOrEqual(5);
+      expect(d.technical_feasibility).toBeGreaterThanOrEqual(1);
+      expect(d.technical_feasibility).toBeLessThanOrEqual(5);
+      expect(d.data_compliance_risk).toBeGreaterThanOrEqual(1);
+      expect(d.data_compliance_risk).toBeLessThanOrEqual(5);
       expect(d.implementation_cost).toBeGreaterThanOrEqual(1);
       expect(d.implementation_cost).toBeLessThanOrEqual(5);
-      expect(d.risk_level).toBeGreaterThanOrEqual(1);
-      expect(d.risk_level).toBeLessThanOrEqual(5);
-      expect(d.admin_priority).toBeGreaterThanOrEqual(1);
-      expect(d.admin_priority).toBeLessThanOrEqual(5);
       expect(d.priority_score).not.toBeNull();
       expect(d.priority_score!).toBeGreaterThan(0);
       expect(d.priority_explanation).toBeTruthy();
@@ -256,9 +264,12 @@ describe("buildDemandFixture", () => {
     expect(withoutPriority.length).toBe(7);
     for (const d of withoutPriority) {
       expect(d.business_value).toBeNull();
+      expect(d.impacted_headcount).toBeNull();
+      expect(d.usage_frequency).toBeNull();
+      expect(d.strategic_fit).toBeNull();
+      expect(d.technical_feasibility).toBeNull();
+      expect(d.data_compliance_risk).toBeNull();
       expect(d.implementation_cost).toBeNull();
-      expect(d.risk_level).toBeNull();
-      expect(d.admin_priority).toBeNull();
       expect(d.priority_score).toBeNull();
       expect(d.priority_explanation).toBeNull();
     }
@@ -412,13 +423,13 @@ describe("buildDemandFixture", () => {
     }
   });
 
-  it("published_at is set for published, in_progress, pilot, completed, closed, merged demands", () => {
+  it("published_at is set for pending_claim, claimed, pilot, converted, closed, merged demands", () => {
     const published = fixture.demands.filter((d) =>
       [
-        "published",
-        "in_progress",
+        "pending_claim",
+        "claimed",
         "pilot",
-        "completed",
+        "converted",
         "closed",
         "merged",
       ].includes(d.status),
@@ -437,10 +448,10 @@ describe("buildDemandFixture", () => {
       "draft",
       "pending_review",
       "rejected",
-      "published",
-      "in_progress",
+      "pending_claim",
+      "claimed",
       "pilot",
-      "completed",
+      "converted",
       "closed",
       "merged",
     ]);

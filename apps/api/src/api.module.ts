@@ -105,7 +105,7 @@ export class ApiModule {
         FeedbackModule.register(databaseUrl),
         NotificationModule.register(databaseUrl),
         CreatorModule.register(databaseUrl),
-        DemandModule.register(databaseUrl),
+        DemandModule.register(databaseUrl, storageDirectory),
         AnalyticsModule.register(databaseUrl),
         HealthModule.register(
           createProductionDatabaseCheck(databaseUrl, metrics),

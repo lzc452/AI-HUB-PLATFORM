@@ -77,7 +77,6 @@ async function bootstrap() {
       config.artifactUploadEnabled ? config.storageDirectory : undefined,
       config.artifactMaxSizeBytes,
       artifactStorage,
-      config.nodeEnv !== "production",
     ),
     { logger: new PinoNestLogger(logger) },
   );

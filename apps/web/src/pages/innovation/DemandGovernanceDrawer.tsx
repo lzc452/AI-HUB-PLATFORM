@@ -7,6 +7,7 @@ import {
   Drawer,
   Empty,
   Form,
+  Input,
   InputNumber,
   Modal,
   Select,
@@ -24,23 +25,30 @@ import {
   useAddDemandProgress,
   useAdvanceDemandStatus,
   useClaimDemand,
+  useConfirmDemandClaim,
+  useConfirmDemandPriority,
   useCreateApplicationFromDemand,
   useCreateDemandPilot,
+  useDemandClaimProposals,
   useDemandGovernanceData,
   useLinkDemandApplication,
   useLookupAnonymousAuthor,
   useMergeDemand,
+  useReleaseDemandClaim,
   useRemoveDemandApplication,
   useRemoveDemandCollaborator,
   useReviewDemand,
   useResolveDemandReport,
   useSetDemandPriority,
+  useSubmitDemandClaimProposal,
   useSubmitDemandForReview,
   useUpdateDemandCollaboratorRole,
+  useWithdrawDemandClaimProposal,
 } from "../../modules/innovation/useDemand";
 import { demandStatusText } from "../../modules/innovation/demandMeta";
 import type {
   DemandApplicationLinkRecord,
+  DemandClaimProposalRecord,
   DemandCollaboratorRecord,
   DemandPilotRecord,
   DemandReportRecord,
@@ -54,7 +62,14 @@ export interface DemandGovernanceDrawerProps {
 }
 
 const statusOptions = (
-  ["published", "in_progress", "pilot", "completed", "closed"] as DemandStatus[]
+  [
+    "pending_claim",
+    "claimed",
+    "validating",
+    "pilot",
+    "converted",
+    "closed",
+  ] as DemandStatus[]
 ).map((value) => ({
   label: demandStatusText[value],
   value,
@@ -87,15 +102,28 @@ export function DemandGovernanceDrawer({
   const merge = useMergeDemand(demand.demandId);
   const resolveReport = useResolveDemandReport(demand.demandId);
   const lookupAuthor = useLookupAnonymousAuthor(demand.demandId);
+  const confirmPriority = useConfirmDemandPriority(demand.demandId);
+  const claimProposals = useDemandClaimProposals(demand.demandId, open);
+  const submitProposal = useSubmitDemandClaimProposal(demand.demandId);
+  const withdrawProposal = useWithdrawDemandClaimProposal(demand.demandId);
+  const confirmClaim = useConfirmDemandClaim(demand.demandId);
+  const releaseClaim = useReleaseDemandClaim(demand.demandId);
   const [priorityForm] = Form.useForm();
+  const [proposalForm] = Form.useForm();
   const [status, setStatus] = useState<DemandStatus | undefined>(undefined);
+  const [confirmedPriority, setConfirmedPriority] = useState<
+    "high" | "medium" | "low" | null
+  >(null);
 
   useEffect(() => {
     priorityForm.setFieldsValue({
-      adminPriority: demand.adminPriority ?? 3,
       businessValue: demand.businessValue ?? 3,
+      impactedHeadcount: demand.impactedHeadcount ?? 3,
+      usageFrequency: demand.usageFrequency ?? 3,
+      strategicFit: demand.strategicFit ?? 3,
+      technicalFeasibility: demand.technicalFeasibility ?? 3,
+      dataComplianceRisk: demand.dataComplianceRisk ?? 3,
       implementationCost: demand.implementationCost ?? 3,
-      riskLevel: demand.riskLevel ?? 3,
     });
     setStatus(undefined);
   }, [demand, priorityForm]);
@@ -205,7 +233,7 @@ export function DemandGovernanceDrawer({
                     ) : null}
                   </Space>
                 </Card>
-                <Card size="small" title="四项优先级指标">
+                <Card size="small" title="七维优先级评估">
                   {can(PERMISSIONS.DEMAND_PRIORITIZE) ? (
                     <Form
                       form={priorityForm}
@@ -221,13 +249,22 @@ export function DemandGovernanceDrawer({
                         <Form.Item label="业务价值" name="businessValue">
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
-                        <Form.Item label="管理优先级" name="adminPriority">
+                        <Form.Item label="影响人数" name="impactedHeadcount">
+                          <InputNumber className="w-full" max={5} min={1} />
+                        </Form.Item>
+                        <Form.Item label="使用频率" name="usageFrequency">
+                          <InputNumber className="w-full" max={5} min={1} />
+                        </Form.Item>
+                        <Form.Item label="战略匹配度" name="strategicFit">
+                          <InputNumber className="w-full" max={5} min={1} />
+                        </Form.Item>
+                        <Form.Item label="技术可行性" name="technicalFeasibility">
+                          <InputNumber className="w-full" max={5} min={1} />
+                        </Form.Item>
+                        <Form.Item label="数据合规风险" name="dataComplianceRisk">
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
                         <Form.Item label="实施成本" name="implementationCost">
-                          <InputNumber className="w-full" max={5} min={1} />
-                        </Form.Item>
-                        <Form.Item label="风险等级" name="riskLevel">
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
                       </div>
@@ -245,6 +282,180 @@ export function DemandGovernanceDrawer({
                     </Typography.Text>
                   )}
                 </Card>
+                <Card size="small" title="确认优先级（高/中/低）">
+                  {can(PERMISSIONS.DEMAND_PRIORITIZE) ? (
+                    <Space wrap>
+                      <Select<"high" | "medium" | "low">
+                        allowClear
+                        className="min-w-32"
+                        onChange={setConfirmedPriority}
+                        options={[
+                          { label: "高", value: "high" },
+                          { label: "中", value: "medium" },
+                          { label: "低", value: "low" },
+                        ]}
+                        placeholder="选择优先级"
+                        value={confirmedPriority}
+                      />
+                      <Button
+                        disabled={!confirmedPriority}
+                        loading={confirmPriority.isPending}
+                        onClick={() => {
+                          const reason = window.prompt("调整原因（可留空）") ?? "";
+                          if (confirmedPriority)
+                            confirmPriority.mutate({
+                              expectedVersion: demand.version,
+                              confirmedPriority,
+                              ...(reason.trim() ? { adjustmentReason: reason.trim() } : {}),
+                            });
+                        }}
+                        type="primary"
+                      >
+                        确认优先级
+                      </Button>
+                    </Space>
+                  ) : (
+                    <Typography.Text type="secondary">
+                      你没有确认优先级的权限。
+                    </Typography.Text>
+                  )}
+                </Card>
+              </div>
+            ),
+          },
+          {
+            key: "claim-proposals",
+            label: "认领方案",
+            children: (
+              <div className="space-y-4">
+                {(claimProposals.data ?? []).length ? (
+                  claimProposals.data?.map((proposal: DemandClaimProposalRecord) => (
+                    <Card
+                      key={proposal.proposalId}
+                      size="small"
+                      title={`方案 · 负责人 ${proposal.ownerEmployeeId} · ${proposal.status}`}
+                    >
+                      <Typography.Paragraph className="!mb-2">
+                        {proposal.approach}
+                      </Typography.Paragraph>
+                      <Typography.Paragraph className="!mb-0 text-xs" type="secondary">
+                        协作者：{proposal.collaboratorEmployeeIds.join("、") || "无"} ·
+                        预计验证 {proposal.estimatedValidationDuration} ·
+                        资源 {proposal.resourceNeeds}
+                      </Typography.Paragraph>
+                      <Space className="mt-3" wrap>
+                        {proposal.status === "proposed" &&
+                        proposal.proposerEmployeeId === actor.data?.employeeId ? (
+                          <Button
+                            size="small"
+                            onClick={() =>
+                              withdrawProposal.mutate({ proposalId: proposal.proposalId })
+                            }
+                          >
+                            撤回
+                          </Button>
+                        ) : null}
+                        {can(PERMISSIONS.DEMAND_MANAGE) &&
+                        proposal.status === "proposed" &&
+                        demand.status === "pending_claim" ? (
+                          <Button
+                            size="small"
+                            type="primary"
+                            onClick={() =>
+                              confirm("确认该认领方案", () =>
+                                confirmClaim.mutate({
+                                  proposalId: proposal.proposalId,
+                                  expectedVersion: demand.version,
+                                }),
+                              )
+                            }
+                          >
+                            确认认领
+                          </Button>
+                        ) : null}
+                      </Space>
+                    </Card>
+                  ))
+                ) : (
+                  <Empty description="暂无认领方案" />
+                )}
+                {can(PERMISSIONS.DEMAND_CLAIM) && demand.status === "pending_claim" ? (
+                  <Form
+                    form={proposalForm}
+                    layout="vertical"
+                    onFinish={(values) =>
+                      submitProposal.mutate({
+                        ownerEmployeeId: values.ownerEmployeeId,
+                        collaboratorEmployeeIds: values.collaboratorEmployeeIds
+                          ? String(values.collaboratorEmployeeIds)
+                              .split(/[,，]/)
+                              .map((s: string) => s.trim())
+                              .filter(Boolean)
+                          : [],
+                        approach: values.approach,
+                        estimatedValidationDuration:
+                          values.estimatedValidationDuration,
+                        resourceNeeds: values.resourceNeeds,
+                      })
+                    }
+                  >
+                    <Form.Item
+                      label="拟定负责人"
+                      name="ownerEmployeeId"
+                      rules={[{ required: true, message: "请输入负责人工号" }]}
+                    >
+                      <Input placeholder="员工工号" />
+                    </Form.Item>
+                    <Form.Item label="拟定协作者（逗号分隔）" name="collaboratorEmployeeIds">
+                      <Input placeholder="员工工号，逗号分隔" />
+                    </Form.Item>
+                    <Form.Item
+                      label="初步思路"
+                      name="approach"
+                      rules={[{ required: true, message: "请输入初步思路" }]}
+                    >
+                      <Input.TextArea autoSize={{ minRows: 3, maxRows: 6 }} />
+                    </Form.Item>
+                    <Form.Item
+                      label="预计验证时间"
+                      name="estimatedValidationDuration"
+                      rules={[{ required: true, message: "请输入预计验证时间" }]}
+                    >
+                      <Input placeholder="例如 4 周" />
+                    </Form.Item>
+                    <Form.Item
+                      label="资源需求"
+                      name="resourceNeeds"
+                      rules={[{ required: true, message: "请输入资源需求" }]}
+                    >
+                      <Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} />
+                    </Form.Item>
+                    <Button
+                      htmlType="submit"
+                      loading={submitProposal.isPending}
+                      type="primary"
+                    >
+                      提交认领方案
+                    </Button>
+                  </Form>
+                ) : null}
+                {can(PERMISSIONS.DEMAND_MANAGE) &&
+                ["claimed", "validating", "pilot"].includes(demand.status) ? (
+                  <Button
+                    danger
+                    onClick={() => {
+                      const reason = window.prompt("解除原因（可留空）") ?? "";
+                      confirm("解除认领并重新开放", () =>
+                        releaseClaim.mutate({
+                          expectedVersion: demand.version,
+                          ...(reason.trim() ? { reason: reason.trim() } : {}),
+                        }),
+                      );
+                    }}
+                  >
+                    解除认领并重新开放
+                  </Button>
+                ) : null}
               </div>
             ),
           },

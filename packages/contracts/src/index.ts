@@ -77,11 +77,16 @@ export type {
 export type {
   CreateDemandInput,
   DemandApplicationRole,
+  DemandAttachment,
   DemandAudienceType,
   DemandCollaboratorRole,
+  DemandClaimProposal,
+  DemandClaimProposalInput,
+  DemandClaimProposalStatus,
   DemandEntry,
   DemandListQuery,
   DemandPriorityInput,
+  DemandPriorityLevel,
   DemandReportStatus,
   DemandStatus,
 } from "./demand.js";

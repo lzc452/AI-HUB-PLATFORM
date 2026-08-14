@@ -485,15 +485,21 @@ export interface AiDemandsTable {
   requester_employee_id: string;
   title: string;
   problem_statement: string;
+  business_scenario: string | null;
+  impact: string | null;
   desired_outcome: string;
+  current_workaround: string | null;
+  data_sensitivity: string | null;
+  ai_solution_idea: string | null;
   status:
     | "draft"
     | "pending_review"
     | "rejected"
-    | "published"
-    | "in_progress"
+    | "pending_claim"
+    | "claimed"
+    | "validating"
     | "pilot"
-    | "completed"
+    | "converted"
     | "closed"
     | "merged";
   audience_type: "all" | "department" | "employee";
@@ -506,8 +512,15 @@ export interface AiDemandsTable {
   implementation_cost: number | null;
   risk_level: number | null;
   admin_priority: number | null;
+  impacted_headcount: number | null;
+  usage_frequency: number | null;
+  strategic_fit: number | null;
+  technical_feasibility: number | null;
+  data_compliance_risk: number | null;
   priority_score: number | null;
   priority_explanation: string | null;
+  confirmed_priority: "high" | "medium" | "low" | null;
+  priority_adjustment_reason: string | null;
   owner_employee_id: string | null;
   version: number;
   merged_into_demand_id: string | null;
@@ -600,6 +613,33 @@ export interface AiDemandAuditEventsTable {
   actor_employee_id: string | null;
   event_type: string;
   details: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface AiDemandClaimProposalsTable {
+  proposal_id: Generated<string>;
+  demand_id: string;
+  proposer_employee_id: string;
+  owner_employee_id: string;
+  collaborator_employee_ids: string[];
+  approach: string;
+  estimated_validation_duration: string;
+  resource_needs: string;
+  preference: string | null;
+  status: "proposed" | "selected" | "rejected" | "withdrawn";
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface AiDemandAttachmentsTable {
+  attachment_id: Generated<string>;
+  demand_id: string | null;
+  storage_key: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  sha256: string | null;
+  uploaded_by_employee_id: string;
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
@@ -716,6 +756,8 @@ export interface DatabaseSchema {
   ai_demand_pilots: AiDemandPilotsTable;
   ai_demand_applications: AiDemandApplicationsTable;
   ai_demand_audit_events: AiDemandAuditEventsTable;
+  ai_demand_claim_proposals: AiDemandClaimProposalsTable;
+  ai_demand_attachments: AiDemandAttachmentsTable;
   analytics_behavior_events: AnalyticsBehaviorEventsTable;
   analytics_daily_aggregates: AnalyticsDailyAggregatesTable;
   analytics_metric_definitions: AnalyticsMetricDefinitionsTable;

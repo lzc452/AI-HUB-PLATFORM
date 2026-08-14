@@ -1,4 +1,10 @@
-import type { CreateDemandInput, DemandStatus } from "@ai-hub/contracts";
+import type {
+  CreateDemandInput,
+  DemandStatus,
+  DemandPriorityInput,
+  DemandPriorityLevel,
+  DemandClaimProposalStatus,
+} from "@ai-hub/contracts";
 import type { DatabaseSchema } from "@ai-hub/database";
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Selectable } from "kysely";
@@ -6,7 +12,9 @@ import { KyselyApplicationRepository } from "../application/application.reposito
 import type {
   DemandCommentRecord,
   DemandCollaboratorRecord,
+  DemandClaimProposalRecord,
   DemandApplicationLinkRecord,
+  DemandAttachmentRecord,
   DemandEntry,
   DemandPilotRecord,
   DemandProgressRecord,
@@ -31,6 +39,8 @@ type CommentRow = Selectable<DatabaseSchema["ai_demand_comments"]> & {
 type ReportRow = Selectable<DatabaseSchema["ai_demand_reports"]>;
 type ProgressRow = Selectable<DatabaseSchema["ai_demand_progress_updates"]>;
 type PilotRow = Selectable<DatabaseSchema["ai_demand_pilots"]>;
+type ClaimProposalRow = Selectable<DatabaseSchema["ai_demand_claim_proposals"]>;
+type AttachmentRow = Selectable<DatabaseSchema["ai_demand_attachments"]>;
 
 export class KyselyDemandRepository implements DemandRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -65,7 +75,12 @@ export class KyselyDemandRepository implements DemandRepository {
     requesterEmployeeId: string;
     title: string;
     problemStatement: string;
+    businessScenario: string;
+    impact: string;
     desiredOutcome: string;
+    currentWorkaround: string;
+    dataSensitivity: string;
+    aiSolutionIdea: string | null;
     audienceType: CreateDemandInput["audienceType"];
     departmentId: string | null;
     employeeId: string | null;
@@ -78,7 +93,12 @@ export class KyselyDemandRepository implements DemandRepository {
         requester_employee_id: input.requesterEmployeeId,
         title: input.title,
         problem_statement: input.problemStatement,
+        business_scenario: input.businessScenario,
+        impact: input.impact,
         desired_outcome: input.desiredOutcome,
+        current_workaround: input.currentWorkaround,
+        data_sensitivity: input.dataSensitivity,
+        ai_solution_idea: input.aiSolutionIdea,
         status: "draft",
         audience_type: input.audienceType,
         audience_department_id: input.departmentId,
@@ -88,10 +108,10 @@ export class KyselyDemandRepository implements DemandRepository {
         review_reason: null,
         business_value: null,
         implementation_cost: null,
-        risk_level: null,
-        admin_priority: null,
         priority_score: null,
         priority_explanation: null,
+        confirmed_priority: null,
+        priority_adjustment_reason: null,
         owner_employee_id: null,
         version: 1,
         merged_into_demand_id: null,
@@ -187,7 +207,12 @@ export class KyselyDemandRepository implements DemandRepository {
     input: Partial<{
       title: string;
       problemStatement: string;
+      businessScenario: string;
+      impact: string;
       desiredOutcome: string;
+      currentWorkaround: string;
+      dataSensitivity: string;
+      aiSolutionIdea: string | null;
       audienceType: CreateDemandInput["audienceType"];
       departmentId: string | null;
       employeeId: string | null;
@@ -202,9 +227,22 @@ export class KyselyDemandRepository implements DemandRepository {
         ...(input.problemStatement === undefined
           ? {}
           : { problem_statement: input.problemStatement }),
+        ...(input.businessScenario === undefined
+          ? {}
+          : { business_scenario: input.businessScenario }),
+        ...(input.impact === undefined ? {} : { impact: input.impact }),
         ...(input.desiredOutcome === undefined
           ? {}
           : { desired_outcome: input.desiredOutcome }),
+        ...(input.currentWorkaround === undefined
+          ? {}
+          : { current_workaround: input.currentWorkaround }),
+        ...(input.dataSensitivity === undefined
+          ? {}
+          : { data_sensitivity: input.dataSensitivity }),
+        ...(input.aiSolutionIdea === undefined
+          ? {}
+          : { ai_solution_idea: input.aiSolutionIdea }),
         ...(input.audienceType === undefined
           ? {}
           : { audience_type: input.audienceType }),
@@ -244,7 +282,7 @@ export class KyselyDemandRepository implements DemandRepository {
       .set({
         status,
         review_reason: reviewReason,
-        published_at: status === "published" ? new Date() : null,
+        published_at: status === "pending_claim" ? new Date() : null,
         version: sql`version + 1`,
         updated_at: new Date(),
       })
@@ -258,12 +296,7 @@ export class KyselyDemandRepository implements DemandRepository {
 
   async setPriority(
     demandId: string,
-    input: {
-      businessValue: number;
-      implementationCost: number;
-      riskLevel: number;
-      adminPriority: number;
-    },
+    input: DemandPriorityInput,
     expectedVersion: number,
     score: number,
     explanation: string,
@@ -272,11 +305,36 @@ export class KyselyDemandRepository implements DemandRepository {
       .updateTable("ai_demands")
       .set({
         business_value: input.businessValue,
+        impacted_headcount: input.impactedHeadcount,
+        usage_frequency: input.usageFrequency,
+        strategic_fit: input.strategicFit,
+        technical_feasibility: input.technicalFeasibility,
+        data_compliance_risk: input.dataComplianceRisk,
         implementation_cost: input.implementationCost,
-        risk_level: input.riskLevel,
-        admin_priority: input.adminPriority,
         priority_score: score,
         priority_explanation: explanation,
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async confirmPriority(
+    demandId: string,
+    confirmedPriority: DemandPriorityLevel,
+    adjustmentReason: string | null,
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({
+        confirmed_priority: confirmedPriority,
+        priority_adjustment_reason: adjustmentReason,
         version: sql`version + 1`,
         updated_at: new Date(),
       })
@@ -580,6 +638,78 @@ export class KyselyDemandRepository implements DemandRepository {
     await this.db
       .insertInto("ai_demand_collaborators")
       .values({ demand_id: demandId, employee_id: employeeId, role: "owner" })
+      .execute();
+    return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async confirmClaim(
+    demandId: string,
+    ownerEmployeeId: string,
+    collaboratorEmployeeIds: string[],
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({
+        owner_employee_id: ownerEmployeeId,
+        status: "claimed",
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("owner_employee_id", "is", null)
+      .where("version", "=", expectedVersion)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    await this.db
+      .insertInto("ai_demand_collaborators")
+      .values({
+        demand_id: demandId,
+        employee_id: ownerEmployeeId,
+        role: "owner",
+      })
+      .onConflict((oc) =>
+        oc.columns(["demand_id", "employee_id"]).doNothing(),
+      )
+      .execute();
+    for (const collaboratorId of collaboratorEmployeeIds) {
+      if (collaboratorId === ownerEmployeeId) continue;
+      await this.db
+        .insertInto("ai_demand_collaborators")
+        .values({
+          demand_id: demandId,
+          employee_id: collaboratorId,
+          role: "collaborator",
+        })
+        .onConflict((oc) =>
+          oc.columns(["demand_id", "employee_id"]).doNothing(),
+        )
+        .execute();
+    }
+    return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
+  }
+
+  async releaseClaim(
+    demandId: string,
+    expectedVersion: number,
+  ): Promise<DemandEntry> {
+    const row = await this.db
+      .updateTable("ai_demands")
+      .set({
+        owner_employee_id: null,
+        status: "pending_claim",
+        version: sql`version + 1`,
+        updated_at: new Date(),
+      })
+      .where("demand_id", "=", demandId)
+      .where("version", "=", expectedVersion)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CONFLICT");
+    await this.db
+      .deleteFrom("ai_demand_collaborators")
+      .where("demand_id", "=", demandId)
       .execute();
     return this.mapRow({ ...row, like_count: 0, comment_count: 0 });
   }
@@ -901,6 +1031,130 @@ export class KyselyDemandRepository implements DemandRepository {
     return rows.map((row) => this.mapReport(row));
   }
 
+  async createClaimProposal(input: {
+    demandId: string;
+    proposerEmployeeId: string;
+    ownerEmployeeId: string;
+    collaboratorEmployeeIds: string[];
+    approach: string;
+    estimatedValidationDuration: string;
+    resourceNeeds: string;
+    preference: string | null;
+  }): Promise<DemandClaimProposalRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_claim_proposals")
+      .values({
+        demand_id: input.demandId,
+        proposer_employee_id: input.proposerEmployeeId,
+        owner_employee_id: input.ownerEmployeeId,
+        collaborator_employee_ids: input.collaboratorEmployeeIds,
+        approach: input.approach,
+        estimated_validation_duration: input.estimatedValidationDuration,
+        resource_needs: input.resourceNeeds,
+        preference: input.preference,
+        status: "proposed",
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapClaimProposal(row);
+  }
+
+  async listClaimProposals(
+    demandId: string,
+  ): Promise<readonly DemandClaimProposalRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_claim_proposals")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "desc")
+      .orderBy("proposal_id", "asc")
+      .execute();
+    return rows.map((row) => this.mapClaimProposal(row));
+  }
+
+  async findClaimProposal(
+    proposalId: string,
+  ): Promise<DemandClaimProposalRecord | null> {
+    const row = await this.db
+      .selectFrom("ai_demand_claim_proposals")
+      .selectAll()
+      .where("proposal_id", "=", proposalId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapClaimProposal(row);
+  }
+
+  async updateClaimProposalStatus(
+    proposalId: string,
+    status: DemandClaimProposalStatus,
+  ): Promise<DemandClaimProposalRecord> {
+    const row = await this.db
+      .updateTable("ai_demand_claim_proposals")
+      .set({ status, updated_at: new Date() })
+      .where("proposal_id", "=", proposalId)
+      .returningAll()
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("DEMAND_CLAIM_PROPOSAL_NOT_FOUND");
+    return this.mapClaimProposal(row);
+  }
+
+  async createAttachment(input: {
+    storageKey: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+    sha256: string;
+    uploadedByEmployeeId: string;
+  }): Promise<DemandAttachmentRecord> {
+    const row = await this.db
+      .insertInto("ai_demand_attachments")
+      .values({
+        demand_id: null,
+        storage_key: input.storageKey,
+        file_name: input.fileName,
+        mime_type: input.mimeType,
+        size_bytes: input.sizeBytes,
+        sha256: input.sha256,
+        uploaded_by_employee_id: input.uploadedByEmployeeId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapAttachment(row);
+  }
+
+  async linkAttachmentToDemand(
+    attachmentId: string,
+    demandId: string,
+  ): Promise<void> {
+    await this.db
+      .updateTable("ai_demand_attachments")
+      .set({ demand_id: demandId })
+      .where("attachment_id", "=", attachmentId)
+      .execute();
+  }
+
+  async listAttachments(
+    demandId: string,
+  ): Promise<readonly DemandAttachmentRecord[]> {
+    const rows = await this.db
+      .selectFrom("ai_demand_attachments")
+      .selectAll()
+      .where("demand_id", "=", demandId)
+      .orderBy("created_at", "asc")
+      .orderBy("attachment_id", "asc")
+      .execute();
+    return rows.map((row) => this.mapAttachment(row));
+  }
+
+  async deleteAttachment(attachmentId: string): Promise<void> {
+    const result = await this.db
+      .deleteFrom("ai_demand_attachments")
+      .where("attachment_id", "=", attachmentId)
+      .executeTakeFirst();
+    if (Number(result.numDeletedRows) !== 1) {
+      throw new Error("DEMAND_ATTACHMENT_NOT_FOUND");
+    }
+  }
+
   async recordAudit(input: {
     demandId: string;
     actorEmployeeId: string;
@@ -1025,7 +1279,12 @@ export class KyselyDemandRepository implements DemandRepository {
       requesterDisplayName: row.requester_display_name ?? null,
       title: row.title,
       problemStatement: row.problem_statement,
+      businessScenario: row.business_scenario,
+      impact: row.impact,
       desiredOutcome: row.desired_outcome,
+      currentWorkaround: row.current_workaround,
+      dataSensitivity: row.data_sensitivity,
+      aiSolutionIdea: row.ai_solution_idea,
       status: row.status,
       audienceType: row.audience_type,
       audienceDepartmentId: row.audience_department_id,
@@ -1036,12 +1295,17 @@ export class KyselyDemandRepository implements DemandRepository {
       likeCount: Number(row.like_count),
       commentCount: Number(row.comment_count),
       businessValue: row.business_value,
+      impactedHeadcount: row.impacted_headcount,
+      usageFrequency: row.usage_frequency,
+      strategicFit: row.strategic_fit,
+      technicalFeasibility: row.technical_feasibility,
+      dataComplianceRisk: row.data_compliance_risk,
       implementationCost: row.implementation_cost,
-      riskLevel: row.risk_level,
-      adminPriority: row.admin_priority,
       priorityScore:
         row.priority_score === null ? null : Number(row.priority_score),
       priorityExplanation: row.priority_explanation,
+      confirmedPriority: row.confirmed_priority,
+      priorityAdjustmentReason: row.priority_adjustment_reason,
       ownerEmployeeId: row.owner_employee_id,
       ownerDisplayName: row.owner_display_name ?? null,
       likedByCurrentActor: row.liked_by_current_actor ?? false,
@@ -1049,6 +1313,35 @@ export class KyselyDemandRepository implements DemandRepository {
       version: row.version,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+    };
+  }
+
+  private mapClaimProposal(row: ClaimProposalRow): DemandClaimProposalRecord {
+    return {
+      proposalId: row.proposal_id,
+      demandId: row.demand_id,
+      proposerEmployeeId: row.proposer_employee_id,
+      ownerEmployeeId: row.owner_employee_id,
+      collaboratorEmployeeIds: row.collaborator_employee_ids,
+      approach: row.approach,
+      estimatedValidationDuration: row.estimated_validation_duration,
+      resourceNeeds: row.resource_needs,
+      preference: row.preference,
+      status: row.status,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  private mapAttachment(row: AttachmentRow): DemandAttachmentRecord {
+    return {
+      attachmentId: row.attachment_id,
+      demandId: row.demand_id,
+      fileName: row.file_name,
+      mimeType: row.mime_type,
+      sizeBytes: row.size_bytes,
+      uploadedByEmployeeId: row.uploaded_by_employee_id,
+      createdAt: row.created_at,
     };
   }
 
