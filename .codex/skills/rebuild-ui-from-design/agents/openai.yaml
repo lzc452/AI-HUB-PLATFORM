@@ -1,4 +1,4 @@
 interface:
-  display_name: "Éè¼ÆÍ¼ÏñËØ¼¶Ç°¶Ë»¹Ô­"
-  short_description: "°´ÏîÄ¿¼Ü¹¹½« packages/ui/src Éè¼ÆÍ¼ÏñËØ¼¶»¹Ô­Îª¿É¸´ÓÃÇ°¶Ë×é¼þ"
-  default_prompt: "Ê¹ÓÃ $rebuild-ui-from-design °´Ô­Ê¼ÊÓ¿Ú¸ß±£ÕæÊµÏÖ packages/ui/src ÖÐÖ¸¶¨µÄÉè¼ÆÍ¼¡£"
+  display_name: "ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ø¼ï¿½Ç°ï¿½Ë»ï¿½Ô­"
+  short_description: "ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½Ü¹ï¿½ï¿½ï¿½ packages/ui/src ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½Ô­Îªï¿½É¸ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½"
+  default_prompt: "Ê¹ï¿½ï¿½ $rebuild-ui-from-design ï¿½ï¿½Ô­Ê¼ï¿½Ó¿Ú¸ß±ï¿½ï¿½ï¿½Êµï¿½ï¿½ packages/ui/src ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½"
