@@ -105,7 +105,7 @@ function latestDialog(): HTMLElement {
 }
 
 describe("创作者中心页面", () => {
-  afterEach(() => {
+  afterEach(async () => {
     // 先卸载 React 树，再清理 Modal portal 和 timer，避免 scheduler 在 jsdom
     // teardown 后继续访问 window。
     cleanup();
@@ -115,6 +115,13 @@ describe("创作者中心页面", () => {
       });
     }
     vi.useRealTimers();
+    // 容器（Node setImmediate 时序）下 React scheduler 的 pending 任务可能排到
+    // jsdom teardown 之后才执行；显式推进一个 immediate + timer 周期，让其在
+    // window 仍存活时完成。
+    await act(async () => {
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
     // 清理 Modal.confirm 遗留的独立根节点，避免用例间相互污染。
     Modal.destroyAll();
     message.destroy();

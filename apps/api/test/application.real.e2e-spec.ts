@@ -13,6 +13,7 @@ import {
 } from "@ai-hub/server";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { ApiModule } from "../src/api.module.js";
 
 const actorHeaders = (employeeId: string) => ({
@@ -89,11 +90,32 @@ describe("real application lifecycle API", () => {
     expect(artifact.accepted).toBe(true);
   };
 
+  // createVersion 要求数据库中存在已完成且扫描通过的制品上传记录
+  // （findVerifiedArtifact），registerArtifact 只写内存 pipeline，需同步落库。
+  const registerVerifiedArtifactRow = async (
+    applicationId: string,
+    artifactKey: string,
+    signature: string,
+  ) => {
+    await sql`
+      insert into application_artifact_uploads
+        (application_id, uploaded_by_employee_id, object_key, file_name,
+         mime_type, size_bytes, sha256, signature, part_count, upload_status,
+         scan_status, error_code, expires_at, completed_at)
+      values (
+        ${applicationId}, 'E100', ${artifactKey}, 'artifact.zip',
+        'application/octet-stream', 22, ${artifactSha256}, ${signature}, 1,
+        'completed', 'passed', null, now() + interval '1 hour', now()
+      )
+    `.execute(db);
+  };
+
   beforeAll(async () => {
     const container = await startPostgresTestContainer();
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
     await sql`
       insert into departments (department_id, name, source)
       values ('dept-platform', 'Platform', 'local'), ('dept-review', 'Review', 'local')
@@ -101,6 +123,11 @@ describe("real application lifecycle API", () => {
     await sql`
       insert into employees (employee_id, display_name, status, primary_department_id)
       values ('E100', 'Owner', 'active', 'dept-platform'), ('E200', 'Reviewer', 'active', 'dept-review')
+    `.execute(db);
+    // publish 路径的 registerToCatalog 写入 catalog_metadata（category_id FK）
+    await sql`
+      insert into catalog_categories (category_id, name, sort_order, enabled)
+      values ('productivity', '办公效率', 0, true)
     `.execute(db);
 
     const identity = new IdentityService(identityRepository);
@@ -162,6 +189,11 @@ describe("real application lifecycle API", () => {
       })
       .expect(201);
     const applicationId = createResponse.body.applicationId as string;
+    await registerVerifiedArtifactRow(
+      applicationId,
+      "applications/phase-3/artifact.zip",
+      "signature-1",
+    );
 
     const versionResponse = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
@@ -222,6 +254,11 @@ describe("real application lifecycle API", () => {
 
     const secondArtifactKey = "applications/phase-3/artifact-v2.zip";
     await registerArtifact("upload-2", secondArtifactKey, "signature-2");
+    await registerVerifiedArtifactRow(
+      applicationId,
+      secondArtifactKey,
+      "signature-2",
+    );
     const secondVersionResponse = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
       .set(ownerHeaders)
@@ -302,6 +339,11 @@ describe("real application lifecycle API", () => {
     const rejectedArtifactKey = "applications/phase-3/rejectable.zip";
     await registerArtifact(
       "upload-rejectable",
+      rejectedArtifactKey,
+      "signature-rejectable",
+    );
+    await registerVerifiedArtifactRow(
+      applicationId,
       rejectedArtifactKey,
       "signature-rejectable",
     );

@@ -12,6 +12,7 @@ import {
   type IdentityRepository,
 } from "@ai-hub/server";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { ApiModule } from "../src/api.module.js";
 
@@ -100,6 +101,7 @@ describe("real Phase 5 demand API", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
     await sql`
       insert into departments (department_id, name, parent_department_id, source)
       values
@@ -114,6 +116,11 @@ describe("real Phase 5 demand API", () => {
         ('E200', 'Other department', 'active', 'dept-ops'),
         ('E300', 'Child department', 'active', 'dept-rnd-child'),
         ('E900', 'Reviewer', 'active', 'dept-rnd')
+    `.execute(db);
+    // publish 路径的 registerToCatalog 写入 catalog_metadata（category_id FK）
+    await sql`
+      insert into catalog_categories (category_id, name, sort_order, enabled)
+      values ('productivity', '办公效率', 0, true)
     `.execute(db);
 
     const identity = new IdentityService(identityRepository);
@@ -458,6 +465,20 @@ describe("real Phase 5 demand API", () => {
         expectedVersion: progress.body.version + 1,
       })
       .expect(400);
+
+    // createVersion 要求数据库中存在已完成且扫描通过的制品上传记录
+    await sql`
+      insert into application_artifact_uploads
+        (application_id, uploaded_by_employee_id, object_key, file_name,
+         mime_type, size_bytes, sha256, signature, part_count, upload_status,
+         scan_status, error_code, expires_at, completed_at)
+      values (
+        ${applicationId}, 'E100', 'applications/phase-5/demand-backed.zip',
+        'demand-backed.zip', 'application/octet-stream', 20,
+        'phase-5-sha256', 'phase-5-signature', 1,
+        'completed', 'passed', null, now() + interval '1 hour', now()
+      )
+    `.execute(db);
 
     const version = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)

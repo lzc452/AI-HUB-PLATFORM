@@ -8,6 +8,7 @@ import {
   runMigrations,
   seedDemoAccounts,
 } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import {
   IdentityService,
@@ -100,6 +101,7 @@ describe("real demo account login", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
 
     const passwordService = new PasswordService();
     const passwordHashes: Record<string, string> = {};
