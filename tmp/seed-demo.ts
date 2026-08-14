@@ -1,8 +1,16 @@
 import { existsSync } from "node:fs";
 const envPath = ".env";
-if (existsSync(envPath)) (process as typeof process & { loadEnvFile?: (path?: string) => void }).loadEnvFile?.(envPath);
+if (existsSync(envPath))
+  (
+    process as typeof process & { loadEnvFile?: (path?: string) => void }
+  ).loadEnvFile?.(envPath);
 
-import { createDatabase, runMigrations, seedDemoDataset, cleanDemoData } from "@ai-hub/database";
+import {
+  createDatabase,
+  runMigrations,
+  seedDemoDataset,
+  cleanDemoData,
+} from "@ai-hub/database";
 import { sql } from "kysely";
 
 async function main() {
@@ -19,9 +27,18 @@ async function main() {
 
   // Insert development sessions for curl validation
   const sessions = [
-    { sessionId: "00000000-0000-0000-0000-00000000cafe", employeeId: "DEMO-APP-ADMIN" },
-    { sessionId: "00000000-0000-0000-0000-00000000caff", employeeId: "DEMO-SUPER-ADMIN" },
-    { sessionId: "00000000-0000-0000-0000-00000000cafd", employeeId: "DEMO-EMPLOYEE" },
+    {
+      sessionId: "00000000-0000-0000-0000-00000000cafe",
+      employeeId: "DEMO-APP-ADMIN",
+    },
+    {
+      sessionId: "00000000-0000-0000-0000-00000000caff",
+      employeeId: "DEMO-SUPER-ADMIN",
+    },
+    {
+      sessionId: "00000000-0000-0000-0000-00000000cafd",
+      employeeId: "DEMO-EMPLOYEE",
+    },
   ];
   for (const s of sessions) {
     await sql`

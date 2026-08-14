@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { Modal, message } from "antd";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -99,8 +106,16 @@ function latestDialog(): HTMLElement {
 
 describe("创作者中心页面", () => {
   afterEach(() => {
-    // 清理 Modal.confirm 遗留的独立根节点，避免用例间相互污染。
+    // 先卸载 React 树，再清理 Modal portal 和 timer，避免 scheduler 在 jsdom
+    // teardown 后继续访问 window。
+    cleanup();
+    if (vi.isFakeTimers()) {
+      act(() => {
+        vi.runOnlyPendingTimers();
+      });
+    }
     vi.useRealTimers();
+    // 清理 Modal.confirm 遗留的独立根节点，避免用例间相互污染。
     Modal.destroyAll();
     message.destroy();
   });

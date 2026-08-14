@@ -15,6 +15,7 @@ import type {
   DeliveryChannel,
 } from "./application.types.js";
 import type { ActorContext } from "@ai-hub/contracts";
+import type { ApplicationAdminKpis } from "@ai-hub/contracts";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -238,6 +239,49 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     };
   }
 
+  async getAdminKpis(actor: ActorContext): Promise<ApplicationAdminKpis> {
+    const canManage =
+      actor.permissions?.includes("application.manage") === true ||
+      actor.permissions?.includes("*") === true;
+    let query = this.db
+      .selectFrom("applications as application")
+      .select([
+        "application.application_id as applicationId",
+        "application.status as status",
+      ]);
+    if (!canManage) {
+      query = query.where((eb) =>
+        eb.or([
+          eb("application.owner_employee_id", "=", actor.employeeId),
+          eb("application.maintainer_employee_id", "=", actor.employeeId),
+        ]),
+      );
+    }
+    const rows = await query.execute();
+    const applicationIds = rows.map((row) => row.applicationId);
+    const deliveries =
+      applicationIds.length === 0
+        ? []
+        : await this.db
+            .selectFrom("application_deliveries")
+            .select("application_id")
+            .where("enabled", "=", true)
+            .where("application_id", "in", applicationIds)
+            .execute();
+    const deliveredIds = new Set(
+      deliveries.map((delivery) => delivery.application_id),
+    );
+    return {
+      deliveryFailed: rows.filter(
+        (row) =>
+          row.status === "withdrawn" || !deliveredIds.has(row.applicationId),
+      ).length,
+      pendingReview: rows.filter((row) => row.status === "in_review").length,
+      published: rows.filter((row) => row.status === "published").length,
+      total: rows.length,
+    };
+  }
+
   async createVersion(
     input: Omit<ApplicationVersionRecord, "createdAt">,
   ): Promise<ApplicationVersionRecord> {
@@ -435,23 +479,26 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .execute();
   }
 
-  async setApplicationStatus(
-    applicationId: string,
-    status: ApplicationRecord["status"],
-    currentVersionId?: string,
-  ): Promise<ApplicationRecord> {
+  async setApplicationStatus(input: {
+    applicationId: string;
+    expectedStatus: ApplicationRecord["status"];
+    status: ApplicationRecord["status"];
+    currentVersionId?: string;
+  }): Promise<ApplicationRecord> {
     const row = await this.db
       .updateTable("applications")
       .set({
-        status,
-        ...(currentVersionId === undefined
+        status: input.status,
+        ...(input.currentVersionId === undefined
           ? {}
-          : { current_version_id: currentVersionId }),
+          : { current_version_id: input.currentVersionId }),
         updated_at: new Date(),
       })
-      .where("application_id", "=", applicationId)
+      .where("application_id", "=", input.applicationId)
+      .where("status", "=", input.expectedStatus)
       .returningAll()
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("APPLICATION_STATE_CONFLICT");
     return this.mapApplication(row);
   }
 
@@ -608,6 +655,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     applicationId: string;
     applicationVersionId?: string | null;
     eventType: string;
+    details?: unknown;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -618,6 +666,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         payload: {
           applicationId: input.applicationId,
           applicationVersionId: input.applicationVersionId ?? null,
+          ...(input.details === undefined ? {} : { details: input.details }),
         },
         idempotency_key: `${input.eventType}:${input.applicationId}:${input.applicationVersionId ?? "none"}:${randomUUID()}`,
         status: "pending",

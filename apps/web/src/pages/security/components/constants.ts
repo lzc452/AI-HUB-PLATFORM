@@ -58,54 +58,65 @@ export interface SecurityKpiStat {
   value: string;
 }
 
-export const SECURITY_KPI_STATS: SecurityKpiStat[] = [
-  {
-    Icon: SafetyCertificateFilled,
-    iconBgClass: "bg-[#e6f4ff]",
-    iconColorClass: "text-[#1677ff]",
-    key: "activeSessions",
-    label: "活跃会话",
-    trendArrow: "up",
-    trendClass: "text-[#52c41a]",
-    trendText: "12%",
-    value: "86",
-  },
-  {
-    // 设计图为红色警灯，@ant-design/icons 无精确匹配，用最近似的 AlertFilled 代替
-    Icon: AlertFilled,
-    iconBgClass: "bg-[#fff1f0]",
-    iconColorClass: "text-[#ff4d4f]",
-    key: "highRiskAlerts",
-    label: "高风险告警",
-    trendArrow: "down",
-    trendClass: "text-[#52c41a]",
-    trendText: "1",
-    value: "3",
-  },
-  {
-    // 设计图为文件夹+锁，无精确匹配，用最近似的 FolderFilled 代替
-    Icon: FolderFilled,
-    iconBgClass: "bg-[#fff7e6]",
-    iconColorClass: "text-[#fa8c16]",
-    key: "quarantinedFiles",
-    label: "隔离文件",
-    trendArrow: "up",
-    trendClass: "text-[#ff4d4f]",
-    trendText: "2",
-    value: "12",
-  },
-  {
-    Icon: SettingFilled,
-    iconBgClass: "bg-[#f9f0ff]",
-    iconColorClass: "text-[#722ed1]",
-    key: "configChanges",
-    label: "配置变更",
-    trendArrow: "up",
-    trendClass: "text-[#ff4d4f]",
-    trendText: "1",
-    value: "5",
-  },
-];
+export function getSecurityKpiStats(
+  rows: readonly AuditLogRow[],
+): SecurityKpiStat[] {
+  const highRiskAlerts = rows.filter((row) =>
+    ["高风险", "critical", "high"].includes(row.detail.riskLevel),
+  ).length;
+  const quarantinedFiles = rows.filter((row) =>
+    /隔离|quarantine|infect/i.test(`${row.actionType} ${row.summary}`),
+  ).length;
+  const configChanges = rows.filter((row) =>
+    /配置|策略|config|policy/i.test(`${row.module} ${row.actionType}`),
+  ).length;
+  return [
+    {
+      Icon: SafetyCertificateFilled,
+      iconBgClass: "bg-[#e6f4ff]",
+      iconColorClass: "text-[#1677ff]",
+      key: "activeSessions",
+      label: "活跃会话",
+      trendArrow: "up",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "后端暂未提供趋势",
+      value: "—",
+    },
+    {
+      Icon: AlertFilled,
+      iconBgClass: "bg-[#fff1f0]",
+      iconColorClass: "text-[#ff4d4f]",
+      key: "highRiskAlerts",
+      label: "高风险告警",
+      trendArrow: "down",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "当前审计记录",
+      value: String(highRiskAlerts),
+    },
+    {
+      Icon: FolderFilled,
+      iconBgClass: "bg-[#fff7e6]",
+      iconColorClass: "text-[#fa8c16]",
+      key: "quarantinedFiles",
+      label: "隔离文件事件",
+      trendArrow: "up",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "当前审计记录",
+      value: String(quarantinedFiles),
+    },
+    {
+      Icon: SettingFilled,
+      iconBgClass: "bg-[#f9f0ff]",
+      iconColorClass: "text-[#722ed1]",
+      key: "configChanges",
+      label: "配置变更事件",
+      trendArrow: "up",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "当前审计记录",
+      value: String(configChanges),
+    },
+  ];
+}
 
 /** 今日安全概况迷你项展示数据（设计图逐字）。 */
 export interface SecurityOverviewItem {
@@ -122,50 +133,65 @@ export interface SecurityOverviewItem {
   valueClass: string;
 }
 
-export const SECURITY_OVERVIEW_ITEMS: SecurityOverviewItem[] = [
-  {
-    Icon: SafetyCertificateOutlined,
-    iconBgClass: "bg-[#e6f4ff]",
-    iconColorClass: "text-[#1677ff]",
-    key: "scanRate",
-    label: "扫描成功率",
-    trendArrow: "up",
-    trendClass: "text-[#52c41a]",
-    trendText: "0.8%",
-    unit: "%",
-    value: "99.2",
-    valueClass: "text-[#52c41a]",
-  },
-  {
-    Icon: FileExclamationOutlined,
-    iconBgClass: "bg-[#fff7e6]",
-    iconColorClass: "text-[#fa8c16]",
-    key: "riskFiles",
-    label: "风险文件",
-    trendArrow: "up",
-    trendClass: "text-[#ff4d4f]",
-    trendText: "2",
-    unit: "",
-    value: "12",
-    valueClass: "text-[#fa8c16]",
-  },
-  {
-    Icon: UserOutlined,
-    iconBgClass: "bg-[#e6f4ff]",
-    iconColorClass: "text-[#1677ff]",
-    key: "forceLogoutUsers",
-    label: "最近强制下线用户",
-    trendArrow: "down",
-    trendClass: "text-[#52c41a]",
-    trendText: "1",
-    unit: "人",
-    value: "3",
-    valueClass: "text-[#1677ff]",
-  },
-];
+export function getSecurityOverviewItems(
+  rows: readonly AuditLogRow[],
+): SecurityOverviewItem[] {
+  const riskFiles = rows.filter((row) =>
+    ["高风险", "critical", "high"].includes(row.detail.riskLevel),
+  ).length;
+  const forceLogoutUsers = rows.filter((row) =>
+    /强制下线|force.?logout/i.test(`${row.actionType} ${row.summary}`),
+  ).length;
+  return [
+    {
+      Icon: SafetyCertificateOutlined,
+      iconBgClass: "bg-[#e6f4ff]",
+      iconColorClass: "text-[#1677ff]",
+      key: "scanRate",
+      label: "扫描成功率",
+      trendArrow: "up",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "后端暂未提供扫描统计",
+      unit: "",
+      value: "—",
+      valueClass: "text-[#8c8c8c]",
+    },
+    {
+      Icon: FileExclamationOutlined,
+      iconBgClass: "bg-[#fff7e6]",
+      iconColorClass: "text-[#fa8c16]",
+      key: "riskFiles",
+      label: "风险文件事件",
+      trendArrow: "up",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "当前审计记录",
+      unit: "",
+      value: String(riskFiles),
+      valueClass: "text-[#fa8c16]",
+    },
+    {
+      Icon: UserOutlined,
+      iconBgClass: "bg-[#e6f4ff]",
+      iconColorClass: "text-[#1677ff]",
+      key: "forceLogoutUsers",
+      label: "强制下线事件",
+      trendArrow: "down",
+      trendClass: "text-[#8c8c8c]",
+      trendText: "当前审计记录",
+      unit: "",
+      value: String(forceLogoutUsers),
+      valueClass: "text-[#1677ff]",
+    },
+  ];
+}
 
 /** 概况卡右上角数据截至时间（设计图逐字）。 */
-export const OVERVIEW_AS_OF = "数据截至 2025-06-01 10:30";
+export function getOverviewAsOf(rows: readonly AuditLogRow[]): string {
+  const latest = rows
+    .map((row) => row.time)
+    .sort((left, right) => right.localeCompare(left))[0];
+  return latest ? `数据截至 ${latest}` : "暂无审计数据";
+}
 
 /** 筛选状态聚合为单一对象，由 SecurityPage 容器持有。 */
 export interface AuditFilterValue {

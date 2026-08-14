@@ -170,10 +170,11 @@ export class ApplicationService {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
-        "in_review",
-      );
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: application.status,
+        status: "in_review",
+      });
       await repository.createReviewQueue({
         applicationId: application.applicationId,
         applicationVersionId,
@@ -295,10 +296,11 @@ export class ApplicationService {
           decision,
           comment,
         });
-        const updated = await repository.setApplicationStatus(
-          application.applicationId,
-          nextStatus,
-        );
+        const updated = await repository.setApplicationStatus({
+          applicationId: application.applicationId,
+          expectedStatus: "in_review",
+          status: nextStatus,
+        });
         await this.recordChange(
           repository,
           "application.reviewed",
@@ -345,11 +347,12 @@ export class ApplicationService {
       throw new Error("DELIVERY_CHANNELS_INCOMPLETE");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
-        "published",
-        applicationVersionId,
-      );
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: "approved",
+        status: "published",
+        currentVersionId: applicationVersionId,
+      });
       await repository.registerToCatalog({
         applicationId: application.applicationId,
         name: application.name,
@@ -405,11 +408,12 @@ export class ApplicationService {
       throw new Error("ROLLBACK_TARGET_IS_CURRENT");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
+      const updated = await repository.setApplicationStatus({
         applicationId,
-        "published",
-        applicationVersionId,
-      );
+        expectedStatus: "published",
+        status: "published",
+        currentVersionId: applicationVersionId,
+      });
       await this.recordChange(
         repository,
         "application.rolled_back",
@@ -503,6 +507,13 @@ export class ApplicationService {
       throw new Error("APPLICATION_ADMIN_LIST_UNAVAILABLE");
     }
     return this.repository.listAdmin(actor, input);
+  }
+
+  async getAdminKpis(actor: ActorContext) {
+    if (this.repository.getAdminKpis === undefined) {
+      throw new Error("APPLICATION_ADMIN_KPIS_UNAVAILABLE");
+    }
+    return this.repository.getAdminKpis(actor);
   }
 
   async listVersions(applicationId: string, actor?: ActorContext) {
@@ -622,18 +633,19 @@ export class ApplicationService {
     actorEmployeeId?: string,
     applicationVersionId?: string,
   ) {
-    void reason;
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: application.status,
         status,
-      );
+      });
       await this.recordChange(
         repository,
         eventType,
         application.applicationId,
         applicationVersionId ?? application.currentVersionId,
         actorEmployeeId ?? null,
+        reason === undefined ? undefined : { reason },
       );
       return updated;
     });
@@ -705,17 +717,20 @@ export class ApplicationService {
     applicationId: string,
     applicationVersionId: string | null,
     actorEmployeeId: string | null,
+    details?: unknown,
   ): Promise<void> {
     await repository.recordAudit({
       applicationId,
       applicationVersionId,
       actorEmployeeId,
       eventType,
+      details,
     });
     await repository.emitOutbox({
       applicationId,
       applicationVersionId,
       eventType,
+      details,
     });
   }
 }

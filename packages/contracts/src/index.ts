@@ -1,4 +1,11 @@
 export type { ProblemDetails } from "./problem-details.js";
+export type { ApiErrorResponse } from "./errors.js";
+export type {
+  IdempotencyKey,
+  IsoUtc,
+  Nullable,
+  PageResult,
+} from "./pagination.js";
 export type { HealthSnapshot } from "./system/health.js";
 export type {
   ClaimedOutboxEvent,
@@ -24,6 +31,7 @@ export {
 } from "./identity.js";
 export type {
   ApplicationId,
+  ApplicationAdminKpis,
   ApplicationStatus,
   ApplicationVersion,
   ApplicationVersionId,

@@ -50,6 +50,51 @@ beforeEach(() => {
       if (path.includes("/internal/notifications")) {
         return Response.json([]);
       }
+      if (path.includes("/internal/catalog?")) {
+        return Response.json({
+          items: [
+            {
+              applicationId: "app-dataviz",
+              name: "数据可视化平台",
+              summary: "拖拽式仪表盘搭建，支持多数据源接入与实时大屏展示。",
+              departmentId: "dept-1",
+              categoryId: "cat-data",
+              tagIds: ["数据分析", "可视化", "仪表盘", "BI"],
+              trustLabels: ["recommended"],
+              currentVersionId: "version-dataviz",
+              publishedAt: new Date().toISOString(),
+              deliveryChannels: ["web"],
+              likeCount: 125,
+              ratingAverage: 4.8,
+              ratingCount: 236,
+              healthStatus: "healthy",
+              deprecatedReason: null,
+              replacementApplicationId: null,
+            },
+            {
+              applicationId: "app-reportgen",
+              name: "报表自动生成",
+              summary: "按模板定时生成业务报表，支持 Excel 导出与邮件送达。",
+              departmentId: "dept-1",
+              categoryId: "cat-report",
+              tagIds: ["报表", "自动化", "定时调度", "Excel导出"],
+              trustLabels: [],
+              currentVersionId: "version-reportgen",
+              publishedAt: new Date().toISOString(),
+              deliveryChannels: ["web"],
+              likeCount: 98,
+              ratingAverage: 4.7,
+              ratingCount: 189,
+              healthStatus: "healthy",
+              deprecatedReason: null,
+              replacementApplicationId: null,
+            },
+          ],
+          page: 1,
+          pageSize: 2,
+          total: 2,
+        });
+      }
       if (path.includes("/internal/applications/admin-list")) {
         return Response.json({
           items: [

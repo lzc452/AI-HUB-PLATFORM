@@ -4,9 +4,12 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common";
-import { useSecurityAuditLogs } from "../../modules/security";
+import {
+  createAuditExport,
+  useSecurityAuditLogs,
+} from "../../modules/security";
 import { ROUTES } from "../../router/routes";
-import { showWarningMessage } from "../../shared/ui/message";
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
 import { AuditFilterBar } from "./components/AuditFilterBar";
 import { AuditLogDetail } from "./components/AuditLogDetail";
@@ -75,8 +78,20 @@ export default function SecurityPage() {
     }
   };
 
-  const handleExport = () => {
-    showWarningMessage("demo 环境暂不支持导出");
+  const handleExport = async () => {
+    try {
+      const result = await createAuditExport({
+        action: filters.actionType,
+        from: filters.range?.[0]?.toISOString() ?? null,
+        keyword: filters.searchText,
+        module: filters.module,
+        operator: filters.operator,
+        to: filters.range?.[1]?.toISOString() ?? null,
+      });
+      showSuccessMessage(`审计导出任务已创建（${result.status}）`);
+    } catch (error) {
+      showErrorMessage(error, "创建审计导出任务失败");
+    }
   };
 
   return (
@@ -93,7 +108,7 @@ export default function SecurityPage() {
       <Title className="!mb-0" level={2}>
         系统安全
       </Title>
-      <SecurityKpiStats />
+      <SecurityKpiStats rows={allRows} />
       <Tabs
         activeKey={activeTab}
         items={[
@@ -123,7 +138,7 @@ export default function SecurityPage() {
                   </div>
                   <div className="w-full space-y-2 lg:w-[460px] lg:shrink-0">
                     <AuditLogDetail loading={isPending} row={selectedRow} />
-                    <SecurityOverviewCard />
+                    <SecurityOverviewCard rows={allRows} />
                   </div>
                 </div>
               </div>
@@ -135,6 +150,7 @@ export default function SecurityPage() {
             children: (
               <EmptyBlock description={`「${label}」模块建设中，敬请期待`} />
             ),
+            disabled: true,
             key,
             label,
           })),

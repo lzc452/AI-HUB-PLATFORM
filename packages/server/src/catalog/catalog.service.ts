@@ -8,12 +8,21 @@ import type {
 } from "./catalog.types.js";
 import type { DeliveryChannel } from "../application/application.types.js";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
+import {
+  CatalogVisibilityPolicy,
+  type CatalogVisibilityPort,
+} from "./catalog-visibility.policy.js";
 
 export class CatalogService {
+  private readonly visibility: CatalogVisibilityPort;
+
   constructor(
     private readonly repository: CatalogRepository,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
-  ) {}
+    visibility?: CatalogVisibilityPort,
+  ) {
+    this.visibility = visibility ?? new CatalogVisibilityPolicy(repository);
+  }
 
   async list(input: CatalogSearchInput): Promise<CatalogListResult> {
     return this.query(input);
@@ -24,12 +33,7 @@ export class CatalogService {
   }
 
   async getDetail(actor: ActorContext, applicationId: string) {
-    const entry = await this.repository.findVisible(actor, applicationId);
-    if (entry === null) throw new Error("CATALOG_APPLICATION_NOT_FOUND");
-    if (entry.currentVersionId.length === 0) {
-      throw new Error("CATALOG_PUBLISHED_VERSION_REQUIRED");
-    }
-    return entry;
+    return this.visibility.requireVisible(actor, applicationId);
   }
 
   async recordDeliveryAction(

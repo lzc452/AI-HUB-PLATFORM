@@ -1,4 +1,8 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import type { DatabaseSchema } from "@ai-hub/database";
 import { sql, type Kysely } from "kysely";
 import type {
@@ -22,6 +26,9 @@ type CatalogRow = {
   healthStatus: "unknown" | "healthy" | "degraded" | "failed";
   deprecatedReason: string | null;
   replacementApplicationId: string | null;
+  ownerEmployeeId: string;
+  maintainerName: string | null;
+  ratingCount: number;
 };
 
 export class KyselyCatalogRepository implements CatalogRepository {
@@ -29,6 +36,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
 
   async listVisible(
     input: CatalogSearchInput,
+    applicationId?: string,
   ): Promise<readonly CatalogEntry[]> {
     const departmentIds = input.actor.departmentIds;
     let query = this.db
@@ -38,11 +46,18 @@ export class KyselyCatalogRepository implements CatalogRepository {
         "application.application_id",
         "metadata.application_id",
       )
+      .leftJoin(
+        "employees as maintainer",
+        "maintainer.employee_id",
+        "application.maintainer_employee_id",
+      )
       .select([
         "application.application_id as applicationId",
         "application.name as name",
         "application.summary as summary",
         "application.department_id as departmentId",
+        "application.owner_employee_id as ownerEmployeeId",
+        "maintainer.display_name as maintainerName",
         "metadata.category_id as categoryId",
         "application.current_version_id as currentVersionId",
         "application.updated_at as publishedAt",
@@ -60,6 +75,11 @@ export class KyselyCatalogRepository implements CatalogRepository {
           from application_ratings rating
           where rating.application_id = application.application_id
         )`.as("ratingAverage"),
+        sql<number>`(
+          select count(*)::int
+          from application_ratings rating_count
+          where rating_count.application_id = application.application_id
+        )`.as("ratingCount"),
       ])
       .where("application.status", "=", "published")
       .where("application.current_version_id", "is not", null)
@@ -82,6 +102,10 @@ export class KyselyCatalogRepository implements CatalogRepository {
             ),
         ),
       );
+
+    if (applicationId !== undefined) {
+      query = query.where("application.application_id", "=", applicationId);
+    }
 
     const queryText = input.query?.trim();
     if (queryText !== undefined && queryText.length > 0) {
@@ -130,24 +154,34 @@ export class KyselyCatalogRepository implements CatalogRepository {
     }
 
     const rows = await query.execute();
-    return Promise.all(rows.map((row) => this.mapEntry(row as CatalogRow)));
+    return Promise.all(
+      rows.map((row) =>
+        this.mapEntry(row as unknown as CatalogRow, input.actor),
+      ),
+    );
   }
 
   async findVisible(
     actor: ActorContext,
     applicationId: string,
   ): Promise<CatalogEntry | null> {
-    const rows = await this.listVisible({
-      actor,
-      sort: "recommended",
-      page: 1,
-      pageSize: 100,
-    });
-    return rows.find((entry) => entry.applicationId === applicationId) ?? null;
+    const rows = await this.listVisible(
+      {
+        actor,
+        sort: "recommended",
+        page: 1,
+        pageSize: 1,
+      },
+      applicationId,
+    );
+    return rows[0] ?? null;
   }
 
-  private async mapEntry(row: CatalogRow): Promise<CatalogEntry> {
-    const [tags, labels, deliveries] = await Promise.all([
+  private async mapEntry(
+    row: CatalogRow,
+    actor: ActorContext,
+  ): Promise<CatalogEntry> {
+    const [tags, labels, deliveries, attachments] = await Promise.all([
       this.db
         .selectFrom("application_tag_links as tag_link")
         .select("tag_link.tag_id")
@@ -167,6 +201,14 @@ export class KyselyCatalogRepository implements CatalogRepository {
         .where("enabled", "=", true)
         .orderBy("channel")
         .execute(),
+      this.db
+        .selectFrom("application_assets")
+        .select(["name", "mime_type", "size_bytes"])
+        .where("application_id", "=", row.applicationId)
+        .where("asset_type", "=", "attachment")
+        .where("scan_status", "=", "passed")
+        .orderBy("sort_order")
+        .execute(),
     ]);
     return {
       applicationId: row.applicationId,
@@ -183,6 +225,36 @@ export class KyselyCatalogRepository implements CatalogRepository {
       deliveryChannels: deliveries.map((delivery) => delivery.channel),
       likeCount: row.likeCount,
       ratingAverage: row.ratingAverage,
+      ratingCount: row.ratingCount,
+      maintainers: row.maintainerName === null ? [] : [row.maintainerName],
+      attachments: attachments.map((attachment) => ({
+        name: attachment.name,
+        type: attachment.mime_type.includes("pdf")
+          ? "pdf"
+          : attachment.mime_type.includes("word")
+            ? "docx"
+            : attachment.name.toLowerCase().endsWith(".doc")
+              ? "doc"
+              : "other",
+        size: formatBytes(attachment.size_bytes),
+      })),
+      capabilities: {
+        canResolveDelivery: deliveries.length > 0,
+        canLike: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+        canRate: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+        canComment: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+        canSubmitFeedback: hasPermission(
+          actor,
+          PERMISSIONS.INTERACTION_INTERACT,
+        ),
+        canModerateComments: hasPermission(
+          actor,
+          PERMISSIONS.INTERACTION_MODERATE,
+        ),
+        canEditRisk:
+          row.ownerEmployeeId === actor.employeeId ||
+          hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE),
+      },
       healthStatus: row.healthStatus,
       deprecatedReason: row.deprecatedReason,
       replacementApplicationId: row.replacementApplicationId,
@@ -272,4 +344,10 @@ export class KyselyCatalogRepository implements CatalogRepository {
       .where("application_id", "=", applicationId)
       .execute();
   }
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }

@@ -1,4 +1,5 @@
 export {
+  createAuditExport,
   fetchSecurityAuditLogs,
   type AuditLogDetail,
   type AuditLogRow,

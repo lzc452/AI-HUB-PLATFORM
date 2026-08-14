@@ -31,9 +31,10 @@ import { configureSwagger, shouldEnableApiDocs } from "./swagger.js";
 async function bootstrap() {
   const config = parseRuntimeConfig(process.env);
   const logger = createApplicationLogger(config.logLevel);
-  const replayDatabase = createDatabase(config.databaseUrl);
+  const database = createDatabase(config.databaseUrl);
+  const replayDatabase = database;
   const metrics = new ObservabilityMetrics({
-    collectOutboxCounts: createOutboxCountCollector(config.databaseUrl),
+    collectOutboxCounts: createOutboxCountCollector(database),
   });
   const identityOptions: {
     loginEncryptionPrivateKey?: string;
@@ -68,16 +69,18 @@ async function bootstrap() {
     : undefined;
   const app = await NestFactory.create<NestExpressApplication>(
     ApiModule.register(
-      config.databaseUrl,
+      database,
       { logger, metrics },
       artifactStorage === undefined
         ? undefined
-        : createArtifactVerification(artifactStorage, config.nodeEnv !== "production"),
+        : createArtifactVerification(
+            artifactStorage,
+            config.nodeEnv !== "production",
+          ),
       identityOptions,
       config.artifactUploadEnabled ? config.storageDirectory : undefined,
       config.artifactMaxSizeBytes,
       artifactStorage,
-      config.nodeEnv !== "production",
     ),
     { logger: new PinoNestLogger(logger) },
   );

@@ -18,7 +18,7 @@ import {
   Typography,
 } from "antd";
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import {
   ApplicationAdminPage,
@@ -439,12 +439,11 @@ function PreviewOverview({
             </span>
           </div>
         </div>
-        <Button
-          size="small"
-          onClick={() => showWarningMessage("应用详情将在新页面打开")}
-        >
-          查看应用详情
-        </Button>
+        <Link to={app ? `/applications/${app.applicationId}` : "#"}>
+          <Button disabled={!app} size="small">
+            查看应用详情
+          </Button>
+        </Link>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <section className="rounded-lg border border-[#e4eaf2] p-4">

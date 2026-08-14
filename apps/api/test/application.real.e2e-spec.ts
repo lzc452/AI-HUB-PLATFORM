@@ -300,7 +300,11 @@ describe("real application lifecycle API", () => {
       .expect(201);
     const applicationId = createResponse.body.applicationId as string;
     const rejectedArtifactKey = "applications/phase-3/rejectable.zip";
-    await registerArtifact("upload-rejectable", rejectedArtifactKey, "signature-rejectable");
+    await registerArtifact(
+      "upload-rejectable",
+      rejectedArtifactKey,
+      "signature-rejectable",
+    );
     const versionResponse = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
       .set(actorHeaders("E100"))

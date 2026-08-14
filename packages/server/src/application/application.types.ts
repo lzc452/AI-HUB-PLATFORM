@@ -1,4 +1,5 @@
 import type {
+  ApplicationAdminKpis,
   ActorContext,
   AuthorizationDecision,
   AuthorizationRequest,
@@ -175,6 +176,7 @@ export interface ApplicationRepository {
     actor: ActorContext,
     input: ApplicationAdminListInput,
   ): Promise<ApplicationAdminListResult>;
+  getAdminKpis?(actor: ActorContext): Promise<ApplicationAdminKpis>;
   createVersion(
     input: Omit<ApplicationVersionRecord, "createdAt">,
   ): Promise<ApplicationVersionRecord>;
@@ -216,11 +218,12 @@ export interface ApplicationRepository {
   listAssets(applicationId: string): Promise<readonly AssetRecord[]>;
   findAsset(assetId: string): Promise<AssetRecord | null>;
   deleteAsset(assetId: string): Promise<void>;
-  setApplicationStatus(
-    applicationId: string,
-    status: ApplicationStatus,
-    currentVersionId?: string,
-  ): Promise<ApplicationRecord>;
+  setApplicationStatus(input: {
+    applicationId: string;
+    expectedStatus: ApplicationStatus;
+    status: ApplicationStatus;
+    currentVersionId?: string;
+  }): Promise<ApplicationRecord>;
   createDelivery(
     input: Omit<DeliveryRecord, "deliveryId">,
   ): Promise<DeliveryRecord>;
@@ -254,6 +257,7 @@ export interface ApplicationRepository {
     applicationId: string;
     applicationVersionId?: string | null;
     eventType: string;
+    details?: unknown;
   }): Promise<void>;
   registerToCatalog(input: {
     applicationId: string;

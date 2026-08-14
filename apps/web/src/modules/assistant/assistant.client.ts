@@ -1,10 +1,4 @@
-/**
- * AI 助手页面的本地展示数据。
- *
- * 当前项目未接入 Dify 等对话后端，这里集中维护示例问题、能力说明与
- * 推荐应用卡片的静态数据，供页面在无后端时呈现与设计稿一致的对话效果。
- * 接入真实后端后，应将这些数据替换为接口返回。
- */
+/** AI 助手 API 客户端与纯说明文案。推荐应用由 Catalog API 返回。 */
 
 export interface RecommendedApp {
   applicationId: string;
@@ -75,35 +69,6 @@ export const assistantCapabilities: readonly AssistantCapability[] = [
       "可指定所需能力，例如「需要 OCR 识别」。",
       "结果卡片可点击查看应用详情与交付方式。",
     ],
-  },
-];
-
-export const recommendedApps: readonly RecommendedApp[] = [
-  {
-    applicationId: "app-dataviz",
-    badge: "推荐",
-    iconBackground: "#0060f0",
-    iconColor: "#ffffff",
-    iconText: "数",
-    name: "数据可视化平台",
-    rating: 4.8,
-    ratingCount: 236,
-    summary: "拖拽式仪表盘搭建，支持多数据源接入与实时大屏展示。",
-    tags: ["数据分析", "可视化", "仪表盘", "BI"],
-    usage: "12.5k",
-  },
-  {
-    applicationId: "app-reportgen",
-    badge: "高匹配",
-    iconBackground: "#4ac78c",
-    iconColor: "#ffffff",
-    iconText: "报",
-    name: "报表自动生成",
-    rating: 4.7,
-    ratingCount: 189,
-    summary: "按模板定时生成业务报表，支持 Excel 导出与邮件送达。",
-    tags: ["报表", "自动化", "定时调度", "Excel导出"],
-    usage: "8.2k",
   },
 ];
 

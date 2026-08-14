@@ -31,12 +31,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "${SCRIPT_DIR}/../.." && pwd)}"
 BACKUP_DIR="${BACKUP_DIR:-${HOME}/docker-migration-backup}"
+# Git Bash (MSYS) 下 docker(Windows) 不识别 POSIX 路径（/c/... 会被当作 \c\... 或匿名卷）：
+# 传给 docker 的宿主路径统一转为 C:/... 形式；cygpath 仅存在于 MSYS，其他平台保持原值
+case "$(uname -s)" in
+  MINGW*|MSYS*) BACKUP_DIR="$(cygpath -m "${BACKUP_DIR}")" ;;
+esac
 
 DRY_RUN=0
 RUN_TESTS=0
 
-# Git Bash (MSYS) 会把 docker run -v 中的 /backup、/data 改写为 Windows 路径
-export MSYS_NO_PATHCONV=1
+# 注意: MSYS_NO_PATHCONV 不能全局导出 —— 会破坏 corepack/node 等依赖 MSYS 路径转换的命令
+# （POSIX 路径 /d/... 原样传给 Windows node 会被解析为 D:\d\...）。仅在 docker 包装函数内按命令设置。
 
 # 参与备份的数据卷（clamav-definitions 可重新下载，不备份；garage 两卷必须成对恢复）
 DATA_VOLUMES=(postgres-data garage-metadata garage-data)
@@ -47,11 +52,11 @@ say()  { printf '%s\n' "$*"; }
 warn() { printf '警告: %s\n' "$*" >&2; }
 fail() { printf '错误: %s\n' "$*" >&2; exit 1; }
 
-run() { # 执行命令；--dry-run 下仅打印
+run() { # 执行命令；--dry-run 下仅打印（MSYS_NO_PATHCONV 仅对本命令生效，防止 -v /data 被改写）
   if [ "${DRY_RUN}" -eq 1 ]; then
     printf '>>> %s\n' "$*"
   else
-    "$@"
+    MSYS_NO_PATHCONV=1 "$@"
   fi
 }
 
@@ -61,7 +66,7 @@ run_capture() { # 执行命令并将 stdout 写入 $1 指定的文件
   if [ "${DRY_RUN}" -eq 1 ]; then
     printf '>>> %s > %s\n' "$*" "${out}"
   else
-    "$@" > "${out}"
+    MSYS_NO_PATHCONV=1 "$@" > "${out}"
   fi
 }
 
@@ -69,7 +74,7 @@ run_silent() { # 同 run，但抑制命令输出（--dry-run 下仍打印命令�
   if [ "${DRY_RUN}" -eq 1 ]; then
     printf '>>> %s\n' "$*"
   else
-    "$@" >/dev/null 2>&1
+    MSYS_NO_PATHCONV=1 "$@" >/dev/null 2>&1
   fi
 }
 
@@ -86,14 +91,17 @@ psql_count() { # 返回表行数（表名来自脚本常量，非用户输入）
 }
 
 compose() { # docker compose 包装（cd 进仓库根目录，使用相对 compose 文件，保证 .env 生效且路径不被 Windows 二进制误解析）
-  (cd "${PROJECT_ROOT}" && docker compose -f compose.yaml -f compose.dev.yaml "$@")
+  (cd "${PROJECT_ROOT}" && MSYS_NO_PATHCONV=1 docker compose -f compose.yaml -f compose.dev.yaml "$@")
 }
 
 project_name() { # 与卷命名一致的 compose 项目名（ai-hub-platform_*）
   local name
-  if name="$(cd "${PROJECT_ROOT}" && docker compose -f compose.yaml config --project-name 2>/dev/null)"; then
+  # compose v5 的 config 无 --project-name；用 --format json 读顶层 name，未设置或解析失败时退回目录名小写
+  name="$(cd "${PROJECT_ROOT}" && docker compose -f compose.yaml config --format json 2>/dev/null \
+    | sed -n 's/^[[:space:]]*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+  if [ -n "${name}" ]; then
     printf '%s' "${name}"
-  else # 无 compose 插件时退回目录名小写
+  else
     printf '%s' "$(basename "${PROJECT_ROOT}" | tr '[:upper:]' '[:lower:]')"
   fi
 }
@@ -103,10 +111,13 @@ db_creds() { # 从 .env 读取数据库凭据（缺失时使用 compose 默认�
   POSTGRES_DB="ai_hub"
   if [ -f "${PROJECT_ROOT}/.env" ]; then
     local u d
-    u="$(grep -E '^POSTGRES_USER=' "${PROJECT_ROOT}/.env" | tail -1 | cut -d= -f2-)"
-    d="$(grep -E '^POSTGRES_DB=' "${PROJECT_ROOT}/.env" | tail -1 | cut -d= -f2-)"
-    [ -n "${u}" ] && POSTGRES_USER="${u}"
-    [ -n "${d}" ] && POSTGRES_DB="${d}"
+    # 注意: 这里不能用 [ -n ... ] && X=... 形式 —— 条件为假时复合语句返回 1，
+    # 作为函数最后一条语句会让 db_creds 返回 1，set -e 会中断脚本。
+    # 命令替换里的 || true 是防止 .env 缺行时 grep 返回 1 触发 pipefail。
+    u="$(grep -E '^POSTGRES_USER=' "${PROJECT_ROOT}/.env" | tail -1 | cut -d= -f2- || true)"
+    d="$(grep -E '^POSTGRES_DB=' "${PROJECT_ROOT}/.env" | tail -1 | cut -d= -f2- || true)"
+    if [ -n "${u}" ]; then POSTGRES_USER="${u}"; fi
+    if [ -n "${d}" ]; then POSTGRES_DB="${d}"; fi
   fi
 }
 
@@ -115,7 +126,8 @@ require_engine() { # 检查 docker 引擎可达
 }
 
 load_images_list() { # 当前引擎的全部可用镜像（排除 <none>）
-  docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -Ev '^<none>|<none>:' | tr '\n' ' ' | sed 's/ $//'
+  # || true: 引擎无镜像时 grep 无匹配返回 1，pipefail 会让命令替换中断脚本
+  docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -Ev '^<none>|<none>:' | tr '\n' ' ' | sed 's/ $//' || true
 }
 
 manual_steps_before_install() {
@@ -252,8 +264,9 @@ cmd_verify() {
 
   if [ -z "${DOCKER_HOST:-}" ]; then
     say ""
-    say "提示: Testcontainers 集成测试需要 DOCKER_HOST，请执行:"
-    say "  setx DOCKER_HOST \"npipe:////./pipe/docker_engine\"   （然后重开终端）"
+    say "提示: Windows 下 docker CLI 默认使用 npipe:////./pipe/docker_engine（Rancher Desktop 提供）。"
+    say "  仅当 --tests 报无法连接 docker 时，再执行（然后重开终端）:"
+    say "  setx DOCKER_HOST \"npipe:////./pipe/docker_engine\""
   fi
 
   if [ "${RUN_TESTS}" -eq 1 ]; then

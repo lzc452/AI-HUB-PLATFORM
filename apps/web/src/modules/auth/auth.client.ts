@@ -84,6 +84,52 @@ export function listDepartments(): Promise<DepartmentSummary[]> {
   return apiFetch<DepartmentSummary[]>("/internal/identity/departments");
 }
 
+export interface IdentityRoleSummary {
+  roleId: string;
+  roleName: string;
+  roleType: "system" | "custom";
+  scope: string;
+  memberCount: number;
+  creator: string | null;
+  status: "active" | "disabled";
+  updatedAt: string;
+}
+
+export function listRoles(): Promise<IdentityRoleSummary[]> {
+  return apiFetch<IdentityRoleSummary[]>("/internal/identity/roles");
+}
+
+export function createRole(input: {
+  roleCode: string;
+  name: string;
+  permissions: string[];
+}): Promise<{ created: boolean }> {
+  return apiFetch("/internal/identity/roles", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRole(
+  roleId: string,
+  input: {
+    name?: string;
+    permissions?: string[];
+    status?: "active" | "disabled";
+  },
+): Promise<{ updated: boolean }> {
+  return apiFetch(`/internal/identity/roles/${encodeURIComponent(roleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function disableRole(roleId: string): Promise<{ disabled: boolean }> {
+  return apiFetch(`/internal/identity/roles/${encodeURIComponent(roleId)}`, {
+    method: "DELETE",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // 组织管理（批次 3）：员工分页/更新、部门 CRUD、角色分配、同步记录
 // ---------------------------------------------------------------------------
@@ -176,6 +222,29 @@ export function listSyncRuns(limit = 20): Promise<SyncRunRecord[]> {
   );
 }
 
-export function triggerSync(): Promise<{ accepted: boolean }> {
+export function triggerSync(): Promise<never> {
   return apiFetch("/internal/identity/sync/run", { method: "POST" });
+}
+
+export interface SyncConfigRecord {
+  enabled: boolean;
+  schedule: string | null;
+  externalOrgId: string | null;
+  lastUpdatedByEmployeeId: string | null;
+  updatedAt: string;
+}
+
+export function getSyncConfig(): Promise<SyncConfigRecord | null> {
+  return apiFetch<SyncConfigRecord | null>("/internal/identity/sync/config");
+}
+
+export function updateSyncConfig(input: {
+  enabled?: boolean;
+  schedule?: string | null;
+  externalOrgId?: string | null;
+}): Promise<SyncConfigRecord> {
+  return apiFetch<SyncConfigRecord>("/internal/identity/sync/config", {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }

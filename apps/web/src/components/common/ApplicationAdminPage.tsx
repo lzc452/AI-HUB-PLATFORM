@@ -3,7 +3,6 @@ import { Alert, Button, Tag, Typography } from "antd";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 
 import { useApplication } from "../../modules/application/useApplication";
-import { showWarningMessage } from "../../shared/ui/message";
 
 const { Title } = Typography;
 
@@ -186,27 +185,16 @@ export function ApplicationAdminPage({
           {actions}
           {isDetail ? (
             <>
-              <Button
-                onClick={() => showWarningMessage("编辑功能将在下一版本开放")}
-              >
+              <Button disabled title="编辑尚未纳入 V1 接口">
                 编辑
               </Button>
-              <Button
-                danger
-                onClick={() => showWarningMessage("下架操作需要发布权限")}
-              >
+              <Button danger disabled title="下架动作需接入发布权限后启用">
                 下架
               </Button>
-              <Button
-                onClick={() => showWarningMessage("归档操作需要发布权限")}
-              >
+              <Button disabled title="归档动作需接入发布权限后启用">
                 归档
               </Button>
-              <Button
-                onClick={() =>
-                  showWarningMessage("责任人移交功能将在下一版本开放")
-                }
-              >
+              <Button disabled title="责任人移交尚未纳入 V1 接口">
                 移交责任人
               </Button>
             </>

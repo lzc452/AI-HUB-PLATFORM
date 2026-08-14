@@ -89,6 +89,33 @@ export class CatalogEntryDto {
   @ApiProperty({ type: Number, description: "点赞数", example: 5 })
   likeCount!: number;
 
+  @ApiPropertyOptional({ type: Number, description: "评分人数" })
+  ratingCount?: number;
+
+  @ApiPropertyOptional({ type: [String], description: "维护人" })
+  maintainers?: string[];
+
+  @ApiPropertyOptional({
+    type: [Object],
+    description: "已通过扫描的附件",
+  })
+  attachments?: readonly {
+    name: string;
+    type: string;
+    size: string;
+  }[];
+
+  @ApiPropertyOptional({ type: Object, description: "当前用户能力" })
+  capabilities?: {
+    canResolveDelivery: boolean;
+    canLike: boolean;
+    canRate: boolean;
+    canComment: boolean;
+    canSubmitFeedback: boolean;
+    canModerateComments: boolean;
+    canEditRisk: boolean;
+  };
+
   @ApiPropertyOptional({
     description: "平均评分",
     type: Number,

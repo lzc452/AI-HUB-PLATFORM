@@ -194,7 +194,7 @@ export default function MarketplaceDetailPage() {
           commentsPending={comments.isPending}
           createComment={createComment}
           createFeedback={createFeedback}
-          isModerator={false}
+          isModerator={data.capabilities?.canModerateComments ?? false}
           myFeedback={myFeedback.data}
           onCommentsPageChange={setCommentsPage}
           onHideComment={(id) => hideComment.mutate(id)}
@@ -207,7 +207,7 @@ export default function MarketplaceDetailPage() {
       )}
       {activeTab === "risk" && (
         <MarketplaceDetailRisk
-          isOwner={false}
+          isOwner={data.capabilities?.canEditRisk ?? false}
           isPending={risk.isPending}
           onSave={(desc) => saveRisk.mutate(desc)}
           risk={risk.data}

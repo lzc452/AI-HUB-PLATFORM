@@ -142,7 +142,9 @@ export class ApplicationAdminListRowDto {
   })
   status!: string;
   @ApiProperty({ type: String }) currentVersion!: string;
-  @ApiProperty({ type: String, nullable: true }) currentVersionId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) currentVersionId!:
+    | string
+    | null;
   @ApiProperty({ type: String }) ownerName!: string;
   @ApiProperty({ type: String }) departmentName!: string;
   @ApiProperty({ type: String, isArray: true }) deliveryChannels!: string[];
@@ -157,6 +159,13 @@ export class ApplicationAdminListResultDto {
   items!: ApplicationAdminListRowDto[];
   @ApiProperty({ type: Number }) page!: number;
   @ApiProperty({ type: Number }) pageSize!: number;
+  @ApiProperty({ type: Number }) total!: number;
+}
+
+export class ApplicationAdminKpisDto {
+  @ApiProperty({ type: Number }) deliveryFailed!: number;
+  @ApiProperty({ type: Number }) pendingReview!: number;
+  @ApiProperty({ type: Number }) published!: number;
   @ApiProperty({ type: Number }) total!: number;
 }
 
@@ -381,7 +390,11 @@ export class ReviewQueueDto {
   @ApiProperty({ type: String, description: "应用版本 ID" })
   applicationVersionId!: string;
 
-  @ApiProperty({ type: String, description: "队列状态", enum: ["available", "claimed"] })
+  @ApiProperty({
+    type: String,
+    description: "队列状态",
+    enum: ["available", "claimed"],
+  })
   status!: "available" | "claimed";
 
   @ApiPropertyOptional({
@@ -414,7 +427,11 @@ export class ReviewQueueDto {
   })
   createdAt!: string;
 
-  @ApiProperty({ type: String, description: "SLA 状态", enum: ["on_time", "overdue"] })
+  @ApiProperty({
+    type: String,
+    description: "SLA 状态",
+    enum: ["on_time", "overdue"],
+  })
   slaStatus!: "on_time" | "overdue";
 }
 

@@ -70,6 +70,18 @@ export class NotificationService {
     return this.repository.listForRecipient(actor.employeeId);
   }
 
+  async getDetail(actor: ActorContext, notificationId: string) {
+    await this.assertAllowed(actor, "read");
+    const notification = await this.repository.findById?.(
+      notificationId,
+      actor.employeeId,
+    );
+    if (notification === null || notification === undefined) {
+      throw new Error("NOTIFICATION_NOT_FOUND");
+    }
+    return notification;
+  }
+
   async retryDelivery(
     actor: ActorContext,
     idempotencyKey: string,

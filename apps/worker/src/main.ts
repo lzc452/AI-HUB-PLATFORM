@@ -11,6 +11,7 @@ if (existsSync(envPath)) processWithEnvLoader.loadEnvFile?.(envPath);
 
 import { NestFactory } from "@nestjs/core";
 import { parseRuntimeConfig } from "@ai-hub/config";
+import { createDatabase } from "@ai-hub/database";
 import {
   createApplicationLogger,
   createOutboxCountCollector,
@@ -25,15 +26,12 @@ import { runOutboxPollingLoop } from "./outbox-poller.js";
 async function bootstrap() {
   const config = parseRuntimeConfig(process.env);
   const logger = createApplicationLogger(config.logLevel);
+  const database = createDatabase(config.databaseUrl);
   const metrics = new ObservabilityMetrics({
-    collectOutboxCounts: createOutboxCountCollector(config.databaseUrl),
+    collectOutboxCounts: createOutboxCountCollector(database),
   });
   const app = await NestFactory.createApplicationContext(
-    WorkerModule.register(
-      config.databaseUrl,
-      metrics,
-      config.outboxLeaseDurationMs,
-    ),
+    WorkerModule.register(database, metrics, config.outboxLeaseDurationMs),
     { logger: new PinoNestLogger(logger) },
   );
   const metricsListener = await startWorkerMetricsServer(

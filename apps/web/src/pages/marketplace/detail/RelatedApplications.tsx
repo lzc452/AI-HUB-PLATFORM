@@ -4,14 +4,20 @@ import {
   Button,
   Card,
   Empty as AntdEmpty,
+  message,
   Tag,
   Tooltip,
   Typography,
 } from "antd";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
+import {
+  downloadDeliveryAsset,
+  resolveDelivery,
+  type DeliveryChannel,
+} from "../../../modules/marketplace/marketplace.client";
 import { useCatalogSearch } from "../../../modules/marketplace/useCatalog";
 import {
   channelText,
@@ -31,6 +37,45 @@ interface RelatedAppItemProps {
 }
 
 function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
+  const [isPending, setIsPending] = useState(false);
+  const deliveryChannel = entry.deliveryChannels[0] as
+    | DeliveryChannel
+    | undefined;
+  const canResolveDelivery = entry.capabilities?.canResolveDelivery ?? false;
+
+  const handleUse = async () => {
+    if (!deliveryChannel || !canResolveDelivery || isPending) return;
+    setIsPending(true);
+    try {
+      const result = await resolveDelivery(
+        entry.applicationId,
+        deliveryChannel,
+      );
+      if (result.kind === "web_redirect") {
+        window.open(result.url, "_blank", "noopener,noreferrer");
+      } else if (result.kind === "download") {
+        const { blob, fileName } = await downloadDeliveryAsset(
+          entry.applicationId,
+          deliveryChannel,
+        );
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      } else if (result.kind === "qr") {
+        message.info(result.payload);
+      } else {
+        message.warning(result.reason);
+      }
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : "交付解析失败");
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   return (
     <article className="flex items-center gap-3 rounded-xl border border-[#f0f0f0] bg-white p-3 transition-colors hover:border-[#91caff]">
       <Link
@@ -73,8 +118,20 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           </div>
         </div>
       </Link>
-      <Tooltip title="交付动作接口待接入">
-        <Button disabled size="small" type="primary">
+      <Tooltip
+        title={
+          canResolveDelivery
+            ? `使用${channelText[deliveryChannel ?? "web"]}`
+            : "当前角色无权交付或应用尚未配置可用渠道"
+        }
+      >
+        <Button
+          disabled={!deliveryChannel || !canResolveDelivery}
+          loading={isPending}
+          onClick={handleUse}
+          size="small"
+          type="primary"
+        >
           立即使用
         </Button>
       </Tooltip>

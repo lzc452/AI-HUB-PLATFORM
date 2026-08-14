@@ -22,6 +22,13 @@ export class ProblemDetailsDto {
   @ApiProperty({ type: String, description: "错误码", example: "BAD_REQUEST" })
   code!: string;
 
+  @ApiProperty({
+    type: String,
+    description: "面向调用方的稳定错误消息",
+    example: "请求参数无效",
+  })
+  message!: string;
+
   @ApiPropertyOptional({
     type: String,
     description: "错误详情",

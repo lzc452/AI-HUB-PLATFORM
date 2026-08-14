@@ -122,11 +122,7 @@ test("拒绝只有声明值或仍引用不存在对象的恢复证据", () => {
         migrationCount: 1,
         latestMigration: "0001_system_foundation",
         expectedLatestMigration: "0001_system_foundation",
-        verifiedTables: [
-          "schema_migrations",
-          "audit_events",
-          "outbox_events",
-        ],
+        verifiedTables: ["schema_migrations", "audit_events", "outbox_events"],
       }),
     /isolated|relation|integrity|source|target/i,
   );
@@ -151,7 +147,10 @@ test("最小权限 bootstrap 与验证 SQL 不含凭据，并固化四类角色�
   assert.match(bootstrap, /AI_HUB_API_DB_PASSWORD/u);
   assert.match(bootstrap, /AI_HUB_WORKER_DB_PASSWORD/u);
   assert.match(bootstrap, /AI_HUB_OBSERVABILITY_DB_PASSWORD/u);
-  assert.match(bootstrap, /ALTER DEFAULT PRIVILEGES FOR ROLE ai_hub_migration/u);
+  assert.match(
+    bootstrap,
+    /ALTER DEFAULT PRIVILEGES FOR ROLE ai_hub_migration/u,
+  );
   assert.match(bootstrap, /REVOKE CREATE ON SCHEMA public FROM PUBLIC/u);
   assert.match(bootstrap, /GRANT pg_monitor TO ai_hub_observability/u);
   assert.match(verification, /rolsuper/u);

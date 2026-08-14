@@ -149,7 +149,11 @@ export class AnalyticsDownloadResultDto {
 
 /** 分析助手响应。 */
 export class AnalyticsAssistantResultDto {
-  @ApiProperty({ type: String, description: "响应状态", enum: ["ok", "degraded"] })
+  @ApiProperty({
+    type: String,
+    description: "响应状态",
+    enum: ["ok", "degraded"],
+  })
   status!: "ok" | "degraded";
 
   @ApiProperty({

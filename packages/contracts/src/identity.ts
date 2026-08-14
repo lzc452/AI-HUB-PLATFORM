@@ -124,4 +124,9 @@ export interface DepartmentSummary {
   name: string;
   parentDepartmentId: string | null;
   source: "local" | "dingtalk";
+  status?: "active" | "disabled";
+  managerEmployeeId?: string | null;
+  lastSyncedAt?: string | null;
+  memberCount?: number;
+  applicationCount?: number;
 }

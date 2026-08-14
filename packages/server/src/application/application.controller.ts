@@ -31,6 +31,7 @@ import { APPLICATION_SERVICE } from "./application.tokens.js";
 import { ApplicationService } from "./application.service.js";
 import {
   ApplicationDto,
+  ApplicationAdminKpisDto,
   ApplicationAdminListResultDto,
   ApplicationVersionDto,
   ApplicationWorkspaceDto,
@@ -381,6 +382,22 @@ export class ApplicationController {
         pageSize: parsedPageSize,
       }),
     );
+  }
+
+  @Get("admin-kpis")
+  @RequiresPermissions({
+    anyOf: [PERMISSIONS.APPLICATION_MANAGE, PERMISSIONS.APPLICATION_REVIEW],
+  })
+  @ApiOperation({ summary: "应用管理 KPI" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "应用管理 KPI", type: ApplicationAdminKpisDto })
+  @ApiProblemResponses([400, 401, 403])
+  async getAdminKpis(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() => this.applications.getAdminKpis(actor));
   }
 
   @Get(":applicationId")

@@ -1,5 +1,6 @@
-import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule, type Provider } from "@nestjs/common";
+import type { Kysely } from "kysely";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { ApplicationController } from "./application.controller.js";
@@ -27,20 +28,19 @@ const unavailableArtifactVerifier: ArtifactVerificationPort = {
 /** V1 单请求 raw body 上限；与运行时配置默认值保持一致。 */
 const DEFAULT_ARTIFACT_MAX_SIZE_BYTES = 64 * 1024 * 1024;
 
-function createRepositoryProvider(databaseUrl: string): Provider {
+function createRepositoryProvider(database: Kysely<DatabaseSchema>): Provider {
   return {
     provide: KyselyApplicationRepository,
-    useFactory: () =>
-      new KyselyApplicationRepository(createDatabase(databaseUrl)),
+    useValue: new KyselyApplicationRepository(database),
   };
 }
 
 function createApplicationServiceProvider(
-  databaseUrl: string,
+  database: Kysely<DatabaseSchema>,
   artifactVerifier: ArtifactVerificationPort,
 ) {
   const analyticsEvents = new AnalyticsEventService(
-    new KyselyAnalyticsEventRepository(createDatabase(databaseUrl)),
+    new KyselyAnalyticsEventRepository(database),
   );
 
   return {
@@ -70,7 +70,8 @@ function createUploadProviders(
     artifactVerifier instanceof ArtifactPipeline
       ? artifactVerifier
       : new ArtifactPipeline(storage, {
-          scan: () => Promise.reject(new Error("ARTIFACT_SECURITY_UNAVAILABLE")),
+          scan: () =>
+            Promise.reject(new Error("ARTIFACT_SECURITY_UNAVAILABLE")),
           verify: () =>
             Promise.reject(new Error("ARTIFACT_SECURITY_UNAVAILABLE")),
         });
@@ -90,36 +91,36 @@ function createUploadControllers(
 @Module({})
 export class ApplicationModule {
   static registerService(
-    databaseUrl: string,
+    database: Kysely<DatabaseSchema>,
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [IdentityModule.register(database)],
       providers: [
-        createRepositoryProvider(databaseUrl),
-        createApplicationServiceProvider(databaseUrl, artifactVerifier),
+        createRepositoryProvider(database),
+        createApplicationServiceProvider(database, artifactVerifier),
       ],
       exports: [APPLICATION_SERVICE],
     };
   }
 
   static register(
-    databaseUrl: string,
+    database: Kysely<DatabaseSchema>,
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
     storageDirectory?: string,
     artifactMaxSizeBytes: number = DEFAULT_ARTIFACT_MAX_SIZE_BYTES,
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [IdentityModule.register(database)],
       controllers: [
         ApplicationController,
         ...createUploadControllers(storageDirectory),
       ],
       providers: [
-        createRepositoryProvider(databaseUrl),
-        createApplicationServiceProvider(databaseUrl, artifactVerifier),
+        createRepositoryProvider(database),
+        createApplicationServiceProvider(database, artifactVerifier),
         ...createUploadProviders(
           artifactVerifier,
           storageDirectory,

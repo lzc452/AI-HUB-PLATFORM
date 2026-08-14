@@ -14,6 +14,9 @@ import type {
   PasswordResetChallengeRecord,
   DingTalkSyncMode,
   IdentityAuditEventRecord,
+  IdentityRoleRecord,
+  IdentitySyncConfigRecord,
+  IdentitySyncRunItemRecord,
 } from "./identity.types.js";
 
 export class KyselyIdentityRepository implements IdentityRepository {
@@ -124,14 +127,49 @@ export class KyselyIdentityRepository implements IdentityRepository {
   async listDepartments(): Promise<readonly DepartmentSummary[]> {
     const rows = await this.db
       .selectFrom("departments")
-      .select(["department_id", "name", "parent_department_id", "source"])
+      .select([
+        "department_id",
+        "name",
+        "parent_department_id",
+        "source",
+        "status",
+        "manager_employee_id",
+        "last_synced_at",
+      ])
       .orderBy("department_id")
       .execute();
+    const memberCounts = await this.db
+      .selectFrom("department_memberships")
+      .select("department_id")
+      .select(sql<{ count: number }>`count(*)::int`.as("member_count"))
+      .groupBy("department_id")
+      .execute();
+    const applicationCounts = await this.db
+      .selectFrom("applications")
+      .select("department_id")
+      .select(sql<{ count: number }>`count(*)::int`.as("application_count"))
+      .groupBy("department_id")
+      .execute();
+    const memberCountByDepartment = new Map(
+      memberCounts.map((row) => [row.department_id, Number(row.member_count)]),
+    );
+    const applicationCountByDepartment = new Map(
+      applicationCounts.map((row) => [
+        row.department_id,
+        Number(row.application_count),
+      ]),
+    );
     return rows.map((row) => ({
       departmentId: row.department_id,
       name: row.name,
       parentDepartmentId: row.parent_department_id,
       source: row.source,
+      status: row.status,
+      managerEmployeeId: row.manager_employee_id,
+      lastSyncedAt: row.last_synced_at?.toISOString() ?? null,
+      memberCount: memberCountByDepartment.get(row.department_id) ?? 0,
+      applicationCount:
+        applicationCountByDepartment.get(row.department_id) ?? 0,
     }));
   }
 
@@ -159,6 +197,91 @@ export class KyselyIdentityRepository implements IdentityRepository {
       roleCode: row.role_code,
       permissions: row.permissions,
     }));
+  }
+
+  async listRoles(): Promise<readonly IdentityRoleRecord[]> {
+    const rows = await this.db
+      .selectFrom("roles")
+      .leftJoin(
+        "employees",
+        "employees.employee_id",
+        "roles.created_by_employee_id",
+      )
+      .select([
+        "roles.role_code",
+        "roles.name",
+        "roles.permissions",
+        "roles.is_system",
+        "roles.status",
+        "roles.created_by_employee_id",
+        "roles.created_at",
+        "roles.updated_at",
+        "employees.display_name as creator_name",
+      ])
+      .orderBy("roles.name")
+      .execute();
+    const counts = await this.db
+      .selectFrom("employee_roles")
+      .select("role_code")
+      .select(sql<{ count: number }>`count(*)::int`.as("member_count"))
+      .groupBy("role_code")
+      .execute();
+    const countByRole = new Map(
+      counts.map((row) => [row.role_code, Number(row.member_count)]),
+    );
+    return rows.map((row) => ({
+      roleCode: row.role_code,
+      name: row.name,
+      permissions: row.permissions,
+      isSystem: row.is_system,
+      status: row.status,
+      createdByEmployeeId: row.created_by_employee_id,
+      creatorName: row.creator_name,
+      memberCount: countByRole.get(row.role_code) ?? 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  async createRole(input: {
+    roleCode: string;
+    name: string;
+    permissions: readonly string[];
+    createdByEmployeeId: EmployeeId;
+  }): Promise<void> {
+    await this.db
+      .insertInto("roles")
+      .values({
+        role_code: input.roleCode,
+        name: input.name,
+        permissions: input.permissions,
+        is_system: false,
+        status: "active",
+        created_by_employee_id: input.createdByEmployeeId,
+      })
+      .execute();
+  }
+
+  async updateRole(
+    roleCode: string,
+    input: {
+      name?: string;
+      permissions?: readonly string[];
+      status?: "active" | "disabled";
+    },
+  ): Promise<void> {
+    await this.db
+      .updateTable("roles")
+      .set({
+        ...(input.name === undefined ? {} : { name: input.name }),
+        ...(input.permissions === undefined
+          ? {}
+          : { permissions: input.permissions }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        updated_at: new Date(),
+      })
+      .where("role_code", "=", roleCode)
+      .execute();
   }
 
   async listEmployeesPage(input?: {
@@ -340,6 +463,123 @@ export class KyselyIdentityRepository implements IdentityRepository {
       completedAt: row.finished_at,
       summary: row.summary,
     }));
+  }
+
+  async findSyncRun(syncRunId: string) {
+    const row = await this.db
+      .selectFrom("dingtalk_sync_runs")
+      .select([
+        "sync_run_id",
+        "mode",
+        "status",
+        "started_at",
+        "finished_at",
+        "summary",
+      ])
+      .where("sync_run_id", "=", syncRunId)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : {
+          syncRunId: row.sync_run_id,
+          mode: row.mode,
+          status: row.status,
+          startedAt: row.started_at,
+          completedAt: row.finished_at,
+          summary: row.summary,
+        };
+  }
+
+  async listSyncRunItems(
+    syncRunId: string,
+  ): Promise<readonly IdentitySyncRunItemRecord[]> {
+    const rows = await this.db
+      .selectFrom("identity_sync_run_items")
+      .select([
+        "sync_run_item_id",
+        "sync_run_id",
+        "object_type",
+        "object_id",
+        "status",
+        "processed_count",
+        "success_count",
+        "failure_count",
+        "error_code",
+        "started_at",
+        "finished_at",
+      ])
+      .where("sync_run_id", "=", syncRunId)
+      .orderBy("created_at")
+      .execute();
+    return rows.map((row) => ({
+      syncRunItemId: row.sync_run_item_id,
+      syncRunId: row.sync_run_id,
+      objectType: row.object_type,
+      objectId: row.object_id,
+      status: row.status,
+      processedCount: row.processed_count,
+      successCount: row.success_count,
+      failureCount: row.failure_count,
+      errorCode: row.error_code,
+      startedAt: row.started_at,
+      finishedAt: row.finished_at,
+    }));
+  }
+
+  async getSyncConfig(): Promise<IdentitySyncConfigRecord | null> {
+    const row = await this.db
+      .selectFrom("identity_sync_config")
+      .select([
+        "enabled",
+        "schedule",
+        "external_org_id",
+        "last_updated_by_employee_id",
+        "updated_at",
+      ])
+      .where("id", "=", true)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : {
+          enabled: row.enabled,
+          schedule: row.schedule,
+          externalOrgId: row.external_org_id,
+          lastUpdatedByEmployeeId: row.last_updated_by_employee_id,
+          updatedAt: row.updated_at,
+        };
+  }
+
+  async updateSyncConfig(input: {
+    enabled?: boolean;
+    schedule?: string | null;
+    externalOrgId?: string | null;
+    lastUpdatedByEmployeeId: EmployeeId;
+  }): Promise<IdentitySyncConfigRecord> {
+    await this.db
+      .insertInto("identity_sync_config")
+      .values({
+        id: true,
+        enabled: input.enabled ?? false,
+        schedule: input.schedule ?? null,
+        external_org_id: input.externalOrgId ?? null,
+        secret_reference: null,
+        last_updated_by_employee_id: input.lastUpdatedByEmployeeId,
+      })
+      .onConflict((oc) =>
+        oc.column("id").doUpdateSet({
+          ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
+          ...(input.schedule === undefined ? {} : { schedule: input.schedule }),
+          ...(input.externalOrgId === undefined
+            ? {}
+            : { external_org_id: input.externalOrgId }),
+          last_updated_by_employee_id: input.lastUpdatedByEmployeeId,
+          updated_at: new Date(),
+        }),
+      )
+      .execute();
+    const updated = await this.getSyncConfig();
+    if (updated === null) throw new Error("SYNC_CONFIG_NOT_FOUND");
+    return updated;
   }
 
   async findSession(sessionId: string): Promise<SessionRecord | null> {

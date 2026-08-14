@@ -46,3 +46,10 @@ export interface ApplicationVersion {
   createdByEmployeeId: string;
   createdAt: string;
 }
+
+export interface ApplicationAdminKpis {
+  deliveryFailed: number;
+  pendingReview: number;
+  published: number;
+  total: number;
+}

@@ -37,6 +37,16 @@ export class KyselyNotificationRepository implements NotificationRepository {
     return rows.map((row) => this.map(row));
   }
 
+  async findById(notificationId: string, employeeId: string) {
+    const row = await this.db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("notification_id", "=", notificationId)
+      .where("recipient_employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.map(row);
+  }
+
   async create(
     input: Omit<NotificationRecord, "notificationId" | "createdAt">,
   ) {

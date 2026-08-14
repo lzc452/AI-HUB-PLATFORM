@@ -1,8 +1,10 @@
 import {
   BadRequestException,
   Controller,
+  ForbiddenException,
   Headers,
   Inject,
+  NotFoundException,
   Param,
   Post,
   Get,
@@ -341,9 +343,13 @@ export class InteractionController {
     try {
       return await operation();
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : "INTERACTION_REQUEST_FAILED",
-      );
+      const code =
+        error instanceof Error ? error.message : "INTERACTION_REQUEST_FAILED";
+      if (code.endsWith("_NOT_FOUND")) throw new NotFoundException(code);
+      if (code === "NOT_AUTHORIZED" || code.endsWith("_FORBIDDEN")) {
+        throw new ForbiddenException(code);
+      }
+      throw new BadRequestException(code);
     }
   }
 }

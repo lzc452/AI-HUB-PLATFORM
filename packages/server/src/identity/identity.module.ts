@@ -1,5 +1,6 @@
-import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import type { Kysely } from "kysely";
 import { IdentityController } from "./identity.controller.js";
 import { KyselyIdentityRepository } from "./identity.repository.js";
 import { IdentityService } from "./identity.service.js";
@@ -28,14 +29,13 @@ export interface IdentityModuleOptions {
 @Module({})
 export class IdentityModule {
   static register(
-    databaseUrl: string,
+    database: Kysely<DatabaseSchema>,
     options?: IdentityModuleOptions,
   ): DynamicModule {
-    const db = createDatabase(databaseUrl);
     const providers: DynamicModule["providers"] = [
       {
         provide: AuditService,
-        useValue: new AuditService(new KyselyAuditRepository(db)),
+        useValue: new AuditService(new KyselyAuditRepository(database)),
       },
       PasswordService,
       {
@@ -51,7 +51,7 @@ export class IdentityModule {
       },
       {
         provide: InMemoryLoginChallengeStore,
-        useValue: new KyselyLoginChallengeRepository(db),
+        useValue: new KyselyLoginChallengeRepository(database),
       },
       {
         provide: IdentityService,
@@ -61,7 +61,7 @@ export class IdentityModule {
           challengeStore: InMemoryLoginChallengeStore,
         ) =>
           new IdentityService(
-            new KyselyIdentityRepository(db),
+            new KyselyIdentityRepository(database),
             passwords,
             undefined,
             encryption,
@@ -94,7 +94,7 @@ export class IdentityModule {
               redirectUri: ssoConfig.redirectUri,
             },
             api,
-            new KyselyIdentityRepository(db),
+            new KyselyIdentityRepository(database),
             identity,
           ),
         inject: [DingTalkApiClient, IdentityService],

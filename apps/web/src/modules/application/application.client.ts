@@ -1,4 +1,8 @@
-import type { ApplicationStatus, DeliveryChannel } from "@ai-hub/contracts";
+import type {
+  ApplicationAdminKpis,
+  ApplicationStatus,
+  DeliveryChannel,
+} from "@ai-hub/contracts";
 
 import { apiFetch, apiUpload } from "../../shared/api/client";
 
@@ -112,6 +116,10 @@ export function getApplication(
   applicationId: string,
 ): Promise<ApplicationRecord> {
   return apiFetch<ApplicationRecord>(applicationsPath(applicationId));
+}
+
+export function getAdminApplicationKpis(): Promise<ApplicationAdminKpis> {
+  return apiFetch<ApplicationAdminKpis>("/internal/applications/admin-kpis");
 }
 
 export function getApplicationWorkspace(

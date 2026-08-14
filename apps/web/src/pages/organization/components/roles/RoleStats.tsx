@@ -24,25 +24,21 @@ export function RoleStats({ rows }: RoleStatsProps) {
       <KpiCard
         icon={<TeamOutlined className="text-lg text-[#1677ff]" />}
         label="角色总数"
-        trend={2}
         value={formatNumber(total)}
       />
       <KpiCard
         icon={<SafetyCertificateFilled className="text-lg text-[#1677ff]" />}
         label="系统角色"
-        trend={0}
         value={formatNumber(systemCount)}
       />
       <KpiCard
         icon={<AppstoreFilled className="text-lg text-[#fa8c16]" />}
         label="自定义角色"
-        trend={2}
         value={formatNumber(customCount)}
       />
       <KpiCard
         icon={<UserOutlined className="text-lg text-[#1677ff]" />}
         label="已分配用户数量"
-        trend={36}
         value={formatNumber(assignedUsers)}
       />
     </div>

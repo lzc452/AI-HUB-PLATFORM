@@ -145,6 +145,10 @@ export { CatalogController } from "./catalog/catalog.controller.js";
 export { CatalogModule } from "./catalog/catalog.module.js";
 export { KyselyCatalogRepository } from "./catalog/catalog.repository.js";
 export { CatalogService } from "./catalog/catalog.service.js";
+export {
+  CatalogVisibilityPolicy,
+  type CatalogVisibilityPort,
+} from "./catalog/catalog-visibility.policy.js";
 export type {
   CatalogEntry,
   CatalogListResult,

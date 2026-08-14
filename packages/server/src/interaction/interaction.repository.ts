@@ -154,6 +154,15 @@ export class KyselyInteractionRepository implements InteractionRepository {
     return this.mapReport(row);
   }
 
+  async findReport(reportId: string): Promise<ReportRecord | null> {
+    const row = await this.db
+      .selectFrom("application_reports")
+      .selectAll()
+      .where("report_id", "=", reportId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapReport(row);
+  }
+
   async resolveReport(
     reportId: string,
     status: ReportRecord["status"],

@@ -21,6 +21,18 @@ bash scripts/dev/docker-engine-migration.sh verify   # 验证引擎、compose �
 
 备份目录默认 `$HOME/docker-migration-backup`，跨设备迁移时用 `BACKUP_DIR` 环境变量覆盖。脚本头部注释包含无法脚本化的手动步骤（安装 Rancher Desktop、配置代理、卸载 Docker Desktop）与回滚方案。
 
+> **警告：备份必须在卸载 Docker Desktop 之前执行。** 卸载（或 `wsl --unregister docker-desktop*`）后，Docker Desktop 的镜像与数据卷随其 WSL 数据一起销毁，无法再从任何引擎读取；备份目录是唯一可恢复的数据来源。若卸载前未备份，数据只能重新生成（`pnpm migrate` + seed 脚本）。
+
+### 已卸载 Docker Desktop / 已迁移的机器
+
+若本机已完成物理切换（Docker Desktop 已卸载、Rancher Desktop 已安装），按以下顺序收尾：
+
+1. 启动 Rancher Desktop 并确认引擎：`docker version` 输出包含 `Server:` 块（dockerd/moby）。首次向导选择 Container Engine = dockerd (moby)、**关闭 Kubernetes**（Kubernetes 启动失败会拖垮整个后端，表现为日志中 "Win32 socket proxy" 崩溃循环）、VM 内存 ≥ 4GB。
+2. 清理遗留的死上下文：`docker context rm desktop-linux`。
+3. 拉取镜像需走 WSL 代理（见下一节），且宿主代理必须开启 allow-lan / 监听 `0.0.0.0`，否则虚拟机无法访问。若 `docker pull hello-world` 直连成功则可跳过代理配置。
+4. 可删除残留目录：`%LOCALAPPDATA%\Docker`（仅日志/锁文件）与 `C:\ProgramData\DockerDesktop`（空目录，需管理员权限）。
+5. 回滚方式：重新安装 Docker Desktop（`desktop-linux` 上下文删除后，回滚不再是切换上下文而是重装）。
+
 ## VPN 与 Rancher Desktop 代理
 
 如果 Windows 使用本地 HTTP 代理访问 VPN，Rancher Desktop 必须能从其 Linux 虚拟机访问该代理。在 Rancher Desktop 中打开 **Preferences → WSL → Proxy**（实验性功能），为 HTTP/HTTPS 代理使用宿主机网关而不是 `127.0.0.1`：
@@ -32,6 +44,18 @@ HTTPS proxy: http://host.rancher-desktop.internal:7897
 
 Linux 虚拟机内的 `127.0.0.1` 指向虚拟机本身，而不是 Windows；`host.rancher-desktop.internal` 由虚拟机解析到宿主机。Docker 拉取总是使用 Rancher Desktop 的虚拟机代理，因此只在 PowerShell 中可用的代理仍可能导致 `docker compose build` 无法拉取基础镜像。首次拉取镜像期间请保持 VPN（代理软件需监听 `0.0.0.0` 或开启 allow-lan）开启；镜像缓存后，常规的仅源码重启无需再次下载。
 
+> **代理节点大流量不稳定时的兜底**：若镜像的大层（>~30MB）经代理长时间停滞（`Pulling fs layer` 无进度），可用宿主机直接拉取并导入引擎：
+>
+> ```powershell
+> # 宿主机下载 crane（Google go-containerregistry，GitHub 不可达时经 gh-proxy 镜像下载）
+> # 从国内镜像源（如 docker.1ms.run）拉取到 tar，宿主机直连镜像源速度快且不走代理节点
+> crane pull --platform linux/amd64 docker.1ms.run/library/postgres:18.4-bookworm postgres.tar
+> docker load -i postgres.tar
+> docker tag docker.1ms.run/library/postgres:18.4-bookworm postgres:18.4-bookworm
+> ```
+>
+> 注意：容器内 `pnpm install`（`infra/docker/*.Dockerfile` 的 workspace 层）同样经代理访问 registry.npmjs.org，速度可能极慢；暂无参数化开关，只能等待或换代理节点。
+
 ## 首次启动
 
 仓库包含一个被 Git 忽略的本地 `.env`。重新创建它：
@@ -40,7 +64,7 @@ Linux 虚拟机内的 `127.0.0.1` 指向虚拟机本身，而不是 Windows；`h
 Copy-Item .env.example .env
 ```
 
-在与其他机器共享环境前，请检查每个值。然后启动开发环境：
+在与其他机器共享环境前，请检查每个值。`.env` 需包含 `DEMO_DATA_ENABLED=true`：dev 容器的 `init:dev` 与宿主机 `pnpm seed:*` 都会执行 `seed:demo-data`，缺少该开关会以 `DEMO_DATA_REFUSED` 失败并导致 api 容器重启循环。然后启动开发环境：
 
 ```powershell
 docker pull node:24.15.0-bookworm-slim

@@ -1,4 +1,4 @@
-import { Button, Empty, Spin, Tag, Typography } from "antd";
+import { Button, Empty, Spin, Tag, Tooltip, Typography } from "antd";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
@@ -6,7 +6,7 @@ import {
   useApplication,
   usePublishedVersion,
 } from "../../modules/application/useApplication";
-import { MessageError, showWarningMessage } from "../../shared/ui/message";
+import { MessageError } from "../../shared/ui/message";
 
 const { Paragraph, Text } = Typography;
 
@@ -130,15 +130,15 @@ export default function ApplicationDetailsPage() {
                   <span className="hidden w-24 text-right text-[#8a94a6] sm:block">
                     {date}
                   </span>
-                  <Button
-                    aria-label={`下载 ${String(name)}`}
-                    onClick={() =>
-                      showWarningMessage("下载功能将在下一版本开放")
-                    }
-                    size="small"
-                  >
-                    下载
-                  </Button>
+                  <Tooltip title="附件下载暂未纳入 V1 交付契约">
+                    <Button
+                      aria-label={`下载 ${String(name)}`}
+                      disabled
+                      size="small"
+                    >
+                      下载
+                    </Button>
+                  </Tooltip>
                 </div>
               ))}
             </div>

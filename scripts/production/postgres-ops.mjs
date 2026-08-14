@@ -112,7 +112,10 @@ export function validateBackupEvidence(evidence) {
   } else if (evidence.sourceDatabaseId === evidence.restoreTargetId) {
     errors.push("source and restore target must be different");
   }
-  if (!Number.isInteger(evidence.migrationCount) || evidence.migrationCount < 1) {
+  if (
+    !Number.isInteger(evidence.migrationCount) ||
+    evidence.migrationCount < 1
+  ) {
     errors.push("migrationCount must prove an applied migration");
   }
   if (!evidence.latestMigration) {

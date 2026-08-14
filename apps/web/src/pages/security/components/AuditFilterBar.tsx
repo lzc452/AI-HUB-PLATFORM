@@ -13,7 +13,7 @@ export interface AuditFilterBarProps {
   actionTypeOptions: string[];
   /** 操作人选项（由容器从数据派生）。 */
   operatorOptions: string[];
-  /** 导出日志点击（demo 环境仅轻提示）。 */
+  /** 创建审计导出任务。 */
   onExport: () => void;
   /** 当前筛选值（受控，由 SecurityPage 持有）。 */
   value: AuditFilterValue;

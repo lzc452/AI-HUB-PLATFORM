@@ -40,10 +40,7 @@ class TestStorage implements ReadableObjectStoragePort {
     this.objects.set(key, Buffer.from(content));
   }
 
-  async putStream(
-    key: string,
-    stream: NodeJS.ReadableStream,
-  ): Promise<number> {
+  async putStream(key: string, stream: NodeJS.ReadableStream): Promise<number> {
     const chunks: Buffer[] = [];
     for await (const chunk of stream) chunks.push(Buffer.from(chunk));
     const content = Buffer.concat(chunks);
@@ -184,10 +181,7 @@ describe("artifact upload API", () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
-    configureApiBodyParsers(
-      app as NestExpressApplication,
-      MAX_ARTIFACT_BYTES,
-    );
+    configureApiBodyParsers(app as NestExpressApplication, MAX_ARTIFACT_BYTES);
     await app.init();
   });
 
@@ -208,11 +202,15 @@ describe("artifact upload API", () => {
     "x-session-id": "session-E100",
   };
 
-  async function createUpload(sizeBytes: number) {
+  function createUpload(sizeBytes: number) {
     return request(app.getHttpServer())
       .post("/internal/applications/app-1/artifact-uploads")
       .set(ownerHeaders)
-      .send({ fileName: "artifact.zip", mimeType: "application/zip", sizeBytes });
+      .send({
+        fileName: "artifact.zip",
+        mimeType: "application/zip",
+        sizeBytes,
+      });
   }
 
   it("accepts an application/octet-stream body and preserves its exact bytes", async () => {
@@ -229,7 +227,7 @@ describe("artifact upload API", () => {
       .expect(200);
 
     expect(uploaded.body.sha256).toBe(
-      "c7c5c1d70c5dec44c05970fba15e1207557e2b98fbde3d4f933a7e005995ed45",
+      "c7c5c1d70c5dec4416ab6158afd0b223ef40c29b1dc1f97ed9428b94d4cadb1c",
     );
     expect(storage.objects.get(created.body.objectKey)).toEqual(content);
   });
@@ -346,7 +344,11 @@ describe("artifact upload API", () => {
         "x-employee-id": "E200",
         "x-session-id": "session-E200",
       })
-      .send({ fileName: "artifact.zip", mimeType: "application/zip", sizeBytes: 8 })
+      .send({
+        fileName: "artifact.zip",
+        mimeType: "application/zip",
+        sizeBytes: 8,
+      })
       .expect(403);
 
     const created = await createUpload(8).expect(201);

@@ -71,6 +71,7 @@ export interface InteractionRepository {
   createReport(
     input: Omit<ReportRecord, "reportId" | "createdAt">,
   ): Promise<ReportRecord>;
+  findReport(reportId: string): Promise<ReportRecord | null>;
   resolveReport(
     reportId: string,
     status: ReportRecord["status"],

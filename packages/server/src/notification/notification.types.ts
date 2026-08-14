@@ -26,6 +26,10 @@ export interface NotificationRepository {
   findByIdempotencyKey(
     idempotencyKey: string,
   ): Promise<NotificationRecord | null>;
+  findById?(
+    notificationId: string,
+    employeeId: string,
+  ): Promise<NotificationRecord | null>;
   listForRecipient(employeeId: string): Promise<readonly NotificationRecord[]>;
   create(
     input: Omit<NotificationRecord, "notificationId" | "createdAt">,

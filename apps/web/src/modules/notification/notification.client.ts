@@ -15,6 +15,14 @@ export function listNotifications(): Promise<NotificationRecord[]> {
   return apiFetch<NotificationRecord[]>("/internal/notifications");
 }
 
+export function getNotification(
+  notificationId: string,
+): Promise<NotificationRecord> {
+  return apiFetch<NotificationRecord>(
+    `/internal/notifications/${encodeURIComponent(notificationId)}`,
+  );
+}
+
 export function markNotificationRead(
   notificationId: string,
 ): Promise<NotificationRecord> {

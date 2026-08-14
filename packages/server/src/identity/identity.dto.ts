@@ -186,6 +186,15 @@ export class DepartmentSummaryDto {
     enum: ["local", "dingtalk"],
   })
   source!: "local" | "dingtalk";
+
+  @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  status?: "active" | "disabled";
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  managerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
+  lastSyncedAt?: string | null;
 }
 
 /** 角色记录。 */
@@ -199,6 +208,54 @@ export class RoleRecordDto {
 
   @ApiProperty({ description: "权限列表", type: [String] })
   permissions!: string[];
+}
+
+export class IdentityRoleSummaryDto {
+  @ApiProperty({ type: String })
+  roleId!: string;
+
+  @ApiProperty({ type: String })
+  roleName!: string;
+
+  @ApiProperty({ enum: ["system", "custom"] })
+  roleType!: "system" | "custom";
+
+  @ApiProperty({ type: String })
+  scope!: string;
+
+  @ApiProperty({ type: Number })
+  memberCount!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  creator!: string | null;
+
+  @ApiProperty({ enum: ["active", "disabled"] })
+  status!: "active" | "disabled";
+
+  @ApiProperty({ type: String, format: "date-time" })
+  updatedAt!: string;
+}
+
+export class CreateRoleRequestDto {
+  @ApiProperty({ type: String, example: "catalog_operator" })
+  roleCode!: string;
+
+  @ApiProperty({ type: String, example: "目录运营" })
+  name!: string;
+
+  @ApiProperty({ type: [String] })
+  permissions!: string[];
+}
+
+export class UpdateRoleRequestDto {
+  @ApiPropertyOptional({ type: String })
+  name?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  permissions?: string[];
+
+  @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  status?: "active" | "disabled";
 }
 
 /** 撤销会话结果。 */
@@ -285,4 +342,67 @@ export class SyncRunDto {
 
   @ApiPropertyOptional({ type: Object, description: "同步摘要" })
   summary?: unknown;
+}
+
+export class SyncConfigDto {
+  @ApiProperty({ type: Boolean })
+  enabled!: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  schedule?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  externalOrgId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  lastUpdatedByEmployeeId?: string | null;
+
+  @ApiProperty({ type: String, format: "date-time" })
+  updatedAt!: string;
+}
+
+export class UpdateSyncConfigRequestDto {
+  @ApiPropertyOptional({ type: Boolean })
+  enabled?: boolean;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  schedule?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  externalOrgId?: string | null;
+}
+
+export class SyncRunItemDto {
+  @ApiProperty({ type: String })
+  syncRunItemId!: string;
+
+  @ApiProperty({ type: String })
+  syncRunId!: string;
+
+  @ApiProperty({ type: String })
+  objectType!: string;
+
+  @ApiProperty({ type: String })
+  objectId!: string;
+
+  @ApiProperty({ type: String })
+  status!: string;
+
+  @ApiProperty({ type: Number })
+  processedCount!: number;
+
+  @ApiProperty({ type: Number })
+  successCount!: number;
+
+  @ApiProperty({ type: Number })
+  failureCount!: number;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  errorCode?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
+  startedAt?: string | null;
+
+  @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
+  finishedAt?: string | null;
 }

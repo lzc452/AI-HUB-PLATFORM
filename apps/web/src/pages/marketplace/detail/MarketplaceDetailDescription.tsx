@@ -27,11 +27,12 @@ export interface MarketplaceDetailDescriptionProps {
 }
 
 const attachmentTypeColor: Record<
-  "pdf" | "docx" | "doc",
+  "pdf" | "docx" | "doc" | "other",
   "red" | "blue" | "geekblue"
 > = {
   doc: "blue",
   docx: "geekblue",
+  other: "blue",
   pdf: "red",
 };
 
@@ -47,8 +48,8 @@ export function MarketplaceDetailDescription({
   const businessScenario = buildBusinessScenario(entry);
   const problemStatement = buildProblemStatement(entry);
   const keyPoints = buildKeyPoints(entry);
-  const maintainers = deriveMaintainers(entry.applicationId);
-  const attachments = listAttachments();
+  const maintainers = deriveMaintainers(entry);
+  const attachments = listAttachments(entry);
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">

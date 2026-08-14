@@ -5,7 +5,9 @@ import { apiFetch, apiUpload } from "./client";
 
 class XMLHttpRequestStub {
   readonly headers = new Headers();
-  readonly upload = { onprogress: null as ((event: ProgressEvent) => void) | null };
+  readonly upload = {
+    onprogress: null as ((event: ProgressEvent) => void) | null,
+  };
   status = 200;
   responseText = JSON.stringify({ uploaded: true });
   onload: (() => void) | null = null;
@@ -29,18 +31,22 @@ describe("API 安全请求头", () => {
   });
 
   it("为 JSON 写请求附加 CSRF 与一次性 replay 头", async () => {
-    const request = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      expect(init?.credentials).toBe("same-origin");
-      expect(headers.get("x-employee-id")).toBe("E-SECURE");
-      expect(headers.get("x-session-id")).toBe("session-secure");
-      expect(headers.get("x-csrf-token")).toBe("csrf-value");
-      expect(headers.get("x-request-nonce")).toMatch(/^[A-Za-z0-9._~-]{16,128}$/u);
-      expect(
-        Number.isNaN(Date.parse(headers.get("x-request-timestamp") ?? "")),
-      ).toBe(false);
-      return Response.json({ updated: true });
-    });
+    const request = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        expect(init?.credentials).toBe("same-origin");
+        expect(headers.get("x-employee-id")).toBe("E-SECURE");
+        expect(headers.get("x-session-id")).toBe("session-secure");
+        expect(headers.get("x-csrf-token")).toBe("csrf-value");
+        expect(headers.get("x-request-nonce")).toMatch(
+          /^[A-Za-z0-9._~-]{16,128}$/u,
+        );
+        expect(
+          Number.isNaN(Date.parse(headers.get("x-request-timestamp") ?? "")),
+        ).toBe(false);
+        return Response.json({ updated: true });
+      },
+    );
     vi.stubGlobal("fetch", request);
 
     await expect(

@@ -16,9 +16,9 @@ describe("assistant page", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("有什么适合数据分析的应用？")).toBeInTheDocument();
     // 推荐应用卡片在欢迎态即展示
-    expect(screen.getByText("数据可视化平台")).toBeInTheDocument();
-    expect(screen.getByText("报表自动生成")).toBeInTheDocument();
-    expect(screen.getAllByText("查看应用详情")).toHaveLength(2);
+    expect(await screen.findByText("数据可视化平台")).toBeInTheDocument();
+    expect(await screen.findByText("报表自动生成")).toBeInTheDocument();
+    expect(await screen.findAllByText("查看应用详情")).toHaveLength(2);
   });
 
   it("hides suggestion chips and shows a warning after sending a question", async () => {

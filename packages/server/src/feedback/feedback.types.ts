@@ -16,7 +16,19 @@ export interface FeedbackRecord {
   resolvedAt: Date | null;
 }
 
+export interface FeedbackApplicationRecord {
+  applicationId: string;
+  ownerEmployeeId: string;
+  maintainerEmployeeId: string;
+}
+
 export interface FeedbackRepository {
+  withTransaction<T>(
+    operation: (repository: FeedbackRepository) => Promise<T>,
+  ): Promise<T>;
+  findApplication(
+    applicationId: string,
+  ): Promise<FeedbackApplicationRecord | null>;
   createFeedback(
     input: Omit<
       FeedbackRecord,
@@ -37,6 +49,12 @@ export interface FeedbackRepository {
       >
     >,
   ): Promise<FeedbackRecord | null>;
+  recordAudit(input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void>;
   emitOutbox(input: {
     applicationId: string;
     eventType: string;

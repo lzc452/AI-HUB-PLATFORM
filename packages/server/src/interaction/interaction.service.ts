@@ -4,15 +4,18 @@ import type {
   InteractionRepository,
   ReportRecord,
 } from "./interaction.types.js";
+import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy.js";
 
 export class InteractionService {
   constructor(
     private readonly repository: InteractionRepository,
     private readonly authorization: InteractionAuthorizationPort,
+    private readonly visibility: CatalogVisibilityPort,
   ) {}
 
   async toggleLike(actor: ActorContext, applicationId: string) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, applicationId);
     await this.requireApplication(applicationId);
     return this.repository.withTransaction(async (repository) => {
       const liked = await repository.hasLike(applicationId, actor.employeeId);
@@ -48,6 +51,7 @@ export class InteractionService {
     if (!Number.isInteger(input.stars) || input.stars < 1 || input.stars > 5) {
       throw new Error("RATING_STARS_INVALID");
     }
+    await this.visibility.requireVisible(actor, input.applicationId);
     const application = await this.requireApplication(input.applicationId);
     const versionId = await this.repository.findCurrentVersionId(
       input.applicationId,
@@ -84,6 +88,7 @@ export class InteractionService {
     },
   ) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, input.applicationId);
     await this.requireApplication(input.applicationId);
     if (input.body.trim().length === 0) {
       throw new Error("COMMENT_BODY_REQUIRED");
@@ -120,6 +125,7 @@ export class InteractionService {
     },
   ) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, input.applicationId);
     const application = await this.requireApplication(input.applicationId);
     if (
       application.ownerEmployeeId !== actor.employeeId &&
@@ -163,6 +169,7 @@ export class InteractionService {
     input: { applicationId: string; commentId: string; reason: string },
   ) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, input.applicationId);
     const comment = await this.repository.findComment(input.commentId);
     if (comment === null || comment.applicationId !== input.applicationId) {
       throw new Error("COMMENT_NOT_FOUND");
@@ -191,6 +198,9 @@ export class InteractionService {
     status: ReportRecord["status"],
   ) {
     await this.assertAllowed(actor, "moderate");
+    const existing = await this.repository.findReport(reportId);
+    if (existing === null) throw new Error("REPORT_NOT_FOUND");
+    await this.visibility.requireVisible(actor, existing.applicationId);
     return this.repository.withTransaction(async (repository) => {
       const report = await repository.resolveReport(
         reportId,
@@ -214,6 +224,7 @@ export class InteractionService {
     if (!decision.allowed) throw new Error("ANONYMOUS_IDENTITY_FORBIDDEN");
     const comment = await this.repository.findComment(commentId);
     if (comment === null) throw new Error("COMMENT_NOT_FOUND");
+    await this.visibility.requireVisible(actor, comment.applicationId);
     await this.repository.recordAudit({
       applicationId: comment.applicationId,
       actorEmployeeId: actor.employeeId,
@@ -230,6 +241,7 @@ export class InteractionService {
     pageSize: number,
   ) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, applicationId);
     await this.requireApplication(applicationId);
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new Error("INTERACTION_PAGINATION_INVALID");
@@ -244,6 +256,7 @@ export class InteractionService {
     pageSize: number,
   ) {
     await this.assertAllowed(actor, "interact");
+    await this.visibility.requireVisible(actor, applicationId);
     await this.requireApplication(applicationId);
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new Error("INTERACTION_PAGINATION_INVALID");
@@ -257,6 +270,7 @@ export class InteractionService {
     commentId: string,
   ) {
     await this.assertAllowed(actor, "moderate");
+    await this.visibility.requireVisible(actor, applicationId);
     const comment = await this.repository.findComment(commentId);
     if (comment === null || comment.applicationId !== applicationId) {
       throw new Error("COMMENT_NOT_FOUND");
@@ -283,6 +297,7 @@ export class InteractionService {
     commentId: string,
   ) {
     await this.assertAllowed(actor, "moderate");
+    await this.visibility.requireVisible(actor, applicationId);
     const comment = await this.repository.findComment(commentId);
     if (comment === null || comment.applicationId !== applicationId) {
       throw new Error("COMMENT_NOT_FOUND");

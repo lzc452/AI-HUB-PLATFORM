@@ -6,6 +6,8 @@ import {
   Registry,
 } from "prom-client";
 import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
+import type { Kysely } from "kysely";
 
 export interface OutboxCounts {
   pending: number;
@@ -19,10 +21,13 @@ export interface ObservabilityMetricsOptions {
 }
 
 export function createOutboxCountCollector(
-  databaseUrl: string,
+  databaseOrUrl: string | Kysely<DatabaseSchema>,
 ): () => Promise<OutboxCounts> {
   return async () => {
-    const database = createDatabase(databaseUrl);
+    const ownsDatabase = typeof databaseOrUrl === "string";
+    const database = ownsDatabase
+      ? createDatabase(databaseOrUrl)
+      : databaseOrUrl;
     try {
       const rows = await database
         .selectFrom("outbox_events")
@@ -53,7 +58,9 @@ export function createOutboxCountCollector(
       }
       return counts;
     } finally {
-      await database.destroy();
+      if (ownsDatabase) {
+        await database.destroy();
+      }
     }
   };
 }
@@ -116,10 +123,7 @@ export class ObservabilityMetrics implements WorkerMetricsPort {
         this.outboxEvents.set({ status: "pending" }, counts.pending);
         this.outboxEvents.set({ status: "processing" }, counts.processing);
         this.outboxEvents.set({ status: "failed" }, counts.failed);
-        this.outboxEvents.set(
-          { status: "quarantined" },
-          counts.quarantined,
-        );
+        this.outboxEvents.set({ status: "quarantined" }, counts.quarantined);
       },
     });
     this.workerDuration = new Histogram({

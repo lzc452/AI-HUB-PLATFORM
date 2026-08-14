@@ -65,6 +65,26 @@ export class NotificationController {
     );
   }
 
+  @Get(":notificationId")
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
+  @ApiOperation({ summary: "通知详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "notificationId", description: "通知 ID" })
+  @ApiOkResponse({ description: "通知详情", type: NotificationRecordDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async detail(
+    @Param("notificationId") notificationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.notifications.getDetail(
+        await this.actor(employeeId, sessionId),
+        notificationId,
+      ),
+    );
+  }
+
   @Post(":notificationId/read")
   @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
   @ApiOperation({ summary: "标记通知已读" })

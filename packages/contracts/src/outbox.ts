@@ -34,9 +34,5 @@ export interface OutboxStorePort {
     errorCode: string,
     nextAvailableAt: Date,
   ): Promise<void>;
-  quarantine(
-    id: string,
-    claim: OutboxClaim,
-    reasonCode: string,
-  ): Promise<void>;
+  quarantine(id: string, claim: OutboxClaim, reasonCode: string): Promise<void>;
 }

@@ -254,8 +254,131 @@ export class IdentityService {
     });
   }
 
+  async listRoles() {
+    if (this.repository.listRoles === undefined) {
+      return [] as const;
+    }
+    return this.repository.listRoles();
+  }
+
+  async getOrganizationOverview() {
+    const [employees, departments, roles] = await Promise.all([
+      this.repository.listEmployees(),
+      this.repository.listDepartments(),
+      this.listRoles(),
+    ]);
+    return {
+      employees,
+      departments,
+      roles,
+      totals: {
+        employees: employees.length,
+        activeEmployees: employees.filter(
+          (employee) => employee.status === "active",
+        ).length,
+        departments: departments.length,
+        activeDepartments: departments.filter(
+          (department) => department.status !== "disabled",
+        ).length,
+        roles: roles.length,
+      },
+    };
+  }
+
+  async createRole(
+    actor: ActorContext,
+    input: { roleCode: string; name: string; permissions: readonly string[] },
+  ): Promise<void> {
+    if (this.repository.createRole === undefined) {
+      throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+    }
+    await this.repository.withTransaction(async (repository) => {
+      if (repository.createRole === undefined) {
+        throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+      }
+      await repository.createRole({
+        ...input,
+        createdByEmployeeId: actor.employeeId,
+      });
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.role.created",
+        subjectEmployeeId: null,
+        details: { roleCode: input.roleCode },
+      });
+    });
+  }
+
+  async updateRole(
+    actor: ActorContext,
+    roleCode: string,
+    input: {
+      name?: string;
+      permissions?: readonly string[];
+      status?: "active" | "disabled";
+    },
+  ): Promise<void> {
+    if (this.repository.updateRole === undefined) {
+      throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+    }
+    await this.repository.withTransaction(async (repository) => {
+      if (repository.updateRole === undefined) {
+        throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+      }
+      await repository.updateRole(roleCode, input);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.role.updated",
+        subjectEmployeeId: null,
+        details: { roleCode, ...input },
+      });
+    });
+  }
+
   async listSyncRuns(limit = 20) {
     return this.repository.listSyncRuns(limit);
+  }
+
+  async getSyncConfig() {
+    return this.repository.getSyncConfig?.() ?? null;
+  }
+
+  async updateSyncConfig(
+    actor: ActorContext,
+    input: {
+      enabled?: boolean;
+      schedule?: string | null;
+      externalOrgId?: string | null;
+    },
+  ) {
+    if (this.repository.updateSyncConfig === undefined) {
+      throw new Error("SYNC_REPOSITORY_UNAVAILABLE");
+    }
+    const result = await this.repository.withTransaction(async (repository) => {
+      if (repository.updateSyncConfig === undefined) {
+        throw new Error("SYNC_REPOSITORY_UNAVAILABLE");
+      }
+      const config = await repository.updateSyncConfig({
+        ...input,
+        lastUpdatedByEmployeeId: actor.employeeId,
+      });
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.sync.config.updated",
+        subjectEmployeeId: null,
+        details: input,
+      });
+      return config;
+    });
+    return result;
+  }
+
+  async getSyncRun(syncRunId: string) {
+    return this.repository.findSyncRun?.(syncRunId) ?? null;
+  }
+
+  async listSyncRunItems(syncRunId: string) {
+    return this.repository.listSyncRunItems?.(syncRunId) ?? [];
   }
 
   /** 仅撤销当前调用者自己的会话，避免 logout 接口被用来注销他人会话。 */

@@ -380,7 +380,7 @@ export class ArtifactUploadController {
       assetKey: asset.storageKey,
     });
     if (result.scanStatus !== "passed") {
-      const updated = await this.repository.updateAsset(assetId, {
+      await this.repository.updateAsset(assetId, {
         scanStatus: "failed",
         sha256: result.sha256,
       });

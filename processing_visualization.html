@@ -1021,6 +1021,38 @@
         ],
         tasks: [
           {
+            id: "v1-wave0-feedback-loop-20260814",
+            phase: "test",
+            status: "有风险",
+            title: "Wave 0 可信反馈环修复",
+            owner: "Codex",
+            start: "2026-08-14",
+            end: "2026-08-14",
+            progress:
+              "已修复 API bootstrap 悬空参数、artifact e2e async helper、server unused variable、19 个格式文件和 auth 测试深导入；format、lint、typecheck、boundaries 已通过，auth.test.tsx 3/3 通过。",
+            problem:
+              "完整 Web 套件此前有 teardown 后 window is not defined；artifact e2e 和完整 pnpm test/build 尚未在容器可用环境完成。",
+            solution:
+              "通过 auth public seam、显式 cleanup、act 等待异步提交，并保留原始失败用例作为回归入口；下一步复验完整 Web/API/build。",
+            skip: "Rancher/Docker engine 当前仍未提供可用 Server，PostgreSQL/Testcontainers 联调延后。",
+          },
+          {
+            id: "v1-codebase-health-20260814",
+            phase: "test",
+            status: "有风险",
+            title: "V1 codebase health、架构、API 与数据库完整性审计",
+            owner: "Codex",
+            start: "2026-08-14",
+            end: "2026-08-14",
+            progress:
+              "完成 ADR、架构热点、前后端主流程、约 114 个 Controller method、migration 0001–0024 和生产静态数据扫描；复现 format/lint/typecheck/boundaries/build/test 六项根门禁，并输出 deepening 候选与 0025 前向 migration 建议。",
+            problem:
+              "根门禁当前 0/6；artifact e2e 8 个测试失败 7 个；统一安全审计没有生产写入者；市场治理身份被固定为 false；Feedback 与 Outbox 非事务；Docker engine 不可用。",
+            solution:
+              "按“反馈环 → Artifact Intake → Audit Ledger → Engagement Policy → 0025 完整性约束 → Organization Sync → 21 图与双主流程验收”路径整改；完整证据见 docs/audit/codebase-health-2026-08-14.md。",
+            skip: "本任务为只读诊断与建议，未获授权修改业务逻辑；真实 PostgreSQL/API/worker/browser 联调因 Docker Desktop Linux engine 未运行而跳过。",
+          },
+          {
             id: "t-027",
             phase: "ui",
             status: "已完成",
@@ -1463,8 +1495,7 @@
               "当前会话中的只读前向测试 Agent 多次无返回，无法形成独立 Agent 的行为复测证据；隔离 worktree 的 pnpm 离线安装也受到注册表访问限制。",
             solution:
               "使用官方 init_skill.py 初始化，临时安装 PyYAML 后以 UTF-8 运行官方 quick_validate.py 并通过；同时完成 references 存在性、占位符扫描、git diff --check 和主工作流本地复核。",
-            skip:
-              "未执行真实浏览器截图差异回放；该技能已将原始视口截图、叠加对比、偏差矩阵和状态回归列为后续页面实现的强制门禁。",
+            skip: "未执行真实浏览器截图差异回放；该技能已将原始视口截图、叠加对比、偏差矩阵和状态回归列为后续页面实现的强制门禁。",
           },
           {
             id: "t-029",
@@ -1880,164 +1911,494 @@
         if (dev) {
           dev.progress = 0;
           dev.tasks = [
-            "Compose + PostgreSQL + API + worker + 浏览器领域链验收 0/11；已有代码能力在下方 DONE 单列。",
+            "Compose + PostgreSQL + API + worker + 浏览器领域链验收 0/11；Wave 1 已完成共享 DatabaseRuntime 接线，业务链仍需容器和浏览器证据。",
           ];
         }
         if (test) {
-          test.progress = 83;
+          test.progress = 89;
           test.tasks = [
-            "format、lint、typecheck、boundaries、build 通过；根 pnpm test 被 Testcontainers 无 runtime 阻断。",
+            "根门禁 8/9：format、lint、typecheck、boundaries、build、文档链接、治理和 Compose config 已通过；root test 仍受 Docker/Testcontainers 阻塞。Web 最新全量 24 文件/102 用例通过，仍需收敛测试环境警告。",
           ];
         }
         const auditLedger = value.auditLedger ?? (value.auditLedger = {});
-        auditLedger.updatedAt = "2026-08-12";
-        auditLedger.status = "partial";
+        auditLedger.updatedAt = "2026-08-14";
+        auditLedger.status = "risk";
         auditLedger.metrics = [
           ["设计图验收", "0/21"],
           ["端到端领域链", "0/11"],
-          ["工程门禁", "5/6"],
-          ["本地 Compose", "未验收"],
+          ["工程门禁", "8/9"],
+          ["本地 Compose", "配置通过/服务未验收"],
         ];
         auditLedger.DONE = [
-          "format、lint、typecheck、boundaries、build 五项工程门禁通过。",
-          "Web 全量 17 个文件、85 个测试通过。",
-          "seed 的“缺少 DATABASE_URL”测试已与仓库 .env 隔离。",
-          "密码登录、session、actor 恢复、logout 与权限路由已有前后端代码链。",
-          "应用创建、版本、交付、提交审核、认领/释放、审批和发布的后端状态机已实现。",
-          "后端已实现禁止自审、artifact 校验、四渠道发布门禁、审计和 Outbox 事务。",
-          "市场列表/详情、点赞、整数评分、评论读取与官方回复已有 API 和表。",
-          "应用管理列表、Analytics、Assistant 问答、Security identity audit 已接真实读取接口。",
+          "ADR 0001–0008、主要领域模块和 migration 0001–0024 已建立。",
+          "server 34 个测试文件、148 个测试通过。",
+          "database 12 个非容器测试文件、348 个测试通过；容器套件单列为未验证。",
+          "密码登录、session、actor、logout 和权限路由已有前后端代码路径。",
+          "artifact init/content/complete/status、创建版本、配置交付、审核和发布已有前后端 client/hook 与后端端点。",
+          "市场 delivery resolve/download、根评论、点赞、整数评分、反馈创建与本人列表已接真实 API。",
+          "Artifact、Feedback、Security audit、组织同步所需主要数据库表已经存在。",
+          "本轮已输出 codebase health 报告、API 缺口、静态数据和 0025 完整性约束建议。",
+          "Wave 0 已修复 API bootstrap、artifact e2e helper、unused variable、19 个格式文件、auth 测试 public seam 和 creator teardown；format/lint/typecheck/boundaries/build 通过。",
+          "Web 测试 24 个文件/102 个用例通过，artifact upload API e2e 8/8 通过；原始 SHA-256 回归断言已校正为 Buffer 字节事实。",
+          "Wave 1 已新增 DatabaseRuntime transaction/close seam；API/worker 各复用单一 Kysely 实例，feature module 不再自行 createDatabase，runtime 单测通过。",
+          "@ai-hub/contracts 已增加 PageResult、ApiErrorResponse、IsoUtc、Nullable、IdempotencyKey；旧 ProblemDetails wire shape 保持并补充稳定 message。",
         ];
         auditLedger.UNDO = [
-          "真实 artifact 上传、完成上传、扫描状态与签名结果接口。",
-          "版本、审核、交付和发布工作台的真实前端 mutation 接线。",
-          "市场“立即使用”与下载的交付解析和真实前端调用。",
-          "普通用户发表评论、分页查询、整数评分契约统一和应用反馈。",
-          "组织用户/部门/角色 CRUD、角色列表与同步管理接口。",
-          "统一安全审计、分页筛选与审计导出。",
-          "删除生产页面 fallbackVersions、fallbackReviews、组织 mock 和交付静态数据。",
+          "root pnpm test 的 database Testcontainers 集成套件仍因 Docker Server 不可用超时；非容器 package test、Web 全套和 artifact API e2e 已通过。",
+          "统一安全审计接入关键生产写路径，完成导出 worker 与状态机。",
+          "Interaction/Feedback 统一 catalog audience/visibility policy，Feedback 与 Outbox 同事务。",
+          "Organization 角色 CRUD、员工导入、同步 overview/config/detail/retry/items，并删除生产 mock。",
+          "Docker 可用后执行并验证 0025_artifact_integrity；当前 migration、schema 类型和回滚路径已写入，数据库约束尚未运行验收。",
+          "Docker 可用后验证 API/worker 连接池归零、重启保持和 health/metrics 复用同一 runtime。",
           "Docker migration、重复 migration、seed 幂等、API/worker/Outbox 联调。",
           "5 个角色的 401/403、受众隔离、禁止自审和资源归属浏览器回归。",
           "21 张设计图当前运行截图、交互状态、响应式与可访问性验收。",
         ];
         auditLedger.TODO = [
-          "P0：落地 artifact upload/asset API 与对象存储适配器。",
-          "P0：为 createVersion、configureDelivery、claim/release、review、publish 增加 client/hook/form。",
-          "P0：新增 delivery resolve，返回受众校验后的跳转、短期下载 URL 或二维码 payload。",
-          "P0：允许普通用户创建根评论，增加评论表单并移除评分 allowHalf。",
-          "P0：增加 application_feedback 的创建、查询、处理和前端状态跟踪。",
-          "P1：补齐组织 CRUD、同步任务以及统一 security audit/export。",
-          "P1：按 0018/0019/0020 前向 migration 方案更新 schema、fixture、seed、Repository 与测试。",
-          "P1：Docker 恢复后跑 migration/seed/API/worker/browser，并完成 21 图验收。",
+          "P0：启动 Rancher/Docker Server 后复验 database Testcontainers、migration、seed 和 root pnpm test；保留已通过的 Web/artifact/build 证据。",
+          "P0：深化 Artifact Intake，收敛 storage/scan/signature/complete 的事务、幂等与失败恢复。",
+          "P0：建立 Audit Ledger 事件目录和事务写入，接入应用、组织、权限、审核、发布与治理写路径。",
+          "P0：统一 Engagement visibility policy；Feedback create/status 与 audit/Outbox 同事务。",
+          "P1：在 Docker 可用后验证 0025–0028 migration，补历史数据清理、enum/check/FK/unique 和状态一致性证据。",
+          "P1：补齐 role CRUD、employee import、sync overview/config/detail/retry/items 并删除组织 mock。",
+          "P1：将重复 Application/Delivery/Feedback/Catalog wire type 迁入已建立的 @ai-hub/contracts primitives，并为新增列表逐步采用 PageResult。",
+          "P2：统一数据库 Pool、优化 Catalog SQL read model、拆分 Web 大 chunk，并完成 21 图验收。",
         ];
         auditLedger.疑点 = [
-          "Docker Desktop Linux engine 当前不可连接",
-          "真实 DingTalk/Dify 凭据与双机部署不在本地 V1 硬完成线",
-          "前端允许半星，但 API/数据库仅允许 1–5 整数星。",
-          "artifact_signature 在 Web 类型允许 null，而数据库/Service 要求非空。",
+          "Rancher/Docker Linux engine 当前不可连接，数据库约束和两条主流程只能标记未验证。",
+          "真实 DingTalk/Dify、Garage/ClamAV 凭据与双机部署不在本地 V1 硬完成线。",
           "发布要求 web/desktop/mobile/mini_program 四渠道全部 enabled，是否符合最终 V1 产品口径需确认。",
+          "employee 删除策略与审计留存要求决定新增 FK 使用 restrict 还是 set null，需要架构决策。",
         ];
         auditLedger.staticData = [
           [
             "组织/角色",
-            "ROLES_MOCK_DATA；创建、编辑、禁用、删除等按钮无真实 handler",
+            "ROLES_MOCK_DATA；角色列表、CRUD 和权限分配没有完整真实数据链",
           ],
           [
             "组织/部门",
-            "DEPARTMENTS_MOCK_DATA；负责人、成员数、应用数和同步时间不可信",
+            "DEPARTMENTS_MOCK_DATA；负责人、成员数、应用数和同步时间来自静态 fixture",
           ],
           [
             "组织/同步",
-            "任务、健康度、告警、日志、配置、统计均为 mock，含 200ms 假延时",
+            "tasks、health、alerts、config、stats 均为 mock；只有部分 sync run logs 真实",
           ],
           [
             "组织/用户",
-            "角色按数组索引生成，最近登录固定生成；KPI 1286/98.6% 硬编码",
+            "角色/最近登录仍含派生数据；KPI memberTotal=1286、syncRate=98.6% 硬编码",
           ],
-          ["应用版本", "空数据回退 fallbackVersions 和静态 artifact 元数据"],
+          ["应用版本", "版本对比行和 versions.length || 5 仍会显示静态数量"],
           [
             "审核工作台",
-            "fallbackReviews、校验项、SLA、认领人静态；动作只弹提示",
-          ],
-          [
-            "交付配置",
-            "URL、安装包、二维码、限制、最近记录静态；保存/提交是假操作",
+            "认领/释放/审核已接 API；V1 转交明确 disabled，部分预览/说明仍为静态",
           ],
           [
             "市场详情",
-            "维护人、附件、问题描述、特性与评分人数静态或派生；CTA disabled",
+            "MOCK_MAINTAINERS、MOCK_ATTACHMENTS；评分人数用 likeCount 估算",
+          ],
+          [
+            "市场相关应用",
+            "相关应用交付按钮仍显示“交付动作接口待接入”，未复用已有 resolve API",
           ],
           [
             "AI 助手",
-            "capabilities、示例问题、recommendedApps 静态；问答请求本身是真实 API",
+            "capabilities、示例问题、recommendedApps 为静态说明；问答请求本身是真实 API",
           ],
-          ["Security", "安全配置/会话/扫描为占位页签，导出为提示"],
+          [
+            "Security",
+            "安全配置/会话/扫描为占位页签；导出前端仍提示，虽然 create export client 已存在",
+          ],
         ];
         auditLedger.apiGaps = [
           [
-            "已有待接线",
-            "create version、configure delivery、submit/claim/release/review、publish、catalog action、comment mutation",
-          ],
-          [
-            "Artifact",
-            "upload init/parts/complete/status；application assets 查询/删除",
-          ],
-          [
-            "交付解析",
-            "按 channel 返回 redirect URL、短期 download URL 或 QR payload",
-          ],
-          ["互动反馈", "普通用户根评论；feedback create/list/update"],
-          [
-            "组织",
-            "员工/部门/角色 CRUD、角色分配、批量导入、同步 overview/run/retry/config",
-          ],
-          ["安全", "overview、统一 audit logs 分页筛选、异步 export job"],
-          [
             "应用管理",
-            "admin-kpis 与 admin-metadata，避免前端只取前 200 条聚合",
+            "新增 admin-kpis，避免前端只取前 200 条聚合；修复已有 artifact bootstrap/e2e 契约",
+          ],
+          [
+            "Catalog capability",
+            "detail/resolve 返回 resource-level capabilities；所有互动和反馈复用 audience policy",
+          ],
+          [
+            "组织角色",
+            "role list/CRUD、permission assignment、employee create/import",
+          ],
+          [
+            "组织同步",
+            "sync overview/config、run detail/items、retry；真实 provider adapter",
+          ],
+          ["通知", "notification detail GET 与结构化 payload contract"],
+          [
+            "安全",
+            "overview、risk filter、audit export status/download/worker；关键生产事件 producer",
           ],
         ];
         auditLedger.databaseMigrations = [
           [
-            "无需新表",
-            "员工/部门/角色计数可聚合现有表；普通根评论复用 application_comments；点赞/整数评分/举报表已存在",
+            "现状",
+            "migration 已到 0024；0018–0024 已注册，Artifact、Security audit、Feedback、Sync 表已存在",
           ],
           [
-            "0018 组织",
-            "departments/roles 管理字段；identity_sync_run_items；可选 identity_sync_config",
+            "0025 组织约束",
+            "roles.created_by 和 sync config updater 增加 FK；singleton check；同步 status/计数 check",
           ],
           [
-            "0019 Artifact",
-            "application_artifact_uploads；扩展 application_assets；application_delivery_assets；artifact_key 唯一索引",
+            "0025 Artifact 约束",
+            "size_bytes > 0；upload/scan/platform status check；uploader FK；sort_order >= 0",
           ],
           [
-            "0020 审计/反馈",
-            "security_audit_events、security_audit_export_jobs、application_feedback；扩展 delivery actions/comments",
+            "0025 审计/反馈约束",
+            "result/risk/export/feedback/action/comment status check；creator/assignee FK；resolved 状态一致性",
           ],
           [
             "同步规则",
-            "不改 0001–0017；同步 schema.ts、fixture、seed、Repository、contract 和集成测试",
+            "不回改 0018–0024；前向 migration 后同步 schema.ts、contracts、fixture、seed、Repository 和集成测试",
           ],
         ];
+        auditLedger.DONE.push(
+          "Security 审计列表 client 已切换为 GET /internal/security/audit-logs，导出按钮已创建真实 audit export job；移除未使用的 128 行本地审计 demo 行。",
+          "docs/audit/codebase-health-2026-08-14.md 已重写为当前证据口径，明确 DONE/UNDO/TODO/疑点、静态数据残留、接口缺口、数据库约束和外部阻塞。",
+          "应用管理新增 GET /internal/applications/admin-kpis，KPI 改为后端按当前 actor 权限范围聚合，不再由前端抓取前 200 条自行估算。",
+          "组织角色、部门和同步页面已删除未引用的设计稿 mock 数组，仅保留类型、筛选和状态元数据；生产查询只来自 identity API。",
+          "Marketplace 相关应用的立即使用按钮已接入已有 delivery resolve/download/web 路径；无渠道或无 capability 时保持禁用并说明原因。",
+          "Applications 版本页不再用 versions.length || 5 伪造版本数；审核页应用详情改为真实路由，附件下载明确标记为 V1 未纳入契约并禁用。",
+          "组织同步触发接口已移除伪 accepted 返回；未配置 provider 时稳定返回 INTEGRATION_UNAVAILABLE，前端 client 类型与实际错误契约一致。",
+          "Wave 2-C 组织目录已接通角色 list/create/update/disable、部门真实统计字段、同步 overview/config/detail/items/retry 路由；组织页角色/部门/同步查询已移除生产 mock。",
+          "0026 engagement、0027 security audit、0028 directory sync integrity migrations 已注册，包含反馈状态/FK、审计 result/risk/export、同步单例/计数/FK 约束。",
+          "组织 KPI 与 KpiCard 已移除硬编码趋势、1286/98.6% 和随机颜色，改为真实查询聚合或明确空态。",
+          "Catalog detail contract 已补充 ratingCount、maintainers、attachments 与 capabilities；前端市场详情不再使用 MOCK_MAINTAINERS、MOCK_ATTACHMENTS、likeCount 估算评分人数或固定 moderator/owner。",
+          "Notifications 已补充 GET /internal/notifications/:notificationId，服务端按 recipient 校验详情归属；结构化 payload 仍待下一 migration。",
+          "Security KPI 与今日概况已改为基于后端审计行计算；活跃会话和扫描趋势无接口时显示明确空态，不再展示设计图硬编码数值。",
+          "安全配置/会话/文件扫描页签、版本对比、应用管理编辑/下架/归档/责任人移交均改为 disabled 边界态，移除点击后伪成功提示。",
+          "AI 助手推荐卡片已改用 Catalog popular 查询，推荐应用不再来自生产代码内的静态列表；示例问题和能力说明保留为纯说明文案。",
+        );
+        auditLedger.UNDO = auditLedger.UNDO.filter(
+          (item) =>
+            !item.includes("Organization 角色 CRUD") &&
+            !item.includes("组织角色") &&
+            !item.includes("组织同步"),
+        );
+        auditLedger.TODO.push(
+          "组织目录仍需 Docker 数据库执行 0025-0028、employee import 与真实 DingTalk deterministic adapter；当前 API 已对未配置同步返回 INTEGRATION_UNAVAILABLE。",
+          "组织页面剩余按钮（部门编辑/成员查看/同步下拉）需接 mutation 或明确 disabled 说明，不能保留可点击伪操作。",
+          "Catalog visibility 仍需改为 detail 按 ID 查询并在 SQL 层 audience-before-pagination；当前列表仍保留既有 read-model 聚合路径，需 Docker 数据库压测和五角色验证。",
+          "清理 jsdom getComputedStyle、Ant Design deprecation、React Router future flag 和 NaN style 警告，并保持 Web 全量测试资源配置稳定。",
+        );
+        auditLedger.staticData = auditLedger.staticData.map((entry) => {
+          if (entry[0] === "组织/角色") {
+            return [
+              entry[0],
+              "角色列表已接 /internal/identity/roles；剩余 employee import 和完整 permission editor 尚未完成",
+            ];
+          }
+          if (entry[0] === "组织/部门") {
+            return [
+              entry[0],
+              "部门名称、状态、成员数、应用数和同步时间来自真实 identity read model",
+            ];
+          }
+          if (entry[0] === "组织/同步") {
+            return [
+              entry[0],
+              "sync runs/config/overview/detail/items 已接真实接口；alerts/health/task 由 run 数据聚合，真实 provider 尚未配置",
+            ];
+          }
+          if (entry[0] === "组织/用户") {
+            return [
+              entry[0],
+              "用户和部门 KPI 已来自 API；同步成功率无可验证 run 时显示空态，不再使用 1286/98.6%",
+            ];
+          }
+          if (entry[0] === "应用版本") {
+            return [
+              entry[0],
+              "版本数来自 API；版本对比按钮已 disabled，等待 V1 comparison contract",
+            ];
+          }
+          if (entry[0] === "审核工作台") {
+            return [
+              entry[0],
+              "认领/释放/审核已接 API；编辑、下架、归档、责任人移交等未纳入 V1 的 CTA 已 disabled",
+            ];
+          }
+          if (entry[0] === "市场详情") {
+            return [
+              entry[0],
+              "维护人、附件、评分人数和 capability 来自 detail API；附件下载仍等待真实交付 contract",
+            ];
+          }
+          if (entry[0] === "市场相关应用") {
+            return [
+              entry[0],
+              "相关应用立即使用已复用 delivery resolve/download/web；无 capability 或渠道时 disabled",
+            ];
+          }
+          if (entry[0] === "AI 助手") {
+            return [
+              entry[0],
+              "问答请求和推荐应用均使用真实 API；示例问题/capability 保留为纯说明，推荐结果来自 Catalog visibility read model",
+            ];
+          }
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "审计列表和导出任务使用真实 API；KPI/概况由审计行计算，无接口的会话/扫描统计显示空态，配置/会话/扫描页签 disabled",
+            ];
+          }
+          return entry;
+        });
+        auditLedger.apiGaps = auditLedger.apiGaps.map((entry) => {
+          if (entry[0] === "组织角色") {
+            return [
+              entry[0],
+              "角色 list/create/update/disable 已接；employee import 与 permission editor 仍待补",
+            ];
+          }
+          if (entry[0] === "组织同步") {
+            return [
+              entry[0],
+              "sync overview/config/run detail/items/retry 已接；真实 provider adapter 未配置时明确返回 INTEGRATION_UNAVAILABLE",
+            ];
+          }
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "审计 logs/export job 已接真实 API；overview、export status/download、worker 和生产事件 producer 仍待补",
+            ];
+          }
+          return entry;
+        });
         auditLedger.flowVerdicts = [
           [
             "登录 → 上传 → 审核 → 发布",
-            "不闭环",
-            "登录代码链存在；真实上传缺失；版本/交付/审核/发布前端未接；无 DB/browser 证据",
+            "代码与局部 API 回归通过，运行验收不闭环",
+            "登录、artifact、版本、交付、审核、发布已有前后端路径；Web 102/102、artifact e2e 8/8、build 通过，但 Docker 数据库、worker、浏览器五角色证据仍缺",
           ],
           [
             "登录 → 下载 → 评论 → 点赞 → 评分 → 反馈",
-            "不闭环",
-            "市场读取、点赞、整数评分有代码链；下载、普通评论、反馈缺失；无 DB/browser 证据",
+            "代码路径基本齐全，正确性与运行验收不闭环",
+            "resolve/download、根评论、点赞、整数评分、反馈已接 API；visibility policy、Feedback 事务、capability 与 DB/browser 证据未完成，当前仅有 Web 局部回归",
           ],
         ];
+        auditLedger.codebaseHealth = [
+          [
+            "P0 bug",
+            "Wave 0 的 API register、artifact e2e helper、unused variable、格式、auth seam 和 creator teardown 已修复；安全审计生产写入仍为 0",
+          ],
+          [
+            "P1 bug",
+            "市场治理 owner/moderator 固定 false；Feedback/Outbox 非事务；互动存在 visibility 旁路",
+          ],
+          [
+            "架构首选",
+            "恢复反馈环 → Artifact Intake → Audit Ledger → Application Engagement",
+          ],
+          [
+            "基础设施",
+            "生产 feature module 已停止重复 createDatabase()；剩余兼容字符串入口、测试 helper 和 metrics fallback 需在容器回归后继续收紧",
+          ],
+          [
+            "契约",
+            "Application/Delivery/Feedback/Catalog 等 wire type 在 Web/Server 重复",
+          ],
+          [
+            "运行时",
+            "DatabaseRuntime 已接入 API/worker composition root；连接池归零和容器重启保持仍待 Docker 证据",
+          ],
+        ];
+        auditLedger.DONE = auditLedger.DONE.filter(
+          (item) => !item.startsWith("server "),
+        );
+        auditLedger.DONE.push(
+          "CatalogVisibilityPolicy 已统一 Catalog detail/versions/delivery/risk、Interaction 和 Feedback 的 published/current-version/audience 判定；detail direct-ID 已下推 applicationId SQL 过滤。",
+          "Feedback create/status 的业务行、application_audit_events 与 Outbox 已进入同一 Kysely transaction；补充非受众拒绝、终态字段一致性和 Outbox 失败回滚测试。",
+          "Application submit/review/publish/withdraw/rollback/archive 状态写入已使用 expected-state CAS，业务状态、Catalog 注册、Audit、Outbox 同事务；并发 publish 单成功和 Outbox 失败全回滚测试通过。",
+          "本 checkpoint 复验 format、lint、typecheck、boundaries 全绿；server 35 个测试文件、155 个测试通过。",
+        );
+        auditLedger.UNDO = auditLedger.UNDO.filter(
+          (item) =>
+            !item.includes(
+              "Interaction/Feedback 统一 catalog audience/visibility policy",
+            ),
+        );
+        auditLedger.UNDO.push(
+          "Catalog 列表仍由 Service 执行 JS 分页，tag/label/delivery/attachment 仍有逐结果查询；需改为 SQL count/limit/offset 与批量 read model，并取得真实 PostgreSQL 证据。",
+          "Feedback/Interaction/Application transaction 与 Application CAS 当前只有单元回滚/并发证据；真实 PostgreSQL 原子性仍未验收。",
+        );
+        auditLedger.TODO = auditLedger.TODO.filter(
+          (item) =>
+            !item.includes("统一 Engagement visibility policy") &&
+            !item.includes("Catalog visibility 仍需改为 detail 按 ID 查询"),
+        );
+        auditLedger.TODO.push(
+          "P0：Docker 恢复后为 Feedback/Interaction/Application transaction 与 lifecycle CAS 增加真实 PostgreSQL 回滚和并发验证。",
+          "P1：将 Catalog 列表分页和 count 下推 SQL，批量加载 tag/label/delivery/attachment，并执行五角色受众隔离压测。",
+        );
+        auditLedger.apiGaps = auditLedger.apiGaps.filter(
+          (entry) => entry[0] !== "Catalog capability",
+        );
+        auditLedger.flowVerdicts[1] = [
+          "登录 → 下载 → 评论 → 点赞 → 评分 → 反馈",
+          "代码级 policy 与事务回归通过，运行验收仍未闭环",
+          "resolve/download、互动、反馈和所有者处理已接 API；统一 visibility policy 与 Feedback 原子回滚单测通过，但通知结果、PostgreSQL、五角色和浏览器证据仍缺。",
+        ];
+        auditLedger.flowVerdicts[0] = [
+          "登录 → 上传 → 审核 → 发布",
+          "代码级 CAS 与事务回归通过，运行验收仍未闭环",
+          "禁止自审、四渠道门禁、lifecycle expected-state CAS 与业务/Audit/Outbox 回滚单测已具备；Garage/ClamAV、PostgreSQL、五角色和浏览器证据仍缺。",
+        ];
+        auditLedger.codebaseHealth = auditLedger.codebaseHealth.map((entry) =>
+          entry[0] === "P1 bug"
+            ? [
+                entry[0],
+                "市场 owner/moderator 常量、Interaction/Feedback visibility 旁路和 Feedback/Outbox 非事务已修复；剩余 P1 为 Catalog 列表 read model 与数据库集成证据。",
+              ]
+            : entry,
+        );
+        const tasks = value.tasks ?? (value.tasks = []);
+        const visibilityTask = tasks.find(
+          (task) => task.id === "v1-catalog-visibility-feedback-20260814",
+        );
+        const visibilityTaskEvidence = {
+          id: "v1-catalog-visibility-feedback-20260814",
+          phase: "dev",
+          status: "已完成",
+          title: "Catalog visibility 与 Feedback 原子事务整改",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "统一 direct-ID visibility policy；Feedback 业务/Audit/Outbox 同事务；server 155/155，format/lint/typecheck/boundaries 通过。",
+          problem:
+            "非受众用户此前可绕过市场详情直接调用互动/反馈接口；Feedback 业务写与 Outbox 分离，失败时可能产生不一致。",
+          solution:
+            "以 CatalogVisibilityPolicy 收敛 published/current-version/audience 判定，并用 Kysely transaction 包裹 Feedback 业务行、Audit、Outbox；增加失败回滚测试。",
+          skip: "Docker Server 不可用，真实 PostgreSQL 原子性、五角色 API 与浏览器流程仍列为 UNDO。",
+        };
+        if (visibilityTask)
+          Object.assign(visibilityTask, visibilityTaskEvidence);
+        else tasks.unshift(visibilityTaskEvidence);
+        const lifecycleTask = tasks.find(
+          (task) => task.id === "v1-application-lifecycle-cas-20260814",
+        );
+        const lifecycleTaskEvidence = {
+          id: "v1-application-lifecycle-cas-20260814",
+          phase: "dev",
+          status: "已完成",
+          title: "Application lifecycle CAS 与原子写入整改",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "submit/review/publish/withdraw/rollback/archive 使用 expected-state CAS；状态、Catalog、Audit、Outbox 同事务；并发和失败回滚测试通过。",
+          problem:
+            "生命周期校验曾在 transaction 外读取状态，更新时没有 expected-state 条件，并发请求可能基于过期状态重复推进。",
+          solution:
+            "Repository 状态命令增加 expectedStatus，PostgreSQL UPDATE 使用 status 条件并返回 APPLICATION_STATE_CONFLICT；withdraw reason 同步写入 Audit/Outbox metadata。",
+          skip: "真实 PostgreSQL 并发、Compose 发布链和浏览器五角色证据仍受 Docker Server 阻塞。",
+        };
+        if (lifecycleTask) Object.assign(lifecycleTask, lifecycleTaskEvidence);
+        else tasks.unshift(lifecycleTaskEvidence);
+        const healthTask = tasks.find(
+          (task) => task.id === "v1-codebase-health-20260814",
+        );
+        if (healthTask) {
+          Object.assign(healthTask, {
+            status: "有风险",
+            progress:
+              "工程门禁 8/9；server 155/155、Web 102/102、artifact API e2e 8/8 通过。DatabaseRuntime、Catalog visibility、Feedback 原子事务和 Application lifecycle CAS 已完成代码整改。",
+            problem:
+              "Docker Server 不可用，导致 Testcontainers、migration 0001–0028、Compose 8 服务、Garage/ClamAV、五角色和 21 图浏览器验收没有运行证据。",
+            solution:
+              "继续完成不依赖 Docker 的 Artifact、Audit Export、通知 payload、Analytics read model 和前端静态数据清理；运行时恢复后集中执行数据库与浏览器硬门禁。",
+            skip: "真实 DingTalk/Dify/企业签名、双机部署、备份恢复和试点属于外部阻塞，不伪装为 DONE。",
+          });
+        }
         if (ops) {
           ops.progress = 0;
           ops.tasks = [
-            "Docker Desktop Linux engine 未运行，尚无本轮 PostgreSQL/API/worker 联调证据。",
+            "Rancher/Docker Linux engine 未运行，尚无本轮 PostgreSQL/API/worker 联调证据。",
           ];
         }
         const events = value.events ?? (value.events = []);
+        if (
+          !events.some(
+            (event) =>
+              event.title === "Catalog visibility 与 Feedback 原子事务完成",
+          )
+        ) {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "development",
+            title: "Catalog visibility 与 Feedback 原子事务完成",
+            body: "Catalog detail/versions/delivery/risk、Interaction、Feedback 已统一 direct-ID audience policy；Feedback create/status 已在同一 transaction 写业务、Audit、Outbox。新增受众旁路与 Outbox 回滚测试，server 155/155 通过；数据库和浏览器证据仍待 Docker。",
+          });
+        }
+        if (
+          !events.some(
+            (event) =>
+              event.title === "Application lifecycle CAS 与原子写入完成",
+          )
+        ) {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "development",
+            title: "Application lifecycle CAS 与原子写入完成",
+            body: "submit/review/publish/withdraw/rollback/archive 已使用 expected-state CAS；状态、Catalog 注册、Audit、Outbox 保持同 transaction。并发 publish 仅一次成功，Outbox 失败全回滚；server 155/155 通过。",
+          });
+        }
+        const wave0Event = events.find(
+          (event) => event.title === "V1 Wave 0 可信反馈环修复",
+        );
+        if (wave0Event) {
+          wave0Event.body =
+            "修复 API bootstrap 悬空参数、artifact e2e helper、server unused variable、19 个格式问题、auth 测试深导入和 creator teardown；format、lint、typecheck、boundaries、build 通过，Web 102/102 与 artifact e2e 8/8 通过。root database integration 仍因 Docker Server 不可用阻塞。";
+        } else {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "test",
+            title: "V1 Wave 0 可信反馈环修复",
+            body: "修复 API bootstrap 悬空参数、artifact e2e helper、server unused variable、19 个格式问题、auth 测试深导入和 creator teardown；format、lint、typecheck、boundaries、build 通过，Web 102/102 与 artifact e2e 8/8 通过。root database integration 仍因 Docker Server 不可用阻塞。",
+          });
+        }
+        const healthEvent = events.find(
+          (event) => event.title === "V1 codebase health 审计完成",
+        );
+        if (healthEvent) {
+          healthEvent.body =
+            "根门禁复验为 8/9：format、lint、typecheck、boundaries、build、文档链接、治理和 Compose config 通过；root database integration 因 Docker Server 不可用超时。Catalog visibility、Feedback transaction 与 Application lifecycle CAS 已完成代码整改，剩余安全审计、Catalog 列表和运行验收。";
+        } else {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "test",
+            title: "V1 codebase health 审计完成",
+            body: "根门禁复验为 8/9：format、lint、typecheck、boundaries、build、文档链接、治理和 Compose config 通过；root database integration 因 Docker Server 不可用超时。Catalog visibility、Feedback transaction 与 Application lifecycle CAS 已完成代码整改，剩余安全审计、Catalog 列表和运行验收。",
+          });
+        }
+        if (
+          !events.some(
+            (event) => event.title === "V1 Wave 1 Shared Database Runtime 接线",
+          )
+        ) {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "development",
+            title: "V1 Wave 1 Shared Database Runtime 接线",
+            body: "新增 DatabaseRuntime transaction/close interface；API 与 worker composition root 各持有一个 Kysely 实例，Identity、Application、Catalog、Interaction、Feedback、Notification、Creator、Demand、Analytics 模块复用该实例；typecheck、lint、API wiring 和 runtime 单测通过。",
+          });
+        }
+        if (
+          !events.some(
+            (event) =>
+              event.title === "V1 Wave 1 Contract 与 0025 migration 基线",
+          )
+        ) {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "development",
+            title: "V1 Wave 1 Contract 与 0025 migration 基线",
+            body: "@ai-hub/contracts 增加 PageResult、ApiErrorResponse、IsoUtc、Nullable、IdempotencyKey；Problem Details 保持兼容并增加稳定 message。新增 0025_artifact_integrity migration、schema union 和回滚路径；Docker 可用前不宣称数据库约束已生效。",
+          });
+        }
         if (
           !events.some((event) => event.title === "V1 本地可运行审计基线建立")
         ) {
@@ -2164,6 +2525,11 @@
           listPanel("疑点", ledger.疑点, "status-risk"),
           listPanel("UNDO", ledger.UNDO, "status-skip"),
           listPanel("TODO", ledger.TODO, "status-todo"),
+          tablePanel(
+            "Codebase health 诊断",
+            ["类别", "事实与建议"],
+            ledger.codebaseHealth ?? [],
+          ),
           tablePanel(
             "前端生产静态数据与占位",
             ["页面/模块", "事实与影响"],

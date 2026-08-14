@@ -235,7 +235,11 @@ export interface ApplicationArtifactUploadsTable {
   sha256: string | null;
   signature: string | null;
   part_count: number;
-  upload_status: ColumnType<string, string | undefined, string>;
+  upload_status: ColumnType<
+    "uploading" | "completed" | "failed",
+    "uploading" | "completed" | "failed" | undefined,
+    "uploading" | "completed" | "failed"
+  >;
   scan_status: ColumnType<
     "pending" | "passed" | "failed",
     "pending" | "passed" | "failed" | undefined,
@@ -249,7 +253,7 @@ export interface ApplicationArtifactUploadsTable {
 
 export interface ApplicationDeliveryAssetsTable {
   delivery_id: string;
-  platform: string;
+  platform: "web" | "desktop" | "mobile" | "mini_program";
   asset_id: string;
   version: string | null;
   sort_order: number;

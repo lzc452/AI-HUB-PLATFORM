@@ -89,8 +89,7 @@ describe("parseRuntimeConfig", () => {
         ...BASE_ENV,
         NODE_ENV: "production",
         ARTIFACT_UPLOAD_ENABLED: "true",
-        LOGIN_ENCRYPTION_PRIVATE_KEY_FILE:
-          "./test-fixtures/encryption-key.pem",
+        LOGIN_ENCRYPTION_PRIVATE_KEY_FILE: "./test-fixtures/encryption-key.pem",
       }),
     ).toThrow("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
   });
