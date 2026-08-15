@@ -96,7 +96,7 @@ export default function MarketplacePage() {
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_230px]">
         <div className="min-w-0 space-y-4">
-          <section
+          {/* <section
             aria-label="应用市场欢迎"
             className="flex items-center justify-between gap-6 rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 lg:p-6"
           >
@@ -111,7 +111,7 @@ export default function MarketplacePage() {
                 统一查找、体验与分享各部门 AI 工具
               </Paragraph>
             </div>
-          </section>
+          </section> */}
 
           <div className="bg-white p-2 lg:p-4 rounded-xl space-y-4">
             <MarketplaceFilters

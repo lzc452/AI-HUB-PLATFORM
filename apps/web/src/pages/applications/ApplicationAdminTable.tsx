@@ -422,7 +422,7 @@ function ActionLink({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       aria-label={ariaLabel}
       className={`rounded px-1.5 py-0.5 text-xs transition-colors duration-150 ${
         danger
@@ -430,10 +430,10 @@ function ActionLink({
           : "!text-[#1677ff] hover:bg-[#e6f4ff]"
       }`}
       onClick={onClick}
-      type="button"
+      type="link"
     >
       {label}
-    </button>
+    </Button>
   );
 }
 

@@ -1,5 +1,5 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
-import { LikeOutlined, StarFilled } from "@ant-design/icons";
+import { LikeOutlined, StarFilled, RightOutlined} from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -32,7 +32,7 @@ interface RelatedAppItemProps {
 
 function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
   return (
-    <article className="flex items-center gap-3 rounded-xl border border-[#f0f0f0] bg-white p-3 transition-colors hover:border-[#91caff]">
+    <article className="flex items-center gap-3 bg-white transition-colors hover:border-[#91caff]">
       <Link
         aria-label={`查看应用 ${entry.name}`}
         className="flex min-w-0 flex-1 items-center gap-3 text-inherit"
@@ -46,10 +46,16 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           {entry.name.slice(0, 1)}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
             <Text strong className="!mb-0 truncate text-sm">
               {entry.name}
             </Text>
+            <span className="text-xs text-[#8c8c8c]">
+              {/* 显示右箭头 */}
+              <RightOutlined />
+            </span>
+          </div>
+          <div>
             {entry.deliveryChannels.map((channel) => (
               <Tag className="!mr-0" color="geekblue" key={channel}>
                 {channelText[channel]}
@@ -59,9 +65,7 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           <div className="mt-1 flex items-center gap-3 text-xs text-[#8c8c8c]">
             <span className="inline-flex items-center gap-1">
               <StarFilled aria-hidden="true" className="text-[#faad14]" />
-              <Text className="!text-[#1f1f1f]">
-                {entry.ratingAverage?.toFixed(1) ?? "暂无"}
-              </Text>
+              {entry.ratingAverage?.toFixed(1) ?? "0.0"}
             </span>
             <span className="inline-flex items-center gap-1">
               <LikeOutlined aria-hidden="true" />
@@ -73,11 +77,6 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           </div>
         </div>
       </Link>
-      <Tooltip title="交付动作接口待接入">
-        <Button disabled size="small" type="primary">
-          立即使用
-        </Button>
-      </Tooltip>
     </article>
   );
 }

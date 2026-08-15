@@ -1,6 +1,7 @@
-import { Card, message, Modal, Skeleton } from "antd";
+import { Card, message, Modal, Skeleton, Tabs } from "antd";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import type { TabsProps } from 'antd';
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
@@ -164,6 +165,29 @@ export default function MarketplaceDetailPage() {
     );
   }
 
+  type DetailTab = "description" | "history" | "reviews" | "risk";
+
+  const VALID_TABS: readonly DetailTab[] = [
+    "description",
+    "history",
+    "reviews",
+    "risk",
+  ];
+
+  const TAB_LABELS: ReadonlyArray<{ key: DetailTab; label: string; children?: React.ReactNode }> = [
+    { key: "description", label: "描述" },
+    { key: "history", label: "版本历史" },
+    { key: "reviews", label: "评价管理" },
+    { key: "risk", label: "风险说明" },
+  ];
+
+  function parseTab(raw: string | null): DetailTab {
+    if (raw && (VALID_TABS as readonly string[]).includes(raw)) {
+      return raw as DetailTab;
+    }
+    return "description";
+  }
+
   return (
     <div className="space-y-4">
       <MarketplaceDetailHeader
@@ -176,44 +200,56 @@ export default function MarketplaceDetailPage() {
         ratingPending={rateApplication.isPending}
         resolving={resolving}
       />
-      <MarketplaceDetailTabs activeTab={activeTab} onTabChange={setTab} />
+      {/* <MarketplaceDetailTabs activeTab={activeTab} onTabChange={setTab} /> */}
 
-      {activeTab === "description" && (
-        <MarketplaceDetailDescription entry={data} />
-      )}
-      {activeTab === "history" && (
-        <MarketplaceDetailHistory
-          isPending={versions.isPending}
-          versions={versions.data}
-        />
-      )}
-      {activeTab === "reviews" && (
-        <MarketplaceDetailReviews
-          comments={comments.data}
-          commentsPage={commentsPage}
-          commentsPending={comments.isPending}
-          createComment={createComment}
-          createFeedback={createFeedback}
-          isModerator={false}
-          myFeedback={myFeedback.data}
-          onCommentsPageChange={setCommentsPage}
-          onHideComment={(id) => hideComment.mutate(id)}
-          onRestoreComment={(id) => restoreComment.mutate(id)}
-          onRatingsPageChange={setRatingsPage}
-          ratings={ratings.data}
-          ratingsPage={ratingsPage}
-          ratingsPending={ratings.isPending}
-        />
-      )}
-      {activeTab === "risk" && (
-        <MarketplaceDetailRisk
-          isOwner={false}
-          isPending={risk.isPending}
-          onSave={(desc) => saveRisk.mutate(desc)}
-          risk={risk.data}
-          savePending={saveRisk.isPending}
-        />
-      )}
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => setTab(parseTab(key))}
+        items={TAB_LABELS.map((tab) => ({
+          key: tab.key,
+          label: tab.label,
+          children: (
+            <>
+              {tab.key === "description" && (
+                <MarketplaceDetailDescription entry={data} />
+              )}
+              {tab.key === "history" && (
+                <MarketplaceDetailHistory
+                  isPending={versions.isPending}
+                  versions={versions.data}
+                />
+              )}
+              {tab.key === "reviews" && (
+                <MarketplaceDetailReviews
+                  comments={comments.data}
+                  commentsPage={commentsPage}
+                  commentsPending={comments.isPending}
+                  createComment={createComment}
+                  createFeedback={createFeedback}
+                  isModerator={false}
+                  myFeedback={myFeedback.data}
+                  onCommentsPageChange={setCommentsPage}
+                  onHideComment={(id) => hideComment.mutate(id)}
+                  onRestoreComment={(id) => restoreComment.mutate(id)}
+                  onRatingsPageChange={setRatingsPage}
+                  ratings={ratings.data}
+                  ratingsPage={ratingsPage}
+                  ratingsPending={ratings.isPending}
+                />
+              )}
+              {tab.key === "risk" && (
+                <MarketplaceDetailRisk
+                  isOwner={false}
+                  isPending={risk.isPending}
+                  risk={risk.data}
+                  onSave={(desc) => saveRisk.mutate(desc)}
+                  savePending={saveRisk.isPending}
+                />
+              )}
+            </>
+          ),
+        }))}
+      />
     </div>
   );
 }

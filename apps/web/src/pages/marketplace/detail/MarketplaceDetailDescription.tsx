@@ -51,11 +51,11 @@ export function MarketplaceDetailDescription({
   const attachments = listAttachments();
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
         <section
           aria-labelledby="intro-heading"
-          className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
+          className="rounded-xl  bg-white p-4 shadow-sm md:p-4"
         >
           <Title id="intro-heading" level={2} className="!mb-3 !text-lg">
             详细介绍
@@ -86,7 +86,7 @@ export function MarketplaceDetailDescription({
 
         <section
           aria-labelledby="screenshots-heading"
-          className="rounded-2xl border border-dashed border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
+          className="rounded-xl  bg-white p-4 shadow-sm md:p-4"
         >
           <Title id="screenshots-heading" level={2} className="!mb-3 !text-lg">
             截图预览
@@ -96,14 +96,14 @@ export function MarketplaceDetailDescription({
 
         <section
           aria-labelledby="attachments-heading"
-          className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
+          className="rounded-xl  bg-white p-4 shadow-sm md:p-4"
         >
           <Title id="attachments-heading" level={2} className="!mb-3 !text-lg">
             相关附件
           </Title>
           <ul
             aria-label="附件列表"
-            className="divide-y divide-[#f0f0f0] overflow-hidden rounded-xl border border-[#f0f0f0]"
+            className="divide-y divide-[#f0f0f0] overflow-hidden rounded-xl "
           >
             {attachments.map((att) => (
               <li
@@ -137,7 +137,7 @@ export function MarketplaceDetailDescription({
         </section>
       </div>
 
-      <aside aria-label="应用信息与推荐" className="space-y-4 lg:col-span-1">
+      <aside aria-label="应用信息与推荐" className="space-y-4 lg:col-span-1 flex flex-col gap-4">
         <Card
           aria-labelledby="info-heading"
           className="rounded-2xl shadow-sm"

@@ -1,5 +1,5 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
-import { LikeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
+import { LikeOutlined, LikeFilled, StarFilled, StarOutlined } from "@ant-design/icons";
 import { Button, Dropdown, Rate, Tag, Tooltip, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
@@ -28,6 +28,7 @@ export interface MarketplaceDetailHeaderProps {
   likePending: boolean;
 }
 
+
 /** 顶部 Header 区：图标 + 应用名 + 信任标签 + 元信息行 + 立即使用/收藏。 */
 export function MarketplaceDetailHeader({
   entry,
@@ -39,6 +40,7 @@ export function MarketplaceDetailHeader({
   ratingDisabled,
   ratingPending,
 }: MarketplaceDetailHeaderProps) {
+  
   const departments = useDepartments();
   const departmentName = departments.data?.find(
     (item) => item.departmentId === entry.departmentId,
@@ -89,7 +91,6 @@ export function MarketplaceDetailHeader({
                 <Text strong className="!text-[#1f1f1f]">
                   {ratingLabel}
                 </Text>
-                <span>{buildRatingCountLabel(entry.likeCount)}</span>
               </span>
               <span className="inline-flex items-center gap-1">
                 <LikeOutlined aria-hidden="true" />
@@ -110,66 +111,71 @@ export function MarketplaceDetailHeader({
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 gap-2">
-          <Dropdown
-            menu={{
-              items: entry.deliveryChannels.map((channel) => ({
-                key: channel,
-                label: (
-                  <span onClick={() => onResolve(channel)} role="menuitem">
-                    {channelText[channel]}
-                  </span>
-                ),
-              })),
-            }}
-            trigger={["click"]}
+        <section aria-label="应用操作" className="flex flex-col gap-2 md:items-end">
+          
+          <section
+            aria-label="应用互动"
+            className="flex flex-wrap items-center gap-4"
           >
-            <Button loading={resolving} type="primary">
-              {primaryChannel !== undefined
-                ? `立即使用（${channelText[primaryChannel]}）`
-                : "立即使用"}
-            </Button>
-          </Dropdown>
-          <Tooltip title="收藏功能待接入">
             <Button
-              aria-label="收藏"
-              disabled
-              icon={<StarOutlined aria-hidden="true" />}
+              aria-label="点赞应用"
+              icon={<LikeOutlined aria-hidden="true" />}
+              loading={likePending}
+              onClick={onLike}
             >
-              收藏
+              点赞
             </Button>
-          </Tooltip>
-        </div>
+            <span className="text-sm text-[#595959]">
+              综合评分：
+              <Text strong className="!text-[#1f1f1f]">
+                {ratingLabel}
+              </Text>
+            </span>
+            <span className="inline-flex items-center gap-2 text-sm text-[#595959]">
+              我的评分：
+              <Rate
+                aria-label="为应用评分"
+                disabled={ratingDisabled}
+                onChange={(stars) => onRate(stars)}
+                {...(ratingPending ? { value: 0 } : {})}
+              />
+            </span>
+          </section>
+
+          <div className="flex shrink-0 gap-2">
+            <Dropdown
+              menu={{
+                items: entry.deliveryChannels.map((channel) => ({
+                  key: channel,
+                  label: (
+                    <span onClick={() => onResolve(channel)} role="menuitem">
+                      {channelText[channel]}
+                    </span>
+                  ),
+                })),
+              }}
+              trigger={["click"]}
+            >
+              <Button loading={resolving} type="primary">
+                {primaryChannel !== undefined
+                  ? `立即使用（${channelText[primaryChannel]}）`
+                  : "立即使用"}
+              </Button>
+            </Dropdown>
+            {/* <Tooltip title="收藏功能待接入">
+              <Button
+                aria-label="收藏"
+                disabled
+                icon={<StarOutlined aria-hidden="true" />}
+              >
+                收藏
+              </Button>
+            </Tooltip> */}
+          </div>
+        </section>
       </div>
 
-      <section
-        aria-label="应用互动"
-        className="mt-4 flex flex-wrap items-center gap-4 rounded-xl border border-[#f0f0f0] bg-[#fafafa] px-4 py-3"
-      >
-        <Button
-          aria-label="点赞应用"
-          icon={<LikeOutlined aria-hidden="true" />}
-          loading={likePending}
-          onClick={onLike}
-        >
-          点赞（{entry.likeCount}）
-        </Button>
-        <span className="text-sm text-[#595959]">
-          综合评分：
-          <Text strong className="!text-[#1f1f1f]">
-            {ratingLabel}
-          </Text>
-        </span>
-        <span className="inline-flex items-center gap-2 text-sm text-[#595959]">
-          我的评分：
-          <Rate
-            aria-label="为应用评分"
-            disabled={ratingDisabled}
-            onChange={(stars) => onRate(stars)}
-            {...(ratingPending ? { value: 0 } : {})}
-          />
-        </span>
-      </section>
+      
     </header>
   );
 }

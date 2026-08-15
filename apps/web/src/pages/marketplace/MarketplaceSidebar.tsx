@@ -38,7 +38,7 @@ export function MarketplaceSidebar() {
         <Title level={5} className="!mb-4 !mt-0 !text-base">
           热门标签
         </Title>
-        <ul className="m-0 space-y-3 p-2">
+        <ul className="m-0 h-32 overflow-y-auto">
           {hotTags.map((tag, index) => (
             <li key={`${tag}-${index}`} className="flex items-center gap-3">
               <span
@@ -60,7 +60,7 @@ export function MarketplaceSidebar() {
         <Title level={5} className="!mb-2 !mt-0 !text-base">
           最近更新
         </Title>
-        <ul className="m-0 p-2">
+        <ul className="m-0 h-32 overflow-y-auto">
           {recentUpdates.map((update) => (
             <li key={update}>
               <div className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm text-[#595959] transition-colors hover:bg-[#f0f7ff] hover:text-[#1677ff]">
