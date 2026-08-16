@@ -23,10 +23,6 @@ import * as identityAuthorizationIntegrity from "./migrations/0021_identity_auth
 import * as outboxClaimLease from "./migrations/0022_outbox_claim_lease.js";
 import * as loginChallenges from "./migrations/0023_login_challenges.js";
 import * as outboxQuarantine from "./migrations/0024_outbox_quarantine.js";
-import * as applicationDraft from "./migrations/0025_application_draft.js";
-import * as unifiedUpload from "./migrations/0026_unified_upload.js";
-import * as versionArtifactNullable from "./migrations/0027_version_artifact_nullable.js";
-import * as demandClaimProposalAndPriority from "./migrations/0028_demand_claim_proposal_and_priority.js";
 import * as artifactIntegrity from "./migrations/0025_artifact_integrity.js";
 import * as engagementIntegrity from "./migrations/0026_engagement_integrity.js";
 import * as securityAuditIntegrity from "./migrations/0027_security_audit_integrity.js";
@@ -35,6 +31,10 @@ import * as notificationPayload from "./migrations/0029_notification_payload.js"
 import * as catalogReadModelIndexes from "./migrations/0030_catalog_read_model_indexes.js";
 import * as artifactRuntimeCompatibility from "./migrations/0031_artifact_runtime_compatibility.js";
 import * as analyticsInteractionFeedbackEvents from "./migrations/0032_analytics_interaction_feedback_events.js";
+import * as applicationDraft from "./migrations/0033_application_draft.js";
+import * as unifiedUpload from "./migrations/0034_unified_upload.js";
+import * as versionArtifactNullable from "./migrations/0035_version_artifact_nullable.js";
+import * as demandClaimProposalAndPriority from "./migrations/0036_demand_claim_proposal_and_priority.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -62,10 +62,6 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0022_outbox_claim_lease": outboxClaimLease,
   "0023_login_challenges": loginChallenges,
   "0024_outbox_quarantine": outboxQuarantine,
-  "0025_application_draft": applicationDraft,
-  "0026_unified_upload": unifiedUpload,
-  "0027_version_artifact_nullable": versionArtifactNullable,
-  "0028_demand_claim_proposal_and_priority": demandClaimProposalAndPriority,
   "0025_artifact_integrity": artifactIntegrity,
   "0026_engagement_integrity": engagementIntegrity,
   "0027_security_audit_integrity": securityAuditIntegrity,
@@ -75,6 +71,10 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0031_artifact_runtime_compatibility": artifactRuntimeCompatibility,
   "0032_analytics_interaction_feedback_events":
     analyticsInteractionFeedbackEvents,
+  "0033_application_draft": applicationDraft,
+  "0034_unified_upload": unifiedUpload,
+  "0035_version_artifact_nullable": versionArtifactNullable,
+  "0036_demand_claim_proposal_and_priority": demandClaimProposalAndPriority,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {
