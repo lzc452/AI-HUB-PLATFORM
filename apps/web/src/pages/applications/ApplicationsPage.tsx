@@ -1,5 +1,6 @@
-import { Form, Input, Modal } from "antd";
+import { Modal } from "antd";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   MessageError,
@@ -16,9 +17,9 @@ import { channelText } from "../../modules/marketplace/catalogMeta";
 import { useAdminApplicationList } from "../../modules/application/useAdminApplicationList";
 import { useAdminKpis } from "../../modules/application/useAdminKpis";
 import {
-  createApplication,
   publishApplication,
 } from "../../modules/application/application.client";
+import { ROUTES } from "../../router/routes";
 
 import { ApplicationAdminHero } from "./ApplicationAdminHero";
 import { ApplicationAdminKpiCards } from "./ApplicationAdminKpiCards";
@@ -87,9 +88,7 @@ export default function ApplicationsPage() {
     action: ApplicationRowAction;
     row: AdminApplicationRow;
   } | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [createForm] = Form.useForm<{ name: string; summary: string }>();
+  const navigate = useNavigate();
 
   // KPI 与 Tab 计数由独立的摘要接口提供，与列表筛选/分页完全解耦。
   const kpiNumbers = kpisQuery.data ?? {
@@ -181,28 +180,7 @@ export default function ApplicationsPage() {
   }, [list, pendingAction]);
 
   const handleCreate = () => {
-    setCreateOpen(true);
-  };
-
-  const handleCreateSubmit = async () => {
-    const values = await createForm.validateFields();
-    setCreating(true);
-    try {
-      const application = await createApplication({
-        name: values.name.trim(),
-        summary: values.summary.trim(),
-      });
-      showSuccessMessage("应用创建成功");
-      setCreateOpen(false);
-      createForm.resetFields();
-      window.location.assign(
-        `/applications/${encodeURIComponent(application.applicationId)}`,
-      );
-    } catch (error: unknown) {
-      showErrorMessage(error, "创建应用失败");
-    } finally {
-      setCreating(false);
-    }
+    navigate(ROUTES.creatorCreate);
   };
 
   return (
@@ -265,37 +243,6 @@ export default function ApplicationsPage() {
           />
         ) : null}
       </div>
-
-      <Modal
-        cancelText="取消"
-        confirmLoading={creating}
-        okText="创建"
-        onCancel={() => setCreateOpen(false)}
-        onOk={() => void handleCreateSubmit()}
-        open={createOpen}
-        title="创建应用"
-      >
-        <Form form={createForm} layout="vertical" name="create-application">
-          <Form.Item
-            label="应用名称"
-            name="name"
-            rules={[{ required: true, message: "请输入应用名称" }]}
-          >
-            <Input maxLength={60} placeholder="例如：智能考勤助手" />
-          </Form.Item>
-          <Form.Item
-            label="应用简介"
-            name="summary"
-            rules={[{ required: true, message: "请输入应用简介" }]}
-          >
-            <Input.TextArea
-              maxLength={200}
-              placeholder="一句话描述应用价值"
-              rows={3}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 }

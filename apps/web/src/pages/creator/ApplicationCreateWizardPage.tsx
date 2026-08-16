@@ -2,14 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { App, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
-import type { FieldValues } from "react-hook-form";
+import type { FieldValues, Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { ApplicationDraft } from "@ai-hub/contracts";
 
 import { FormWizard } from "../../shared/forms/FormWizard";
 import {
   applicationDraftDefaults,
+  applicationDraftFormSchema,
   createWizardSteps,
   createApplicationDraft,
+  defaultDeliveriesForType,
   getApplicationDraft,
   listCategories,
   listTags,
@@ -95,11 +98,21 @@ export default function ApplicationCreateWizardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const withDeliveries = (values: FieldValues): ApplicationDraft => {
+    const draft = { ...(values as ApplicationDraft) };
+    if (!draft.deliveries || draft.deliveries.length === 0) {
+      draft.deliveries = defaultDeliveriesForType(
+        draft.applicationType,
+      ) as ApplicationDraft["deliveries"];
+    }
+    return draft;
+  };
+
   const handleSaveDraft = async (values: FieldValues) => {
     if (!applicationId) return;
     setSaveState("saving");
     try {
-      await saveApplicationDraft(applicationId, values as ApplicationDraft);
+      await saveApplicationDraft(applicationId, withDeliveries(values));
       setSaveState("saved");
       message.success("草稿已保存");
     } catch {
@@ -110,7 +123,7 @@ export default function ApplicationCreateWizardPage() {
 
   const handleSubmit = async (values: FieldValues) => {
     if (!applicationId) return;
-    await saveApplicationDraft(applicationId, values as ApplicationDraft);
+    await saveApplicationDraft(applicationId, withDeliveries(values));
     await submitApplicationDraft(applicationId);
     message.success("已提交审核");
   };
@@ -124,12 +137,15 @@ export default function ApplicationCreateWizardPage() {
   }
 
   return (
-    <FormWizard
-      steps={createWizardSteps(options, applicationId ?? "")}
-      defaultValues={defaultValues}
-      onSaveDraft={handleSaveDraft}
-      onSubmit={handleSubmit}
-      saveState={saveState}
-    />
+    <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
+      <FormWizard
+        steps={createWizardSteps(options, applicationId ?? "")}
+        defaultValues={defaultValues}
+        onSaveDraft={handleSaveDraft}
+        onSubmit={handleSubmit}
+        saveState={saveState}
+        resolver={zodResolver(applicationDraftFormSchema) as unknown as Resolver<FieldValues>}
+      />
+    </div>
   );
 }

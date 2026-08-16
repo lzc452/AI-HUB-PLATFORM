@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Space, Steps } from "antd";
 import { FormProvider, useForm } from "react-hook-form";
-import type { FieldValues, UseFormReturn } from "react-hook-form";
+import type { FieldValues, Resolver, UseFormReturn } from "react-hook-form";
 
 /**
  * 通用分步表单容器（组件化复用核心）。
@@ -36,6 +36,8 @@ export interface FormWizardProps {
   saveState?: "idle" | "saving" | "saved";
   /** 提交按钮文案。 */
   submitLabel?: string;
+  /** 表单校验器（如 zodResolver），用于「下一步」与「提交」时按 schema 校验。 */
+  resolver?: Resolver<FieldValues>;
 }
 
 export function FormWizard({
@@ -45,28 +47,50 @@ export function FormWizard({
   onSubmit,
   saveState = "idle",
   submitLabel = "提交审核",
+  resolver,
 }: FormWizardProps) {
   const [current, setCurrent] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const form = useForm<FieldValues>({ defaultValues });
+  const form = useForm<FieldValues>({
+    defaultValues,
+    ...(resolver ? { resolver } : {}),
+  });
 
   const isFirst = current === 0;
   const isLast = current === steps.length - 1;
 
+  /**
+   * 校验指定步骤的全部字段（与 schema 同源）。
+   * 存草稿、下一步、最终提交三者共用，保证校验逻辑一致、单点维护。
+   */
+  const validateStep = async (index: number): Promise<boolean> => {
+    const ok = await form.trigger(steps[index]!.fields);
+    return ok;
+  };
+
   const handleNext = async () => {
-    const valid = await form.trigger(steps[current]!.fields);
-    if (valid) setCurrent((index) => Math.min(index + 1, steps.length - 1));
+    if (await validateStep(current)) {
+      setCurrent((index) => Math.min(index + 1, steps.length - 1));
+    }
   };
 
   const handlePrev = () => setCurrent((index) => Math.max(index - 1, 0));
 
   const handleSaveDraft = async () => {
+    // 存草稿与「下一步」采用一致的当前步校验；校验不通过则不保存（错误已在表单展示）。
+    if (!(await validateStep(current))) return;
     await onSaveDraft(form.getValues());
   };
 
   const handleSubmit = async () => {
-    const valid = await form.trigger();
-    if (!valid) return;
+    // 按顺序校验每个步骤：任一不通过则跳转到该步并中止提交。
+    for (let index = 0; index < steps.length; index += 1) {
+      const ok = await validateStep(index);
+      if (!ok) {
+        setCurrent(index);
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       await onSubmit(form.getValues());
@@ -88,16 +112,28 @@ export function FormWizard({
         }}
         style={{ marginBottom: 24 }}
       />
-      <div style={{ minHeight: 320 }}>
-        {steps[current]!.render(form)}
+      {/* 所有步骤常驻挂载：保证上传预览等本地状态在步骤切换时不丢失。 */}
+      <div style={{ maxWidth: 680, margin: "0 auto", minHeight: 360 }}>
+        {steps.map((step, index) => (
+          <div
+            key={step.key}
+            style={{ display: index === current ? "block" : "none" }}
+          >
+            {step.render(form)}
+          </div>
+        ))}
       </div>
-      <Space
-        style={{ marginTop: 24, display: "flex", justifyContent: "space-between" }}
+      <div
+        style={{
+          marginTop: 24,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
       >
-        <Button onClick={handleSaveDraft} loading={saveState === "saving"}>
-          {saveState === "saved" ? "已保存" : "存草稿"}
-        </Button>
         <Space>
+          <Button onClick={handleSaveDraft} loading={saveState === "saving"}>
+            {saveState === "saved" ? "已保存" : "存草稿"}
+          </Button>
           {!isFirst && <Button onClick={handlePrev}>上一步</Button>}
           {!isLast && (
             <Button type="primary" onClick={handleNext}>
@@ -110,7 +146,7 @@ export function FormWizard({
             </Button>
           )}
         </Space>
-      </Space>
+      </div>
     </FormProvider>
   );
 }

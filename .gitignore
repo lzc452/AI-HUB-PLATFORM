@@ -15,3 +15,6 @@ dist/
 .codex/*.secret.*
 .workbuddy/
 .claude/
+
+# 运行时存储（上传文件 / 生成资产），非源码，不入库
+apps/api/.storage/
