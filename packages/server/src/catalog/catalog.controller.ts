@@ -14,6 +14,7 @@ import {
   Query,
   StreamableFile,
 } from "@nestjs/common";
+import { Readable } from "node:stream";
 import {
   ApiBody,
   ApiCreatedResponse,
@@ -33,7 +34,8 @@ import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import { ApplicationService } from "../application/application.service.js";
 import { ApplicationVersionDto } from "../application/application.dto.js";
-import { DiskObjectStorage } from "../application/storage.disk.js";
+import { ARTIFACT_STORAGE } from "../application/application.tokens.js";
+import type { ReadableObjectStoragePort } from "../application/storage.port.js";
 import { CATALOG_SERVICE } from "./catalog.tokens.js";
 import { CatalogService } from "./catalog.service.js";
 import type { CatalogSearchInput } from "./catalog.types.js";
@@ -63,8 +65,8 @@ export class CatalogController {
     @Inject(APPLICATION_SERVICE)
     private readonly applications: ApplicationService | undefined,
     @Optional()
-    @Inject(DiskObjectStorage)
-    private readonly storage: DiskObjectStorage | undefined,
+    @Inject(ARTIFACT_STORAGE)
+    private readonly storage: ReadableObjectStoragePort | undefined,
   ) {}
 
   @Get()
@@ -127,7 +129,11 @@ export class CatalogController {
   @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({ summary: "分类列表", description: "返回启用的单层主分类。" })
   @ApiIdentityHeaders()
-  @ApiOkResponse({ description: "分类列表", type: CategorySummaryDto, isArray: true })
+  @ApiOkResponse({
+    description: "分类列表",
+    type: CategorySummaryDto,
+    isArray: true,
+  })
   @ApiProblemResponses([400, 401, 403])
   async listCategories() {
     return this.call(() => this.catalog.listCategories());
@@ -137,7 +143,11 @@ export class CatalogController {
   @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({ summary: "标签列表", description: "返回启用的标签。" })
   @ApiIdentityHeaders()
-  @ApiOkResponse({ description: "标签列表", type: TagSummaryDto, isArray: true })
+  @ApiOkResponse({
+    description: "标签列表",
+    type: TagSummaryDto,
+    isArray: true,
+  })
   @ApiProblemResponses([400, 401, 403])
   async listTags() {
     return this.call(() => this.catalog.listTags());
@@ -249,7 +259,11 @@ export class CatalogController {
     if (stream === null) {
       throw new NotFoundException("CATALOG_DELIVERY_ASSET_NOT_FOUND");
     }
-    return new StreamableFile(stream);
+    return new StreamableFile(
+      stream instanceof Readable
+        ? stream
+        : Readable.from(stream as AsyncIterable<Uint8Array>),
+    );
   }
 
   @Get(":applicationId/versions")

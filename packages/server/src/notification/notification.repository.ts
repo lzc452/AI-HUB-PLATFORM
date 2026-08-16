@@ -1,4 +1,5 @@
 import type { DatabaseSchema } from "@ai-hub/database";
+import type { NotificationPayload } from "@ai-hub/contracts";
 import { sql, type Kysely, type Selectable } from "kysely";
 import type {
   NotificationRecord,
@@ -37,6 +38,16 @@ export class KyselyNotificationRepository implements NotificationRepository {
     return rows.map((row) => this.map(row));
   }
 
+  async findById(notificationId: string, employeeId: string) {
+    const row = await this.db
+      .selectFrom("notifications")
+      .selectAll()
+      .where("notification_id", "=", notificationId)
+      .where("recipient_employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row === undefined ? null : this.map(row);
+  }
+
   async create(
     input: Omit<NotificationRecord, "notificationId" | "createdAt">,
   ) {
@@ -48,6 +59,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
         aggregate_id: input.aggregateId,
         idempotency_key: input.idempotencyKey,
         message: input.message,
+        payload: input.payload ?? {},
         read_at: input.readAt,
         delivery_status: "pending",
         delivery_attempts: 0,
@@ -131,6 +143,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
       aggregateId: row.aggregate_id,
       idempotencyKey: row.idempotency_key,
       message: row.message,
+      payload: (row.payload ?? {}) as NotificationPayload,
       readAt: row.read_at,
       createdAt: row.created_at,
     };

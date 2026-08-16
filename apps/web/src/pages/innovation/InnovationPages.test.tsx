@@ -54,6 +54,11 @@ vi.mock("../../modules/innovation/useDemand", () => ({
     };
   },
   useCreateDemandDraft: () => ({ isPending: false, mutateAsync: mockCreate }),
+  useUploadDemandAttachment: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
+  useDemandAttachments: () => ({ data: [], isPending: false }),
   useDemand: () => ({
     data: {
       demandId: "d-1",

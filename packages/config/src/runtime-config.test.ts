@@ -42,6 +42,18 @@ describe("parseRuntimeConfig", () => {
       storageDirectory: ".storage/artifacts",
       artifactUploadEnabled: false,
       artifactMaxSizeBytes: 64 * 1024 * 1024,
+      objectStorageDriver: "disk",
+      objectStorageEndpoint: undefined,
+      objectStorageRegion: "garage",
+      objectStorageBucket: "ai-hub",
+      objectStorageAccessKey: undefined,
+      objectStorageSecretKey: undefined,
+      objectStorageForcePathStyle: false,
+      clamavHost: "127.0.0.1",
+      clamavPort: 3310,
+      clamavTimeoutMs: 30_000,
+      artifactSigningPrivateKey: undefined,
+      artifactSigningPublicKey: undefined,
       enableApiDocs: true,
       demoDataEnabled: false,
       demoMode: false,
@@ -89,8 +101,7 @@ describe("parseRuntimeConfig", () => {
         ...BASE_ENV,
         NODE_ENV: "production",
         ARTIFACT_UPLOAD_ENABLED: "true",
-        LOGIN_ENCRYPTION_PRIVATE_KEY_FILE:
-          "./test-fixtures/encryption-key.pem",
+        LOGIN_ENCRYPTION_PRIVATE_KEY_FILE: "./test-fixtures/encryption-key.pem",
       }),
     ).toThrow("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
   });

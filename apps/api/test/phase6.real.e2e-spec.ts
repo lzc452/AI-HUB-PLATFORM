@@ -23,6 +23,7 @@ import {
   type IdentityRepository,
 } from "@ai-hub/server";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { OutboxStore } from "@ai-hub/database";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { ApiModule } from "../src/api.module.js";
@@ -90,6 +91,7 @@ describe("real Phase 6 analytics API", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
     await sql`
       insert into departments (department_id, name, parent_department_id, source)
       values ('dept-rnd', 'R&D', null, 'local')
@@ -210,12 +212,29 @@ describe("real Phase 6 analytics API", () => {
       .query({ from: "2026-08-03", to: "2026-08-04" })
       .set(headers)
       .expect(200);
-    expect(dashboard.body.metrics).toEqual([
-      expect.objectContaining({
-        metricKey: "platform.application_views",
-        value: 2,
-      }),
-    ]);
+    expect(dashboard.body.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricKey: "platform.application_views",
+          value: 2,
+        }),
+        expect.objectContaining({
+          metricKey: "platform.active_employee_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.active_application_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.published_application_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.pending_review_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.pending_claim_count",
+        }),
+      ]),
+    );
 
     const exportResponse = await request(app.getHttpServer())
       .post("/internal/analytics/exports")
@@ -281,7 +300,11 @@ describe("real Phase 6 analytics API", () => {
       "notification.created": (event) =>
         notificationHandler(event as Parameters<typeof notificationHandler>[0]),
     });
-    await outboxWorker.runOnce("phase6-real-worker");
+    // OutboxWorker.runOnce 每次只领取一条事件；analytics 请求已先写入
+    // behavior_event 事件，需循环排空队列直到通知事件被处理。
+    for (let processed = 1; processed > 0; ) {
+      processed = await outboxWorker.runOnce("phase6-real-worker");
+    }
     expect(dingtalk.send).toHaveBeenCalledWith({
       idempotencyKey: "analytics.export.completed:export-real-1:E901",
       recipientEmployeeId: "E901",

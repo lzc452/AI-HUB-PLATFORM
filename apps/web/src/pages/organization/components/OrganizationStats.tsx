@@ -27,26 +27,22 @@ export function OrganizationStats({
       <KpiCard
         icon={<UserOutlined className="text-lg text-[#1677ff]" />}
         label="总用户"
-        trend={36}
         value={formatNumber(total)}
       />
       <KpiCard
         icon={<CheckCircleFilled className="text-lg text-[#52c41a]" />}
         label="启用中"
-        trend={28}
         value={formatNumber(active)}
       />
       <KpiCard
         icon={<ApartmentOutlined className="text-lg text-[#722ed1]" />}
         label="部门数量"
-        trend={2}
         value={formatNumber(departmentCount)}
       />
       <KpiCard
         icon={<RiseOutlined className="text-lg text-[#fa8c16]" />}
         label="最近同步成功率"
-        trend={2.1}
-        value="98.6%"
+        value="—"
       />
     </section>
   );

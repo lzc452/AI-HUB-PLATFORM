@@ -258,10 +258,16 @@ export function DemandGovernanceDrawer({
                         <Form.Item label="战略匹配度" name="strategicFit">
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
-                        <Form.Item label="技术可行性" name="technicalFeasibility">
+                        <Form.Item
+                          label="技术可行性"
+                          name="technicalFeasibility"
+                        >
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
-                        <Form.Item label="数据合规风险" name="dataComplianceRisk">
+                        <Form.Item
+                          label="数据合规风险"
+                          name="dataComplianceRisk"
+                        >
                           <InputNumber className="w-full" max={5} min={1} />
                         </Form.Item>
                         <Form.Item label="实施成本" name="implementationCost">
@@ -301,12 +307,15 @@ export function DemandGovernanceDrawer({
                         disabled={!confirmedPriority}
                         loading={confirmPriority.isPending}
                         onClick={() => {
-                          const reason = window.prompt("调整原因（可留空）") ?? "";
+                          const reason =
+                            window.prompt("调整原因（可留空）") ?? "";
                           if (confirmedPriority)
                             confirmPriority.mutate({
                               expectedVersion: demand.version,
                               confirmedPriority,
-                              ...(reason.trim() ? { adjustmentReason: reason.trim() } : {}),
+                              ...(reason.trim()
+                                ? { adjustmentReason: reason.trim() }
+                                : {}),
                             });
                         }}
                         type="primary"
@@ -329,57 +338,68 @@ export function DemandGovernanceDrawer({
             children: (
               <div className="space-y-4">
                 {(claimProposals.data ?? []).length ? (
-                  claimProposals.data?.map((proposal: DemandClaimProposalRecord) => (
-                    <Card
-                      key={proposal.proposalId}
-                      size="small"
-                      title={`方案 · 负责人 ${proposal.ownerEmployeeId} · ${proposal.status}`}
-                    >
-                      <Typography.Paragraph className="!mb-2">
-                        {proposal.approach}
-                      </Typography.Paragraph>
-                      <Typography.Paragraph className="!mb-0 text-xs" type="secondary">
-                        协作者：{proposal.collaboratorEmployeeIds.join("、") || "无"} ·
-                        预计验证 {proposal.estimatedValidationDuration} ·
-                        资源 {proposal.resourceNeeds}
-                      </Typography.Paragraph>
-                      <Space className="mt-3" wrap>
-                        {proposal.status === "proposed" &&
-                        proposal.proposerEmployeeId === actor.data?.employeeId ? (
-                          <Button
-                            size="small"
-                            onClick={() =>
-                              withdrawProposal.mutate({ proposalId: proposal.proposalId })
-                            }
-                          >
-                            撤回
-                          </Button>
-                        ) : null}
-                        {can(PERMISSIONS.DEMAND_MANAGE) &&
-                        proposal.status === "proposed" &&
-                        demand.status === "pending_claim" ? (
-                          <Button
-                            size="small"
-                            type="primary"
-                            onClick={() =>
-                              confirm("确认该认领方案", () =>
-                                confirmClaim.mutate({
+                  claimProposals.data?.map(
+                    (proposal: DemandClaimProposalRecord) => (
+                      <Card
+                        key={proposal.proposalId}
+                        size="small"
+                        title={`方案 · 负责人 ${proposal.ownerEmployeeId} · ${proposal.status}`}
+                      >
+                        <Typography.Paragraph className="!mb-2">
+                          {proposal.approach}
+                        </Typography.Paragraph>
+                        <Typography.Paragraph
+                          className="!mb-0 text-xs"
+                          type="secondary"
+                        >
+                          协作者：
+                          {proposal.collaboratorEmployeeIds.join("、") ||
+                            "无"}{" "}
+                          · 预计验证 {proposal.estimatedValidationDuration} ·
+                          资源 {proposal.resourceNeeds}
+                        </Typography.Paragraph>
+                        <Space className="mt-3" wrap>
+                          {proposal.status === "proposed" &&
+                          proposal.proposerEmployeeId ===
+                            actor.data?.employeeId ? (
+                            <Button
+                              size="small"
+                              onClick={() =>
+                                withdrawProposal.mutate({
                                   proposalId: proposal.proposalId,
-                                  expectedVersion: demand.version,
-                                }),
-                              )
-                            }
-                          >
-                            确认认领
-                          </Button>
-                        ) : null}
-                      </Space>
-                    </Card>
-                  ))
+                                })
+                              }
+                            >
+                              撤回
+                            </Button>
+                          ) : null}
+                          {can(PERMISSIONS.DEMAND_MANAGE) &&
+                          proposal.status === "proposed" &&
+                          demand.status === "pending_claim" ? (
+                            <Button
+                              size="small"
+                              type="primary"
+                              onClick={() =>
+                                confirm("确认该认领方案", () =>
+                                  confirmClaim.mutate({
+                                    proposalId: proposal.proposalId,
+                                    expectedVersion: demand.version,
+                                  }),
+                                )
+                              }
+                            >
+                              确认认领
+                            </Button>
+                          ) : null}
+                        </Space>
+                      </Card>
+                    ),
+                  )
                 ) : (
                   <Empty description="暂无认领方案" />
                 )}
-                {can(PERMISSIONS.DEMAND_CLAIM) && demand.status === "pending_claim" ? (
+                {can(PERMISSIONS.DEMAND_CLAIM) &&
+                demand.status === "pending_claim" ? (
                   <Form
                     form={proposalForm}
                     layout="vertical"
@@ -406,7 +426,10 @@ export function DemandGovernanceDrawer({
                     >
                       <Input placeholder="员工工号" />
                     </Form.Item>
-                    <Form.Item label="拟定协作者（逗号分隔）" name="collaboratorEmployeeIds">
+                    <Form.Item
+                      label="拟定协作者（逗号分隔）"
+                      name="collaboratorEmployeeIds"
+                    >
                       <Input placeholder="员工工号，逗号分隔" />
                     </Form.Item>
                     <Form.Item
@@ -419,7 +442,9 @@ export function DemandGovernanceDrawer({
                     <Form.Item
                       label="预计验证时间"
                       name="estimatedValidationDuration"
-                      rules={[{ required: true, message: "请输入预计验证时间" }]}
+                      rules={[
+                        { required: true, message: "请输入预计验证时间" },
+                      ]}
                     >
                       <Input placeholder="例如 4 周" />
                     </Form.Item>

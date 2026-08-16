@@ -1,6 +1,6 @@
 import type { DatabaseSchema } from "@ai-hub/database";
 import { OutboxStore } from "@ai-hub/database";
-import { type Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { DailyAggregate } from "./aggregation.types.js";
 import type {
   AnalyticsDashboardRepository,
@@ -50,6 +50,42 @@ export class KyselyAnalyticsDashboardRepository
       value: Number(row.value),
       sourceEventCount: row.source_event_count,
     }));
+  }
+
+  async readSnapshotCounts(): Promise<
+    readonly { metricKey: string; value: number }[]
+  > {
+    const [published, pendingReview, pendingClaim] = await Promise.all([
+      this.db
+        .selectFrom("applications")
+        .select(sql<number>`count(*)::int`.as("value"))
+        .where("status", "=", "published")
+        .executeTakeFirst(),
+      this.db
+        .selectFrom("application_review_queue")
+        .select(sql<number>`count(*)::int`.as("value"))
+        .where("status", "=", "available")
+        .executeTakeFirst(),
+      this.db
+        .selectFrom("ai_demands")
+        .select(sql<number>`count(*)::int`.as("value"))
+        .where("status", "=", "pending_review")
+        .executeTakeFirst(),
+    ]);
+    return [
+      {
+        metricKey: "platform.published_application_count",
+        value: Number(published?.value ?? 0),
+      },
+      {
+        metricKey: "platform.pending_review_count",
+        value: Number(pendingReview?.value ?? 0),
+      },
+      {
+        metricKey: "platform.pending_claim_count",
+        value: Number(pendingClaim?.value ?? 0),
+      },
+    ];
   }
 
   async recordAudit(input: {

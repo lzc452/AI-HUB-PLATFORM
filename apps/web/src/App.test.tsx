@@ -33,6 +33,10 @@ vi.mock("./modules/application/adminList.client", () => ({
 
 vi.mock("./modules/innovation/useDemand", () => ({
   useCreateDemandDraft: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useUploadDemandAttachment: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
   useAddDemandComment: () => ({
     isError: false,
     isPending: false,

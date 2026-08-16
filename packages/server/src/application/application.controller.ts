@@ -28,9 +28,13 @@ import {
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
-import { ApplicationService, DraftValidationError } from "./application.service.js";
+import {
+  ApplicationService,
+  DraftValidationError,
+} from "./application.service.js";
 import {
   ApplicationDto,
+  ApplicationAdminKpisDto,
   ApplicationAdminListResultDto,
   ApplicationDraftRecordDto,
   ApplicationVersionDto,
@@ -86,11 +90,17 @@ export class ApplicationController {
   @Put(":applicationId/draft")
   @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
   @HttpCode(200)
-  @ApiOperation({ summary: "保存应用草稿", description: "整表单一份 draft，全量幂等保存。" })
+  @ApiOperation({
+    summary: "保存应用草稿",
+    description: "整表单一份 draft，全量幂等保存。",
+  })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
   @ApiBody({ type: SaveApplicationDraftRequestDto })
-  @ApiOkResponse({ description: "保存后的草稿记录", type: ApplicationDraftRecordDto })
+  @ApiOkResponse({
+    description: "保存后的草稿记录",
+    type: ApplicationDraftRecordDto,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   async saveDraft(
     @Param("applicationId") applicationId: string,
@@ -109,7 +119,10 @@ export class ApplicationController {
 
   @Get(":applicationId/draft")
   @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
-  @ApiOperation({ summary: "读取应用草稿", description: "回显整表单草稿内容。" })
+  @ApiOperation({
+    summary: "读取应用草稿",
+    description: "回显整表单草稿内容。",
+  })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
   @ApiOkResponse({ description: "草稿记录", type: ApplicationDraftRecordDto })
@@ -453,6 +466,22 @@ export class ApplicationController {
         pageSize: parsedPageSize,
       }),
     );
+  }
+
+  @Get("admin-kpis")
+  @RequiresPermissions({
+    anyOf: [PERMISSIONS.APPLICATION_MANAGE, PERMISSIONS.APPLICATION_REVIEW],
+  })
+  @ApiOperation({ summary: "应用管理 KPI" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "应用管理 KPI", type: ApplicationAdminKpisDto })
+  @ApiProblemResponses([400, 401, 403])
+  async getAdminKpis(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() => this.applications.getAdminKpis(actor));
   }
 
   @Get(":applicationId")

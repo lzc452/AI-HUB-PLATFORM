@@ -14,14 +14,26 @@ export interface AuditEventRecord {
   createdAt: Date;
 }
 
+export interface AuditExportJobRecord {
+  exportJobId: string;
+  requestedByEmployeeId: string;
+  filterSnapshot: unknown;
+  status: "queued" | "processing" | "completed" | "failed";
+  resultStorageKey: string | null;
+  expiresAt: Date | null;
+  failureCode: string | null;
+  createdAt: Date;
+  completedAt: Date | null;
+}
+
 export interface AuditEventInput {
   traceId?: string | null;
   module: string;
   action: string;
   actorEmployeeId?: string | null;
   subject?: string | null;
-  result: "success" | "failure" | "blocked";
-  risk?: "none" | "low" | "medium" | "high" | "critical";
+  result: "success" | "failure" | "denied" | "error";
+  risk?: "low" | "medium" | "high" | "critical";
   ipAddress?: string | null;
   userAgent?: string | null;
   details?: unknown;
@@ -32,7 +44,7 @@ export interface AuditListInput {
   module?: string;
   action?: string;
   actorEmployeeId?: string;
-  result?: "success" | "failure" | "blocked";
+  result?: "success" | "failure" | "denied" | "error";
   risk?: string;
   from?: string;
   to?: string;
@@ -49,5 +61,16 @@ export interface AuditRepository {
   createExportJob(input: {
     requestedByEmployeeId: string;
     filterSnapshot: unknown;
-  }): Promise<{ exportJobId: string; status: string; createdAt: Date }>;
+  }): Promise<AuditExportJobRecord>;
+  findExportJob(exportJobId: string): Promise<AuditExportJobRecord | null>;
+  claimExportJob(exportJobId: string): Promise<AuditExportJobRecord | null>;
+  completeExportJob(input: {
+    exportJobId: string;
+    resultStorageKey: string;
+    expiresAt: Date;
+  }): Promise<AuditExportJobRecord | null>;
+  failExportJob(input: {
+    exportJobId: string;
+    failureCode: string;
+  }): Promise<AuditExportJobRecord | null>;
 }

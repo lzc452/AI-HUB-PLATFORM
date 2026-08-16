@@ -14,6 +14,8 @@ services:
     command: ["sh", "-c", "pnpm init:dev && exec pnpm --filter @ai-hub/api dev"]
     environment:
       NODE_ENV: development
+      # init:dev 包含 seed:demo-data，无此开关时 api 容器会以 DEMO_DATA_REFUSED 崩溃循环
+      DEMO_DATA_ENABLED: ${DEMO_DATA_ENABLED:-true}
     volumes:
       - ./apps/api/src:/workspace/apps/api/src
       - ./packages/config/src:/workspace/packages/config/src

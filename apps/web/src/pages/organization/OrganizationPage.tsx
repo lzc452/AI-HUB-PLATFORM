@@ -48,10 +48,14 @@ export default function OrganizationPage() {
     const rows = departmentRows.data ?? [];
     const total = rows.length;
     const active = rows.filter((d) => d.status === "active").length;
+    const memberTotal = rows.reduce((sum, row) => sum + row.memberCount, 0);
+    const synced = rows.filter(
+      (row) => row.lastSyncAt && row.lastSyncAt !== "—",
+    ).length;
     return {
       active,
-      memberTotal: 1286,
-      syncRate: "98.6%",
+      memberTotal,
+      syncRate: total === 0 ? "—" : `${Math.round((synced / total) * 100)}%`,
       total,
     };
   }, [departmentRows.data]);

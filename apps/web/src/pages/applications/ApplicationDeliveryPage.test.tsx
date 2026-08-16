@@ -69,6 +69,7 @@ const hoisted = vi.hoisted(() => {
   ];
   const workspace: ApplicationWorkspace = {
     application,
+    assets: [],
     deliveries,
     reviewQueue: null,
     reviews: [],

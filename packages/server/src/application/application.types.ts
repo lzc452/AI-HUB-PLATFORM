@@ -1,4 +1,5 @@
 import type {
+  ApplicationAdminKpis,
   ActorContext,
   ApplicationDraft,
   AudienceRule,
@@ -15,7 +16,11 @@ export type ApplicationStatus =
   | "withdrawn"
   | "archived";
 export type ApplicationVersionScanStatus = "pending" | "passed" | "failed";
-export type ArtifactUploadStatus = "uploading" | "completed" | "failed";
+export type ArtifactUploadStatus =
+  | "uploading"
+  | "verifying"
+  | "completed"
+  | "failed";
 export type ReviewDecision = "approve" | "reject" | "request_changes";
 export type ReviewQueueStatus = "available" | "claimed";
 export type ReviewSlaStatus = "on_time" | "overdue";
@@ -60,6 +65,11 @@ export interface ArtifactUploadRecord {
   uploadStatus: ArtifactUploadStatus;
   scanStatus: ApplicationVersionScanStatus;
   errorCode: string | null;
+  /** 新版数据库字段；旧测试 fixture 可以省略，由 mapper/DTO 使用默认值。 */
+  stagingObjectKey?: string;
+  verificationStartedAt?: Date | null;
+  verificationAttempts?: number;
+  updatedAt?: Date;
   expiresAt: Date;
   completedAt: Date | null;
   createdAt: Date;
@@ -124,6 +134,7 @@ export interface ApplicationWorkspace {
   deliveries: readonly DeliveryRecord[];
   reviews: readonly ReviewRecord[];
   reviewQueue: ReviewQueueRecord | null;
+  assets: readonly AssetRecord[];
 }
 
 export interface ApplicationAdminListInput {
@@ -206,6 +217,7 @@ export interface ApplicationRepository {
     actor: ActorContext,
     input: ApplicationAdminListInput,
   ): Promise<ApplicationAdminListResult>;
+  getAdminKpis?(actor: ActorContext): Promise<ApplicationAdminKpis>;
   createVersion(
     input: Omit<ApplicationVersionRecord, "createdAt">,
   ): Promise<ApplicationVersionRecord>;
@@ -238,20 +250,44 @@ export interface ApplicationRepository {
         | "errorCode"
         | "completedAt"
         | "objectKey"
+        | "stagingObjectKey"
+        | "verificationStartedAt"
+        | "verificationAttempts"
+        | "updatedAt"
       >
     >,
   ): Promise<ArtifactUploadRecord | null>;
+  claimArtifactVerification?(input: {
+    uploadId: string;
+    expectedSha256: string;
+    requestedSignature?: string | null;
+  }): Promise<ArtifactUploadRecord | null>;
+  finalizeArtifactVerification?(input: {
+    uploadId: string;
+    objectKey: string;
+    signature: string;
+  }): Promise<ArtifactUploadRecord | null>;
+  failArtifactVerification?(input: {
+    uploadId: string;
+    errorCode: string;
+  }): Promise<ArtifactUploadRecord | null>;
+  listStaleArtifactVerifications?(input: {
+    olderThan: Date;
+    limit: number;
+  }): Promise<readonly ArtifactUploadRecord[]>;
+  resetStaleArtifactVerification?(uploadId: string): Promise<boolean>;
   createAsset(
     input: Omit<AssetRecord, "assetId" | "createdAt">,
   ): Promise<AssetRecord>;
   listAssets(applicationId: string): Promise<readonly AssetRecord[]>;
   findAsset(assetId: string): Promise<AssetRecord | null>;
   deleteAsset(assetId: string): Promise<void>;
-  setApplicationStatus(
-    applicationId: string,
-    status: ApplicationStatus,
-    currentVersionId?: string,
-  ): Promise<ApplicationRecord>;
+  setApplicationStatus(input: {
+    applicationId: string;
+    expectedStatus: ApplicationStatus;
+    status: ApplicationStatus;
+    currentVersionId?: string;
+  }): Promise<ApplicationRecord>;
   createDelivery(
     input: Omit<DeliveryRecord, "deliveryId">,
   ): Promise<DeliveryRecord>;
@@ -285,6 +321,7 @@ export interface ApplicationRepository {
     applicationId: string;
     applicationVersionId?: string | null;
     eventType: string;
+    details?: unknown;
   }): Promise<void>;
   registerToCatalog(input: {
     applicationId: string;

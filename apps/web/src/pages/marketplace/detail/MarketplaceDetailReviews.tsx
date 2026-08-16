@@ -13,11 +13,13 @@ import {
   Input,
   Pagination,
   Radio,
+  Select,
   Skeleton,
   Tag,
   Typography,
 } from "antd";
 import type { UseMutationResult } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   type CommentOutputExt,
   type FeedbackRecord,
@@ -64,19 +66,36 @@ function RatingCard({ rating }: { rating: RatingOutput }) {
 }
 
 function CommentThread({
+  canReplyOfficial,
   comment,
-  replies,
   isModerator,
   onHide,
+  onReplyCancel,
+  onReplyChange,
+  onReplyStart,
+  onReplySubmit,
   onRestore,
+  replies,
+  replyDraft,
+  replyPending,
+  replyTargetId,
 }: {
+  canReplyOfficial: boolean;
   comment: CommentOutput;
-  replies: readonly CommentOutput[];
   isModerator: boolean;
   onHide: (id: string) => void;
+  onReplyCancel: () => void;
+  onReplyChange: (value: string) => void;
+  onReplyStart: (id: string) => void;
+  onReplySubmit: (body: string) => void;
   onRestore: (id: string) => void;
+  replies: readonly CommentOutput[];
+  replyDraft: string;
+  replyPending: boolean;
+  replyTargetId: string | null;
 }) {
   const isHidden = comment.hiddenAt !== null;
+  const isReplying = replyTargetId === comment.commentId;
 
   return (
     <div className="space-y-3">
@@ -122,6 +141,41 @@ function CommentThread({
         >
           {isHidden ? "该评论已被管理员隐藏" : comment.body}
         </p>
+        {isReplying ? (
+          <div className="mt-3 space-y-2">
+            <Input.TextArea
+              aria-label="官方回复内容"
+              autoSize={{ minRows: 2, maxRows: 4 }}
+              maxLength={500}
+              onChange={(event) => onReplyChange(event.target.value)}
+              placeholder="输入官方回复…"
+              value={replyDraft}
+            />
+            <div className="flex justify-end gap-2">
+              <Button onClick={onReplyCancel} size="small">
+                取消
+              </Button>
+              <Button
+                loading={replyPending}
+                onClick={() => onReplySubmit(replyDraft)}
+                size="small"
+                type="primary"
+              >
+                发送回复
+              </Button>
+            </div>
+          </div>
+        ) : canReplyOfficial ? (
+          <Button
+            aria-label={`回复 ${comment.commentId}`}
+            className="mt-2 px-0"
+            onClick={() => onReplyStart(comment.commentId)}
+            size="small"
+            type="link"
+          >
+            回复
+          </Button>
+        ) : null}
       </div>
       {replies.length > 0 && (
         <div className="ml-8 space-y-2 border-l-2 border-[#e6f4ff] pl-4">
@@ -200,7 +254,72 @@ const feedbackStatusText: Record<FeedbackRecord["status"], string> = {
   closed: "已关闭",
 };
 
+const feedbackStatusOptions = (
+  Object.keys(feedbackStatusText) as FeedbackRecord["status"][]
+).map((status) => ({ label: feedbackStatusText[status], value: status }));
+
+function OwnerFeedbackItem({
+  feedback,
+  onSave,
+  pending,
+}: {
+  feedback: FeedbackRecord;
+  onSave: (
+    feedbackId: string,
+    status: FeedbackRecord["status"],
+    resolution: string,
+  ) => void;
+  pending: boolean;
+}) {
+  const [status, setStatus] = useState<FeedbackRecord["status"]>(
+    feedback.status,
+  );
+  const [resolution, setResolution] = useState(feedback.resolution ?? "");
+
+  return (
+    <div className="rounded-lg border border-[#f0f0f0] bg-[#fafafa] p-3">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Tag color="geekblue">{feedbackTypeText[feedback.type]}</Tag>
+          <span className="ml-1 text-xs text-[#8c8c8c]">
+            {feedback.creatorEmployeeId}
+          </span>
+        </div>
+        <Tag color="green">{feedbackStatusText[feedback.status]}</Tag>
+      </div>
+      <p className="!mb-2 text-sm text-[#1f1f1f]">{feedback.body}</p>
+      <div className="flex items-start gap-2">
+        <Select
+          aria-label="反馈处理状态"
+          onChange={(next) => setStatus(next)}
+          options={feedbackStatusOptions}
+          size="small"
+          style={{ width: 110 }}
+          value={status}
+        />
+        <Input
+          aria-label="反馈处理说明"
+          maxLength={500}
+          onChange={(event) => setResolution(event.target.value)}
+          placeholder="处理说明（终态必填）"
+          size="small"
+          value={resolution}
+        />
+        <Button
+          loading={pending}
+          onClick={() => onSave(feedback.feedbackId, status, resolution)}
+          size="small"
+          type="primary"
+        >
+          保存
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export interface MarketplaceDetailReviewsProps {
+  applicationFeedback: readonly FeedbackRecord[] | undefined;
   ratings: { items: readonly RatingOutput[]; total: number } | undefined;
   comments: { items: readonly CommentOutput[]; total: number } | undefined;
   ratingsPending: boolean;
@@ -209,6 +328,7 @@ export interface MarketplaceDetailReviewsProps {
   commentsPage: number;
   onRatingsPageChange: (page: number) => void;
   onCommentsPageChange: (page: number) => void;
+  canReplyOfficial: boolean;
   isModerator: boolean;
   onHideComment: (commentId: string) => void;
   onRestoreComment: (commentId: string) => void;
@@ -223,10 +343,16 @@ export interface MarketplaceDetailReviewsProps {
     { type: FeedbackRecord["type"]; body: string }
   >;
   myFeedback: readonly FeedbackRecord[] | undefined;
+  updateFeedback: UseMutationResult<
+    FeedbackRecord,
+    unknown,
+    { feedbackId: string; status: FeedbackRecord["status"]; resolution: string }
+  >;
 }
 
 /** 评价管理 Tab：评分列表 + 评论列表（含官方回复线程）+ 评论提交 + 应用反馈。 */
 export function MarketplaceDetailReviews({
+  applicationFeedback,
   ratings,
   comments,
   ratingsPending,
@@ -235,14 +361,18 @@ export function MarketplaceDetailReviews({
   commentsPage,
   onRatingsPageChange,
   onCommentsPageChange,
+  canReplyOfficial,
   isModerator,
   onHideComment,
   onRestoreComment,
   createComment,
   createFeedback,
   myFeedback,
+  updateFeedback,
 }: MarketplaceDetailReviewsProps) {
   const [commentForm] = Form.useForm<{ body: string }>();
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
   const [feedbackForm] = Form.useForm<{
     type: FeedbackRecord["type"];
     body: string;
@@ -277,6 +407,16 @@ export function MarketplaceDetailReviews({
       body: values.body.trim(),
     });
     feedbackForm.resetFields();
+  };
+
+  const handleSubmitReply = async (body: string) => {
+    if (!replyTargetId || !body.trim()) return;
+    await createComment.mutateAsync({
+      parentCommentId: replyTargetId,
+      body: body.trim(),
+    });
+    setReplyTargetId(null);
+    setReplyDraft("");
   };
 
   return (
@@ -377,11 +517,25 @@ export function MarketplaceDetailReviews({
             <div className="space-y-4">
               {rootComments.map((root) => (
                 <CommentThread
+                  canReplyOfficial={canReplyOfficial}
                   comment={root}
                   isModerator={isModerator}
                   key={root.commentId}
                   onHide={onHideComment}
+                  onReplyCancel={() => {
+                    setReplyTargetId(null);
+                    setReplyDraft("");
+                  }}
+                  onReplyChange={setReplyDraft}
+                  onReplyStart={(id) => {
+                    setReplyTargetId(id);
+                    setReplyDraft("");
+                  }}
+                  onReplySubmit={(body) => void handleSubmitReply(body)}
                   onRestore={onRestoreComment}
+                  replyDraft={replyDraft}
+                  replyPending={createComment.isPending}
+                  replyTargetId={replyTargetId}
                   replies={repliesByParent.get(root.commentId) ?? []}
                 />
               ))}
@@ -478,6 +632,26 @@ export function MarketplaceDetailReviews({
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        ) : null}
+
+        {canReplyOfficial &&
+        applicationFeedback &&
+        applicationFeedback.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            <Title level={3} className="!mb-2 !text-base">
+              反馈管理
+            </Title>
+            {applicationFeedback.map((item) => (
+              <OwnerFeedbackItem
+                feedback={item}
+                key={item.feedbackId}
+                onSave={(feedbackId, status, resolution) =>
+                  updateFeedback.mutate({ feedbackId, status, resolution })
+                }
+                pending={updateFeedback.isPending}
+              />
             ))}
           </div>
         ) : null}

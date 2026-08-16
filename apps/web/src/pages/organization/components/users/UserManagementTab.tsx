@@ -8,11 +8,13 @@ import { MessageError } from "../../../../shared/ui/message";
 import {
   STATUS_META,
   createDefaultFilters,
+  type UserTableRow,
   type UserFilterValue,
 } from "../constants";
 import { useUserTableRows } from "./hooks/useUserTableRows";
 import { UserFilterBar } from "./UserFilterBar";
 import { UserTable } from "./UserTable";
+import { UserDetailModal } from "./UserDetailModal";
 
 interface UserManagementTabProps {
   departments: UseQueryResult<DepartmentSummary[], Error>;
@@ -35,6 +37,7 @@ export function UserManagementTab({
   const [filters, setFilters] = useState<UserFilterValue>(
     createDefaultFilters(),
   );
+  const [selectedRow, setSelectedRow] = useState<UserTableRow | null>(null);
 
   const rows = useUserTableRows(employees, departments);
 
@@ -56,6 +59,11 @@ export function UserManagementTab({
     [],
   );
 
+  const roleOptions = useMemo(
+    () => [...new Set(rows.flatMap((row) => row.roleNames ?? []))].sort(),
+    [rows],
+  );
+
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
       const matchesSearch =
@@ -64,7 +72,8 @@ export function UserManagementTab({
         row.displayName.includes(filters.searchText);
       const matchesDepartment =
         !filters.department || row.departmentName === filters.department;
-      const matchesRole = !filters.role || row.role === filters.role;
+      const matchesRole =
+        !filters.role || (row.roleNames ?? []).includes(filters.role);
       const matchesStatus =
         !filters.status || STATUS_META[row.status].text === filters.status;
       const matchesSource =
@@ -89,11 +98,17 @@ export function UserManagementTab({
       />
       <UserFilterBar
         departmentOptions={departmentOptions}
+        roleOptions={roleOptions}
         statusOptions={statusOptions}
         value={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
       />
-      <UserTable rows={filteredRows} />
+      <UserTable
+        onDetail={setSelectedRow}
+        onEdit={setSelectedRow}
+        rows={filteredRows}
+      />
+      <UserDetailModal onClose={() => setSelectedRow(null)} row={selectedRow} />
     </section>
   );
 }

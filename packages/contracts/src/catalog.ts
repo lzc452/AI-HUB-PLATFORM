@@ -31,6 +31,23 @@ export interface CatalogEntry {
   deliveryChannels: readonly DeliveryChannel[];
   likeCount: number;
   ratingAverage: number | null;
+  ratingCount?: number;
+  maintainers?: readonly string[];
+  attachments?: readonly {
+    name: string;
+    type: "pdf" | "docx" | "doc" | "other";
+    size: string;
+  }[];
+  capabilities?: {
+    canResolveDelivery: boolean;
+    canLike: boolean;
+    canRate: boolean;
+    canComment: boolean;
+    canSubmitFeedback: boolean;
+    canModerateComments: boolean;
+    canEditRisk: boolean;
+    canReplyOfficial?: boolean;
+  };
   healthStatus: CatalogHealthStatus;
   deprecatedReason: string | null;
   replacementApplicationId: string | null;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { setSession } from "../auth/session.store";
+import { setSession } from "../auth";
 import { uploadArtifactContent } from "./application.client";
 
 class XMLHttpRequestStub {

@@ -140,7 +140,7 @@ describe("Phase 6 analytics schema", () => {
       order by metric_key
     `.execute(db);
 
-    expect(definitions.rows).toHaveLength(12);
+    expect(definitions.rows).toHaveLength(23);
     expect(definitions.rows.every((row) => row.version === 1)).toBe(true);
   });
 

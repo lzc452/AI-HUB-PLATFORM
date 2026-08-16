@@ -220,7 +220,8 @@ export class DemandService {
       throw new Error("DEMAND_CLAIM_INVALID_STATE");
     }
     const approach = input.approach.trim();
-    const estimatedValidationDuration = input.estimatedValidationDuration.trim();
+    const estimatedValidationDuration =
+      input.estimatedValidationDuration.trim();
     const resourceNeeds = input.resourceNeeds.trim();
     const preference = input.preference?.trim() || null;
     if (
@@ -374,9 +375,15 @@ export class DemandService {
     const releaseReason = reason?.trim() || null;
     return this.repository.withTransaction(async (repository) => {
       const released = await repository.releaseClaim(demandId, expectedVersion);
-      await this.recordMutation(repository, released, actor, "demand.claim.released", {
-        reason: releaseReason,
-      });
+      await this.recordMutation(
+        repository,
+        released,
+        actor,
+        "demand.claim.released",
+        {
+          reason: releaseReason,
+        },
+      );
       return released;
     });
   }
@@ -889,9 +896,12 @@ export class DemandService {
     const demand = await this.requireDemand(demandId);
     this.assertProgressActor(actor, demand);
     if (
-      !new Set<DemandStatus>(["claimed", "validating", "pilot", "converted"]).has(
-        demand.status,
-      )
+      !new Set<DemandStatus>([
+        "claimed",
+        "validating",
+        "pilot",
+        "converted",
+      ]).has(demand.status)
     ) {
       throw new Error("DEMAND_APPLICATION_BRIDGE_INVALID_STATE");
     }
@@ -1384,9 +1394,7 @@ export class DemandService {
     };
   }
 
-  private normalizeInput(
-    input: DemandDraftInput,
-  ): Required<
+  private normalizeInput(input: DemandDraftInput): Required<
     Pick<
       DemandDraftInput,
       | "title"
@@ -1467,7 +1475,8 @@ export class DemandService {
     const draft: DemandDraftInput = {
       title: input.title ?? current.title,
       problemStatement: input.problemStatement ?? current.problemStatement,
-      businessScenario: input.businessScenario ?? current.businessScenario ?? "",
+      businessScenario:
+        input.businessScenario ?? current.businessScenario ?? "",
       impact: input.impact ?? current.impact ?? "",
       desiredOutcome: input.desiredOutcome ?? current.desiredOutcome,
       currentWorkaround:

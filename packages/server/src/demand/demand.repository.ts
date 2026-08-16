@@ -669,9 +669,7 @@ export class KyselyDemandRepository implements DemandRepository {
         employee_id: ownerEmployeeId,
         role: "owner",
       })
-      .onConflict((oc) =>
-        oc.columns(["demand_id", "employee_id"]).doNothing(),
-      )
+      .onConflict((oc) => oc.columns(["demand_id", "employee_id"]).doNothing())
       .execute();
     for (const collaboratorId of collaboratorEmployeeIds) {
       if (collaboratorId === ownerEmployeeId) continue;

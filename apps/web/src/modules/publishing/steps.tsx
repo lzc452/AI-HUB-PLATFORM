@@ -86,7 +86,9 @@ function IconField({ applicationId }: { applicationId: string }) {
                 value={text ?? ""}
                 placeholder="展示字符（默认取名称首字）"
                 onChange={(event) =>
-                  setValue("icon.text", event.target.value, { shouldDirty: true })
+                  setValue("icon.text", event.target.value, {
+                    shouldDirty: true,
+                  })
                 }
                 style={{ width: 200 }}
               />
@@ -196,7 +198,9 @@ function BasicInfoStep({
             <Select
               {...field}
               placeholder="选择部门"
-              options={options.departments as { value: string; label: string }[]}
+              options={
+                options.departments as { value: string; label: string }[]
+              }
               style={{ width: "100%" }}
             />
           </Form.Item>
@@ -280,7 +284,10 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
@@ -293,7 +300,10 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
@@ -306,7 +316,10 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
@@ -371,8 +384,11 @@ function DepartmentSelect({ options }: { options: PublishingOptions }) {
   const audienceType = watch("audience.0.audienceType");
   if (audienceType !== "department" && audienceType !== "employee") return null;
   const name =
-    audienceType === "department" ? "audience.0.departmentId" : "audience.0.employeeId";
-  const opts = audienceType === "department" ? options.departments : options.employees;
+    audienceType === "department"
+      ? "audience.0.departmentId"
+      : "audience.0.employeeId";
+  const opts =
+    audienceType === "department" ? options.departments : options.employees;
   return (
     <Controller
       control={control}
@@ -412,15 +428,25 @@ function RiskStep() {
   );
   return (
     <>
-      {yesNo("1. 是否处理员工个人信息或企业敏感数据？", "risk.handlesSensitiveData")}
-      {yesNo("2. 数据是否发送至企业外部或第三方模型供应商？", "risk.sendsDataExternally")}
+      {yesNo(
+        "1. 是否处理员工个人信息或企业敏感数据？",
+        "risk.handlesSensitiveData",
+      )}
+      {yesNo(
+        "2. 数据是否发送至企业外部或第三方模型供应商？",
+        "risk.sendsDataExternally",
+      )}
       {yesNo("3. 是否保存输入、文件及对话？", "risk.retainsConversations")}
       <Controller
         control={control}
         name="risk.retentionPeriod"
         render={({ field }) => (
           <Form.Item label="保留周期（如保存，请说明）">
-            <Input {...field} value={field.value ?? ""} placeholder="如：不保存 / 保留 30 天" />
+            <Input
+              {...field}
+              value={field.value ?? ""}
+              placeholder="如：不保存 / 保留 30 天"
+            />
           </Form.Item>
         )}
       />
@@ -444,7 +470,10 @@ function RiskStep() {
           </Form.Item>
         )}
       />
-      {yesNo("5. 是否影响人事、财务、法务等高风险决策？", "risk.affectsHighRiskDecisions")}
+      {yesNo(
+        "5. 是否影响人事、财务、法务等高风险决策？",
+        "risk.affectsHighRiskDecisions",
+      )}
       <Controller
         control={control}
         name="risk.inputRestrictionDisclaimer"
@@ -465,9 +494,13 @@ function RiskStep() {
               type="link"
               style={{ paddingLeft: 0 }}
               onClick={() =>
-                setValue("risk.inputRestrictionDisclaimer", DISCLAIMER_TEMPLATE, {
-                  shouldDirty: true,
-                })
+                setValue(
+                  "risk.inputRestrictionDisclaimer",
+                  DISCLAIMER_TEMPLATE,
+                  {
+                    shouldDirty: true,
+                  },
+                )
               }
             >
               填入默认模板
@@ -507,7 +540,11 @@ function ReviewSubmitStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <Input.TextArea {...field} rows={3} placeholder="本次发布的内容说明" />
+            <Input.TextArea
+              {...field}
+              rows={3}
+              placeholder="本次发布的内容说明"
+            />
           </Form.Item>
         )}
       />
@@ -539,7 +576,9 @@ export function createWizardSteps(
         "icon",
         "screenshotAssetIds",
       ],
-      render: () => <BasicInfoStep options={options} applicationId={applicationId} />,
+      render: () => (
+        <BasicInfoStep options={options} applicationId={applicationId} />
+      ),
     },
     {
       key: "content",

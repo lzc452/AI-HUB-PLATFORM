@@ -29,6 +29,8 @@ export class KyselyAnalyticsAggregationRepository
       eventId: row.event_id,
       idempotencyKey: row.idempotency_key,
       eventName: row.event_name as RawBehaviorEvent["eventName"],
+      aggregateId: row.aggregate_id,
+      actorEmployeeId: row.actor_employee_id,
       occurredAt: row.occurred_at,
       audienceScopeKey:
         row.audience_employee_id !== null

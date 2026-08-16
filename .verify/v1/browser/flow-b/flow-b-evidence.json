@@ -1,0 +1,33 @@
+{
+  "employee": {
+    "likeBefore": "点赞（2）",
+    "likeAfterLike": "点赞（1）",
+    "likeAfterUnlike": "点赞（2）",
+    "ratingStars": 4,
+    "commentVisible": true,
+    "feedbackVisible": true,
+    "feedbackStatus": "",
+    "consoleErrors": [],
+    "http4xx": []
+  },
+  "owner": {
+    "replyButtonCount": 1,
+    "replyVisible": true,
+    "officialReplyTagVisible": true,
+    "resolutionVisible": false,
+    "consoleErrors": [],
+    "http4xx": []
+  },
+  "employeeRevisited": {
+    "replyVisible": true,
+    "resolvedVisible": true,
+    "consoleErrors": [],
+    "http4xx": []
+  },
+  "moderation": {
+    "hiddenTextVisible": true,
+    "restoredTextVisible": true,
+    "consoleErrors": [],
+    "http4xx": []
+  }
+}

@@ -12,6 +12,7 @@ import {
   type IdentityRepository,
 } from "@ai-hub/server";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { ApiModule } from "../src/api.module.js";
 
@@ -100,6 +101,7 @@ describe("real Phase 5 demand API", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
     await sql`
       insert into departments (department_id, name, parent_department_id, source)
       values
@@ -114,6 +116,11 @@ describe("real Phase 5 demand API", () => {
         ('E200', 'Other department', 'active', 'dept-ops'),
         ('E300', 'Child department', 'active', 'dept-rnd-child'),
         ('E900', 'Reviewer', 'active', 'dept-rnd')
+    `.execute(db);
+    // publish 路径的 registerToCatalog 写入 catalog_metadata（category_id FK）
+    await sql`
+      insert into catalog_categories (category_id, name, sort_order, enabled)
+      values ('productivity', '办公效率', 0, true)
     `.execute(db);
 
     const identity = new IdentityService(identityRepository);
@@ -174,7 +181,11 @@ describe("real Phase 5 demand API", () => {
       .send({
         title: "R&D knowledge assistant",
         problemStatement: "R&D teams cannot find approved guidance quickly.",
+        businessScenario: "R&D teams search for guidance during development.",
+        impact: "Slow guidance lookup delays weekly delivery.",
         desiredOutcome: "Return cited guidance in under one minute.",
+        currentWorkaround: "Manual searches across shared drives.",
+        dataSensitivity: "Internal, medium sensitivity.",
         audienceType: "department",
         departmentId: "dept-rnd",
         includeChildren: true,
@@ -199,18 +210,26 @@ describe("real Phase 5 demand API", () => {
       .send({
         expectedVersion: published.body.version,
         businessValue: 5,
+        impactedHeadcount: 4,
+        usageFrequency: 5,
+        strategicFit: 5,
+        technicalFeasibility: 4,
+        dataComplianceRisk: 1,
         implementationCost: 2,
-        riskLevel: 1,
-        adminPriority: 4,
       })
       .expect(201);
     expect(priority.body).toMatchObject({ priorityScore: 4.6 });
-    const started = await request(app.getHttpServer())
+    const claimed = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/claim`)
+      .set(requester)
+      .send({ expectedVersion: priority.body.version })
+      .expect(201);
+    const statusClaimed = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/status`)
       .set(reviewer)
       .send({
-        expectedVersion: priority.body.version,
-        nextStatus: "in_progress",
+        expectedVersion: claimed.body.version,
+        nextStatus: "claimed",
       })
       .expect(201);
     const progress = await request(app.getHttpServer())
@@ -221,7 +240,7 @@ describe("real Phase 5 demand API", () => {
         body: "The first governed workflow is being tested.",
       })
       .expect(201);
-    expect(progress.body.status).toBe("in_progress");
+    expect(progress.body.status).toBe("claimed");
     const pilot = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/pilots`)
       .set(reviewer)
@@ -240,7 +259,7 @@ describe("real Phase 5 demand API", () => {
       .post(`/internal/demands/${demandId}/status`)
       .set(reviewer)
       .send({
-        expectedVersion: started.body.version,
+        expectedVersion: statusClaimed.body.version,
         nextStatus: "closed",
         reason: "Pilot workflow completed for this demand.",
       })
@@ -351,7 +370,11 @@ describe("real Phase 5 demand API", () => {
       .send({
         title: "Concurrent ownership demand",
         problemStatement: "Multiple teams may claim the same governed request.",
+        businessScenario: "Multiple teams compete to own a request.",
+        impact: "Duplicate ownership causes delivery conflicts.",
         desiredOutcome: "Exactly one owner coordinates the implementation.",
+        currentWorkaround: "Manual coordination meetings.",
+        dataSensitivity: "Internal, low sensitivity.",
         audienceType: "all",
       })
       .expect(201);
@@ -416,7 +439,11 @@ describe("real Phase 5 demand API", () => {
       .send({
         title: "Demand-backed assistant",
         problemStatement: "The accepted demand needs a formal application.",
+        businessScenario: "A governed demand graduates into an application.",
+        impact: "Unmanaged bridges skip publication gates.",
         desiredOutcome: "The application must pass the standard review gates.",
+        currentWorkaround: "Manual re-entry of demand data.",
+        dataSensitivity: "Internal, medium sensitivity.",
         audienceType: "all",
       })
       .expect(201);
@@ -430,10 +457,18 @@ describe("real Phase 5 demand API", () => {
       .set(operator)
       .send({ decision: "publish" })
       .expect(201);
-    const progress = await request(app.getHttpServer())
+    const claimed = await request(app.getHttpServer())
+      .post(`/internal/demands/${demandId}/claim`)
+      .set(requester)
+      .send({ expectedVersion: 3 })
+      .expect(201);
+    const statusClaimed = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/status`)
       .set(operator)
-      .send({ expectedVersion: 3, nextStatus: "in_progress" })
+      .send({
+        expectedVersion: claimed.body.version,
+        nextStatus: "claimed",
+      })
       .expect(201);
 
     const bridge = await request(app.getHttpServer())
@@ -444,7 +479,7 @@ describe("real Phase 5 demand API", () => {
         summary: "Application created from a structured demand.",
         role: "solution",
         isPrimary: false,
-        expectedVersion: progress.body.version,
+        expectedVersion: statusClaimed.body.version,
       })
       .expect(201);
     const applicationId = bridge.body.applicationId as string;
@@ -455,9 +490,23 @@ describe("real Phase 5 demand API", () => {
         applicationId,
         role: "solution",
         isPrimary: true,
-        expectedVersion: progress.body.version + 1,
+        expectedVersion: statusClaimed.body.version + 1,
       })
       .expect(400);
+
+    // createVersion 要求数据库中存在已完成且扫描通过的制品上传记录
+    await sql`
+      insert into application_artifact_uploads
+        (application_id, uploaded_by_employee_id, object_key, staging_object_key, file_name,
+         mime_type, size_bytes, sha256, signature, part_count, upload_status,
+         scan_status, error_code, expires_at, completed_at)
+      values (
+        ${applicationId}, 'E100', 'applications/phase-5/demand-backed.zip', 'applications/phase-5/demand-backed.zip',
+        'demand-backed.zip', 'application/octet-stream', 20,
+        'phase-5-sha256', 'phase-5-signature', 1,
+        'completed', 'passed', null, now() + interval '1 hour', now()
+      )
+    `.execute(db);
 
     const version = await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/versions`)
@@ -509,7 +558,7 @@ describe("real Phase 5 demand API", () => {
         applicationId,
         role: "solution",
         isPrimary: true,
-        expectedVersion: progress.body.version + 1,
+        expectedVersion: statusClaimed.body.version + 1,
       })
       .expect(201);
 

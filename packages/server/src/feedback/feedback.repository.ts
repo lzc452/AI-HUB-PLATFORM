@@ -6,6 +6,31 @@ import type { FeedbackRecord, FeedbackRepository } from "./feedback.types.js";
 export class KyselyFeedbackRepository implements FeedbackRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
 
+  withTransaction<T>(
+    operation: (repository: FeedbackRepository) => Promise<T>,
+  ): Promise<T> {
+    return this.db
+      .transaction()
+      .execute(async (transaction) =>
+        operation(new KyselyFeedbackRepository(transaction)),
+      );
+  }
+
+  async findApplication(applicationId: string) {
+    const row = await this.db
+      .selectFrom("applications")
+      .select(["application_id", "owner_employee_id", "maintainer_employee_id"])
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : {
+          applicationId: row.application_id,
+          ownerEmployeeId: row.owner_employee_id,
+          maintainerEmployeeId: row.maintainer_employee_id,
+        };
+  }
+
   async createFeedback(
     input: Omit<
       FeedbackRecord,
@@ -38,6 +63,18 @@ export class KyselyFeedbackRepository implements FeedbackRepository {
       .selectAll()
       .where("application_id", "=", applicationId)
       .where("creator_employee_id", "=", creatorEmployeeId)
+      .orderBy("created_at", "desc")
+      .execute();
+    return rows.map((row) => this.mapFeedback(row));
+  }
+
+  async listByApplication(
+    applicationId: string,
+  ): Promise<readonly FeedbackRecord[]> {
+    const rows = await this.db
+      .selectFrom("application_feedback")
+      .selectAll()
+      .where("application_id", "=", applicationId)
       .orderBy("created_at", "desc")
       .execute();
     return rows.map((row) => this.mapFeedback(row));
@@ -101,6 +138,24 @@ export class KyselyFeedbackRepository implements FeedbackRepository {
         claimed_at: null,
         last_error: null,
         completed_at: null,
+      })
+      .execute();
+  }
+
+  async recordAudit(input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void> {
+    await this.db
+      .insertInto("application_audit_events")
+      .values({
+        application_id: input.applicationId,
+        application_version_id: null,
+        actor_employee_id: input.actorEmployeeId,
+        event_type: input.eventType,
+        details: input.details ?? {},
       })
       .execute();
   }

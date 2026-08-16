@@ -3,7 +3,6 @@ import { Alert, Button, Tag, Typography } from "antd";
 import { NavLink, useLocation, useParams } from "react-router-dom";
 
 import { useApplication } from "../../modules/application/useApplication";
-import { showWarningMessage } from "../../shared/ui/message";
 
 const { Title } = Typography;
 
@@ -113,7 +112,7 @@ export function ApplicationAdminPage({
   const location = useLocation();
   const applicationQuery = useApplication(applicationId);
   const application = applicationQuery.data;
-  const appName = application?.name ?? "OCR 票据识别";
+  const appName = application?.name ?? "未命名应用";
   const status = statusMeta[application?.status ?? "published"];
   const isDetail = title === "应用详情";
   const isVersions = title === "版本管理";
@@ -145,12 +144,8 @@ export function ApplicationAdminPage({
                   ? appName
                   : `${isVersions ? "版本历史" : title} — ${appName}`}
               </h2>
-              {isDetail ? <Tag color="magenta">推荐</Tag> : null}
               {!isVersions && title !== "交付配置" ? (
                 <Tag color={displayStatus.color}>{displayStatus.label}</Tag>
-              ) : null}
-              {!isVersions && title !== "交付配置" ? (
-                <Tag color="blue">Web 应用</Tag>
               ) : null}
               {isReview ? <Tag color="error">高优先级</Tag> : null}
             </div>
@@ -158,23 +153,29 @@ export function ApplicationAdminPage({
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-[#697386]">
                 <span>
                   当前版本{" "}
-                  <strong className="font-medium text-[#1f2937]">v2.4.1</strong>
+                  <strong className="font-medium text-[#1f2937]">
+                    {application?.currentVersionId ?? "未发布"}
+                  </strong>
                 </span>
                 <i className="h-4 w-px bg-[#d9dfe8]" />
                 <span>
                   所属部门{" "}
-                  <strong className="font-medium text-[#1f2937]">财务部</strong>
+                  <strong className="font-medium text-[#1f2937]">
+                    {application?.departmentId ?? "未提供"}
+                  </strong>
                 </span>
                 <i className="h-4 w-px bg-[#d9dfe8]" />
                 <span>
                   责任人{" "}
-                  <strong className="font-medium text-[#1f2937]">李小龙</strong>
+                  <strong className="font-medium text-[#1f2937]">
+                    {application?.ownerEmployeeId ?? "未提供"}
+                  </strong>
                 </span>
                 <i className="h-4 w-px bg-[#d9dfe8]" />
                 <span>
                   维护人{" "}
                   <strong className="font-medium text-[#1f2937]">
-                    王芳 / 刘涛
+                    {application?.maintainerEmployeeId ?? "未提供"}
                   </strong>
                 </span>
               </div>
@@ -186,27 +187,16 @@ export function ApplicationAdminPage({
           {actions}
           {isDetail ? (
             <>
-              <Button
-                onClick={() => showWarningMessage("编辑功能将在下一版本开放")}
-              >
+              <Button disabled title="编辑尚未纳入 V1 接口">
                 编辑
               </Button>
-              <Button
-                danger
-                onClick={() => showWarningMessage("下架操作需要发布权限")}
-              >
+              <Button danger disabled title="下架动作需接入发布权限后启用">
                 下架
               </Button>
-              <Button
-                onClick={() => showWarningMessage("归档操作需要发布权限")}
-              >
+              <Button disabled title="归档动作需接入发布权限后启用">
                 归档
               </Button>
-              <Button
-                onClick={() =>
-                  showWarningMessage("责任人移交功能将在下一版本开放")
-                }
-              >
+              <Button disabled title="责任人移交尚未纳入 V1 接口">
                 移交责任人
               </Button>
             </>
@@ -214,10 +204,14 @@ export function ApplicationAdminPage({
           {isVersions ? (
             <div className="grid min-w-[390px] grid-cols-4 divide-x divide-[#edf0f5] text-center">
               {[
-                ["当前版本", "v2.4.1", "#1f2937"],
-                ["已发布", "8", "#16a66a"],
-                ["草稿", "1", "#1f2937"],
-                ["审核中", "1", "#f59e0b"],
+                [
+                  "当前版本",
+                  application?.currentVersionId ?? "未发布",
+                  "#1f2937",
+                ],
+                ["已发布", "—", "#16a66a"],
+                ["草稿", "—", "#1f2937"],
+                ["审核中", "—", "#f59e0b"],
               ].map(([label, value, color]) => (
                 <div key={label} className="px-5">
                   <div className="text-[13px] text-[#697386]">{label}</div>
@@ -236,19 +230,19 @@ export function ApplicationAdminPage({
               <div className="px-5">
                 <div className="text-[13px] text-[#697386]">提交时间</div>
                 <div className="mt-2 text-[15px] font-semibold text-[#1f2937]">
-                  2026-08-01 10:20
+                  —
                 </div>
               </div>
               <div className="px-5">
                 <div className="text-[13px] text-[#697386]">提交人</div>
                 <div className="mt-2 text-[15px] font-semibold text-[#1f2937]">
-                  李小龙
+                  {application?.ownerEmployeeId ?? "—"}
                 </div>
               </div>
               <div className="px-5">
                 <div className="text-[13px] text-[#697386]">SLA 剩余</div>
                 <div className="mt-2 text-[20px] font-semibold text-[#f59e0b]">
-                  18h 23m
+                  请查看任务卡
                 </div>
               </div>
             </div>

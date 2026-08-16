@@ -13,7 +13,11 @@ import {
   Typography,
   Upload,
 } from "antd";
-import { DeleteOutlined, PaperClipOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PaperClipOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +25,10 @@ import { z } from "zod";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 import { submitDemandForReview } from "../../modules/innovation/demand.client";
-import { useCreateDemandDraft, useUploadDemandAttachment } from "../../modules/innovation/useDemand";
+import {
+  useCreateDemandDraft,
+  useUploadDemandAttachment,
+} from "../../modules/innovation/useDemand";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
 interface PendingAttachment {
@@ -476,7 +483,10 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
             onChange={({ fileList }) => {
               const files = fileList
                 .map((item) => item.originFileObj)
-                .filter((file): file is NonNullable<typeof file> => file !== undefined);
+                .filter(
+                  (file): file is NonNullable<typeof file> =>
+                    file !== undefined,
+                );
               void handleFiles(files);
             }}
             showUploadList={false}

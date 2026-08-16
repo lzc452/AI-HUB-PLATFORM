@@ -106,7 +106,8 @@ describe("DemandService submission lifecycle", () => {
     const draft = await service.createDraft(requester, {
       title: "  Internal knowledge assistant  ",
       problemStatement: "Teams cannot find approved internal guidance quickly.",
-      businessScenario: "Teams maintain guidance across many disconnected tools.",
+      businessScenario:
+        "Teams maintain guidance across many disconnected tools.",
       impact: "All engineers, daily, several minutes per lookup.",
       desiredOutcome: "Return cited guidance in under one minute.",
       currentWorkaround: "Manual search across wikis and shared drives.",

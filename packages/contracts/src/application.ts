@@ -144,3 +144,10 @@ export interface ApplicationDraftRecord {
   draft: ApplicationDraft;
   updatedAt: string;
 }
+
+export interface ApplicationAdminKpis {
+  deliveryFailed: number;
+  pendingReview: number;
+  published: number;
+  total: number;
+}

@@ -1,0 +1,66 @@
+{
+  "mode": "export-poll",
+  "label": "expired",
+  "exportJobId": "b39f4592-57a0-493a-9322-ac49366d42d2",
+  "status": {
+    "exportId": "b39f4592-57a0-493a-9322-ac49366d42d2",
+    "status": "completed",
+    "resultStorageKey": "security/audit-exports/b39f4592-57a0-493a-9322-ac49366d42d2.jsonl",
+    "failureCode": null,
+    "expiresAt": "2026-08-22T19:41:07.250Z",
+    "createdAt": "2026-08-15T19:41:06.929Z",
+    "completedAt": "2026-08-15T19:41:07.250Z"
+  },
+  "evidence": {
+    "job": [
+      {
+        "export_job_id": "b39f4592-57a0-493a-9322-ac49366d42d2",
+        "requested_by_employee_id": "DEMO-SUPER-ADMIN",
+        "filter_snapshot": {},
+        "status": "completed",
+        "result_storage_key": "security/audit-exports/b39f4592-57a0-493a-9322-ac49366d42d2.jsonl",
+        "expires_at": "2026-08-22T19:41:07.250Z",
+        "failure_code": null,
+        "created_at": "2026-08-15T19:41:06.929Z",
+        "completed_at": "2026-08-15T19:41:07.250Z"
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "security.audit.export.requested",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "b39f4592-57a0-493a-9322-ac49366d42d2",
+        "result": "success",
+        "risk": "high",
+        "details": {
+          "filterSnapshot": {}
+        },
+        "created_at": "2026-08-15T19:41:06.929Z"
+      },
+      {
+        "event_type": "security.audit.export.completed",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "b39f4592-57a0-493a-9322-ac49366d42d2",
+        "result": "success",
+        "risk": "low",
+        "details": {
+          "rowCount": 7,
+          "storageKey": "security/audit-exports/b39f4592-57a0-493a-9322-ac49366d42d2.jsonl",
+          "exportJobId": "b39f4592-57a0-493a-9322-ac49366d42d2"
+        },
+        "created_at": "2026-08-15T19:41:07.253Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "2cd3245d-093b-4493-b2b6-4059587728fe",
+        "event_type": "security.audit.export.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:41:07.255Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:41:07.765Z"
+}

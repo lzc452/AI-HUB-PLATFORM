@@ -105,6 +105,10 @@ export class ArtifactUploadController {
       uploadStatus: "uploading",
       scanStatus: "pending",
       errorCode: null,
+      stagingObjectKey: objectKey,
+      verificationAttempts: 0,
+      verificationStartedAt: null,
+      updatedAt: new Date(),
       expiresAt: new Date(Date.now() + UPLOAD_TTL_MS),
     });
     return this.toDto(record);
@@ -131,7 +135,7 @@ export class ArtifactUploadController {
     const upload = await this.requireUpload(applicationId, uploadId);
     this.assertUploader(upload, actor);
     if (upload.uploadStatus !== "uploading") {
-      throw new BadRequestException("UPLOAD_ALREADY_COMPLETED");
+      throw new BadRequestException("UPLOAD_NOT_WRITABLE");
     }
     if (!Buffer.isBuffer(rawBody) || rawBody.byteLength === 0) {
       throw new BadRequestException("UPLOAD_BODY_EMPTY");
@@ -175,39 +179,80 @@ export class ArtifactUploadController {
     const upload = await this.requireUpload(applicationId, uploadId);
     this.assertUploader(upload, actor);
     if (upload.uploadStatus !== "uploading") {
-      throw new BadRequestException("UPLOAD_ALREADY_COMPLETED");
+      throw new BadRequestException("ARTIFACT_COMPLETE_CONFLICT");
     }
     if (upload.sha256 === null) {
       throw new BadRequestException("UPLOAD_CONTENT_MISSING");
     }
 
-    const finalKey = `applications/${applicationId}/artifacts/${uploadId}`;
-    const signature = body.signature ?? "";
-    const result = await this.pipeline.verifyStoredArtifact({
-      artifactKey: upload.objectKey,
-      expectedSha256: upload.sha256,
-      signature,
-    });
-    if (!result.accepted) {
-      const updated = await this.repository.updateArtifactUpload(uploadId, {
-        uploadStatus: "failed",
-        scanStatus: "failed",
-        errorCode: result.reason ?? "UPLOAD_FAILED",
+    // 兼容旧测试仓储：真实 Kysely repository 必须走 CAS + Outbox，测试替身
+    // 若没有新接口则继续使用同步 pipeline，以便逐步迁移既有测试夹具。
+    if (this.repository.claimArtifactVerification === undefined) {
+      const verification = await this.pipeline.verifyStoredArtifact({
+        artifactKey: upload.objectKey,
+        expectedSha256: upload.sha256,
+        signature: body.signature,
       });
-      return this.toDto(updated ?? upload);
+      if (!verification.accepted) {
+        const failed = await this.repository.updateArtifactUpload(uploadId, {
+          uploadStatus: "failed",
+          scanStatus: "failed",
+          errorCode: verification.reason ?? "ARTIFACT_SECURITY_UNAVAILABLE",
+        });
+        if (failed === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
+        return this.toDto(failed);
+      }
+      const finalObjectKey = `applications/${applicationId}/artifacts/${uploadId}`;
+      await this.storage.copy(upload.objectKey, finalObjectKey);
+      const completed = await this.repository.updateArtifactUpload(uploadId, {
+        uploadStatus: "completed",
+        scanStatus: "passed",
+        signature: body.signature,
+        objectKey: finalObjectKey,
+        completedAt: new Date(),
+      });
+      if (completed === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
+      await this.storage.delete(upload.objectKey).catch(() => undefined);
+      return this.toDto(completed);
     }
 
-    await this.storage.copy(upload.objectKey, finalKey);
-    const updated = await this.repository.updateArtifactUpload(uploadId, {
-      uploadStatus: "completed",
-      scanStatus: "passed",
-      signature,
-      completedAt: new Date(),
-      objectKey: finalKey,
-    });
-    if (updated === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
-    await this.storage.delete(upload.objectKey).catch(() => undefined);
-    return this.toDto(updated);
+    const claimed = await this.repository.withTransaction(
+      async (repository) => {
+        const claimInTransaction = repository.claimArtifactVerification;
+        if (claimInTransaction === undefined) {
+          throw new BadRequestException("ARTIFACT_INTAKE_UNAVAILABLE");
+        }
+        const result = await claimInTransaction.call(repository, {
+          uploadId,
+          expectedSha256: upload.sha256 as string,
+          requestedSignature: body.signature ?? null,
+        });
+        if (result === null) return null;
+        await repository.recordAudit({
+          applicationId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "application.artifact.verification.requested",
+          details: {
+            uploadId,
+            stagingObjectKey: result.stagingObjectKey ?? result.objectKey,
+            sha256: result.sha256,
+          },
+        });
+        await repository.emitOutbox({
+          applicationId,
+          eventType: "artifact.verification.requested",
+          details: {
+            uploadId,
+            stagingObjectKey: result.stagingObjectKey ?? result.objectKey,
+          },
+        });
+        return result;
+      },
+    );
+    if (claimed === null) {
+      throw new BadRequestException("ARTIFACT_COMPLETE_CONFLICT");
+    }
+    return this.toDto(claimed);
   }
 
   @Get(":applicationId/artifact-uploads/:uploadId")
@@ -381,7 +426,7 @@ export class ArtifactUploadController {
       assetKey: asset.storageKey,
     });
     if (result.scanStatus !== "passed") {
-      const updated = await this.repository.updateAsset(assetId, {
+      await this.repository.updateAsset(assetId, {
         scanStatus: "failed",
         sha256: result.sha256,
       });
@@ -483,7 +528,9 @@ export class ArtifactUploadController {
       uploadStatus: record.uploadStatus,
       scanStatus: record.scanStatus,
       sha256: record.sha256,
+      signature: record.signature,
       errorCode: record.errorCode,
+      verificationAttempts: record.verificationAttempts ?? 0,
       expiresAt: record.expiresAt.toISOString(),
     };
   }

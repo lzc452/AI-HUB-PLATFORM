@@ -80,6 +80,7 @@ export function toProblemDetails(
       title: "Validation Failed",
       status: HttpStatus.BAD_REQUEST,
       code: "VALIDATION_ERROR",
+      message: "Validation Failed",
       traceId,
       fieldErrors: zodFieldErrors(exception),
     };
@@ -96,6 +97,7 @@ export function toProblemDetails(
       title: details.title,
       status,
       code: httpExceptionCode(exception, details.code),
+      message: details.title,
       traceId,
     };
   }
@@ -105,6 +107,7 @@ export function toProblemDetails(
     title: "Internal Server Error",
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     code: "INTERNAL_ERROR",
+    message: "Internal Server Error",
     traceId,
   };
 }

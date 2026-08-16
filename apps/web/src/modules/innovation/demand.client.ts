@@ -592,10 +592,7 @@ export function listDemandAttachments(
   );
 }
 
-export function deleteDemandAttachment(
-  demandId: string,
-  attachmentId: string,
-) {
+export function deleteDemandAttachment(demandId: string, attachmentId: string) {
   return apiFetch<void>(
     `/internal/demands/${encodedDemandId(demandId)}/attachments/${encodeURIComponent(attachmentId)}`,
     { method: "DELETE" },

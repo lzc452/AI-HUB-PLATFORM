@@ -6,10 +6,12 @@ import { STATUS_META, type UserTableRow } from "../constants";
 
 interface UserTableProps {
   rows: UserTableRow[];
+  onDetail: (row: UserTableRow) => void;
+  onEdit: (row: UserTableRow) => void;
 }
 
 /** 用户表格：列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
-export function UserTable({ rows }: UserTableProps) {
+export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
   const columns = [
     {
       dataIndex: "employeeId",
@@ -39,20 +41,23 @@ export function UserTable({ rows }: UserTableProps) {
       width: 160,
     },
     {
-      dataIndex: "role",
-      render: (role: string) => (
-        <Tooltip title={role}>
-          <Tag
-            className="m-0 truncate"
-            style={{
-              maxWidth: 100,
-            }}
-            title={role}
-          >
-            {role}
-          </Tag>
-        </Tooltip>
-      ),
+      dataIndex: "roleNames",
+      render: (roleNames?: readonly string[]) => {
+        const role = (roleNames ?? []).join("、");
+        return (
+          <Tooltip title={role || "未分配角色"}>
+            <Tag
+              className="m-0 truncate"
+              style={{
+                maxWidth: 100,
+              }}
+              title={role}
+            >
+              {role}
+            </Tag>
+          </Tooltip>
+        );
+      },
       title: "角色",
       width: 110,
     },
@@ -91,9 +96,14 @@ export function UserTable({ rows }: UserTableProps) {
     },
     {
       key: "action",
-      render: () => (
+      render: (_value: unknown, row: UserTableRow) => (
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <Button className="px-0" type="link">
+          <Button
+            aria-label={`编辑 ${row.displayName}`}
+            className="px-0"
+            onClick={() => onEdit(row)}
+            type="link"
+          >
             编辑
           </Button>
           <Button className="px-0" type="link">
@@ -102,7 +112,11 @@ export function UserTable({ rows }: UserTableProps) {
           <Dropdown
             menu={{
               items: [
-                { key: "detail", label: "查看详情" },
+                {
+                  key: "detail",
+                  label: "查看详情",
+                  onClick: () => onDetail(row),
+                },
                 { key: "disable", label: "停用" },
                 { key: "delete", label: "删除" },
               ],

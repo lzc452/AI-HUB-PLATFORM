@@ -26,7 +26,10 @@ export const applicationIconSchema = z
       icon.mode === "auto"
         ? typeof icon.text === "string" && icon.text.length > 0
         : typeof icon.assetId === "string" && icon.assetId.length > 0,
-    { message: "图标二选一：自动模式需字符，上传模式需图标资产", path: ["mode"] },
+    {
+      message: "图标二选一：自动模式需字符，上传模式需图标资产",
+      path: ["mode"],
+    },
   );
 
 export const faqEntrySchema = z.object({
@@ -56,7 +59,12 @@ export const applicationDraftSchema = z
     departmentId: z.string().min(1, "请选择归属部门"),
     maintainerEmployeeIds: z.array(z.string()).min(1, "至少指定一名维护人"),
     categoryId: z.string().min(1, "请选择分类"),
-    applicationType: z.enum(["web_app", "desktop_app", "mobile_app", "mini_program"]),
+    applicationType: z.enum([
+      "web_app",
+      "desktop_app",
+      "mobile_app",
+      "mini_program",
+    ]),
     tagIds: z.array(z.string()),
     icon: applicationIconSchema,
     screenshotAssetIds: z
@@ -77,8 +85,10 @@ export const applicationDraftSchema = z
   })
   .superRefine((draft, ctx) => {
     const hasManual =
-      (typeof draft.manualHtml === "string" && draft.manualHtml.trim().length > 0) ||
-      (typeof draft.manualAssetId === "string" && draft.manualAssetId.length > 0);
+      (typeof draft.manualHtml === "string" &&
+        draft.manualHtml.trim().length > 0) ||
+      (typeof draft.manualAssetId === "string" &&
+        draft.manualAssetId.length > 0);
     if (!hasManual) {
       ctx.addIssue({
         code: "custom",
@@ -89,7 +99,8 @@ export const applicationDraftSchema = z
     const hasExamples =
       (typeof draft.examplesHtml === "string" &&
         draft.examplesHtml.trim().length > 0) ||
-      (typeof draft.examplesAssetId === "string" && draft.examplesAssetId.length > 0);
+      (typeof draft.examplesAssetId === "string" &&
+        draft.examplesAssetId.length > 0);
     if (!hasExamples) {
       ctx.addIssue({
         code: "custom",
@@ -117,7 +128,14 @@ export const applicationDraftDefaults: ApplicationDraftFormValues = {
   examplesHtml: null,
   examplesAssetId: null,
   faq: [],
-  audience: [{ audienceType: "all", departmentId: null, employeeId: null, includeChildren: false }],
+  audience: [
+    {
+      audienceType: "all",
+      departmentId: null,
+      employeeId: null,
+      includeChildren: false,
+    },
+  ],
   risk: {
     handlesSensitiveData: false,
     sendsDataExternally: false,

@@ -89,6 +89,33 @@ export class CatalogEntryDto {
   @ApiProperty({ type: Number, description: "点赞数", example: 5 })
   likeCount!: number;
 
+  @ApiPropertyOptional({ type: Number, description: "评分人数" })
+  ratingCount?: number;
+
+  @ApiPropertyOptional({ type: [String], description: "维护人" })
+  maintainers?: string[];
+
+  @ApiPropertyOptional({
+    type: [Object],
+    description: "已通过扫描的附件",
+  })
+  attachments?: readonly {
+    name: string;
+    type: string;
+    size: string;
+  }[];
+
+  @ApiPropertyOptional({ type: Object, description: "当前用户能力" })
+  capabilities?: {
+    canResolveDelivery: boolean;
+    canLike: boolean;
+    canRate: boolean;
+    canComment: boolean;
+    canSubmitFeedback: boolean;
+    canModerateComments: boolean;
+    canEditRisk: boolean;
+  };
+
   @ApiPropertyOptional({
     description: "平均评分",
     type: Number,
@@ -153,7 +180,11 @@ export class SaveRiskDescriptionRequestDto {
 
 /** 分类摘要。 */
 export class CategorySummaryDto {
-  @ApiProperty({ type: String, description: "分类 ID", example: "productivity" })
+  @ApiProperty({
+    type: String,
+    description: "分类 ID",
+    example: "productivity",
+  })
   categoryId!: string;
 
   @ApiProperty({ type: String, description: "分类名称", example: "效率工具" })
@@ -162,7 +193,11 @@ export class CategorySummaryDto {
 
 /** 标签摘要。 */
 export class TagSummaryDto {
-  @ApiProperty({ type: String, description: "标签 ID", example: "ai-assistant" })
+  @ApiProperty({
+    type: String,
+    description: "标签 ID",
+    example: "ai-assistant",
+  })
   tagId!: string;
 
   @ApiProperty({ type: String, description: "标签名称", example: "AI 助手" })

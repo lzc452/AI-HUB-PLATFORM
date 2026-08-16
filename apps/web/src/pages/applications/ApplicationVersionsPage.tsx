@@ -8,7 +8,7 @@ import {
   useApplicationVersions,
   usePublishedVersion,
 } from "../../modules/application/useApplication";
-import { MessageError, showWarningMessage } from "../../shared/ui/message";
+import { MessageError } from "../../shared/ui/message";
 import { UploadVersionDrawer } from "./UploadVersionDrawer";
 
 const scanStatusMeta: Record<
@@ -136,7 +136,7 @@ export default function ApplicationVersionsPage() {
             })}
           </div>
           <div className="border-t border-[#edf0f5] px-5 py-3 text-[13px] text-[#697386]">
-            共 {versions.length || 5} 个版本
+            共 {versions.length} 个版本
           </div>
         </section>
 
@@ -179,8 +179,9 @@ export default function ApplicationVersionsPage() {
                   }))}
                 />
                 <Button
+                  disabled
                   type="primary"
-                  onClick={() => showWarningMessage("版本对比已刷新")}
+                  title="版本对比尚未纳入 V1 接口"
                 >
                   开始对比
                 </Button>

@@ -1,0 +1,17 @@
+
+> ai-hub-platform@ seed:demo-data /workspace
+> tsx scripts/seed-demo-data.mts
+
+{
+  "anchorDate": "2026-08-15T19:51:58.412Z",
+  "counts": {
+    "identity": 9,
+    "application": 84,
+    "catalog": 23,
+    "demand": 24,
+    "notification": 20,
+    "analytics": 1110
+  },
+  "durationMs": 110
+}
+Seed complete in 110ms

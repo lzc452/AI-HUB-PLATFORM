@@ -14,13 +14,16 @@ const colors = ["#f2f0fd", "#e4eefe", "#b3e0ff", "#fff6ec", "#daf8e8"];
 
 /** 指标卡片：图标 + 数值 + 标题 + 可选趋势。 */
 export function KpiCard({ icon, label, trend, value }: KpiCardProps) {
+  const colorIndex =
+    [...label].reduce((sum, character) => sum + character.charCodeAt(0), 0) %
+    colors.length;
   return (
     <div className="flex gap-3 items-start rounded-xl bg-white p-2 dashboard-panel">
       {/* 背景颜色 随机 colors */}
       <div
         className="mb-2 w-12 h-12 flex items-center gap-2 rounded-full justify-center"
         style={{
-          backgroundColor: colors[Math.floor(Math.random() * colors.length)],
+          backgroundColor: colors[colorIndex],
         }}
       >
         {icon}

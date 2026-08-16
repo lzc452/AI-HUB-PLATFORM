@@ -290,6 +290,8 @@ export function useArtifactUploadStatus(
         uploadId as string,
       ) as Promise<ArtifactUploadRecord>,
     queryKey: ["applications", "artifact-upload", applicationId, uploadId],
+    // 制品校验由 worker 异步完成；仅在调用方提供 uploadId 时轮询。
+    refetchInterval: 1_000,
   });
 }
 

@@ -3,6 +3,7 @@ import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { ApiModule } from "../src/api.module.js";
 import { configureSwagger } from "../src/swagger.js";
@@ -30,6 +31,7 @@ describe("swagger API docs", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
 
     const moduleRef = await Test.createTestingModule({
       imports: [ApiModule.register(container.databaseUrl)],

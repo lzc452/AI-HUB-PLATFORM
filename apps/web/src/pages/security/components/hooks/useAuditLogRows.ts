@@ -29,6 +29,11 @@ export function useAuditLogRows(
       const matchesOperator =
         !filters.operator || row.operatorName === filters.operator;
       const matchesModule = !filters.module || row.module === filters.module;
+      const matchesRisk =
+        !filters.risk ||
+        (filters.risk === "low" && row.detail.riskLevel === "低风险") ||
+        (filters.risk === "medium" && row.detail.riskLevel === "中风险") ||
+        (filters.risk === "high" && row.detail.riskLevel === "高风险");
       const matchesKeyword =
         !keyword ||
         row.traceId.toLowerCase().includes(keyword) ||
@@ -38,6 +43,7 @@ export function useAuditLogRows(
         matchesAction &&
         matchesOperator &&
         matchesModule &&
+        matchesRisk &&
         matchesKeyword
       );
     });

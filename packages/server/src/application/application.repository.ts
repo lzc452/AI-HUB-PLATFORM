@@ -18,6 +18,7 @@ import type {
   ActorContext,
   ApplicationDraft,
   AudienceRule,
+  ApplicationAdminKpis,
 } from "@ai-hub/contracts";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
@@ -146,7 +147,12 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     if (tagIds.length > 0) {
       await this.db
         .insertInto("application_tag_links")
-        .values(tagIds.map((tagId) => ({ application_id: applicationId, tag_id: tagId })))
+        .values(
+          tagIds.map((tagId) => ({
+            application_id: applicationId,
+            tag_id: tagId,
+          })),
+        )
         .execute();
     }
   }
@@ -287,21 +293,20 @@ export class KyselyApplicationRepository implements ApplicationRepository {
             .where("application_id", "in", applicationIds)
             .where("enabled", "=", true)
             .execute(),
-      rows.some((row) => row.currentVersionId !== null)
-        ? this.db
+      applicationIds.length === 0
+        ? Promise.resolve(
+            [] as Array<{
+              application_id: string;
+              application_version_id: string;
+              version: string;
+            }>,
+          )
+        : this.db
             .selectFrom("application_versions")
-            .select(["application_version_id", "version"])
-            .where(
-              "application_version_id",
-              "in",
-              rows
-                .map((row) => row.currentVersionId)
-                .filter((id): id is string => id !== null),
-            )
-            .execute()
-        : Promise.resolve(
-            [] as Array<{ application_version_id: string; version: string }>,
-          ),
+            .select(["application_id", "application_version_id", "version"])
+            .where("application_id", "in", applicationIds)
+            .orderBy("created_at", "desc")
+            .execute(),
       applicationIds.length === 0
         ? Promise.resolve(
             [] as Array<{
@@ -322,6 +327,18 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         version.version,
       ]),
     );
+    const latestVersionByApplication = new Map<
+      string,
+      { applicationVersionId: string; version: string }
+    >();
+    for (const version of versions) {
+      if (!latestVersionByApplication.has(version.application_id)) {
+        latestVersionByApplication.set(version.application_id, {
+          applicationVersionId: version.application_version_id,
+          version: version.version,
+        });
+      }
+    }
     const channelsByApp = new Map<string, DeliveryChannel[]>();
     for (const delivery of deliveries)
       channelsByApp.set(delivery.application_id, [
@@ -345,9 +362,13 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         status: row.status,
         currentVersion:
           row.currentVersionId === null
-            ? ""
+            ? (latestVersionByApplication.get(row.applicationId)?.version ?? "")
             : (versionById.get(row.currentVersionId) ?? ""),
-        currentVersionId: row.currentVersionId,
+        currentVersionId:
+          row.currentVersionId ??
+          latestVersionByApplication.get(row.applicationId)
+            ?.applicationVersionId ??
+          null,
         ownerName: row.ownerName,
         departmentName: row.departmentName,
         deliveryChannels: channelsByApp.get(row.applicationId) ?? [],
@@ -366,6 +387,49 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       page: input.page,
       pageSize: input.pageSize,
       total: items.length,
+    };
+  }
+
+  async getAdminKpis(actor: ActorContext): Promise<ApplicationAdminKpis> {
+    const canManage =
+      actor.permissions?.includes("application.manage") === true ||
+      actor.permissions?.includes("*") === true;
+    let query = this.db
+      .selectFrom("applications as application")
+      .select([
+        "application.application_id as applicationId",
+        "application.status as status",
+      ]);
+    if (!canManage) {
+      query = query.where((eb) =>
+        eb.or([
+          eb("application.owner_employee_id", "=", actor.employeeId),
+          eb("application.maintainer_employee_id", "=", actor.employeeId),
+        ]),
+      );
+    }
+    const rows = await query.execute();
+    const applicationIds = rows.map((row) => row.applicationId);
+    const deliveries =
+      applicationIds.length === 0
+        ? []
+        : await this.db
+            .selectFrom("application_deliveries")
+            .select("application_id")
+            .where("enabled", "=", true)
+            .where("application_id", "in", applicationIds)
+            .execute();
+    const deliveredIds = new Set(
+      deliveries.map((delivery) => delivery.application_id),
+    );
+    return {
+      deliveryFailed: rows.filter(
+        (row) =>
+          row.status === "withdrawn" || !deliveredIds.has(row.applicationId),
+      ).length,
+      pendingReview: rows.filter((row) => row.status === "in_review").length,
+      published: rows.filter((row) => row.status === "published").length,
+      total: rows.length,
     };
   }
 
@@ -422,6 +486,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         application_id: input.applicationId,
         uploaded_by_employee_id: input.uploadedByEmployeeId,
         object_key: input.objectKey,
+        staging_object_key: input.stagingObjectKey ?? input.objectKey,
         file_name: input.fileName,
         mime_type: input.mimeType,
         size_bytes: input.sizeBytes,
@@ -432,6 +497,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         upload_status: input.uploadStatus,
         scan_status: input.scanStatus,
         error_code: input.errorCode,
+        verification_attempts: input.verificationAttempts ?? 0,
+        verification_started_at: input.verificationStartedAt ?? null,
+        updated_at: input.updatedAt ?? new Date(),
         expires_at: input.expiresAt,
       })
       .returningAll()
@@ -483,6 +551,10 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         | "errorCode"
         | "completedAt"
         | "objectKey"
+        | "stagingObjectKey"
+        | "verificationStartedAt"
+        | "verificationAttempts"
+        | "updatedAt"
       >
     >,
   ): Promise<ArtifactUploadRecord | null> {
@@ -511,11 +583,118 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         ...(input.objectKey === undefined
           ? {}
           : { object_key: input.objectKey }),
+        ...(input.stagingObjectKey === undefined
+          ? {}
+          : { staging_object_key: input.stagingObjectKey }),
+        ...(input.verificationStartedAt === undefined
+          ? {}
+          : { verification_started_at: input.verificationStartedAt }),
+        ...(input.verificationAttempts === undefined
+          ? {}
+          : { verification_attempts: input.verificationAttempts }),
+        updated_at: new Date(),
       })
       .where("upload_id", "=", uploadId)
       .returningAll()
       .executeTakeFirst();
     return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async claimArtifactVerification(input: {
+    uploadId: string;
+    expectedSha256: string;
+    requestedSignature?: string | null;
+  }): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .updateTable("application_artifact_uploads")
+      .set({
+        upload_status: "verifying",
+        verification_started_at: new Date(),
+        verification_attempts: (eb) => eb("verification_attempts", "+", 1),
+        ...(input.requestedSignature === undefined
+          ? {}
+          : { signature: input.requestedSignature }),
+        updated_at: new Date(),
+      })
+      .where("upload_id", "=", input.uploadId)
+      .where("upload_status", "=", "uploading")
+      .where("sha256", "=", input.expectedSha256)
+      .where("expires_at", ">", new Date())
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async finalizeArtifactVerification(input: {
+    uploadId: string;
+    objectKey: string;
+    signature: string;
+  }): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .updateTable("application_artifact_uploads")
+      .set({
+        upload_status: "completed",
+        scan_status: "passed",
+        signature: input.signature,
+        object_key: input.objectKey,
+        completed_at: new Date(),
+        updated_at: new Date(),
+      })
+      .where("upload_id", "=", input.uploadId)
+      .where("upload_status", "=", "verifying")
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async failArtifactVerification(input: {
+    uploadId: string;
+    errorCode: string;
+  }): Promise<ArtifactUploadRecord | null> {
+    const row = await this.db
+      .updateTable("application_artifact_uploads")
+      .set({
+        upload_status: "failed",
+        scan_status: "failed",
+        error_code: input.errorCode,
+        updated_at: new Date(),
+      })
+      .where("upload_id", "=", input.uploadId)
+      .where("upload_status", "=", "verifying")
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapArtifactUpload(row);
+  }
+
+  async listStaleArtifactVerifications(input: {
+    olderThan: Date;
+    limit: number;
+  }): Promise<readonly ArtifactUploadRecord[]> {
+    const rows = await this.db
+      .selectFrom("application_artifact_uploads")
+      .selectAll()
+      .where("upload_status", "=", "verifying")
+      .where("verification_started_at", "<", input.olderThan)
+      .orderBy("verification_started_at", "asc")
+      .limit(input.limit)
+      .execute();
+    return rows.map((row) => this.mapArtifactUpload(row));
+  }
+
+  async resetStaleArtifactVerification(uploadId: string): Promise<boolean> {
+    const result = await this.db
+      .updateTable("application_artifact_uploads")
+      .set({
+        upload_status: "uploading",
+        scan_status: "pending",
+        verification_started_at: null,
+        error_code: null,
+        updated_at: new Date(),
+      })
+      .where("upload_id", "=", uploadId)
+      .where("upload_status", "=", "verifying")
+      .executeTakeFirst();
+    return Number(result.numUpdatedRows) > 0;
   }
 
   async createAsset(
@@ -567,23 +746,26 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .execute();
   }
 
-  async setApplicationStatus(
-    applicationId: string,
-    status: ApplicationRecord["status"],
-    currentVersionId?: string,
-  ): Promise<ApplicationRecord> {
+  async setApplicationStatus(input: {
+    applicationId: string;
+    expectedStatus: ApplicationRecord["status"];
+    status: ApplicationRecord["status"];
+    currentVersionId?: string;
+  }): Promise<ApplicationRecord> {
     const row = await this.db
       .updateTable("applications")
       .set({
-        status,
-        ...(currentVersionId === undefined
+        status: input.status,
+        ...(input.currentVersionId === undefined
           ? {}
-          : { current_version_id: currentVersionId }),
+          : { current_version_id: input.currentVersionId }),
         updated_at: new Date(),
       })
-      .where("application_id", "=", applicationId)
+      .where("application_id", "=", input.applicationId)
+      .where("status", "=", input.expectedStatus)
       .returningAll()
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+    if (row === undefined) throw new Error("APPLICATION_STATE_CONFLICT");
     return this.mapApplication(row);
   }
 
@@ -740,6 +922,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     applicationId: string;
     applicationVersionId?: string | null;
     eventType: string;
+    details?: unknown;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -750,6 +933,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         payload: {
           applicationId: input.applicationId,
           applicationVersionId: input.applicationVersionId ?? null,
+          ...(input.details === undefined ? {} : { details: input.details }),
         },
         idempotency_key: `${input.eventType}:${input.applicationId}:${input.applicationVersionId ?? "none"}:${randomUUID()}`,
         status: "pending",
@@ -943,6 +1127,10 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       uploadStatus: row.upload_status as ArtifactUploadRecord["uploadStatus"],
       scanStatus: row.scan_status,
       errorCode: row.error_code,
+      stagingObjectKey: row.staging_object_key,
+      verificationStartedAt: row.verification_started_at,
+      verificationAttempts: row.verification_attempts,
+      updatedAt: row.updated_at,
       expiresAt: row.expires_at,
       completedAt: row.completed_at,
       createdAt: row.created_at,

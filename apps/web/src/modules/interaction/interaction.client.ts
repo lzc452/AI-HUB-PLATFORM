@@ -132,3 +132,27 @@ export function listMyFeedback(
     `${interactionsPath(applicationId)}/feedback`,
   );
 }
+
+/** 所有者/维护者查看应用收到的全部反馈。 */
+export function listApplicationFeedback(
+  applicationId: string,
+): Promise<FeedbackRecord[]> {
+  return apiFetch<FeedbackRecord[]>(
+    `${interactionsPath(applicationId)}/feedback?scope=all`,
+  );
+}
+
+/** 所有者/维护者更新反馈处理状态与处理说明。 */
+export function updateFeedbackStatus(
+  applicationId: string,
+  feedbackId: string,
+  input: { status: FeedbackRecord["status"]; resolution: string },
+): Promise<FeedbackRecord> {
+  return apiFetch<FeedbackRecord>(
+    `${interactionsPath(applicationId)}/feedback/${feedbackId}`,
+    {
+      body: JSON.stringify(input),
+      method: "PATCH",
+    },
+  );
+}

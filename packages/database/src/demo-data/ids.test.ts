@@ -166,8 +166,8 @@ describe("IDS counts", () => {
     expect(IDS.notification).toHaveLength(20);
   });
 
-  it("has 30 behavior events", () => {
-    expect(IDS.behaviorEvent).toHaveLength(30);
+  it("has 40 behavior events", () => {
+    expect(IDS.behaviorEvent).toHaveLength(40);
   });
 });
 

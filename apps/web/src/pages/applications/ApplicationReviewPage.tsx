@@ -18,7 +18,7 @@ import {
   Typography,
 } from "antd";
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import {
   ApplicationAdminPage,
@@ -39,6 +39,7 @@ import {
   useReviewApplicationVersion,
   useReviewQueue,
 } from "../../modules/application/useApplication";
+import { useAuth } from "../../modules/auth/useAuth";
 import { MessageError, showWarningMessage } from "../../shared/ui/message";
 
 const { Text } = Typography;
@@ -58,6 +59,7 @@ type ViewModel = {
 };
 
 export default function ApplicationReviewPage() {
+  const { actor } = useAuth();
   const { applicationId } = useParams();
   const applicationQuery = useApplication(applicationId);
   const versionsQuery = useApplicationVersions(applicationId);
@@ -104,6 +106,7 @@ export default function ApplicationReviewPage() {
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="space-y-3">
             <TaskInfoCard
+              actorEmployeeId={actor?.employeeId}
               app={data.app}
               claim={claim}
               release={release}
@@ -133,7 +136,11 @@ function deriveChecks(version: ApplicationVersionRecord | undefined): Check[] {
     return [];
   }
   const base: Check[] = [
-    { name: "制品完整性（SHA-256）", status: "passed" },
+    {
+      name: "制品完整性（SHA-256）",
+      status: version.artifactSha256 ? "passed" : "warning",
+      ...(version.artifactSha256 ? {} : { description: "后端尚未返回摘要" }),
+    },
     {
       name: "恶意代码扫描",
       status: version.scanStatus === "passed" ? "passed" : "warning",
@@ -156,6 +163,7 @@ function SpinPlaceholder() {
 }
 
 function TaskInfoCard({
+  actorEmployeeId,
   app,
   claim,
   release,
@@ -163,6 +171,7 @@ function TaskInfoCard({
   version,
   versionId,
 }: {
+  actorEmployeeId: string | undefined;
   app: ApplicationRecord | undefined;
   claim: ReturnType<typeof useClaimReview>;
   release: ReturnType<typeof useReleaseReview>;
@@ -170,6 +179,8 @@ function TaskInfoCard({
   version: ApplicationVersionRecord | undefined;
   versionId: string | undefined;
 }) {
+  const selfReview =
+    app !== undefined && app.ownerEmployeeId === actorEmployeeId;
   const slaLabel = reviewQueue
     ? `${Math.max(0, Math.ceil((new Date(reviewQueue.slaDueAt).getTime() - Date.now()) / 36e5))}h`
     : "-";
@@ -206,8 +217,9 @@ function TaskInfoCard({
       <Button
         block
         className="mt-4"
-        disabled={!versionId}
+        disabled={!versionId || selfReview}
         loading={claim.isPending}
+        title={selfReview ? "禁止审核自己提交的应用" : undefined}
         type="primary"
         onClick={() => {
           if (versionId) claim.mutate(versionId);
@@ -415,11 +427,9 @@ function PreviewOverview({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="m-0 text-[20px] font-semibold">
-              {app?.name ?? "OCR 票据识别"}
+              {app?.name ?? "未命名应用"}
             </h3>
-            <Tag color="magenta">推荐</Tag>
-            <Tag color="success">已上架</Tag>
-            <Tag color="blue">Web 应用</Tag>
+            <Tag color="blue">{app?.status ?? "unknown"}</Tag>
           </div>
           <div className="mt-2 flex flex-wrap gap-4 text-[13px] text-[#697386]">
             <span className="inline-flex items-center gap-1">
@@ -427,82 +437,96 @@ function PreviewOverview({
                 aria-hidden="true"
                 className="app-ui-icon app-ui-icon-star text-[#f59e0b]"
               />
-              评分 4.8（210）
+              评分：暂无数据
             </span>
-            <span>使用 1.6k</span>
+            <span>使用量：暂无数据</span>
             <span>
-              所属部门：<strong className="text-[#374151]">财务部</strong>
+              所属部门：
+              <strong className="text-[#374151]">
+                {app?.departmentId ?? "未提供"}
+              </strong>
             </span>
             <span>
               责任人：
-              <strong className="text-[#374151]">李小龙（财务部）</strong>
+              <strong className="text-[#374151]">
+                {app?.ownerEmployeeId ?? "未提供"}
+              </strong>
             </span>
           </div>
         </div>
-        <Button
-          size="small"
-          onClick={() => showWarningMessage("应用详情将在新页面打开")}
-        >
-          查看应用详情
-        </Button>
+        <Link to={app ? `/applications/${app.applicationId}` : "#"}>
+          <Button disabled={!app} size="small">
+            查看应用详情
+          </Button>
+        </Link>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-2 font-semibold">详细介绍</h4>
           <p className="m-0 text-[13px] leading-6 text-[#596579]">
-            业务场景：发票增值税发票、交通票据、火车票等类型，提供高效准确的票据识别与结构化输出能力，助力财务报销和业务数据自动化处理。
+            {app?.summary || "暂无应用简介"}
           </p>
-          <h4 className="mb-2 mt-4 font-semibold">关键特点</h4>
-          <ul className="m-0 list-disc space-y-1 pl-5 text-[13px] text-[#596579]">
-            <li>自动化识别增值税发票、交通票据、火车票等类型</li>
-            <li>提高财务报销效率，提升数据级及结构化率</li>
-            <li>支持多语言识别，支持数字语言识别</li>
-          </ul>
+          <h4 className="mb-2 mt-4 font-semibold">版本变更</h4>
+          <p className="m-0 text-[13px] leading-6 text-[#596579]">
+            {version?.changelog || "暂无版本变更说明"}
+          </p>
         </section>
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-2 font-semibold">关键特性</h4>
-          <ul className="m-0 list-disc space-y-1 pl-5 text-[13px] text-[#596579]">
-            <li>高精度 OCR 识别，准确率 ≥ 98%</li>
-            <li>支持多语言识别（中 / 英 / 日 / 韩）</li>
-            <li>自动校验票据信息，异常预警</li>
-            <li>提供开放 API，方便系统集成</li>
-          </ul>
+          <dl className="m-0 space-y-2 text-[13px] text-[#596579]">
+            <div className="flex justify-between gap-3">
+              <dt>安全扫描</dt>
+              <dd className="m-0">{version?.scanStatus ?? "unknown"}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>SHA-256</dt>
+              <dd className="m-0 truncate">
+                {version?.artifactSha256 ?? "未提供"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt>签名</dt>
+              <dd className="m-0">
+                {version?.artifactSignature ? "已签名" : "未提供"}
+              </dd>
+            </div>
+          </dl>
         </section>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-3 font-semibold">截图预览</h4>
-          <div className="grid grid-cols-3 gap-2">
-            <MiniShot />
-            <MiniShot variant="invoice" />
-            <MiniShot variant="chart" />
-          </div>
+          <Empty
+            description="暂无截图资产"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+          />
         </section>
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-3 font-semibold">相关附件</h4>
           <div className="space-y-3">
-            {[
-              "OCR 票据识别_产品白皮书.pdf",
-              "OCR 票据识别_接入指南.docx",
-              "OCR 票据识别_字段说明.xlsx",
-            ].map((item, index) => (
-              <div className="flex items-center gap-2 text-[12px]" key={item}>
+            {version ? (
+              <div className="flex items-center gap-2 text-[12px]">
                 <span className="flex h-7 w-7 items-center justify-center rounded bg-[#eef5ff] text-[#1677ff]">
                   <FileTextOutlined />
                 </span>
-                <span className="min-w-0 flex-1 truncate">{item}</span>
-                <span className="text-[#8a94a6]">
-                  {["2.34 MB", "1.21 MB", "98.6 KB"][index]}
+                <span className="min-w-0 flex-1 truncate">
+                  {version.artifactKey}
                 </span>
-                <DownloadOutlined className="text-[#1677ff]" />
+                <span className="text-[#8a94a6]">安全校验后可用</span>
+                <DownloadOutlined className="text-[#8a94a6]" />
               </div>
-            ))}
+            ) : (
+              <Empty
+                description="暂无制品附件"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
           </div>
         </section>
       </div>
       <Text type="secondary">
-        提交版本：v{(version?.version ?? "2.4.1").replace(/^v/, "")}-
-        当前状态：待审核
+        提交版本：{version?.version ?? "未提供"} - 当前状态：
+        {app?.status ?? "unknown"}
       </Text>
     </div>
   );
@@ -592,35 +616,6 @@ function InfoLine({
     <div className="flex items-center justify-between gap-3">
       <span className="text-[#697386]">{label}</span>
       <span className="text-right text-[#374151]">{children}</span>
-    </div>
-  );
-}
-function MiniShot({
-  variant = "dashboard",
-}: {
-  variant?: "dashboard" | "invoice" | "chart";
-}) {
-  return (
-    <div className="h-20 rounded border border-[#dce5f2] bg-[#f8fbff] p-1">
-      <div className="flex h-full gap-1">
-        <i className="w-2 rounded-sm bg-[#bed6fb]" />
-        <div className="flex-1 space-y-1">
-          <i className="block h-1.5 w-2/5 rounded bg-[#8bb8ff]" />
-          {variant === "chart" ? (
-            <div className="flex h-12 items-end gap-1">
-              <i className="h-1/2 flex-1 bg-[#8bb8ff]" />
-              <i className="h-full flex-1 bg-[#4d8df4]" />
-              <i className="h-2/3 flex-1 bg-[#a9c8f7]" />
-            </div>
-          ) : (
-            <div className="h-12 rounded bg-white p-1">
-              <i className="mb-2 block h-1.5 w-full bg-[#d6e3f4]" />
-              <i className="block h-1.5 w-3/4 bg-[#e7eef8]" />
-              <i className="mt-2 block h-3 w-1/3 border border-[#93b6ed]" />
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

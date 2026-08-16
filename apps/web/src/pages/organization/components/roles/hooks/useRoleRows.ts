@@ -1,4 +1,6 @@
-import { ROLES_MOCK_DATA, type RoleSummary } from "../constants";
+import { useQuery } from "@tanstack/react-query";
+import { listRoles } from "../../../../../modules/auth/auth.client";
+import type { RoleSummary } from "../constants";
 
 interface UseRoleRowsResult {
   data: RoleSummary[];
@@ -6,15 +8,15 @@ interface UseRoleRowsResult {
   isPending: boolean;
 }
 
-/**
- * 角色列表数据源。
- * 当前后端未提供角色接口，使用与设计图完全对齐的 mock 数据；
- * 接口就绪后，只需把这里的实现替换为 react-query useQuery，组件层无需改动。
- */
+/** 从 identity API 查询角色列表；页面不再内置设计稿 mock 数据。 */
 export function useRoleRows(): UseRoleRowsResult {
+  const query = useQuery({
+    queryKey: ["identity", "roles"],
+    queryFn: listRoles,
+  });
   return {
-    data: ROLES_MOCK_DATA,
-    error: null,
-    isPending: false,
+    data: (query.data ?? []) as RoleSummary[],
+    error: query.error,
+    isPending: query.isPending,
   };
 }

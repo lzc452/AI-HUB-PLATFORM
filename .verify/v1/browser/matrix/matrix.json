@@ -1,0 +1,674 @@
+{
+  "401-unauthenticated": {
+    "path": "/marketplace",
+    "status": 200,
+    "finalUrl": "http://127.0.0.1:8080/login",
+    "heading": "欢迎登录",
+    "forbidden": false,
+    "notFound": false,
+    "resultTitle": null,
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "DEMO-EMPLOYEE": {
+    "menus": ["应用市场", "创新广场", "站内通知"],
+    "routes": {
+      "/marketplace": {
+        "path": "/marketplace",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace",
+        "heading": "发现企业内部 AI 应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/applications": {
+        "path": "/applications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/applications",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/analytics": {
+        "path": "/analytics",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/analytics",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/organization": {
+        "path": "/organization",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/organization",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/security": {
+        "path": "/security",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/security",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/notifications": {
+        "path": "/notifications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/notifications",
+        "heading": "站内通知",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/innovation": {
+        "path": "/innovation",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/innovation",
+        "heading": "创新广场",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/assistant": {
+        "path": "/assistant",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/assistant",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      }
+    },
+    "directIds": {
+      "publishedAll": {
+        "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/10000000-0000-4000-8000-000000000001",
+        "heading": "智能考勤助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "innovationOnly": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000001",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      },
+      "archived": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000002",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000002",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      }
+    },
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "DEMO-APP-ADMIN": {
+    "menus": ["应用市场", "创新广场", "应用管理", "数据看板", "站内通知"],
+    "routes": {
+      "/marketplace": {
+        "path": "/marketplace",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace",
+        "heading": "发现企业内部 AI 应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/applications": {
+        "path": "/applications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/applications",
+        "heading": "应用管理",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/analytics": {
+        "path": "/analytics",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/analytics",
+        "heading": "数据看板",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/organization": {
+        "path": "/organization",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/organization",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/security": {
+        "path": "/security",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/security",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/notifications": {
+        "path": "/notifications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/notifications",
+        "heading": "站内通知",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/innovation": {
+        "path": "/innovation",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/innovation",
+        "heading": "创新广场",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/assistant": {
+        "path": "/assistant",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/assistant",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      }
+    },
+    "directIds": {
+      "publishedAll": {
+        "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/10000000-0000-4000-8000-000000000001",
+        "heading": "智能考勤助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "innovationOnly": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000001",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      },
+      "archived": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000002",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000002",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      }
+    },
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "DEMO-INNOVATION": {
+    "menus": ["应用市场", "创新广场", "数据看板", "站内通知"],
+    "routes": {
+      "/marketplace": {
+        "path": "/marketplace",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace",
+        "heading": "发现企业内部 AI 应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/applications": {
+        "path": "/applications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/applications",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/analytics": {
+        "path": "/analytics",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/analytics",
+        "heading": "数据看板",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/organization": {
+        "path": "/organization",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/organization",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/security": {
+        "path": "/security",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/security",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/notifications": {
+        "path": "/notifications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/notifications",
+        "heading": "站内通知",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/innovation": {
+        "path": "/innovation",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/innovation",
+        "heading": "创新广场",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/assistant": {
+        "path": "/assistant",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/assistant",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      }
+    },
+    "directIds": {
+      "publishedAll": {
+        "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/10000000-0000-4000-8000-000000000001",
+        "heading": "智能考勤助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "innovationOnly": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000001",
+        "heading": "创新专属压测应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "archived": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000002",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000002",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      }
+    },
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "DEMO-ORG-ADMIN": {
+    "menus": ["应用市场", "创新广场", "数据看板", "组织管理", "站内通知"],
+    "routes": {
+      "/marketplace": {
+        "path": "/marketplace",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace",
+        "heading": "发现企业内部 AI 应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/applications": {
+        "path": "/applications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/applications",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/analytics": {
+        "path": "/analytics",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/analytics",
+        "heading": "数据看板",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/organization": {
+        "path": "/organization",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/organization",
+        "heading": "组织管理",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/security": {
+        "path": "/security",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/security",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      },
+      "/notifications": {
+        "path": "/notifications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/notifications",
+        "heading": "站内通知",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/innovation": {
+        "path": "/innovation",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/innovation",
+        "heading": "创新广场",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/assistant": {
+        "path": "/assistant",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/assistant",
+        "heading": "",
+        "forbidden": true,
+        "notFound": false,
+        "resultTitle": "没有访问权限"
+      }
+    },
+    "directIds": {
+      "publishedAll": {
+        "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/10000000-0000-4000-8000-000000000001",
+        "heading": "智能考勤助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "innovationOnly": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000001",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      },
+      "archived": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000002",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000002",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      }
+    },
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "DEMO-SUPER-ADMIN": {
+    "menus": [
+      "应用市场",
+      "创新广场",
+      "应用管理",
+      "数据看板",
+      "组织管理",
+      "系统安全",
+      "AI 助手",
+      "站内通知"
+    ],
+    "routes": {
+      "/marketplace": {
+        "path": "/marketplace",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace",
+        "heading": "发现企业内部 AI 应用",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/applications": {
+        "path": "/applications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/applications",
+        "heading": "应用管理",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/analytics": {
+        "path": "/analytics",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/analytics",
+        "heading": "数据看板",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/organization": {
+        "path": "/organization",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/organization",
+        "heading": "组织管理",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/security": {
+        "path": "/security",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/security",
+        "heading": "系统安全",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/notifications": {
+        "path": "/notifications",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/notifications",
+        "heading": "站内通知",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/innovation": {
+        "path": "/innovation",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/innovation",
+        "heading": "创新广场",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "/assistant": {
+        "path": "/assistant",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/assistant",
+        "heading": "AI 助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      }
+    },
+    "directIds": {
+      "publishedAll": {
+        "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/10000000-0000-4000-8000-000000000001",
+        "heading": "智能考勤助手",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": null
+      },
+      "innovationOnly": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000001",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000001",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      },
+      "archived": {
+        "path": "/marketplace/90000000-0000-4000-8000-000000000002",
+        "status": 200,
+        "finalUrl": "http://127.0.0.1:8080/marketplace/90000000-0000-4000-8000-000000000002",
+        "heading": "",
+        "forbidden": false,
+        "notFound": false,
+        "resultTitle": "页面不存在"
+      }
+    },
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "no-self-review": {
+    "selfReview": {
+      "path": "/applications/10000000-0000-4000-8000-000000000002/review",
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:8080/applications/10000000-0000-4000-8000-000000000002/review",
+      "heading": "审核工作台",
+      "forbidden": false,
+      "notFound": false,
+      "resultTitle": null
+    },
+    "selfClaimButtons": 1,
+    "otherReview": {
+      "path": "/applications/90000000-0000-4000-8000-000000000003/review",
+      "status": 200,
+      "finalUrl": "http://127.0.0.1:8080/applications/90000000-0000-4000-8000-000000000003/review",
+      "heading": "审核工作台",
+      "forbidden": false,
+      "notFound": false,
+      "resultTitle": null
+    },
+    "otherClaimButtons": 1,
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "failedRequests": [
+      "GET http://127.0.0.1:8080/assets/index-CqW8TDQ-.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/MarketplacePage-BFntB29v.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/ReloadOutlined-Cxo-tmGk.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/PlusOutlined-VULB9AMk.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/EmptyBlock-YRdpejJz.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/internal/notifications net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/StarFilled-xY2jpSLU.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/index-Cph3E01f.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/index-CyFNoVIv.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/TrophyOutlined-CfsWFDR1.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/index-CRm_5QzV.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/index-CNK4fgQa.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/catalogMeta-BxDultv9.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/CommentOutlined-qdQmn8Rg.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/useIdentity-DCejZyre.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/LikeOutlined-CGAuK6un.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/index-eKCTAvD5.js net::ERR_ABORTED",
+      "GET http://127.0.0.1:8080/assets/useCatalog-Vh_Bnm4q.js net::ERR_ABORTED"
+    ],
+    "http4xx": []
+  }
+}

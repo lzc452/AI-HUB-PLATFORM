@@ -326,7 +326,11 @@ export function useConfirmDemandClaim(demandId?: string) {
   return useGovernanceMutation(
     demandId,
     (input: { proposalId: string; expectedVersion: number }) =>
-      confirmDemandClaim(demandId as string, input.proposalId, input.expectedVersion),
+      confirmDemandClaim(
+        demandId as string,
+        input.proposalId,
+        input.expectedVersion,
+      ),
     "确认认领方案失败",
   );
 }
@@ -335,7 +339,11 @@ export function useReleaseDemandClaim(demandId?: string) {
   return useGovernanceMutation(
     demandId,
     (input: { expectedVersion: number; reason?: string }) =>
-      releaseDemandClaim(demandId as string, input.expectedVersion, input.reason),
+      releaseDemandClaim(
+        demandId as string,
+        input.expectedVersion,
+        input.reason,
+      ),
     "解除认领失败",
   );
 }
@@ -354,7 +362,9 @@ export function useUploadDemandAttachment() {
     mutationFn: (file: File) => uploadDemandAttachment(file),
     onError: (error) => showErrorMessage(error, "附件上传失败"),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["demands", "attachments"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["demands", "attachments"],
+      });
     },
   });
 }

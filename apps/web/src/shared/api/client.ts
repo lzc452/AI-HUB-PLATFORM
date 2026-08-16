@@ -1,4 +1,5 @@
 import { getSession, setSession } from "../../modules/auth/session.store";
+import type { ApiErrorResponse } from "@ai-hub/contracts";
 
 const BASE = ""; // 同源，无需前缀
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -15,11 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-interface ErrorBody {
-  code?: string;
-  detail?: string;
-  traceId?: string;
-}
+type ErrorBody = Partial<ApiErrorResponse> & { detail?: string };
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -84,7 +81,7 @@ async function apiRequest(
     throw new ApiError(
       response.status,
       body.code ?? "UNKNOWN",
-      body.detail,
+      body.message ?? body.detail,
       body.traceId,
     );
   }
@@ -160,7 +157,7 @@ export function apiUpload<T>(
         new ApiError(
           request.status,
           body.code ?? "UNKNOWN",
-          body.detail,
+          body.message ?? body.detail,
           body.traceId,
         ),
       );

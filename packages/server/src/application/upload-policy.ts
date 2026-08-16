@@ -21,7 +21,9 @@ const IMAGE_MIME = ["image/png", "image/jpeg", "image/webp"] as const;
 const IMAGE_SVG_MIME = [...IMAGE_MIME, "image/svg+xml"] as const;
 
 /** 各 kind 的统一校验策略（大小 / 扩展名 / MIME / SVG）。 */
-export const UPLOAD_KIND_POLICIES: Readonly<Record<UploadKind, UploadKindPolicy>> = {
+export const UPLOAD_KIND_POLICIES: Readonly<
+  Record<UploadKind, UploadKindPolicy>
+> = {
   icon: {
     kind: "icon",
     maxSizeBytes: 5 * MB,
@@ -124,7 +126,10 @@ export function assertUploadAllowed(input: {
 }
 
 /** 校验文件头（魔数）与扩展名一致；无法识别的扩展名默认放行（由扫描兜底）。 */
-export function assertMagicMatches(content: Uint8Array, extension: string): void {
+export function assertMagicMatches(
+  content: Uint8Array,
+  extension: string,
+): void {
   const bytes = (values: readonly number[], offset = 0): boolean =>
     values.every((value, index) => content[offset + index] === value);
   const ascii = (offset: number, length: number): string =>

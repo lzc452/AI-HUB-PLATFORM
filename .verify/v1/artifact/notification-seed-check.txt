@@ -1,0 +1,11 @@
+
+> ai-hub-platform@ check:demo-data /workspace
+> tsx scripts/check-demo-data.mts
+
+{
+  "passed": true,
+  "anchorDate": "2026-08-15T19:51:59.179Z",
+  "failures": [],
+  "durationMs": 35
+}
+Check passed in 35ms

@@ -1,0 +1,120 @@
+{
+  "mode": "cas",
+  "label": "cas",
+  "applicationId": "301902fa-dcc2-48f7-a66f-3b1f7aad6db3",
+  "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+  "concurrent": [
+    {
+      "status": 400,
+      "body": {
+        "type": "about:blank",
+        "title": "Bad Request",
+        "status": 400,
+        "code": "ARTIFACT_COMPLETE_CONFLICT",
+        "message": "Bad Request",
+        "traceId": "01M03EAGQSBR6R5GAJK4M8FA9J"
+      }
+    },
+    {
+      "status": 200,
+      "body": {
+        "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+        "objectKey": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/uploads/fd877ba1-4e9d-4bd2-a247-183741fe2f37/content",
+        "fileName": "cas.txt",
+        "mimeType": "text/plain",
+        "sizeBytes": 34,
+        "uploadStatus": "verifying",
+        "scanStatus": "pending",
+        "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+        "signature": "",
+        "errorCode": null,
+        "verificationAttempts": 1,
+        "expiresAt": "2026-08-16T19:28:03.248Z"
+      }
+    }
+  ],
+  "third": {
+    "status": 400,
+    "body": {
+      "type": "about:blank",
+      "title": "Bad Request",
+      "status": 400,
+      "code": "ARTIFACT_COMPLETE_CONFLICT",
+      "message": "Bad Request",
+      "traceId": "01M03EAGR7GZEF5HZ6VASPCB86"
+    }
+  },
+  "final": {
+    "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+    "objectKey": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/artifacts/e4d3e50a-011f-400f-b021-2a4ae4b3f8da/content",
+    "fileName": "cas.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 34,
+    "uploadStatus": "completed",
+    "scanStatus": "passed",
+    "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+    "signature": "qKrYa3EWhdtY2teeb4h6r-lfrC6uv-4N0Qi3RusWROqZ7slLMZEb7dztHHUGUjZzrXoapI1coTKwaH2IksDzBw",
+    "errorCode": null,
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:28:03.248Z"
+  },
+  "s3After": [
+    "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/artifacts/e4d3e50a-011f-400f-b021-2a4ae4b3f8da/content"
+  ],
+  "evidence": {
+    "upload": [
+      {
+        "upload_status": "completed",
+        "scan_status": "passed",
+        "error_code": null,
+        "verification_attempts": 1,
+        "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+        "signature": "qKrYa3EWhdtY2teeb4h6r-lfrC6uv-4N0Qi3RusWROqZ7slLMZEb7dztHHUGUjZzrXoapI1coTKwaH2IksDzBw",
+        "object_key": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/artifacts/e4d3e50a-011f-400f-b021-2a4ae4b3f8da/content",
+        "staging_object_key": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/uploads/fd877ba1-4e9d-4bd2-a247-183741fe2f37/content",
+        "completed_at": "2026-08-15T19:28:03.441Z"
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "application.artifact.verification.requested",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+          "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+          "stagingObjectKey": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/uploads/fd877ba1-4e9d-4bd2-a247-183741fe2f37/content"
+        },
+        "created_at": "2026-08-15T19:28:03.328Z"
+      },
+      {
+        "event_type": "application.artifact.verification.completed",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+          "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+          "objectKey": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/artifacts/e4d3e50a-011f-400f-b021-2a4ae4b3f8da/content"
+        },
+        "created_at": "2026-08-15T19:28:03.441Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "af2c058f-899b-4d6f-88cc-8d88e158648c",
+        "event_type": "artifact.verification.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:28:03.448Z"
+      },
+      {
+        "id": "072f65b7-282e-4f54-ab6e-0a937023174c",
+        "event_type": "artifact.verification.completed",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:28:03.456Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:28:03.863Z"
+}

@@ -142,7 +142,9 @@ export class ApplicationAdminListRowDto {
   })
   status!: string;
   @ApiProperty({ type: String }) currentVersion!: string;
-  @ApiProperty({ type: String, nullable: true }) currentVersionId!: string | null;
+  @ApiProperty({ type: String, nullable: true }) currentVersionId!:
+    | string
+    | null;
   @ApiProperty({ type: String }) ownerName!: string;
   @ApiProperty({ type: String }) departmentName!: string;
   @ApiProperty({ type: String, isArray: true }) deliveryChannels!: string[];
@@ -157,6 +159,13 @@ export class ApplicationAdminListResultDto {
   items!: ApplicationAdminListRowDto[];
   @ApiProperty({ type: Number }) page!: number;
   @ApiProperty({ type: Number }) pageSize!: number;
+  @ApiProperty({ type: Number }) total!: number;
+}
+
+export class ApplicationAdminKpisDto {
+  @ApiProperty({ type: Number }) deliveryFailed!: number;
+  @ApiProperty({ type: Number }) pendingReview!: number;
+  @ApiProperty({ type: Number }) published!: number;
   @ApiProperty({ type: Number }) total!: number;
 }
 
@@ -381,7 +390,11 @@ export class ReviewQueueDto {
   @ApiProperty({ type: String, description: "应用版本 ID" })
   applicationVersionId!: string;
 
-  @ApiProperty({ type: String, description: "队列状态", enum: ["available", "claimed"] })
+  @ApiProperty({
+    type: String,
+    description: "队列状态",
+    enum: ["available", "claimed"],
+  })
   status!: "available" | "claimed";
 
   @ApiPropertyOptional({
@@ -414,7 +427,11 @@ export class ReviewQueueDto {
   })
   createdAt!: string;
 
-  @ApiProperty({ type: String, description: "SLA 状态", enum: ["on_time", "overdue"] })
+  @ApiProperty({
+    type: String,
+    description: "SLA 状态",
+    enum: ["on_time", "overdue"],
+  })
   slaStatus!: "on_time" | "overdue";
 }
 
@@ -434,6 +451,9 @@ export class ApplicationWorkspaceDto {
 
   @ApiProperty({ type: ReviewQueueDto, nullable: true })
   reviewQueue!: ReviewQueueDto | null;
+
+  @ApiProperty({ type: () => AssetDto, isArray: true })
+  assets!: AssetDto[];
 }
 
 /** 创建 artifact 上传会话请求。 */
@@ -476,9 +496,9 @@ export class ArtifactUploadDto {
   @ApiProperty({
     type: String,
     description: "上传状态",
-    enum: ["uploading", "completed", "failed"],
+    enum: ["uploading", "verifying", "completed", "failed"],
   })
-  uploadStatus!: "uploading" | "completed" | "failed";
+  uploadStatus!: "uploading" | "verifying" | "completed" | "failed";
 
   @ApiProperty({
     type: String,
@@ -496,6 +516,12 @@ export class ArtifactUploadDto {
 
   @ApiProperty({ type: String, nullable: true, description: "错误码" })
   errorCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "服务端签名" })
+  signature!: string | null;
+
+  @ApiProperty({ type: Number, description: "校验尝试次数" })
+  verificationAttempts!: number;
 
   @ApiProperty({ type: String, description: "过期时间（ISO 8601）" })
   expiresAt!: string;
@@ -594,16 +620,26 @@ export class LinkDeliveryAssetResponseDto {
 
 /** AI 风险声明（6 项）。 */
 export class AiRiskDeclarationDto {
-  @ApiProperty({ type: Boolean, description: "是否处理员工个人信息/企业敏感数据" })
+  @ApiProperty({
+    type: Boolean,
+    description: "是否处理员工个人信息/企业敏感数据",
+  })
   handlesSensitiveData!: boolean;
 
-  @ApiProperty({ type: Boolean, description: "是否发送至企业外部/第三方模型供应商" })
+  @ApiProperty({
+    type: Boolean,
+    description: "是否发送至企业外部/第三方模型供应商",
+  })
   sendsDataExternally!: boolean;
 
   @ApiProperty({ type: Boolean, description: "是否保存输入/文件/对话" })
   retainsConversations!: boolean;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "保留周期" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "保留周期",
+  })
   retentionPeriod?: string | null;
 
   @ApiProperty({
@@ -613,10 +649,17 @@ export class AiRiskDeclarationDto {
   })
   modelProviders!: string[];
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "提供方补充说明" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "提供方补充说明",
+  })
   providerNote?: string | null;
 
-  @ApiProperty({ type: Boolean, description: "是否影响人事/财务/法务等高风险决策" })
+  @ApiProperty({
+    type: Boolean,
+    description: "是否影响人事/财务/法务等高风险决策",
+  })
   affectsHighRiskDecisions!: boolean;
 
   @ApiProperty({ type: String, description: "用户输入限制与免责声明" })
@@ -625,7 +668,11 @@ export class AiRiskDeclarationDto {
 
 /** 保存应用草稿请求（整表单一份 draft）。 */
 export class SaveApplicationDraftRequestDto {
-  @ApiProperty({ type: String, description: "应用名称", example: "智能考勤助手" })
+  @ApiProperty({
+    type: String,
+    description: "应用名称",
+    example: "智能考勤助手",
+  })
   name!: string;
 
   @ApiProperty({ type: String, description: "归属部门 ID" })
@@ -649,7 +696,8 @@ export class SaveApplicationDraftRequestDto {
 
   @ApiProperty({
     type: "object",
-    description: "应用图标（mode: auto|upload；auto 需 backgroundColor+text，upload 需 assetId）",
+    description:
+      "应用图标（mode: auto|upload；auto 需 backgroundColor+text，upload 需 assetId）",
   })
   icon!: object;
 
@@ -659,16 +707,32 @@ export class SaveApplicationDraftRequestDto {
   @ApiProperty({ type: String, description: "简介富文本（已受限白名单）" })
   summaryHtml!: string;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "操作手册富文本" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "操作手册富文本",
+  })
   manualHtml?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "操作手册附件资产 ID" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "操作手册附件资产 ID",
+  })
   manualAssetId?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "使用示例富文本" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "使用示例富文本",
+  })
   examplesHtml?: string | null;
 
-  @ApiPropertyOptional({ type: String, nullable: true, description: "使用示例附件资产 ID" })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "使用示例附件资产 ID",
+  })
   examplesAssetId?: string | null;
 
   @ApiProperty({ type: "array", description: "常见问题列表（选填）" })
@@ -701,7 +765,10 @@ export class ApplicationDraftRecordDto {
   @ApiProperty({ type: String, description: "责任人员工工号" })
   ownerEmployeeId!: string;
 
-  @ApiProperty({ type: () => SaveApplicationDraftRequestDto, description: "草稿内容" })
+  @ApiProperty({
+    type: () => SaveApplicationDraftRequestDto,
+    description: "草稿内容",
+  })
   draft!: SaveApplicationDraftRequestDto;
 
   @ApiProperty({ type: String, description: "最后更新时间（ISO 8601）" })
@@ -767,6 +834,10 @@ export class UnifiedUploadDto {
   @ApiProperty({ type: String, nullable: true, description: "错误码" })
   errorCode!: string | null;
 
-  @ApiProperty({ type: String, nullable: true, description: "关联资产 ID（complete 后返回）" })
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "关联资产 ID（complete 后返回）",
+  })
   assetId!: string | null;
 }

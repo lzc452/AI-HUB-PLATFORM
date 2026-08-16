@@ -27,6 +27,14 @@ import * as applicationDraft from "./migrations/0025_application_draft.js";
 import * as unifiedUpload from "./migrations/0026_unified_upload.js";
 import * as versionArtifactNullable from "./migrations/0027_version_artifact_nullable.js";
 import * as demandClaimProposalAndPriority from "./migrations/0028_demand_claim_proposal_and_priority.js";
+import * as artifactIntegrity from "./migrations/0025_artifact_integrity.js";
+import * as engagementIntegrity from "./migrations/0026_engagement_integrity.js";
+import * as securityAuditIntegrity from "./migrations/0027_security_audit_integrity.js";
+import * as directorySyncIntegrity from "./migrations/0028_directory_sync_integrity.js";
+import * as notificationPayload from "./migrations/0029_notification_payload.js";
+import * as catalogReadModelIndexes from "./migrations/0030_catalog_read_model_indexes.js";
+import * as artifactRuntimeCompatibility from "./migrations/0031_artifact_runtime_compatibility.js";
+import * as analyticsInteractionFeedbackEvents from "./migrations/0032_analytics_interaction_feedback_events.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -58,6 +66,15 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0026_unified_upload": unifiedUpload,
   "0027_version_artifact_nullable": versionArtifactNullable,
   "0028_demand_claim_proposal_and_priority": demandClaimProposalAndPriority,
+  "0025_artifact_integrity": artifactIntegrity,
+  "0026_engagement_integrity": engagementIntegrity,
+  "0027_security_audit_integrity": securityAuditIntegrity,
+  "0028_directory_sync_integrity": directorySyncIntegrity,
+  "0029_notification_payload": notificationPayload,
+  "0030_catalog_read_model_indexes": catalogReadModelIndexes,
+  "0031_artifact_runtime_compatibility": artifactRuntimeCompatibility,
+  "0032_analytics_interaction_feedback_events":
+    analyticsInteractionFeedbackEvents,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

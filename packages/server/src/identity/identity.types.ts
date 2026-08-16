@@ -20,6 +20,39 @@ export interface RoleRecord {
   permissions: readonly string[];
 }
 
+export interface IdentityRoleRecord extends RoleRecord {
+  name: string;
+  isSystem: boolean;
+  status: "active" | "disabled";
+  createdByEmployeeId: string | null;
+  creatorName: string | null;
+  memberCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IdentitySyncConfigRecord {
+  enabled: boolean;
+  schedule: string | null;
+  externalOrgId: string | null;
+  lastUpdatedByEmployeeId: string | null;
+  updatedAt: Date;
+}
+
+export interface IdentitySyncRunItemRecord {
+  syncRunItemId: string;
+  syncRunId: string;
+  objectType: string;
+  objectId: string;
+  status: string;
+  processedCount: number;
+  successCount: number;
+  failureCount: number;
+  errorCode: string | null;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+}
+
 export interface SessionRecord {
   sessionId: string;
   employeeId: EmployeeId;
@@ -99,6 +132,39 @@ export interface IdentityRepository {
   listDepartments(): Promise<readonly DepartmentSummary[]>;
   listEmployeeDepartmentIds(employeeId: EmployeeId): Promise<readonly string[]>;
   listEmployeeRoles(employeeId: EmployeeId): Promise<readonly RoleRecord[]>;
+  listRoles?(): Promise<readonly IdentityRoleRecord[]>;
+  createRole?(input: {
+    roleCode: string;
+    name: string;
+    permissions: readonly string[];
+    createdByEmployeeId: EmployeeId;
+  }): Promise<void>;
+  updateRole?(
+    roleCode: string,
+    input: {
+      name?: string;
+      permissions?: readonly string[];
+      status?: "active" | "disabled";
+    },
+  ): Promise<void>;
+  getSyncConfig?(): Promise<IdentitySyncConfigRecord | null>;
+  updateSyncConfig?(input: {
+    enabled?: boolean;
+    schedule?: string | null;
+    externalOrgId?: string | null;
+    lastUpdatedByEmployeeId: EmployeeId;
+  }): Promise<IdentitySyncConfigRecord>;
+  findSyncRun?(syncRunId: string): Promise<{
+    syncRunId: string;
+    mode: string;
+    status: string;
+    startedAt: Date;
+    completedAt: Date | null;
+    summary: unknown;
+  } | null>;
+  listSyncRunItems?(
+    syncRunId: string,
+  ): Promise<readonly IdentitySyncRunItemRecord[]>;
   listEmployeesPage(input?: {
     keyword?: string;
     page?: number;

@@ -88,11 +88,13 @@ export function FormWizard({
         }}
         style={{ marginBottom: 24 }}
       />
-      <div style={{ minHeight: 320 }}>
-        {steps[current]!.render(form)}
-      </div>
+      <div style={{ minHeight: 320 }}>{steps[current]!.render(form)}</div>
       <Space
-        style={{ marginTop: 24, display: "flex", justifyContent: "space-between" }}
+        style={{
+          marginTop: 24,
+          display: "flex",
+          justifyContent: "space-between",
+        }}
       >
         <Button onClick={handleSaveDraft} loading={saveState === "saving"}>
           {saveState === "saved" ? "已保存" : "存草稿"}

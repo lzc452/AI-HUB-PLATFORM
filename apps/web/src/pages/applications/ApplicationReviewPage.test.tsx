@@ -58,8 +58,13 @@ const hoisted = vi.hoisted(() => {
       mutate: hoisted.reviewMutate,
     })),
     reviewMutate: vi.fn(),
+    useAuth: vi.fn(() => ({ actor: { employeeId: "李小龙" } })),
   };
 });
+
+vi.mock("../../modules/auth/useAuth", () => ({
+  useAuth: hoisted.useAuth,
+}));
 
 vi.mock("../../modules/application/useApplication", () => ({
   useApplication: hoisted.useApplication,
@@ -190,5 +195,25 @@ describe("ApplicationReviewPage", () => {
       comment: "缺少必要的风险评估材料",
       decision: "reject",
     });
+  });
+
+  it("禁止审核自己提交的应用：所有者视角领取按钮禁用", () => {
+    hoisted.useAuth.mockReturnValue({
+      actor: { employeeId: "李小龙" },
+    });
+    renderPage();
+
+    expect(screen.getByRole("button", { name: /领\s*取任务/ })).toBeDisabled();
+  });
+
+  it("他人提交的应用允许领取任务", () => {
+    hoisted.useAuth.mockReturnValue({
+      actor: { employeeId: "E900" },
+    });
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: /领\s*取任务/ }),
+    ).not.toBeDisabled();
   });
 });

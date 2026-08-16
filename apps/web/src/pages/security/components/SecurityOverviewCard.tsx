@@ -1,7 +1,9 @@
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
-import { OVERVIEW_AS_OF, SECURITY_OVERVIEW_ITEMS } from "./constants";
+import type { AuditLogRow } from "../../../modules/security";
+
+import { getOverviewAsOf, getSecurityOverviewItems } from "./constants";
 
 const { Title } = Typography;
 
@@ -9,7 +11,11 @@ const { Title } = Typography;
  * 右栏「今日安全概况」卡：3 个 40×40 rounded-lg 图标迷你项，
  * 右上角「数据截至 2025-06-01 10:30」。
  */
-export function SecurityOverviewCard() {
+export function SecurityOverviewCard({
+  rows,
+}: {
+  rows: readonly AuditLogRow[];
+}) {
   return (
     <section
       aria-label="今日安全概况"
@@ -19,10 +25,12 @@ export function SecurityOverviewCard() {
         <Title className="!mb-0" level={4}>
           今日安全概况
         </Title>
-        <span className="text-[12px] text-[#8c8c8c]">{OVERVIEW_AS_OF}</span>
+        <span className="text-[12px] text-[#8c8c8c]">
+          {getOverviewAsOf(rows)}
+        </span>
       </div>
       <div className="grid grid-cols-3 divide-x divide-solid divide-[#f0f0f0]">
-        {SECURITY_OVERVIEW_ITEMS.map(
+        {getSecurityOverviewItems(rows).map(
           (
             {
               Icon,

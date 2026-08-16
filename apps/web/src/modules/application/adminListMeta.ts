@@ -26,7 +26,8 @@ export type AdminApplicationStatus =
   | "approved"
   | "in_review"
   | "draft"
-  | "withdrawn";
+  | "withdrawn"
+  | "archived";
 
 /** 应用管理筛选模式，对应设计稿 Tab 顺序。 */
 export type AdminApplicationFilterMode = "all" | "review" | "owned";

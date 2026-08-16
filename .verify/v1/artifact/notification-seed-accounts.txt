@@ -1,0 +1,5 @@
+
+> ai-hub-platform@ seed:demo-accounts /workspace
+> tsx scripts/seed-demo-accounts.mts
+
+Demo accounts seeded: departments=4, roles=21, employees=5, memberships=5, roleAssignments=9

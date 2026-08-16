@@ -1,0 +1,17 @@
+{
+  "mode": "export-download",
+  "label": "file-not-found",
+  "exportJobId": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+  "status": 404,
+  "contentType": "application/problem+json; charset=utf-8",
+  "contentDisposition": null,
+  "body": {
+    "type": "about:blank",
+    "title": "Not Found",
+    "status": 404,
+    "code": "AUDIT_EXPORT_FILE_NOT_FOUND",
+    "message": "Not Found",
+    "traceId": "01M03F2S05J92SV9S7H0G28Q82"
+  },
+  "verifiedAt": "2026-08-15T19:41:18.224Z"
+}

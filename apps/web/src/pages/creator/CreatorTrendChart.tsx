@@ -3,6 +3,7 @@ import { lazy, Suspense, useMemo } from "react";
 
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { useDashboard } from "../../modules/analytics/useAnalytics";
+import type { AnalyticsDateRange } from "../../modules/analytics/analytics.client";
 import { MessageError } from "../../shared/ui/message";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
@@ -18,7 +19,16 @@ function prefersReducedMotion(): boolean {
 
 /** 本月应用使用趋势折线图：数据源为 application 仪表盘，按日聚合。 */
 export function CreatorTrendChart() {
-  const { data, error, isError, isPending } = useDashboard("application");
+  const range = useMemo<AnalyticsDateRange>(() => {
+    const to = new Date();
+    const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const format = (value: Date) => value.toISOString().slice(0, 10);
+    return { from: format(from), to: format(to) };
+  }, []);
+  const { data, error, isError, isPending } = useDashboard(
+    "application",
+    range,
+  );
 
   const { days, values, total } = useMemo(() => {
     const byDay = new Map<string, number>();

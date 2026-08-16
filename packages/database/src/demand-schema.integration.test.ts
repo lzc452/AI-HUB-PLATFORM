@@ -116,6 +116,7 @@ describe("Phase 5 demand schema", () => {
 
     expect(triggers.rows.map((row) => row.trigger_name).sort()).toEqual([
       "ai_demand_audit_events_no_delete",
+      "ai_demand_claim_proposals_no_delete",
       "ai_demand_comments_no_delete",
       "ai_demand_pilots_no_delete",
       "ai_demand_progress_updates_no_delete",

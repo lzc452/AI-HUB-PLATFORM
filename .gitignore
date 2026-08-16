@@ -15,3 +15,8 @@ dist/
 .codex/*.secret.*
 .workbuddy/
 .claude/
+
+# 一次性验证脚本与可复现的重型产物（截图/日志不入库，脚本可重新生成）
+tmp/
+.verify/**/*.png
+.verify/**/*.log

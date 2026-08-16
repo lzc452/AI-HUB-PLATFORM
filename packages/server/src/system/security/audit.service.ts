@@ -24,6 +24,10 @@ export class AuditService {
     });
   }
 
+  async getExportJob(exportJobId: string) {
+    return this.repository.findExportJob(exportJobId);
+  }
+
   /** 供关键写路径调用：统一安全审计记录。 */
   async recordEvent(input: AuditEventInput): Promise<void> {
     await this.repository.createEvent(input);
