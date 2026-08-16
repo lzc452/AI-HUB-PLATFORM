@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { NotificationRecord } from "../../modules/notification/notification.client";
+import type { NotificationRecord } from "./notification.client";
 import { resolveNotificationMeta } from "./notificationMeta";
 
 /**

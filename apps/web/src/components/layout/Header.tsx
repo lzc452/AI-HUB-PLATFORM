@@ -5,8 +5,10 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { Badge, Button, Dropdown, Input, Layout, Modal, Popover } from "antd";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { NotificationDetailModal } from "../../components/common/NotificationDetailModal";
 import { readLastViewedApplicationId } from "../../modules/application/last-viewed";
 import { useAuth } from "../../modules/auth/useAuth";
 import { ROUTE_ACCESS } from "../../modules/auth/roles";
@@ -14,7 +16,11 @@ import {
   readSearchQuery,
   searchPath,
 } from "../../modules/marketplace/search.store";
-import { useNotifications } from "../../modules/notification/useNotification";
+import type { NotificationRecord } from "../../modules/notification/notification.client";
+import {
+  useMarkNotificationRead,
+  useNotifications,
+} from "../../modules/notification/useNotification";
 import { ROUTES } from "../../router/routes";
 import logoUrl from "../../../assets/logo.png";
 
@@ -28,6 +34,10 @@ export interface HeaderProps {
 export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const { actor, canAccess, logout } = useAuth();
   const notifications = useNotifications({ enabled: actor !== null });
+  const markNotificationRead = useMarkNotificationRead();
+  const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] =
+    useState<NotificationRecord | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -54,6 +64,14 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
       },
       title: "确认退出登录？",
     });
+  };
+
+  const handleOpenNotification = (item: NotificationRecord) => {
+    setSelectedNotification(item);
+    setNotificationPopoverOpen(false);
+    if (item.readAt === null) {
+      markNotificationRead.mutate(item.notificationId);
+    }
   };
 
   return (
@@ -108,10 +126,17 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
                   <ul className="m-0 list-none p-0">
                     {recentUnread.map((item) => (
                       <li
-                        className="border-b border-[#f0f0f0] py-2 text-sm text-[#1f1f1f]"
+                        className="border-b border-[#f0f0f0] last:border-b-0"
                         key={item.notificationId}
                       >
-                        <span className="line-clamp-1">{item.message}</span>
+                        <button
+                          className="w-full border-0 bg-transparent p-0 py-2 text-left text-sm text-[#1f1f1f] transition-colors hover:text-[#1677ff]"
+                          onClick={() => handleOpenNotification(item)}
+                          style={{ fontFamily: "inherit" }}
+                          type="button"
+                        >
+                          <span className="line-clamp-1">{item.message}</span>
+                        </button>
                       </li>
                     ))}
                   </ul>
@@ -121,6 +146,8 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
                 </div>
               </div>
             }
+            onOpenChange={setNotificationPopoverOpen}
+            open={notificationPopoverOpen}
             placement="bottomRight"
             trigger="click"
           >
@@ -181,6 +208,11 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
           </Dropdown>
         </div>
       </div>
+      <NotificationDetailModal
+        notification={selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        open={selectedNotification !== null}
+      />
     </LayoutHeader>
   );
 }

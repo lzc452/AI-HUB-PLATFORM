@@ -239,297 +239,309 @@ export function CreateDemandDrawer({ open, onClose }: CreateDemandDrawerProps) {
         noValidate
         onSubmit={(event) => event.preventDefault()}
       >
-        <Form.Item
-          help={errors.title?.message ?? ""}
-          label="需求标题"
-          validateStatus={errors.title ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="title"
-            render={({ field }) => (
-              <Input
-                {...field}
-                aria-label="需求标题"
-                maxLength={200}
-                showCount
+        <Form component={false} layout="vertical">
+          <Form.Item
+            help={errors.title?.message ?? ""}
+            label="需求标题"
+            required
+            validateStatus={errors.title ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="title"
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  aria-label="需求标题"
+                  maxLength={200}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.problemStatement?.message ?? ""}
+            label="当前问题"
+            required
+            validateStatus={errors.problemStatement ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="problemStatement"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="当前问题"
+                  autoSize={{ minRows: 4, maxRows: 8 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.businessScenario?.message ?? ""}
+            label="业务场景与当前流程"
+            required
+            validateStatus={errors.businessScenario ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="businessScenario"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="业务场景与当前流程"
+                  autoSize={{ minRows: 3, maxRows: 7 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.impact?.message ?? ""}
+            label="影响对象、发生频率和耗时"
+            required
+            validateStatus={errors.impact ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="impact"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="影响对象、发生频率和耗时"
+                  autoSize={{ minRows: 3, maxRows: 7 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.desiredOutcome?.message ?? ""}
+            label="期望结果"
+            required
+            validateStatus={errors.desiredOutcome ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="desiredOutcome"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="期望结果"
+                  autoSize={{ minRows: 4, maxRows: 8 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.currentWorkaround?.message ?? ""}
+            label="当前替代方案"
+            required
+            validateStatus={errors.currentWorkaround ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="currentWorkaround"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="当前替代方案"
+                  autoSize={{ minRows: 3, maxRows: 7 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.dataSensitivity?.message ?? ""}
+            label="数据类型与敏感程度"
+            required
+            validateStatus={errors.dataSensitivity ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="dataSensitivity"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="数据类型与敏感程度"
+                  autoSize={{ minRows: 3, maxRows: 7 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            help={errors.aiSolutionIdea?.message ?? ""}
+            label="AI 方案设想（可选）"
+            validateStatus={errors.aiSolutionIdea ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="aiSolutionIdea"
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  aria-label="AI 方案设想"
+                  autoSize={{ minRows: 3, maxRows: 7 }}
+                  showCount
+                />
+              )}
+            />
+          </Form.Item>
+          <Form.Item
+            label="可见范围"
+            help={errors.audienceType?.message ?? ""}
+            required
+            validateStatus={errors.audienceType ? "error" : ""}
+          >
+            <Controller
+              control={control}
+              name="audienceType"
+              render={({ field }) => (
+                <Radio.Group
+                  {...field}
+                  options={[
+                    { label: "全员", value: "all" },
+                    { label: "部门", value: "department" },
+                    { label: "员工", value: "employee" },
+                  ]}
+                />
+              )}
+            />
+          </Form.Item>
+          {audienceType === "department" ? (
+            <>
+              <Form.Item
+                help={errors.departmentId?.message ?? ""}
+                label="选择部门"
+                required
+                validateStatus={errors.departmentId ? "error" : ""}
+              >
+                <Controller
+                  control={control}
+                  name="departmentId"
+                  render={({ field }) => (
+                    <Select
+                      {...field}
+                      allowClear
+                      aria-label="选择部门"
+                      className="w-full"
+                      options={departmentOptions}
+                      placeholder="请选择部门"
+                      showSearch
+                    />
+                  )}
+                />
+              </Form.Item>
+              <Controller
+                control={control}
+                name="includeChildren"
+                render={({ field }) => (
+                  <Checkbox
+                    checked={field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                  >
+                    包含子部门
+                  </Checkbox>
+                )}
               />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.problemStatement?.message ?? ""}
-          label="当前问题"
-          validateStatus={errors.problemStatement ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="problemStatement"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="当前问题"
-                autoSize={{ minRows: 4, maxRows: 8 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.businessScenario?.message ?? ""}
-          label="业务场景与当前流程"
-          validateStatus={errors.businessScenario ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="businessScenario"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="业务场景与当前流程"
-                autoSize={{ minRows: 3, maxRows: 7 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.impact?.message ?? ""}
-          label="影响对象、发生频率和耗时"
-          validateStatus={errors.impact ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="impact"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="影响对象、发生频率和耗时"
-                autoSize={{ minRows: 3, maxRows: 7 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.desiredOutcome?.message ?? ""}
-          label="期望结果"
-          validateStatus={errors.desiredOutcome ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="desiredOutcome"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="期望结果"
-                autoSize={{ minRows: 4, maxRows: 8 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.currentWorkaround?.message ?? ""}
-          label="当前替代方案"
-          validateStatus={errors.currentWorkaround ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="currentWorkaround"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="当前替代方案"
-                autoSize={{ minRows: 3, maxRows: 7 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.dataSensitivity?.message ?? ""}
-          label="数据类型与敏感程度"
-          validateStatus={errors.dataSensitivity ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="dataSensitivity"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="数据类型与敏感程度"
-                autoSize={{ minRows: 3, maxRows: 7 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          help={errors.aiSolutionIdea?.message ?? ""}
-          label="AI 方案设想（可选）"
-          validateStatus={errors.aiSolutionIdea ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="aiSolutionIdea"
-            render={({ field }) => (
-              <Input.TextArea
-                {...field}
-                aria-label="AI 方案设想"
-                autoSize={{ minRows: 3, maxRows: 7 }}
-                showCount
-              />
-            )}
-          />
-        </Form.Item>
-        <Form.Item
-          label="可见范围"
-          help={errors.audienceType?.message ?? ""}
-          validateStatus={errors.audienceType ? "error" : ""}
-        >
-          <Controller
-            control={control}
-            name="audienceType"
-            render={({ field }) => (
-              <Radio.Group
-                {...field}
-                options={[
-                  { label: "全员", value: "all" },
-                  { label: "部门", value: "department" },
-                  { label: "员工", value: "employee" },
-                ]}
-              />
-            )}
-          />
-        </Form.Item>
-        {audienceType === "department" ? (
-          <>
+            </>
+          ) : null}
+          {audienceType === "employee" ? (
             <Form.Item
-              help={errors.departmentId?.message ?? ""}
-              label="选择部门"
-              validateStatus={errors.departmentId ? "error" : ""}
+              help={errors.employeeId?.message ?? ""}
+              label="选择员工"
+              required
+              validateStatus={errors.employeeId ? "error" : ""}
             >
               <Controller
                 control={control}
-                name="departmentId"
+                name="employeeId"
                 render={({ field }) => (
                   <Select
                     {...field}
                     allowClear
-                    aria-label="选择部门"
+                    aria-label="选择员工"
                     className="w-full"
-                    options={departmentOptions}
-                    placeholder="请选择部门"
+                    options={employeeOptions}
+                    placeholder="请选择员工"
                     showSearch
                   />
                 )}
               />
             </Form.Item>
-            <Controller
-              control={control}
-              name="includeChildren"
-              render={({ field }) => (
-                <Checkbox
-                  checked={field.value}
-                  onChange={(event) => field.onChange(event.target.checked)}
-                >
-                  包含子部门
-                </Checkbox>
-              )}
-            />
-          </>
-        ) : null}
-        {audienceType === "employee" ? (
-          <Form.Item
-            help={errors.employeeId?.message ?? ""}
-            label="选择员工"
-            validateStatus={errors.employeeId ? "error" : ""}
-          >
-            <Controller
-              control={control}
-              name="employeeId"
-              render={({ field }) => (
-                <Select
-                  {...field}
-                  allowClear
-                  aria-label="选择员工"
-                  className="w-full"
-                  options={employeeOptions}
-                  placeholder="请选择员工"
-                  showSearch
-                />
-              )}
-            />
-          </Form.Item>
-        ) : null}
-        <Controller
-          control={control}
-          name="displayAnonymously"
-          render={({ field }) => (
-            <Checkbox
-              checked={field.value}
-              onChange={(event) => field.onChange(event.target.checked)}
-            >
-              匿名展示发起人
-            </Checkbox>
-          )}
-        />
-        <Form.Item label="附件（可选）">
-          <Upload
-            beforeUpload={() => false}
-            fileList={[]}
-            multiple
-            onChange={({ fileList }) => {
-              const files = fileList
-                .map((item) => item.originFileObj)
-                .filter(
-                  (file): file is NonNullable<typeof file> =>
-                    file !== undefined,
-                );
-              void handleFiles(files);
-            }}
-            showUploadList={false}
-          >
-            <Button icon={<UploadOutlined />} loading={uploading}>
-              选择并上传附件
-            </Button>
-          </Upload>
-          {attachments.length > 0 ? (
-            <List
-              className="mt-2"
-              dataSource={attachments}
-              locale={{ emptyText: "暂无附件" }}
-              renderItem={(item) => (
-                <List.Item
-                  actions={[
-                    <Button
-                      aria-label={`移除附件 ${item.fileName}`}
-                      danger
-                      icon={<DeleteOutlined />}
-                      key="remove"
-                      onClick={() =>
-                        setAttachments((prev) =>
-                          prev.filter(
-                            (it) => it.attachmentId !== item.attachmentId,
-                          ),
-                        )
-                      }
-                      size="small"
-                      type="text"
-                    />,
-                  ]}
-                >
-                  <Typography.Text className="inline-flex items-center gap-2">
-                    <PaperClipOutlined />
-                    {item.fileName}
-                  </Typography.Text>
-                </List.Item>
-              )}
-              size="small"
-            />
           ) : null}
-        </Form.Item>
+          <Form.Item label="附件（可选）">
+            <Upload
+              beforeUpload={() => false}
+              fileList={[]}
+              multiple
+              onChange={({ fileList }) => {
+                const files = fileList
+                  .map((item) => item.originFileObj)
+                  .filter(
+                    (file): file is NonNullable<typeof file> =>
+                      file !== undefined,
+                  );
+                void handleFiles(files);
+              }}
+              showUploadList={false}
+            >
+              <Button icon={<UploadOutlined />} loading={uploading}>
+                选择并上传附件
+              </Button>
+            </Upload>
+            {attachments.length > 0 ? (
+              <List
+                className="mt-2"
+                dataSource={attachments}
+                locale={{ emptyText: "暂无附件" }}
+                renderItem={(item) => (
+                  <List.Item
+                    actions={[
+                      <Button
+                        aria-label={`移除附件 ${item.fileName}`}
+                        danger
+                        icon={<DeleteOutlined />}
+                        key="remove"
+                        onClick={() =>
+                          setAttachments((prev) =>
+                            prev.filter(
+                              (it) => it.attachmentId !== item.attachmentId,
+                            ),
+                          )
+                        }
+                        size="small"
+                        type="text"
+                      />,
+                    ]}
+                  >
+                    <Typography.Text className="inline-flex items-center gap-2">
+                      <PaperClipOutlined />
+                      {item.fileName}
+                    </Typography.Text>
+                  </List.Item>
+                )}
+                size="small"
+              />
+            ) : null}
+          </Form.Item>
+          <Controller
+            control={control}
+            name="displayAnonymously"
+            render={({ field }) => (
+              <Checkbox
+                checked={field.value}
+                onChange={(event) => field.onChange(event.target.checked)}
+              >
+                匿名展示发起人
+              </Checkbox>
+            )}
+          />
+        </Form>
       </form>
     </Drawer>
   );

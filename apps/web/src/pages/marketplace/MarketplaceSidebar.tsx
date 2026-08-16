@@ -7,21 +7,20 @@ import {
   TrophyOutlined,
 } from "@ant-design/icons";
 import { Typography } from "antd";
+import { useState } from "react";
+
+import { MarketplaceGuideModal } from "./MarketplaceGuideModal";
+import {
+  marketplaceGuideItems,
+  type MarketplaceGuideItem,
+} from "./marketplaceGuide";
 
 const { Title } = Typography;
 
-const hotTags: string[] = []; // 热门标签，api待实现
-const recentUpdates: string[] = []; // 最近更新，api待实现
-const developerResources = [
-  { title: "如何快速找到合适的应用？", icon: "api" },
-  { title: "应用使用和权限说明", icon: "comment" },
-  { title: "如何申请发布应用？", icon: "experiment" },
-  { title: "常见问题解答", icon: "read" },
-] as const;
+const hotTags: string[] = []; // 热门标签，api 待实现
+const recentUpdates: string[] = []; // 最近更新，api 待实现
 
-type DeveloperResource = (typeof developerResources)[number];
-
-const resourceIcons: Record<DeveloperResource["icon"], React.ReactNode> = {
+const resourceIcons: Record<MarketplaceGuideItem["icon"], React.ReactNode> = {
   api: <ApiOutlined aria-hidden="true" className="text-[#1677ff]" />,
   comment: <CommentOutlined aria-hidden="true" className="text-[#52c41a]" />,
   experiment: (
@@ -32,6 +31,12 @@ const resourceIcons: Record<DeveloperResource["icon"], React.ReactNode> = {
 
 /** 市场右侧栏：热门标签、最近更新、使用指南。 */
 export function MarketplaceSidebar() {
+  const [openGuideKey, setOpenGuideKey] = useState<
+    MarketplaceGuideItem["key"] | null
+  >(null);
+  const selectedGuide =
+    marketplaceGuideItems.find((item) => item.key === openGuideKey) ?? null;
+
   return (
     <aside aria-label="市场资源" className="space-y-4">
       <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
@@ -80,20 +85,30 @@ export function MarketplaceSidebar() {
           使用指南
         </Title>
         <ul className="m-0 p-2">
-          {developerResources.map((resource) => (
-            <li key={resource.title}>
-              <div className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm text-[#1f1f1f] transition-colors hover:bg-[#f0f7ff]">
+          {marketplaceGuideItems.map((resource) => (
+            <li key={resource.key}>
+              <button
+                aria-haspopup="dialog"
+                className="flex w-full items-center gap-3 rounded-md border-0 bg-transparent px-2 py-2 text-left text-sm text-[#1f1f1f] transition-colors hover:bg-[#f0f7ff]"
+                onClick={() => setOpenGuideKey(resource.key)}
+                style={{ fontFamily: "inherit" }}
+                type="button"
+              >
                 {resourceIcons[resource.icon]}
                 <span className="flex-1 !text-xs">{resource.title}</span>
                 <RightOutlined
                   aria-hidden="true"
                   className="shrink-0 text-xs text-[#8c8c8c]"
                 />
-              </div>
+              </button>
             </li>
           ))}
         </ul>
       </section>
+      <MarketplaceGuideModal
+        item={selectedGuide}
+        onClose={() => setOpenGuideKey(null)}
+      />
     </aside>
   );
 }

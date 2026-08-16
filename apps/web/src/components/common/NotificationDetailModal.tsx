@@ -3,7 +3,7 @@ import { Avatar, Button, Modal, Tag, Typography } from "antd";
 import { Link } from "react-router-dom";
 
 import type { NotificationRecord } from "../../modules/notification/notification.client";
-import { resolveNotificationMeta } from "./notificationMeta";
+import { resolveNotificationMeta } from "../../modules/notification/notificationMeta";
 
 const { Paragraph, Text, Title } = Typography;
 

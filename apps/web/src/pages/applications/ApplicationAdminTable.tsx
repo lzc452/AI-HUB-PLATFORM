@@ -5,7 +5,8 @@ import {
   GlobalOutlined,
   MoreOutlined,
 } from "@ant-design/icons";
-import { Button, Dropdown, Skeleton, Tooltip } from "antd";
+import { Button, Dropdown, Skeleton, Table, Tag, Tooltip } from "antd";
+import type { TableProps } from "antd";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { DeliveryChannel } from "@ai-hub/contracts";
@@ -60,50 +61,39 @@ const channelMeta: Record<
 
 const statusMeta: Record<
   AdminApplicationStatus,
-  { label: string; color: string; background: string; border: string }
+  { label: string; color: string; background: string }
 > = {
   published: {
     background: "#e6f4ff",
-    border: "#91caff",
     color: "#0958d9",
     label: "已上架",
   },
   in_review: {
     background: "#fff7e6",
-    border: "#ffd591",
     color: "#ad6800",
     label: "审核中",
   },
   approved: {
     background: "#f6ffed",
-    border: "#b7eb8f",
     color: "#237804",
     label: "已通过",
   },
   draft: {
     background: "#f5f5f5",
-    border: "#d9d9d9",
     color: "#595959",
     label: "草稿",
   },
   withdrawn: {
     background: "#fff1f0",
-    border: "#ffa39e",
     color: "#cf1322",
     label: "已下架",
   },
   archived: {
     background: "#f5f5f5",
-    border: "#d9d9d9",
     color: "#8c8c8c",
     label: "已归档",
   },
 };
-
-const columnHeaderClass =
-  "!px-3 !py-2 !text-xs !font-medium !text-[#595959] !bg-[#fafafa]";
-
-const cellClass = "!px-3 !py-3 !align-middle";
 
 /**
  * 应用管理数据表：
@@ -135,127 +125,129 @@ export function ApplicationAdminTable({
   if (rows.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-[#d9d9d9] bg-white px-4 py-10 text-center text-sm text-[#8c8c8c]">
-        没有符合条件的应用，试试调整筛选条件。
+        没有符合条件的应用，请调整筛选条件。
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#f0f0f0] bg-white">
-      <table
+    <div className="rounded-2xl border border-[#f0f0f0] bg-white">
+      <Table<AdminApplicationRow>
         aria-label="应用管理列表"
-        className="min-w-full table-fixed border-separate border-spacing-0 text-sm"
-      >
-        <colgroup>
-          <col className="w-[24%]" />
-          <col className="w-[10%]" />
-          <col className="w-[10%]" />
-          <col className="w-[14%]" />
-          <col className="w-[14%]" />
-          <col className="w-[12%]" />
-          <col className="w-[16%]" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th className={`${columnHeaderClass} !text-left`}>应用名称</th>
-            <th className={`${columnHeaderClass} !text-left`}>状态</th>
-            <th className={`${columnHeaderClass} !text-left`}>当前版本</th>
-            <th className={`${columnHeaderClass} !text-left`}>
-              负责人 / 所属部门
-            </th>
-            <th className={`${columnHeaderClass} !text-left`}>交付渠道</th>
-            <th className={`${columnHeaderClass} !text-left`}>最近更新</th>
-            <th className={`${columnHeaderClass} !text-left`}>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr
-              className={`group transition-colors duration-150 hover:bg-[#f5f9ff] ${
-                index % 2 === 0 ? "bg-white" : "bg-[#fcfcfd]"
-              }`}
-              key={row.applicationId}
-            >
-              <td className={`${cellClass} !text-left`}>
-                <div className="flex items-start gap-3">
-                  <div
-                    aria-hidden="true"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
-                    style={{ background: iconGradient(row.applicationId) }}
-                  >
-                    {row.name.slice(0, 1)}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <Link
-                      aria-label={`查看应用 ${row.name}`}
-                      className="block truncate text-sm font-medium !text-[#1f1f1f] transition-colors hover:!text-[#1677ff]"
-                      to={`/applications/${row.applicationId}`}
-                    >
-                      {row.name}
-                    </Link>
-                    <p className="m-0 line-clamp-2 text-xs !text-[#8c8c8c]">
-                      {row.summary}
-                    </p>
-                  </div>
-                </div>
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <StatusTag status={row.status} />
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <span className="font-mono text-xs !text-[#1f1f1f]">
-                  {row.currentVersion}
-                </span>
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <div className="flex flex-col text-xs">
-                  <span className="!text-[#1f1f1f]">{row.ownerName}</span>
-                  <span className="!text-[#8c8c8c]">
-                    / {row.departmentName}
-                  </span>
-                </div>
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <ChannelChips channels={row.deliveryChannels} />
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <span className="text-xs !text-[#595959]">
-                  {formatRelativeTime(row.updatedAt)}
-                </span>
-              </td>
-              <td className={`${cellClass} !text-left`}>
-                <RowActions onAction={onAction} row={row} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        columns={buildColumns(onAction)}
+        dataSource={[...rows]}
+        pagination={false}
+        rowKey="applicationId"
+        scroll={{ x: 960 }}
+        size="middle"
+      />
     </div>
   );
+}
+
+function buildColumns(
+  onAction?: (action: ApplicationRowAction, row: AdminApplicationRow) => void,
+): NonNullable<TableProps<AdminApplicationRow>["columns"]> {
+  return [
+    {
+      title: "应用名称",
+      key: "name",
+      width: "24%",
+      render: (_, row) => (
+        <div className="flex items-start gap-3">
+          <div
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
+            style={{ background: iconGradient(row.applicationId) }}
+          >
+            {row.name.slice(0, 1)}
+          </div>
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <Link
+              aria-label={`查看应用 ${row.name}`}
+              className="block truncate text-sm font-medium !text-[#1f1f1f] transition-colors hover:!text-[#1677ff]"
+              to={`/applications/${row.applicationId}`}
+            >
+              {row.name}
+            </Link>
+            <p className="m-0 line-clamp-2 text-xs !text-[#8c8c8c]">
+              {row.summary}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "状态",
+      key: "status",
+      width: "10%",
+      render: (_, row) => <StatusTag status={row.status} />,
+    },
+    {
+      title: "当前版本",
+      dataIndex: "currentVersion",
+      key: "currentVersion",
+      width: "10%",
+      render: (value: string) => (
+        <span className="font-mono text-xs !text-[#1f1f1f]">{value}</span>
+      ),
+    },
+    {
+      title: "负责人 / 所属部门",
+      key: "owner",
+      width: "14%",
+      render: (_, row) => (
+        <div className="flex flex-col text-xs">
+          <span className="!text-[#1f1f1f]">{row.ownerName}</span>
+          <span className="!text-[#8c8c8c]">/ {row.departmentName}</span>
+        </div>
+      ),
+    },
+    {
+      title: "交付渠道",
+      key: "channels",
+      width: "14%",
+      render: (_, row) => <ChannelTags channels={row.deliveryChannels} />,
+    },
+    {
+      title: "最近更新",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      width: "12%",
+      render: (value: string) => (
+        <span className="text-xs !text-[#595959]">
+          {formatRelativeTime(value)}
+        </span>
+      ),
+    },
+    {
+      title: "操作",
+      key: "actions",
+      width: "16%",
+      render: (_, row) => <RowActions onAction={onAction} row={row} />,
+    },
+  ];
 }
 
 function StatusTag({ status }: { status: AdminApplicationStatus }) {
   const meta = statusMeta[status];
   return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium"
-      style={{
-        background: meta.background,
-        borderColor: meta.border,
-        color: meta.color,
-      }}
+    <Tag
+      bordered={false}
+      className="!m-0"
+      style={{ background: meta.background, color: meta.color }}
     >
       <span
         aria-hidden="true"
-        className="inline-block h-1.5 w-1.5 rounded-full"
+        className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
         style={{ background: meta.color }}
       />
       {meta.label}
-    </span>
+    </Tag>
   );
 }
 
-function ChannelChips({ channels }: { channels: readonly DeliveryChannel[] }) {
+function ChannelTags({ channels }: { channels: readonly DeliveryChannel[] }) {
   if (channels.length === 0) {
     return <span className="text-xs !text-[#bfbfbf]">未配置</span>;
   }
@@ -265,16 +257,17 @@ function ChannelChips({ channels }: { channels: readonly DeliveryChannel[] }) {
         const meta = channelMeta[channel];
         return (
           <Tooltip key={channel} title={meta.label}>
-            <span
+            <Tag
               aria-label={meta.label}
-              className="inline-flex items-center gap-1 rounded-md border border-[#f0f0f0] bg-white px-1.5 py-0.5 text-[11px]"
+              bordered
+              className="!m-0 inline-flex items-center gap-1"
               style={{ color: meta.color }}
             >
               <span aria-hidden="true" className="text-xs">
                 {meta.icon}
               </span>
-              <span>{meta.label}</span>
-            </span>
+              {meta.label}
+            </Tag>
           </Tooltip>
         );
       })}
@@ -416,12 +409,7 @@ function RowActions({
         label="版本"
         onClick={handle("version")}
       />
-      <Dropdown
-        menu={{
-          items: moreItems,
-        }}
-        trigger={["click"]}
-      >
+      <Dropdown menu={{ items: moreItems }} trigger={["click"]}>
         <Button
           aria-label={`更多操作 ${row.name}`}
           icon={<MoreOutlined aria-hidden="true" />}
@@ -445,18 +433,15 @@ function ActionLink({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
       aria-label={ariaLabel}
-      className={`rounded px-1.5 py-0.5 text-xs transition-colors duration-150 ${
-        danger
-          ? "!text-[#cf1322] hover:bg-[#fff1f0]"
-          : "!text-[#1677ff] hover:bg-[#e6f4ff]"
-      }`}
+      danger={danger}
       onClick={onClick}
-      type="button"
+      size="small"
+      type="link"
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
