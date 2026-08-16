@@ -1,4 +1,4 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import type { ActorContext, NotificationPayload } from "@ai-hub/contracts";
 import type { DingTalkNotificationPort } from "./dingtalk.port.js";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 import type {
@@ -22,6 +22,7 @@ export class NotificationService {
       aggregateId: string;
       message: string;
       metadata?: Readonly<Record<string, string>>;
+      payload?: NotificationPayload;
     },
   ) {
     await this.assertAllowed(actor, "create");
@@ -38,6 +39,10 @@ export class NotificationService {
           aggregateId: input.aggregateId,
           idempotencyKey,
           message: input.message,
+          payload: input.payload ?? {
+            title: input.message,
+            body: input.message,
+          },
           readAt: null,
         });
         await repository.emitOutbox?.({

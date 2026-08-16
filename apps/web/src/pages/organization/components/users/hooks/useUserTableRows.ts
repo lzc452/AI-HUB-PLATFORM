@@ -3,7 +3,15 @@ import type { UseQueryResult } from "@tanstack/react-query";
 
 import type { DepartmentSummary, EmployeeSummary } from "@ai-hub/contracts";
 
-import { ROLE_OPTIONS, type UserTableRow } from "../../constants";
+import type { UserTableRow } from "../../constants";
+
+function formatLastLogin(value: string | null | undefined): string {
+  if (!value) return "—";
+  return value
+    .replace("T", " ")
+    .replace(/\.\d{3}Z$/, "")
+    .slice(0, 16);
+}
 
 /**
  * 纯派生 hook：把 employees + departments 两个查询收敛为表格行。
@@ -21,7 +29,7 @@ export function useUserTableRows(
       departmentMap.set(dept.departmentId, dept.name),
     );
 
-    return employees.data.map((employee, index) => {
+    return employees.data.map((employee) => {
       const department = departments.data?.find(
         (dept) => dept.departmentId === employee.primaryDepartmentId,
       );
@@ -30,18 +38,12 @@ export function useUserTableRows(
         employee.primaryDepartmentId;
       const sourceText = department?.source === "dingtalk" ? "钉钉" : "本地";
       const sourceColor = department?.source === "dingtalk" ? "blue" : "orange";
-      // 后端暂未返回角色与最近登录时间，使用确定性占位数据以保持视觉还原。
-      const role = ROLE_OPTIONS[index % ROLE_OPTIONS.length] ?? "普通用户";
-      const day = String((index % 30) + 1).padStart(2, "0");
-      const hour = String(8 + (index % 14)).padStart(2, "0");
-      const minute = String((index * 7) % 60).padStart(2, "0");
-      const lastLogin = `2025-06-${day} ${hour}:${minute}`;
 
       return {
         ...employee,
         departmentName,
-        lastLogin,
-        role,
+        lastLogin: formatLastLogin(employee.lastLoginAt),
+        roleNames: employee.roleNames ?? [],
         sourceColor,
         sourceText,
       };

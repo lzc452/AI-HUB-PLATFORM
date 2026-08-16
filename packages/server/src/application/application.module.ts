@@ -15,7 +15,10 @@ import {
 } from "./application.tokens.js";
 import { ArtifactPipeline } from "./storage.pipeline.js";
 import { DiskObjectStorage } from "./storage.disk.js";
-import type { ArtifactVerificationPort } from "./storage.port.js";
+import type {
+  ArtifactVerificationPort,
+  ReadableObjectStoragePort,
+} from "./storage.port.js";
 import { AnalyticsEventService } from "../analytics/analytics.service.js";
 import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
@@ -63,9 +66,12 @@ function createUploadProviders(
   artifactVerifier: ArtifactVerificationPort,
   storageDirectory: string | undefined,
   maxSizeBytes: number,
+  configuredStorage?: ReadableObjectStoragePort,
 ): Provider[] {
-  if (storageDirectory === undefined) return [];
-  const storage = new DiskObjectStorage(storageDirectory);
+  if (storageDirectory === undefined && configuredStorage === undefined)
+    return [];
+  const storage =
+    configuredStorage ?? new DiskObjectStorage(storageDirectory as string);
   const pipeline =
     artifactVerifier instanceof ArtifactPipeline
       ? artifactVerifier
@@ -84,8 +90,11 @@ function createUploadProviders(
 
 function createUploadControllers(
   storageDirectory: string | undefined,
+  configuredStorage?: ReadableObjectStoragePort,
 ): (typeof ArtifactUploadController)[] {
-  return storageDirectory === undefined ? [] : [ArtifactUploadController];
+  return storageDirectory === undefined && configuredStorage === undefined
+    ? []
+    : [ArtifactUploadController];
 }
 
 @Module({})
@@ -110,13 +119,14 @@ export class ApplicationModule {
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
     storageDirectory?: string,
     artifactMaxSizeBytes: number = DEFAULT_ARTIFACT_MAX_SIZE_BYTES,
+    artifactStorage?: ReadableObjectStoragePort,
   ): DynamicModule {
     return {
       module: ApplicationModule,
       imports: [IdentityModule.register(database)],
       controllers: [
         ApplicationController,
-        ...createUploadControllers(storageDirectory),
+        ...createUploadControllers(storageDirectory, artifactStorage),
       ],
       providers: [
         createRepositoryProvider(database),
@@ -125,6 +135,7 @@ export class ApplicationModule {
           artifactVerifier,
           storageDirectory,
           artifactMaxSizeBytes,
+          artifactStorage,
         ),
       ],
       exports: [APPLICATION_SERVICE],

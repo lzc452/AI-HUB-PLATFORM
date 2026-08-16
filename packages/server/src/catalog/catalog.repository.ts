@@ -27,6 +27,7 @@ type CatalogRow = {
   deprecatedReason: string | null;
   replacementApplicationId: string | null;
   ownerEmployeeId: string;
+  maintainerEmployeeId: string;
   maintainerName: string | null;
   ratingCount: number;
 };
@@ -36,8 +37,14 @@ export class KyselyCatalogRepository implements CatalogRepository {
 
   async listVisible(
     input: CatalogSearchInput,
-    applicationId?: string,
   ): Promise<readonly CatalogEntry[]> {
+    return (await this.listVisiblePage(input)).items;
+  }
+
+  async listVisiblePage(
+    input: CatalogSearchInput,
+    applicationId?: string,
+  ): Promise<import("./catalog.types.js").CatalogListResult> {
     const departmentIds = input.actor.departmentIds;
     let query = this.db
       .selectFrom("application_catalog_metadata as metadata")
@@ -57,6 +64,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
         "application.summary as summary",
         "application.department_id as departmentId",
         "application.owner_employee_id as ownerEmployeeId",
+        "application.maintainer_employee_id as maintainerEmployeeId",
         "maintainer.display_name as maintainerName",
         "metadata.category_id as categoryId",
         "application.current_version_id as currentVersionId",
@@ -152,20 +160,35 @@ export class KyselyCatalogRepository implements CatalogRepository {
     } else {
       query = query.orderBy("application.updated_at", "desc");
     }
+    // 主排序并列时以应用 ID 收尾，保证分页跨页稳定、不重复、不遗漏。
+    query = query.orderBy("application.application_id", "asc");
 
-    const rows = await query.execute();
-    return Promise.all(
-      rows.map((row) =>
-        this.mapEntry(row as unknown as CatalogRow, input.actor),
-      ),
+    const countRow = await this.db
+      .selectFrom(query.as("visible_catalog"))
+      .select(sql<number>`count(*)::int`.as("count"))
+      .executeTakeFirst();
+    const total = Number(countRow?.count ?? 0);
+    const rows = await query
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize)
+      .execute();
+    const entries = await this.mapEntries(
+      rows as unknown as CatalogRow[],
+      input.actor,
     );
+    return {
+      items: entries,
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+    };
   }
 
   async findVisible(
     actor: ActorContext,
     applicationId: string,
   ): Promise<CatalogEntry | null> {
-    const rows = await this.listVisible(
+    const result = await this.listVisiblePage(
       {
         actor,
         sort: "recommended",
@@ -174,91 +197,110 @@ export class KyselyCatalogRepository implements CatalogRepository {
       },
       applicationId,
     );
-    return rows[0] ?? null;
+    return result.items[0] ?? null;
   }
 
-  private async mapEntry(
-    row: CatalogRow,
+  private async mapEntries(
+    rows: readonly CatalogRow[],
     actor: ActorContext,
-  ): Promise<CatalogEntry> {
+  ): Promise<readonly CatalogEntry[]> {
+    if (rows.length === 0) return [];
+    const applicationIds = rows.map((row) => row.applicationId);
     const [tags, labels, deliveries, attachments] = await Promise.all([
       this.db
         .selectFrom("application_tag_links as tag_link")
         .select("tag_link.tag_id")
-        .where("tag_link.application_id", "=", row.applicationId)
+        .select("tag_link.application_id")
+        .where("tag_link.application_id", "in", applicationIds)
         .orderBy("tag_link.tag_id")
         .execute(),
       this.db
         .selectFrom("application_catalog_labels")
-        .select("label")
-        .where("application_id", "=", row.applicationId)
+        .select(["application_id", "label"])
+        .where("application_id", "in", applicationIds)
         .orderBy("label")
         .execute(),
       this.db
         .selectFrom("application_deliveries")
-        .select("channel")
-        .where("application_id", "=", row.applicationId)
+        .select(["application_id", "channel"])
+        .where("application_id", "in", applicationIds)
         .where("enabled", "=", true)
         .orderBy("channel")
         .execute(),
       this.db
         .selectFrom("application_assets")
-        .select(["name", "mime_type", "size_bytes"])
-        .where("application_id", "=", row.applicationId)
+        .select(["application_id", "name", "mime_type", "size_bytes"])
+        .where("application_id", "in", applicationIds)
         .where("asset_type", "=", "attachment")
         .where("scan_status", "=", "passed")
         .orderBy("sort_order")
         .execute(),
     ]);
-    return {
-      applicationId: row.applicationId,
-      name: row.name,
-      summary: row.summary,
-      departmentId: row.departmentId,
-      categoryId: row.categoryId,
-      tagIds: tags.map((tag) => tag.tag_id),
-      trustLabels: labels.map(
-        (label) => label.label as CatalogEntry["trustLabels"][number],
-      ),
-      currentVersionId: row.currentVersionId ?? "",
-      publishedAt: row.publishedAt,
-      deliveryChannels: deliveries.map((delivery) => delivery.channel),
-      likeCount: row.likeCount,
-      ratingAverage: row.ratingAverage,
-      ratingCount: row.ratingCount,
-      maintainers: row.maintainerName === null ? [] : [row.maintainerName],
-      attachments: attachments.map((attachment) => ({
-        name: attachment.name,
-        type: attachment.mime_type.includes("pdf")
-          ? "pdf"
-          : attachment.mime_type.includes("word")
-            ? "docx"
-            : attachment.name.toLowerCase().endsWith(".doc")
-              ? "doc"
-              : "other",
-        size: formatBytes(attachment.size_bytes),
-      })),
-      capabilities: {
-        canResolveDelivery: deliveries.length > 0,
-        canLike: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
-        canRate: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
-        canComment: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
-        canSubmitFeedback: hasPermission(
-          actor,
-          PERMISSIONS.INTERACTION_INTERACT,
+    const tagsByApp = groupBy(tags, (item) => item.application_id);
+    const labelsByApp = groupBy(labels, (item) => item.application_id);
+    const deliveriesByApp = groupBy(deliveries, (item) => item.application_id);
+    const attachmentsByApp = groupBy(
+      attachments,
+      (item) => item.application_id,
+    );
+    return rows.map((row) => {
+      const appTags = tagsByApp.get(row.applicationId) ?? [];
+      const appLabels = labelsByApp.get(row.applicationId) ?? [];
+      const appDeliveries = deliveriesByApp.get(row.applicationId) ?? [];
+      const appAttachments = attachmentsByApp.get(row.applicationId) ?? [];
+      return {
+        applicationId: row.applicationId,
+        name: row.name,
+        summary: row.summary,
+        departmentId: row.departmentId,
+        categoryId: row.categoryId,
+        tagIds: appTags.map((tag) => tag.tag_id),
+        trustLabels: appLabels.map(
+          (label) => label.label as CatalogEntry["trustLabels"][number],
         ),
-        canModerateComments: hasPermission(
-          actor,
-          PERMISSIONS.INTERACTION_MODERATE,
-        ),
-        canEditRisk:
-          row.ownerEmployeeId === actor.employeeId ||
-          hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE),
-      },
-      healthStatus: row.healthStatus,
-      deprecatedReason: row.deprecatedReason,
-      replacementApplicationId: row.replacementApplicationId,
-    };
+        currentVersionId: row.currentVersionId ?? "",
+        publishedAt: row.publishedAt,
+        deliveryChannels: appDeliveries.map((delivery) => delivery.channel),
+        likeCount: row.likeCount,
+        ratingAverage: row.ratingAverage,
+        ratingCount: row.ratingCount,
+        maintainers: row.maintainerName === null ? [] : [row.maintainerName],
+        attachments: appAttachments.map((attachment) => ({
+          name: attachment.name,
+          type: attachment.mime_type.includes("pdf")
+            ? "pdf"
+            : attachment.mime_type.includes("word")
+              ? "docx"
+              : attachment.name.toLowerCase().endsWith(".doc")
+                ? "doc"
+                : "other",
+          size: formatBytes(attachment.size_bytes),
+        })),
+        capabilities: {
+          canResolveDelivery: appDeliveries.length > 0,
+          canLike: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+          canRate: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+          canComment: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
+          canSubmitFeedback: hasPermission(
+            actor,
+            PERMISSIONS.INTERACTION_INTERACT,
+          ),
+          canModerateComments: hasPermission(
+            actor,
+            PERMISSIONS.INTERACTION_MODERATE,
+          ),
+          canEditRisk:
+            row.ownerEmployeeId === actor.employeeId ||
+            hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE),
+          canReplyOfficial:
+            row.ownerEmployeeId === actor.employeeId ||
+            row.maintainerEmployeeId === actor.employeeId,
+        },
+        healthStatus: row.healthStatus,
+        deprecatedReason: row.deprecatedReason,
+        replacementApplicationId: row.replacementApplicationId,
+      } satisfies CatalogEntry;
+    });
   }
 
   async recordDeliveryAction(input: {
@@ -350,4 +392,15 @@ function formatBytes(value: number): string {
   if (value < 1024) return `${value} B`;
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function groupBy<T>(items: readonly T[], keyOf: (item: T) => string) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    const group = groups.get(key);
+    if (group === undefined) groups.set(key, [item]);
+    else group.push(item);
+  }
+  return groups;
 }

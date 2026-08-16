@@ -1,5 +1,6 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy.js";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 import type {
   FeedbackRecord,
   FeedbackRepository,
@@ -11,6 +12,7 @@ export class FeedbackService {
   constructor(
     private readonly repository: FeedbackRepository,
     private readonly visibility: CatalogVisibilityPort,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
   async createFeedback(
@@ -48,6 +50,14 @@ export class FeedbackService {
         applicationId: input.applicationId,
         eventType: "feedback.created",
       });
+      await this.analyticsEvents?.record(actor, {
+        eventName: "feedback_submitted",
+        aggregateType: "feedback",
+        aggregateId: record.feedbackId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `feedback-submitted:${record.feedbackId}`,
+        metadata: { source: "feedback.create" },
+      });
       return record;
     });
   }
@@ -61,6 +71,23 @@ export class FeedbackService {
       applicationId,
       actor.employeeId,
     );
+  }
+
+  /** 所有者/维护者查看该应用收到的全部反馈。 */
+  async listApplicationFeedback(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<readonly FeedbackRecord[]> {
+    await this.visibility.requireVisible(actor, applicationId);
+    const application = await this.repository.findApplication(applicationId);
+    if (application === null) throw new Error("APPLICATION_NOT_FOUND");
+    if (
+      application.ownerEmployeeId !== actor.employeeId &&
+      application.maintainerEmployeeId !== actor.employeeId
+    ) {
+      throw new Error("OFFICIAL_FEEDBACK_VIEW_FORBIDDEN");
+    }
+    return this.repository.listByApplication(applicationId);
   }
 
   async updateFeedbackStatus(
@@ -112,6 +139,16 @@ export class FeedbackService {
         applicationId: input.applicationId,
         eventType: "feedback.status.updated",
       });
+      if (terminal) {
+        await this.analyticsEvents?.record(actor, {
+          eventName: "feedback_resolved",
+          aggregateType: "feedback",
+          aggregateId: input.feedbackId,
+          occurredAt: new Date().toISOString(),
+          idempotencyKey: `feedback-resolved:${input.feedbackId}:${input.status}`,
+          metadata: { source: "feedback.status.updated" },
+        });
+      }
       return updated;
     });
   }

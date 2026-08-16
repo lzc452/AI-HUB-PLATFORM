@@ -4,11 +4,14 @@ import { useMemo, useState } from "react";
 
 import { aiHubTheme } from "@ai-hub/ui";
 import {
+  createAnalyticsExport,
   DASHBOARD_PERMISSIONS,
+  type AnalyticsDateRange,
   type DashboardKey,
 } from "../../modules/analytics/analytics.client";
 import { hasPermission } from "../../modules/auth/roles";
 import { useAuth } from "../../modules/auth/useAuth";
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import { DashboardCard } from "./DashboardCard";
 import { PlatformOverviewDashboard } from "./PlatformOverviewDashboard";
 
@@ -75,6 +78,15 @@ export default function AnalyticsDashboardPage() {
   const { actor } = useAuth();
   const [activeTab, setActiveTab] = useState("platform");
   const [timeFilter, setTimeFilter] = useState("30d");
+  const [isExporting, setIsExporting] = useState(false);
+
+  const range = useMemo<AnalyticsDateRange>(() => {
+    const days = Number.parseInt(timeFilter.replace("d", ""), 10);
+    const to = new Date();
+    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
+    const format = (value: Date) => value.toISOString().slice(0, 10);
+    return { from: format(from), to: format(to) };
+  }, [timeFilter]);
 
   const visibleTabs = useMemo(
     () =>
@@ -89,12 +101,13 @@ export default function AnalyticsDashboardPage() {
       visibleTabs.map((tab) => ({
         children:
           tab.dashboardKey === "platform" ? (
-            <PlatformOverviewDashboard />
+            <PlatformOverviewDashboard range={range} />
           ) : (
             <section aria-label={tab.label} className="pt-4">
               <DashboardCard
                 dashboardKey={tab.dashboardKey}
                 description={tab.description}
+                range={range}
                 title={tab.label}
               />
             </section>
@@ -102,8 +115,44 @@ export default function AnalyticsDashboardPage() {
         key: tab.key,
         label: tab.label,
       })),
-    [visibleTabs],
+    [range, visibleTabs],
   );
+
+  const handleExport = async () => {
+    const target = (
+      visibleTabs.find((tab) => tab.key === activeTab) ?? visibleTabs[0]
+    )?.dashboardKey;
+    if (!target) return;
+    setIsExporting(true);
+    try {
+      const result = await createAnalyticsExport(target, range);
+      const rows = [
+        ["aggregateId", "occurredAt", "value", "requester"],
+        ...result.rows.map((row) => [
+          row.aggregateId,
+          row.occurredAt,
+          String(row.value),
+          row.requester ?? "",
+        ]),
+      ];
+      const csv = rows
+        .map((row) => row.map((value) => JSON.stringify(value)).join(","))
+        .join("\n");
+      const url = URL.createObjectURL(
+        new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      );
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `analytics-${target}-${range.from}-${range.to}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      showSuccessMessage("分析数据已导出");
+    } catch (error) {
+      showErrorMessage(error, "分析数据导出失败");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <ConfigProvider theme={dashboardTheme}>
@@ -131,7 +180,11 @@ export default function AnalyticsDashboardPage() {
                     {option.label}
                   </Button>
                 ))}
-                <Button icon={<DownloadOutlined aria-hidden="true" />}>
+                <Button
+                  icon={<DownloadOutlined aria-hidden="true" />}
+                  loading={isExporting}
+                  onClick={handleExport}
+                >
                   导出
                 </Button>
               </div>

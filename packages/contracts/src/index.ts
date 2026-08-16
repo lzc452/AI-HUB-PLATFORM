@@ -63,6 +63,7 @@ export type {
 export type {
   NotificationDeliveryStatus,
   NotificationInput,
+  NotificationPayload,
 } from "./notification.js";
 export { behaviorEventNames, validateBehaviorEventInput } from "./analytics.js";
 export type {

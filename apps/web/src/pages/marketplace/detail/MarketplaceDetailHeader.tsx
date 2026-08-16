@@ -26,6 +26,7 @@ export interface MarketplaceDetailHeaderProps {
   ratingDisabled: boolean;
   ratingPending: boolean;
   likePending: boolean;
+  myRating?: number;
 }
 
 /** 顶部 Header 区：图标 + 应用名 + 信任标签 + 元信息行 + 立即使用/收藏。 */
@@ -38,6 +39,7 @@ export function MarketplaceDetailHeader({
   resolving,
   ratingDisabled,
   ratingPending,
+  myRating = 0,
 }: MarketplaceDetailHeaderProps) {
   const departments = useDepartments();
   const departmentName = departments.data?.find(
@@ -166,7 +168,7 @@ export function MarketplaceDetailHeader({
             aria-label="为应用评分"
             disabled={ratingDisabled}
             onChange={(stars) => onRate(stars)}
-            {...(ratingPending ? { value: 0 } : {})}
+            value={ratingPending ? 0 : myRating}
           />
         </span>
       </section>

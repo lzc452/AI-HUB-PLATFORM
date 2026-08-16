@@ -9,7 +9,7 @@ import {
   Upload,
   message,
 } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { UploadFile } from "antd/es/upload/interface";
 
 import {
@@ -19,6 +19,7 @@ import {
 import { getArtifactUploadErrorMessage } from "../../modules/application/application.errors";
 import {
   useArtifactUpload,
+  useArtifactUploadStatus,
   useCreateVersion,
 } from "../../modules/application/useApplication";
 
@@ -51,6 +52,30 @@ export function UploadVersionDrawer({
   const [processError, setProcessError] = useState<string | null>(null);
   const [form] = Form.useForm<VersionFormValues>();
   const busy = uploading || creating;
+  const statusUploadId =
+    uploadRecord !== null &&
+    (uploadRecord.uploadStatus === "verifying" ||
+      uploadRecord.scanStatus === "pending")
+      ? uploadRecord.uploadId
+      : undefined;
+  const uploadStatus = useArtifactUploadStatus(applicationId, statusUploadId);
+
+  useEffect(() => {
+    const next = uploadStatus.data;
+    if (next === undefined || next.uploadId !== uploadRecord?.uploadId) {
+      return;
+    }
+    setUploadRecord(next);
+    if (next.uploadStatus === "failed" || next.scanStatus === "failed") {
+      setProcessError(
+        `扫描失败：${getArtifactUploadErrorMessage(next.errorCode)}`,
+      );
+      return;
+    }
+    if (isVerifiedUpload(next)) {
+      setProcessError(null);
+    }
+  }, [uploadRecord?.uploadId, uploadStatus.data]);
 
   const reset = () => {
     setFileList([]);
@@ -128,7 +153,7 @@ export function UploadVersionDrawer({
         changelog: values.changelog.trim(),
         artifactKey: uploadRecord.objectKey,
         artifactSha256: uploadRecord.sha256,
-        artifactSignature: "",
+        artifactSignature: uploadRecord.signature ?? "",
       });
       reset();
       onClose();
@@ -227,6 +252,7 @@ export function UploadVersionDrawer({
               <Input.TextArea placeholder="描述本次版本的变更内容" rows={3} />
             </Form.Item>
             <Button
+              disabled={!isVerifiedUpload(uploadRecord)}
               loading={creating}
               onClick={() => void handleCreateVersion()}
               type="primary"

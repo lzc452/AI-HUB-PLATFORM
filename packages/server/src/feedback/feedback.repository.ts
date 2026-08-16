@@ -68,6 +68,18 @@ export class KyselyFeedbackRepository implements FeedbackRepository {
     return rows.map((row) => this.mapFeedback(row));
   }
 
+  async listByApplication(
+    applicationId: string,
+  ): Promise<readonly FeedbackRecord[]> {
+    const rows = await this.db
+      .selectFrom("application_feedback")
+      .selectAll()
+      .where("application_id", "=", applicationId)
+      .orderBy("created_at", "desc")
+      .execute();
+    return rows.map((row) => this.mapFeedback(row));
+  }
+
   async findFeedback(feedbackId: string): Promise<FeedbackRecord | null> {
     const row = await this.db
       .selectFrom("application_feedback")

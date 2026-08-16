@@ -50,6 +50,13 @@ export {
 } from "./system/security/replay-guard.js";
 export { KyselyReplayNonceRepository } from "./system/security/replay.repository.js";
 export {
+  AUDIT_EVENT_CATALOG,
+  type AuditEventType,
+} from "./system/security/audit.catalog.js";
+export { AuditExportWorker } from "./system/security/audit-export.worker.js";
+export { SECURITY_AUDIT_STORAGE } from "./system/security/security.tokens.js";
+export { KyselyAuditRepository } from "./system/security/audit.repository.js";
+export {
   createProductionSecurityMiddleware,
   type ProductionSecurityOptions,
 } from "./system/security/production.middleware.js";
@@ -116,11 +123,20 @@ export {
 } from "./application/application.tokens.js";
 export type {
   ArtifactVerificationPort,
+  ObjectStoragePort,
   ReadableObjectStoragePort,
+  SignatureSignerPort,
 } from "./application/storage.port.js";
 export { ArtifactPipeline } from "./application/storage.pipeline.js";
 export { MemoryObjectStorage } from "./application/storage.memory.js";
 export { DiskObjectStorage } from "./application/storage.disk.js";
+export { GarageObjectStorage } from "./application/storage.garage.js";
+export { ClamAvMalwareScanner } from "./application/scanner.clamav.js";
+export { Ed25519ArtifactSigner } from "./application/signature.ed25519.js";
+export {
+  ArtifactVerificationWorker,
+  type ArtifactVerificationWorkerOptions,
+} from "./application/artifact-verification.worker.js";
 export {
   createNoopSecurity,
   NoopMalwareScanner,

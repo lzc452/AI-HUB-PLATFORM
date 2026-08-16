@@ -201,6 +201,8 @@ export interface AuditFilterValue {
   module: string;
   /** 操作人，空字符串表示「全部」。 */
   operator: string;
+  /** 风险等级（low/medium/high），空字符串表示「全部」。 */
+  risk: string;
   /** 时间范围（设计图默认 2025-06-01 全天）。 */
   range: [Dayjs, Dayjs] | null;
   /** 搜索追踪 ID / 详情摘要。 */
@@ -212,6 +214,7 @@ export function createDefaultFilters(): AuditFilterValue {
     actionType: "",
     module: "",
     operator: "",
+    risk: "",
     range: [dayjs("2025-06-01 00:00"), dayjs("2025-06-01 23:59")],
     searchText: "",
   };
@@ -219,3 +222,11 @@ export function createDefaultFilters(): AuditFilterValue {
 
 /** Select「全部」选项：value 为空字符串即不过滤。 */
 export const ALL_FILTER_OPTION = { label: "全部", value: "" };
+
+/** 风险等级筛选选项（值对齐后端 risk 语义，high 覆盖 critical）。 */
+export const RISK_FILTER_OPTIONS = [
+  ALL_FILTER_OPTION,
+  { label: "低风险", value: "low" },
+  { label: "中风险", value: "medium" },
+  { label: "高风险", value: "high" },
+] as const;

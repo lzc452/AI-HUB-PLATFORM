@@ -35,6 +35,7 @@ import {
   type IdentityService,
   type ApplicationService,
   type ArtifactVerificationPort,
+  type ReadableObjectStoragePort,
 } from "@ai-hub/server";
 
 export interface ApiModuleTestOptions {
@@ -102,10 +103,11 @@ export class ApiModule {
         corpId: string;
         redirectUri: string;
       };
+      auditExportStorage?: ReadableObjectStoragePort;
     },
     storageDirectory?: string,
     artifactMaxSizeBytes?: number,
-    artifactStorage?: import("@ai-hub/server").DiskObjectStorage,
+    artifactStorage?: ReadableObjectStoragePort,
   ): DynamicModule {
     const database =
       typeof databaseOrUrl === "string"
@@ -121,12 +123,18 @@ export class ApiModule {
       ],
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
-        IdentityModule.register(database, identityOptions),
+        IdentityModule.register(database, {
+          ...identityOptions,
+          ...(artifactStorage === undefined
+            ? {}
+            : { auditExportStorage: artifactStorage }),
+        }),
         ApplicationModule.register(
           database,
           artifactVerification,
           storageDirectory,
           artifactMaxSizeBytes,
+          artifactStorage,
         ),
         CatalogModule.register(database, artifactStorage),
         InteractionModule.register(database),

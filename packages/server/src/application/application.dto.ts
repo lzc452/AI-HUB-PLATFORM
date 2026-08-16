@@ -451,6 +451,9 @@ export class ApplicationWorkspaceDto {
 
   @ApiProperty({ type: ReviewQueueDto, nullable: true })
   reviewQueue!: ReviewQueueDto | null;
+
+  @ApiProperty({ type: () => AssetDto, isArray: true })
+  assets!: AssetDto[];
 }
 
 /** 创建 artifact 上传会话请求。 */
@@ -493,9 +496,9 @@ export class ArtifactUploadDto {
   @ApiProperty({
     type: String,
     description: "上传状态",
-    enum: ["uploading", "completed", "failed"],
+    enum: ["uploading", "verifying", "completed", "failed"],
   })
-  uploadStatus!: "uploading" | "completed" | "failed";
+  uploadStatus!: "uploading" | "verifying" | "completed" | "failed";
 
   @ApiProperty({
     type: String,
@@ -513,6 +516,12 @@ export class ArtifactUploadDto {
 
   @ApiProperty({ type: String, nullable: true, description: "错误码" })
   errorCode!: string | null;
+
+  @ApiProperty({ type: String, nullable: true, description: "服务端签名" })
+  signature!: string | null;
+
+  @ApiProperty({ type: Number, description: "校验尝试次数" })
+  verificationAttempts!: number;
 
   @ApiProperty({ type: String, description: "过期时间（ISO 8601）" })
   expiresAt!: string;

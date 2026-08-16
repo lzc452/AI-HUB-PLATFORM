@@ -140,6 +140,19 @@ class TestApplicationRepository {
   }
 }
 
+type CasRepository = TestApplicationRepository & {
+  claimArtifactVerification: (input: {
+    expectedSha256: string;
+    requestedSignature?: string | null;
+    uploadId: string;
+  }) => Promise<ArtifactUploadRecord | null>;
+  emitOutbox: (input: unknown) => Promise<boolean>;
+  recordAudit: (input: unknown) => Promise<void>;
+  withTransaction: <T>(
+    operation: (repository: CasRepository) => Promise<T>,
+  ) => Promise<T>;
+};
+
 describe("artifact upload API", () => {
   let app: INestApplication;
   let storage: TestStorage;
@@ -191,6 +204,11 @@ describe("artifact upload API", () => {
     storage.objects.clear();
     storage.completionEvents.length = 0;
     storage.failDelete = false;
+    const casRepository = repository as Partial<CasRepository>;
+    delete casRepository.claimArtifactVerification;
+    delete casRepository.emitOutbox;
+    delete casRepository.recordAudit;
+    delete casRepository.withTransaction;
   });
 
   afterAll(async () => {
@@ -294,6 +312,71 @@ describe("artifact upload API", () => {
         `applications/app-1/artifacts/${created.body.uploadId}`,
       ),
     ).toEqual(content);
+  });
+
+  it("uses an atomic CAS claim so concurrent complete requests yield one success and one conflict", async () => {
+    const content = Buffer.from("artifact");
+    const created = await createUpload(content.byteLength).expect(201);
+    await request(app.getHttpServer())
+      .put(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/content`,
+      )
+      .set(ownerHeaders)
+      .set("content-type", "application/octet-stream")
+      .send(content)
+      .expect(200);
+
+    const casRepository = repository as CasRepository;
+    casRepository.withTransaction = async (operation) =>
+      operation(casRepository);
+    casRepository.claimArtifactVerification = async ({
+      expectedSha256,
+      requestedSignature,
+      uploadId,
+    }) => {
+      const current = casRepository.uploads.get(uploadId);
+      if (
+        current === undefined ||
+        current.uploadStatus !== "uploading" ||
+        current.sha256 !== expectedSha256
+      ) {
+        return null;
+      }
+      const claimed = {
+        ...current,
+        signature: requestedSignature ?? null,
+        updatedAt: new Date(),
+        uploadStatus: "verifying" as const,
+        verificationAttempts: (current.verificationAttempts ?? 0) + 1,
+        verificationStartedAt: new Date(),
+      };
+      casRepository.uploads.set(uploadId, claimed);
+      return claimed;
+    };
+    casRepository.recordAudit = async () => undefined;
+    casRepository.emitOutbox = async () => true;
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post(
+          `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/complete`,
+        )
+        .set(ownerHeaders)
+        .send({ signature: "valid-signature" }),
+      request(app.getHttpServer())
+        .post(
+          `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/complete`,
+        )
+        .set(ownerHeaders)
+        .send({ signature: "valid-signature" }),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 400,
+    ]);
+    expect(casRepository.uploads.get(created.body.uploadId)?.uploadStatus).toBe(
+      "verifying",
+    );
   });
 
   it("fails closed when verification is unavailable", async () => {

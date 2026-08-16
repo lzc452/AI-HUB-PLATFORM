@@ -95,6 +95,7 @@ describe("real demo account login", () => {
   let db: ReturnType<typeof createDatabase>;
   let stop: (() => Promise<void>) | undefined;
   let app: INestApplication;
+  let identity: IdentityService;
 
   beforeAll(async () => {
     const container = await startPostgresTestContainer();
@@ -113,7 +114,7 @@ describe("real demo account login", () => {
     await seedDemoAccounts(db, passwordHashes);
 
     const encryption = await LoginEncryptionService.generateDev();
-    const identity = new IdentityService(
+    identity = new IdentityService(
       new KyselyIdentityRepository(db),
       passwordService,
       undefined,
@@ -170,6 +171,23 @@ describe("real demo account login", () => {
       });
     },
   );
+
+  it("enriches the employee list with real role names and last login", async () => {
+    const employees = await identity.listEmployees();
+    const appAdmin = employees.find(
+      (employee) => employee.employeeId === "DEMO-APP-ADMIN",
+    );
+    expect(appAdmin?.roleNames).toEqual(
+      expect.arrayContaining(["普通员工", "应用管理员"]),
+    );
+    expect(appAdmin?.lastLoginAt).toEqual(expect.any(String));
+
+    const employee = employees.find(
+      (item) => item.employeeId === "DEMO-EMPLOYEE",
+    );
+    expect(employee?.roleNames).toEqual(["普通员工"]);
+    expect(employee?.lastLoginAt).toEqual(expect.any(String));
+  });
 
   it("logs in through the password login endpoint", async () => {
     const challengeResponse = await request(app.getHttpServer())

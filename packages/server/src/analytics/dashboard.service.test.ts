@@ -43,6 +43,7 @@ describe("AnalyticsDashboardService", () => {
           },
         ];
       },
+      readSnapshotCounts: async () => [],
       withTransaction: async (operation) => operation(repository),
       recordAudit: async (input) => {
         audits.push(input.action);
@@ -71,6 +72,7 @@ describe("AnalyticsDashboardService", () => {
         queried = true;
         return [];
       },
+      readSnapshotCounts: async () => [],
       withTransaction: async (operation) => operation(repository),
       recordAudit: async () => undefined,
       appendOutbox: async () => true,
@@ -94,6 +96,7 @@ describe("AnalyticsDashboardService", () => {
         scope = input.audienceScopeKey;
         return [];
       },
+      readSnapshotCounts: async () => [],
       withTransaction: async (operation) => operation(repository),
       recordAudit: async () => undefined,
       appendOutbox: async () => true,

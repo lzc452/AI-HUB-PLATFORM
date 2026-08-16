@@ -1,0 +1,24 @@
+{
+  "eicar": {
+    "scanError": "扫描失败：检测到恶意文件，请更换制品后重试",
+    "createVersionButtonPresent": false
+  },
+  "selfReview": {
+    "selfClaimDisabled": true,
+    "otherClaimDisabled": false
+  },
+  "channels": [
+    "Web 应用",
+    "桌面端",
+    "移动端",
+    "小程序",
+    "Web 应用",
+    "Web 应用",
+    "桌面端",
+    "移动端",
+    "小程序",
+    "桌面端和移动端的资产绑定写接口尚未提供；当前入口地址作为下载或跳转兜底。"
+  ],
+  "consoleErrors": [],
+  "http4xx": []
+}

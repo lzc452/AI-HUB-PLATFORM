@@ -39,37 +39,65 @@ function jsonb(value: unknown): unknown {
 // ── event type definitions ─────────────────────────────────────────────────────
 
 const BEHAVIOR_EVENT_TYPES = [
-  "app.view",
-  "app.like",
-  "app.rate",
-  "app.comment",
-  "app.delivery_action",
-  "catalog.search",
-  "catalog.browse",
-  "demand.create",
-  "demand.view",
-  "demand.like",
-  "demand.comment",
-  "demand.progress",
-  "demand.pilot",
-  "notification.read",
-  "export.requested",
+  "application_viewed",
+  "application_delivered",
+  "application_downloaded",
+  "application_liked",
+  "application_commented",
+  "application_rated",
+  "demand_viewed",
+  "demand_liked",
+  "demand_commented",
+  "review_created",
+  "review_decided",
+  "review_sla_breached",
+  "demand_reported",
+  "export_requested",
+  "assistant_requested",
+  "assistant_failed",
+  "notification_queued",
+  "notification_delivery_retried",
+  "feedback_submitted",
+  "feedback_resolved",
+] as const;
+
+const BEHAVIOR_EVENT_AGGREGATE_TYPES = [
+  "application",
+  "application",
+  "application",
+  "application",
+  "application",
+  "application",
+  "ai_demand",
+  "ai_demand",
+  "ai_demand",
+  "review",
+  "review",
+  "review",
+  "ai_demand",
+  "export",
+  "assistant",
+  "assistant",
+  "notification",
+  "notification",
+  "feedback",
+  "feedback",
 ] as const;
 
 // ── builder ────────────────────────────────────────────────────────────────────
 
 export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
-  // ── behavior events (15 types × 2 = 30) ────────────────────────────────────
+  // ── behavior events (20 types × 2 = 40) ────────────────────────────────────
 
   const behaviorEvents: AnalyticsFixtureData["behaviorEvents"] = [];
-  for (let i = 0; i < 15; i++) {
+  for (let i = 0; i < 20; i++) {
     for (let j = 0; j < 2; j++) {
       const idx = i * 2 + j;
       const occurredAt = daysAgo(anchor, 29 - idx);
       behaviorEvents.push({
         event_id: at(IDS.behaviorEvent, idx),
         event_name: at(BEHAVIOR_EVENT_TYPES, i),
-        aggregate_type: i < 6 ? "application" : "ai_demand",
+        aggregate_type: at(BEHAVIOR_EVENT_AGGREGATE_TYPES, i),
         aggregate_id:
           i < 6
             ? at(
@@ -84,13 +112,13 @@ export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
         metadata: jsonb({ source: "demo", index: idx }),
         idempotency_key: demoIdempotency("analytics", "behavior", String(idx)),
         occurred_at: occurredAt,
-        expires_at: new Date(occurredAt.getTime() + 90 * 24 * 60 * 60 * 1000),
+        expires_at: new Date(occurredAt.getTime() + 180 * 24 * 60 * 60 * 1000),
         created_at: occurredAt,
       });
     }
   }
 
-  // ── daily aggregates (30 days × 12 metrics × 3 scopes = 1080) ──────────────
+  // ── daily aggregates (30 days × 20 metrics × 3 scopes = 1800) ──────────────
 
   const dailyAggregates: AnalyticsFixtureData["dailyAggregates"] = [];
   const metricKeys = IDS.analyticsMetric as readonly string[];
@@ -179,7 +207,7 @@ export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
       action: "export.completed",
       aggregate_type: "analytics_export",
       aggregate_id: at(IDS.analyticsExportJob, 0),
-      details: jsonb({ row_count: 1080 }),
+      details: jsonb({ row_count: 1800 }),
       created_at: daysAgo(anchor, 4),
     },
     {

@@ -1,6 +1,9 @@
 export interface ObjectStoragePort {
   put(key: string, content: Uint8Array): Promise<void>;
   get(key: string): Promise<Uint8Array | null>;
+  head?(
+    key: string,
+  ): Promise<{ sizeBytes: number; etag: string | null } | null>;
   copy(sourceKey: string, destinationKey: string): Promise<void>;
   delete(key: string): Promise<void>;
 }
@@ -16,6 +19,10 @@ export interface MalwareScannerPort {
 
 export interface SignatureVerifierPort {
   verify(content: Uint8Array, signature: string): Promise<boolean>;
+}
+
+export interface SignatureSignerPort {
+  sign(content: Uint8Array): Promise<string>;
 }
 
 export interface ArtifactVerificationResult {

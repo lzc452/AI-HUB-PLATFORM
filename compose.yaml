@@ -1,5 +1,5 @@
 x-runtime-environment: &runtime-environment
-  NODE_ENV: ${NODE_ENV:-production}
+  NODE_ENV: ${NODE_ENV:-development}
   API_PORT: 3000
   DATABASE_URL: postgres://${POSTGRES_USER:-ai_hub}:${POSTGRES_PASSWORD:-ai_hub_local_only}@postgres:5432/${POSTGRES_DB:-ai_hub}
   COOKIE_SECRET: ${COOKIE_SECRET:-ai-hub-local-cookie-secret-change-me}
@@ -9,6 +9,16 @@ x-runtime-environment: &runtime-environment
   WORKER_METRICS_PORT: 9464
   ARTIFACT_UPLOAD_ENABLED: ${ARTIFACT_UPLOAD_ENABLED:-true}
   ARTIFACT_MAX_SIZE_BYTES: ${ARTIFACT_MAX_SIZE_BYTES:-67108864}
+  OBJECT_STORAGE_DRIVER: ${OBJECT_STORAGE_DRIVER:-garage}
+  OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://garage:3900}
+  OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:-garage}
+  OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-ai-hub}
+  OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-GKAIHUBLOCALDEVELOPMENT000000}
+  OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-ai-hub-local-secret-key-replace-before-shared-use}
+  OBJECT_STORAGE_FORCE_PATH_STYLE: ${OBJECT_STORAGE_FORCE_PATH_STYLE:-true}
+  CLAMAV_HOST: ${CLAMAV_HOST:-clamav}
+  CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+  CLAMAV_TIMEOUT_MS: ${CLAMAV_TIMEOUT_MS:-30000}
 
 services:
   postgres:
@@ -73,10 +83,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      garage:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
     expose:
       - "3000"
-    volumes:
-      - artifact-data:/workspace/.storage/artifacts
     healthcheck:
       test:
         [
@@ -99,6 +111,12 @@ services:
       target: production
     environment: *runtime-environment
     depends_on:
+      postgres:
+        condition: service_healthy
+      garage:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
       api:
         condition: service_healthy
     healthcheck:
@@ -168,6 +186,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    ports:
+      - "${PROXY_HOST_PORT:-8080}:80"
     volumes:
       - ./infra/docker/nginx.conf:/etc/nginx/templates/default.conf.template:ro
     networks:
@@ -178,7 +198,6 @@ volumes:
   garage-metadata:
   garage-data:
   clamav-definitions:
-  artifact-data:
 
 networks:
   application:

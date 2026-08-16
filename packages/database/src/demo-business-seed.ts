@@ -1070,6 +1070,10 @@ export async function seedDemoBusinessData(
           aggregate_id: notification.aggregate_id,
           idempotency_key: notification.idempotency_key,
           message: notification.message,
+          payload: {
+            title: notification.event_type,
+            body: notification.message,
+          },
           read_at: notification.read_at,
           delivery_status: "sent",
           delivery_attempts: 1,
@@ -1080,6 +1084,10 @@ export async function seedDemoBusinessData(
         .onConflict((conflict) =>
           conflict.column("idempotency_key").doUpdateSet({
             message: notification.message,
+            payload: {
+              title: notification.event_type,
+              body: notification.message,
+            },
             delivery_status: "sent",
             delivery_attempts: 1,
             last_delivery_error: null,

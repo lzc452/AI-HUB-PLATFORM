@@ -99,11 +99,11 @@ describe("real application lifecycle API", () => {
   ) => {
     await sql`
       insert into application_artifact_uploads
-        (application_id, uploaded_by_employee_id, object_key, file_name,
+        (application_id, uploaded_by_employee_id, object_key, staging_object_key, file_name,
          mime_type, size_bytes, sha256, signature, part_count, upload_status,
          scan_status, error_code, expires_at, completed_at)
       values (
-        ${applicationId}, 'E100', ${artifactKey}, 'artifact.zip',
+        ${applicationId}, 'E100', ${artifactKey}, ${artifactKey}, 'artifact.zip',
         'application/octet-stream', 22, ${artifactSha256}, ${signature}, 1,
         'completed', 'passed', null, now() + interval '1 hour', now()
       )

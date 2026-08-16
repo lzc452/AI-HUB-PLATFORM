@@ -117,6 +117,10 @@ export interface EmployeeSummary {
   displayName: string;
   status: "pending_binding" | "active" | "disabled" | "archived";
   primaryDepartmentId: string;
+  /** 激活角色展示名（员工可能拥有多个角色）。 */
+  roleNames?: readonly string[];
+  /** 最近一次登录时间（无会话记录时为 null）。 */
+  lastLoginAt?: string | null;
 }
 
 export interface DepartmentSummary {

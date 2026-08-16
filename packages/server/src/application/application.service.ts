@@ -529,10 +529,11 @@ export class ApplicationService {
     actor?: ActorContext,
   ): Promise<ApplicationWorkspace> {
     const application = await this.getApplication(applicationId, actor);
-    const [versions, deliveries, reviews] = await Promise.all([
+    const [versions, deliveries, reviews, assets] = await Promise.all([
       this.repository.listVersions(applicationId),
       this.repository.listDeliveries(applicationId),
       this.repository.listReviews(applicationId),
+      this.repository.listAssets(applicationId),
     ]);
     const latestVersion = versions[0];
     const reviewQueue = latestVersion
@@ -546,6 +547,7 @@ export class ApplicationService {
       deliveries,
       reviews,
       reviewQueue,
+      assets,
     };
   }
 

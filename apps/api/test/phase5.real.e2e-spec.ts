@@ -469,11 +469,11 @@ describe("real Phase 5 demand API", () => {
     // createVersion 要求数据库中存在已完成且扫描通过的制品上传记录
     await sql`
       insert into application_artifact_uploads
-        (application_id, uploaded_by_employee_id, object_key, file_name,
+        (application_id, uploaded_by_employee_id, object_key, staging_object_key, file_name,
          mime_type, size_bytes, sha256, signature, part_count, upload_status,
          scan_status, error_code, expires_at, completed_at)
       values (
-        ${applicationId}, 'E100', 'applications/phase-5/demand-backed.zip',
+        ${applicationId}, 'E100', 'applications/phase-5/demand-backed.zip', 'applications/phase-5/demand-backed.zip',
         'demand-backed.zip', 'application/octet-stream', 20,
         'phase-5-sha256', 'phase-5-signature', 1,
         'completed', 'passed', null, now() + interval '1 hour', now()

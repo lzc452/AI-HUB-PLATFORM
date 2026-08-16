@@ -2,6 +2,9 @@ export const behaviorEventNames = [
   "application_viewed",
   "application_delivered",
   "application_downloaded",
+  "application_liked",
+  "application_commented",
+  "application_rated",
   "demand_viewed",
   "demand_liked",
   "demand_commented",
@@ -14,6 +17,8 @@ export const behaviorEventNames = [
   "assistant_failed",
   "notification_queued",
   "notification_delivery_retried",
+  "feedback_submitted",
+  "feedback_resolved",
 ] as const;
 
 export type BehaviorEventName = (typeof behaviorEventNames)[number];
@@ -23,7 +28,8 @@ export type AnalyticsAggregateType =
   | "review"
   | "export"
   | "assistant"
-  | "notification";
+  | "notification"
+  | "feedback";
 
 export interface BehaviorEventInput {
   eventName: string;

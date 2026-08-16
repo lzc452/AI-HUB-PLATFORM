@@ -1,4 +1,4 @@
-import { apiFetch } from "../../shared/api/client";
+import { apiFetch, apiFetchBlob } from "../../shared/api/client";
 
 /** 系统安全审计 API 客户端；列表和导出均通过受保护的后端接口完成。 */
 
@@ -99,4 +99,39 @@ export function createAuditExport(
     body: JSON.stringify({ filterSnapshot }),
     method: "POST",
   });
+}
+
+/** 后端审计导出任务状态（与 GET /audit-exports/:exportId 对齐）。 */
+export interface AuditExportStatusApi {
+  exportId: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  resultStorageKey: string | null;
+  failureCode: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+/** 查询审计导出任务状态。 */
+export function fetchAuditExportStatus(
+  exportJobId: string,
+): Promise<AuditExportStatusApi> {
+  return apiFetch<AuditExportStatusApi>(
+    `/internal/security/audit-exports/${exportJobId}`,
+  );
+}
+
+/** 通过统一认证 seam 下载审计导出文件并触发浏览器保存。 */
+export async function downloadAuditExport(exportJobId: string): Promise<void> {
+  const { blob, fileName } = await apiFetchBlob(
+    `/internal/security/audit-exports/${exportJobId}/download`,
+  );
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName ?? `audit-export-${exportJobId}.jsonl`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

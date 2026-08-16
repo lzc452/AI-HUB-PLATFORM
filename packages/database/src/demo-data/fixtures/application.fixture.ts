@@ -263,6 +263,10 @@ export interface ApplicationFixtureData {
   applicationAuditEvents: Array<
     Insertable<DatabaseSchema["application_audit_events"]>
   >;
+  publishedCurrentVersions: Array<{
+    application_id: string;
+    current_version_id: string;
+  }>;
 }
 
 // ── implementation ──────────────────────────────────────────────────────────
@@ -543,6 +547,15 @@ export function buildApplicationFixture(anchor: Date): ApplicationFixtureData {
     created_at: daysAgo(anchor, 50 - i * 5),
   }));
 
+  // 发布应用需回填当前版本；版本行先于外键插入，回填由 orchestrator 执行。
+  const publishedCurrentVersions = statuses
+    .map((status, i) => ({ status, index: i }))
+    .filter((entry) => entry.status === "published")
+    .map((entry) => ({
+      application_id: IDS.application.all[entry.index]!,
+      current_version_id: IDS.version[entry.index]!,
+    }));
+
   // ── assemble ───────────────────────────────────────────────────────────────
 
   return {
@@ -552,5 +565,6 @@ export function buildApplicationFixture(anchor: Date): ApplicationFixtureData {
     applicationReviews,
     applicationReviewQueue,
     applicationAuditEvents,
+    publishedCurrentVersions,
   };
 }

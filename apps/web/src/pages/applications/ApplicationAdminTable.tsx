@@ -92,6 +92,12 @@ const statusMeta: Record<
     color: "#cf1322",
     label: "已下架",
   },
+  archived: {
+    background: "#f5f5f5",
+    border: "#d9d9d9",
+    color: "#8c8c8c",
+    label: "已归档",
+  },
 };
 
 const columnHeaderClass =
@@ -348,6 +354,23 @@ function RowActions({
           label="发布"
           onClick={handle("publish")}
         />
+        <ActionLink
+          ariaLabel={`查看 ${row.name}`}
+          label="查看"
+          onClick={handle("view")}
+        />
+        <ActionLink
+          ariaLabel={`查看 ${row.name} 版本`}
+          label="版本"
+          onClick={handle("version")}
+        />
+      </div>
+    );
+  }
+
+  if (row.status === "archived") {
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
         <ActionLink
           ariaLabel={`查看 ${row.name}`}
           label="查看"

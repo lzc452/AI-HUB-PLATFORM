@@ -200,6 +200,9 @@ export class CatalogService {
     if (input.page < 1 || input.pageSize < 1 || input.pageSize > 100) {
       throw new Error("CATALOG_PAGINATION_INVALID");
     }
+    if (this.repository.listVisiblePage !== undefined) {
+      return this.repository.listVisiblePage(input);
+    }
     const visible = await this.repository.listVisible(input);
     const start = (input.page - 1) * input.pageSize;
     return {

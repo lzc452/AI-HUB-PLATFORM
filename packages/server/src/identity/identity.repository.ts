@@ -116,12 +116,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       ])
       .orderBy("employee_id")
       .execute();
-    return rows.map((row) => ({
-      employeeId: row.employee_id,
-      displayName: row.display_name,
-      status: row.status,
-      primaryDepartmentId: row.primary_department_id,
-    }));
+    return this.enrichEmployeeSummaries(rows);
   }
 
   async listDepartments(): Promise<readonly DepartmentSummary[]> {
@@ -323,14 +318,63 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .offset((page - 1) * pageSize)
       .execute();
     return {
-      items: rows.map((row) => ({
+      items: await this.enrichEmployeeSummaries(rows),
+      total,
+    };
+  }
+
+  private async enrichEmployeeSummaries(
+    rows: readonly {
+      employee_id: string;
+      display_name: string;
+      status: "pending_binding" | "active" | "disabled" | "archived";
+      primary_department_id: string;
+    }[],
+  ): Promise<readonly EmployeeSummary[]> {
+    if (rows.length === 0) return [];
+    const employeeIds = rows.map((row) => row.employee_id);
+    const [roleRows, sessionRows] = await Promise.all([
+      this.db
+        .selectFrom("employee_roles")
+        .innerJoin("roles", "roles.role_code", "employee_roles.role_code")
+        .select(["employee_roles.employee_id", "roles.name", "roles.role_code"])
+        .where("employee_roles.employee_id", "in", employeeIds)
+        .where("roles.status", "=", "active")
+        .orderBy("roles.role_code")
+        .execute(),
+      this.db
+        .selectFrom("user_sessions")
+        .select([
+          "employee_id",
+          sql<Date | null>`max(created_at)`.as("last_login_at"),
+        ])
+        .where("employee_id", "in", employeeIds)
+        .groupBy("employee_id")
+        .execute(),
+    ]);
+    const rolesByEmployee = new Map<string, string[]>();
+    for (const role of roleRows) {
+      const names = rolesByEmployee.get(role.employee_id) ?? [];
+      names.push(role.name);
+      rolesByEmployee.set(role.employee_id, names);
+    }
+    const loginByEmployee = new Map(
+      sessionRows.map((session) => [
+        session.employee_id,
+        session.last_login_at,
+      ]),
+    );
+    return rows.map((row) => {
+      const lastLoginAt = loginByEmployee.get(row.employee_id);
+      return {
         employeeId: row.employee_id,
         displayName: row.display_name,
         status: row.status,
         primaryDepartmentId: row.primary_department_id,
-      })),
-      total,
-    };
+        roleNames: rolesByEmployee.get(row.employee_id) ?? [],
+        lastLoginAt: lastLoginAt?.toISOString() ?? null,
+      };
+    });
   }
 
   async updateEmployee(

@@ -68,6 +68,7 @@ export interface ApplicationWorkspace {
   deliveries: DeliveryRecord[];
   reviews: ReviewRecord[];
   reviewQueue: ReviewQueueRecord | null;
+  assets: AssetRecord[];
 }
 
 export interface CreatorApplicationRecord {
@@ -318,10 +319,12 @@ export interface ArtifactUploadRecord {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
-  uploadStatus: "uploading" | "completed" | "failed";
+  uploadStatus: "uploading" | "verifying" | "completed" | "failed";
   scanStatus: "pending" | "passed" | "failed";
   sha256: string | null;
+  signature: string | null;
   errorCode: string | null;
+  verificationAttempts: number;
   expiresAt: string;
 }
 

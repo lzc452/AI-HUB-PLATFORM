@@ -46,6 +46,7 @@ export interface CatalogEntry {
     canSubmitFeedback: boolean;
     canModerateComments: boolean;
     canEditRisk: boolean;
+    canReplyOfficial?: boolean;
   };
   healthStatus: CatalogHealthStatus;
   deprecatedReason: string | null;

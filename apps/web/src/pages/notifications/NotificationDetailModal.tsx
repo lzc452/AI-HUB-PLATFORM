@@ -22,6 +22,7 @@ export function NotificationDetailModal({
 
   const meta = resolveNotificationMeta(notification);
   const Icon = meta.icon;
+  const payload = notification.payload;
   const createdAt = new Date(notification.createdAt).toLocaleString("zh-CN", {
     day: "2-digit",
     hour: "2-digit",
@@ -89,7 +90,7 @@ export function NotificationDetailModal({
         />
         <div className="min-w-0 flex-1">
           <Title className="!mb-2 !text-lg" level={4}>
-            {meta.title}
+            {payload?.title ?? meta.title}
           </Title>
           <div className="flex flex-wrap items-center gap-2 text-sm text-[#595959]">
             <Tag bordered={false} color="processing">
@@ -105,7 +106,27 @@ export function NotificationDetailModal({
         <Paragraph className="!mb-0">
           <Text strong>尊敬的用户：</Text>
         </Paragraph>
-        <Paragraph className="!mb-0">{meta.detailLead}</Paragraph>
+        <Paragraph className="!mb-0">
+          {payload?.body ?? meta.detailLead}
+        </Paragraph>
+
+        {payload?.detail && Object.keys(payload.detail).length > 0 ? (
+          <div>
+            <Paragraph className="!mb-2">
+              <Text strong>详情</Text>
+            </Paragraph>
+            <ul className="m-0 list-none space-y-1 p-0 text-[#595959]">
+              {Object.entries(payload.detail).map(([label, value]) => (
+                <li key={label}>
+                  <Text type="secondary">
+                    {label}:{" "}
+                    {typeof value === "string" ? value : JSON.stringify(value)}
+                  </Text>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         {meta.detailFields.length > 0 ? (
           <div>

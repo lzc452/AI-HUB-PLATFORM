@@ -3,6 +3,7 @@ import { cleanup, configure } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
 
 import { setSession } from "../modules/auth/session.store";
+import { queryClient } from "../query-client";
 
 configure({ asyncUtilTimeout: 5000 });
 
@@ -124,8 +125,14 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => {
+afterEach(async () => {
+  // 先取消共享 QueryClient 的异步更新，避免 jsdom 销毁后 React scheduler 仍访问 window。
+  await queryClient.cancelQueries();
+  queryClient.clear();
   cleanup();
   setSession(null);
   vi.unstubAllGlobals();
+  if (vi.isFakeTimers()) {
+    vi.useRealTimers();
+  }
 });

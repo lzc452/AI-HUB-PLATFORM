@@ -6,7 +6,8 @@ import { IdentityService } from "../identity/identity.service.js";
 import { ApplicationModule } from "../application/application.module.js";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import type { ApplicationService } from "../application/application.service.js";
-import { DiskObjectStorage } from "../application/storage.disk.js";
+import { ARTIFACT_STORAGE } from "../application/application.tokens.js";
+import type { ReadableObjectStoragePort } from "../application/storage.port.js";
 import { CatalogController } from "./catalog.controller.js";
 import { KyselyCatalogRepository } from "./catalog.repository.js";
 import { CatalogService } from "./catalog.service.js";
@@ -18,7 +19,7 @@ import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repositor
 export class CatalogModule {
   static register(
     database: Kysely<DatabaseSchema>,
-    storage?: DiskObjectStorage,
+    storage?: ReadableObjectStoragePort,
   ): DynamicModule {
     return {
       module: CatalogModule,
@@ -30,7 +31,7 @@ export class CatalogModule {
       providers: [
         ...(storage === undefined
           ? []
-          : [{ provide: DiskObjectStorage, useValue: storage }]),
+          : [{ provide: ARTIFACT_STORAGE, useValue: storage }]),
         {
           provide: CATALOG_SERVICE,
           useValue: new CatalogService(

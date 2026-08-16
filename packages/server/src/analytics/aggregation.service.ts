@@ -37,8 +37,10 @@ export class AnalyticsAggregationService {
       (event) => event.occurredAt >= lowerBound && event.occurredAt < to,
     );
     const rows = new Map<string, DailyAggregate>();
+    const distinctSets = new Map<string, Set<string>>();
 
     for (const definition of metricDefinitions) {
+      if (definition.aggregation !== "count") continue;
       const names = new Set(definition.sourceEventNames);
       for (const event of events) {
         if (!names.has(event.eventName)) {
@@ -61,6 +63,44 @@ export class AnalyticsAggregationService {
           current.sourceEventCount += 1;
         }
       }
+    }
+
+    for (const definition of metricDefinitions) {
+      if (
+        definition.aggregation !== "distinct_actor" &&
+        definition.aggregation !== "distinct_aggregate"
+      ) {
+        continue;
+      }
+      const names = new Set(definition.sourceEventNames);
+      for (const event of events) {
+        if (!names.has(event.eventName)) continue;
+        const member =
+          definition.aggregation === "distinct_actor"
+            ? event.actorEmployeeId
+            : event.aggregateId;
+        if (member === null || member === undefined) continue;
+        const day = utcDay(event.occurredAt);
+        const key = `${definition.metricKey}|${day}|${event.audienceScopeKey}`;
+        const set = distinctSets.get(key) ?? new Set<string>();
+        set.add(member);
+        distinctSets.set(key, set);
+      }
+    }
+    for (const [key, members] of distinctSets) {
+      const [metricKey, day, audienceScopeKey] = key.split("|") as [
+        string,
+        string,
+        string,
+      ];
+      rows.set(key, {
+        metricKey,
+        metricVersion: 1,
+        day,
+        audienceScopeKey,
+        value: members.size,
+        sourceEventCount: members.size,
+      });
     }
 
     const aggregates = [...rows.values()].sort(

@@ -1,4 +1,8 @@
-import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
+import type {
+  ActorContext,
+  AuthorizationDecision,
+  NotificationPayload,
+} from "@ai-hub/contracts";
 
 export interface NotificationRecord {
   notificationId: string;
@@ -7,6 +11,7 @@ export interface NotificationRecord {
   aggregateId: string;
   idempotencyKey: string;
   message: string;
+  payload?: NotificationPayload;
   readAt: Date | null;
   createdAt: Date;
 }
@@ -48,5 +53,6 @@ export interface NotificationRepository {
     eventType: string;
     idempotencyKey: string;
     metadata?: Readonly<Record<string, string>>;
+    payload?: NotificationPayload;
   }): Promise<void>;
 }

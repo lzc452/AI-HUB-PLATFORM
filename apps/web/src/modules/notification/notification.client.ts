@@ -1,4 +1,5 @@
 import { apiFetch } from "../../shared/api/client";
+import type { NotificationPayload } from "@ai-hub/contracts";
 
 export interface NotificationRecord {
   notificationId: string;
@@ -7,6 +8,7 @@ export interface NotificationRecord {
   aggregateId: string;
   idempotencyKey: string;
   message: string;
+  payload?: NotificationPayload;
   readAt: string | null;
   createdAt: string;
 }

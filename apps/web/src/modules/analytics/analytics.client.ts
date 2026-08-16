@@ -44,10 +44,40 @@ export interface DashboardResult {
   metrics: DailyAggregate[];
 }
 
+export interface AnalyticsDateRange {
+  from: string;
+  to: string;
+}
+
 export function getDashboard(
   dashboardKey: DashboardKey,
+  range?: AnalyticsDateRange,
 ): Promise<DashboardResult> {
+  const query = range ? `?from=${range.from}&to=${range.to}` : "";
   return apiFetch<DashboardResult>(
-    `/internal/analytics/dashboards/${encodeURIComponent(dashboardKey)}`,
+    `/internal/analytics/dashboards/${encodeURIComponent(dashboardKey)}${query}`,
   );
+}
+
+export interface AnalyticsExportResult {
+  exportId: string;
+  target: DashboardKey;
+  from: string;
+  to: string;
+  rows: Array<{
+    aggregateId: string;
+    occurredAt: string;
+    requester?: string | null;
+    value: number;
+  }>;
+}
+
+export function createAnalyticsExport(
+  target: DashboardKey,
+  range: AnalyticsDateRange,
+): Promise<AnalyticsExportResult> {
+  return apiFetch<AnalyticsExportResult>("/internal/analytics/exports", {
+    body: JSON.stringify({ target, ...range }),
+    method: "POST",
+  });
 }

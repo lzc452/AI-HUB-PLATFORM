@@ -1,0 +1,2 @@
+AI Hub Platform V1 browser flow artifact.
+This deterministic text payload is used only for local browser acceptance.

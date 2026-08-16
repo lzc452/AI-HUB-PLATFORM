@@ -212,12 +212,29 @@ describe("real Phase 6 analytics API", () => {
       .query({ from: "2026-08-03", to: "2026-08-04" })
       .set(headers)
       .expect(200);
-    expect(dashboard.body.metrics).toEqual([
-      expect.objectContaining({
-        metricKey: "platform.application_views",
-        value: 2,
-      }),
-    ]);
+    expect(dashboard.body.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricKey: "platform.application_views",
+          value: 2,
+        }),
+        expect.objectContaining({
+          metricKey: "platform.active_employee_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.active_application_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.published_application_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.pending_review_count",
+        }),
+        expect.objectContaining({
+          metricKey: "platform.pending_claim_count",
+        }),
+      ]),
+    );
 
     const exportResponse = await request(app.getHttpServer())
       .post("/internal/analytics/exports")

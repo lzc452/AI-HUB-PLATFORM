@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Headers,
   Inject,
+  NotFoundException,
   Param,
   Post,
 } from "@nestjs/common";
@@ -142,9 +144,20 @@ export class NotificationController {
     try {
       return await operation();
     } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : "NOTIFICATION_REQUEST_FAILED",
-      );
+      throw mapNotificationError(error);
     }
   }
+}
+
+/** 把通知域错误映射为 HTTP 语义：越权 403、不存在 404、其余 400。 */
+export function mapNotificationError(error: unknown): Error {
+  const message =
+    error instanceof Error ? error.message : "NOTIFICATION_REQUEST_FAILED";
+  if (message === "NOT_AUTHORIZED") {
+    return new ForbiddenException("NOT_AUTHORIZED");
+  }
+  if (message === "NOTIFICATION_NOT_FOUND") {
+    return new NotFoundException("NOTIFICATION_NOT_FOUND");
+  }
+  return new BadRequestException(message);
 }

@@ -9,10 +9,15 @@ import { InteractionService } from "./interaction.service.js";
 import { INTERACTION_SERVICE } from "./interaction.tokens.js";
 import { CatalogVisibilityPolicy } from "../catalog/catalog-visibility.policy.js";
 import { KyselyCatalogRepository } from "../catalog/catalog.repository.js";
+import { AnalyticsEventService } from "../analytics/analytics.service.js";
+import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
 
 @Module({})
 export class InteractionModule {
   static register(database: Kysely<DatabaseSchema>): DynamicModule {
+    const analyticsEvents = new AnalyticsEventService(
+      new KyselyAnalyticsEventRepository(database),
+    );
     return {
       module: InteractionModule,
       imports: [IdentityModule.register(database)],
@@ -27,6 +32,7 @@ export class InteractionModule {
               new CatalogVisibilityPolicy(
                 new KyselyCatalogRepository(database),
               ),
+              analyticsEvents,
             ),
           inject: [IdentityService],
         },

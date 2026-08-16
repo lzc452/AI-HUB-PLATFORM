@@ -1,13 +1,5 @@
 import type { EmployeeSummary } from "@ai-hub/contracts";
 
-export const ROLE_OPTIONS = [
-  "管理员",
-  "应用管理员",
-  "开发者",
-  "普通用户",
-  "系统管理员",
-];
-
 export const SOURCE_OPTIONS = ["钉钉", "本地"];
 
 export const STATUS_META: Record<
@@ -20,11 +12,10 @@ export const STATUS_META: Record<
   pending_binding: { color: "warning", text: "待绑定" },
 };
 
-/** 表格行 = 员工基础数据 + 由部门/索引派生的展示字段。 */
+/** 表格行 = 员工基础数据 + 由真实部门/会话派生的展示字段。 */
 export interface UserTableRow extends EmployeeSummary {
   departmentName: string;
   lastLogin: string;
-  role: string;
   sourceColor: string;
   sourceText: string;
 }

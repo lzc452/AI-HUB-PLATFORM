@@ -4,6 +4,8 @@ export interface RawBehaviorEvent {
   eventId: string;
   idempotencyKey: string;
   eventName: BehaviorEventName;
+  aggregateId: string;
+  actorEmployeeId: string | null;
   occurredAt: Date;
   audienceScopeKey: string;
 }
@@ -22,6 +24,7 @@ export interface AnalyticsMetricDefinition {
   version: number;
   label: string;
   sourceEventNames: readonly BehaviorEventName[];
+  aggregation: "count" | "distinct_actor" | "distinct_aggregate" | "snapshot";
   formula: string;
   timeRange: "day" | "7d" | "30d" | "180d";
   requiredPermission: string;

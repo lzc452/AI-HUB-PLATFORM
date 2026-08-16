@@ -1,4 +1,4 @@
-import { getDashboard } from "./analytics.client";
+import { getDashboard, type AnalyticsDateRange } from "./analytics.client";
 
 export interface KpiMetric {
   iconBackground: string;
@@ -57,8 +57,10 @@ export interface PlatformOverviewData {
   slaPolicies: SlaPolicy[];
 }
 
-export async function getPlatformOverviewData(): Promise<PlatformOverviewData> {
-  const result = await getDashboard("platform");
+export async function getPlatformOverviewData(
+  range?: AnalyticsDateRange,
+): Promise<PlatformOverviewData> {
+  const result = await getDashboard("platform", range);
   const byMetric = new Map<string, number>();
   for (const item of result.metrics) {
     byMetric.set(
@@ -83,17 +85,47 @@ export async function getPlatformOverviewData(): Promise<PlatformOverviewData> {
     appRanking: [],
     conversionRates: [],
     deliveryTrend: result.metrics
-      .filter((item) => item.metricKey === "delivery_action_count")
+      .filter((item) => item.metricKey === "platform.delivery_action_count")
       .map((item) => ({ date: item.day.slice(5), value: item.value })),
     departmentHeatmap: [],
     demandFunnel: [],
     kpiMetrics: [
-      metric("月活员工", "active_employee_count", "#0060f0", "#e6f4ff"),
-      metric("活跃应用", "active_application_count", "#52c41a", "#f6ffed"),
-      metric("交付总数", "delivery_action_count", "#722ed1", "#f9f0ff"),
-      metric("上架应用", "published_application_count", "#fa8c16", "#fff7e6"),
-      metric("待审核任务", "pending_review_count", "#f5222d", "#fff1f0"),
-      metric("待认领需求", "pending_claim_count", "#fadb14", "#fffbe6"),
+      metric(
+        "月活员工",
+        "platform.active_employee_count",
+        "#0060f0",
+        "#e6f4ff",
+      ),
+      metric(
+        "活跃应用",
+        "platform.active_application_count",
+        "#52c41a",
+        "#f6ffed",
+      ),
+      metric(
+        "交付总数",
+        "platform.delivery_action_count",
+        "#722ed1",
+        "#f9f0ff",
+      ),
+      metric(
+        "上架应用",
+        "platform.published_application_count",
+        "#fa8c16",
+        "#fff7e6",
+      ),
+      metric(
+        "待审核任务",
+        "platform.pending_review_count",
+        "#f5222d",
+        "#fff1f0",
+      ),
+      metric(
+        "待认领需求",
+        "platform.pending_claim_count",
+        "#fadb14",
+        "#fffbe6",
+      ),
     ],
     slaPolicies: [],
   };

@@ -236,9 +236,9 @@ export interface ApplicationArtifactUploadsTable {
   signature: string | null;
   part_count: number;
   upload_status: ColumnType<
-    "uploading" | "completed" | "failed",
-    "uploading" | "completed" | "failed" | undefined,
-    "uploading" | "completed" | "failed"
+    "uploading" | "verifying" | "completed" | "failed",
+    "uploading" | "verifying" | "completed" | "failed" | undefined,
+    "uploading" | "verifying" | "completed" | "failed"
   >;
   scan_status: ColumnType<
     "pending" | "passed" | "failed",
@@ -246,6 +246,10 @@ export interface ApplicationArtifactUploadsTable {
     "pending" | "passed" | "failed"
   >;
   error_code: string | null;
+  staging_object_key: string;
+  verification_started_at: Date | null;
+  verification_attempts: number;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
   expires_at: Date;
   completed_at: Date | null;
   created_at: ColumnType<Date, Date | undefined, never>;
@@ -475,6 +479,7 @@ export interface NotificationsTable {
   aggregate_id: string;
   idempotency_key: string;
   message: string;
+  payload: unknown;
   read_at: Date | null;
   delivery_status: "pending" | "sent" | "retry" | "failed";
   delivery_attempts: number;

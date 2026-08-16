@@ -50,6 +50,17 @@ export class NotificationRecordDto {
   })
   message!: string;
 
+  @ApiProperty({
+    type: Object,
+    description: "通知详情结构化 payload",
+    example: {
+      title: "应用已发布",
+      body: "应用已进入市场",
+      deepLink: "/marketplace/app-1",
+    },
+  })
+  payload!: Record<string, unknown>;
+
   @ApiPropertyOptional({
     description: "已读时间（ISO 8601），未读为 null",
     type: String,

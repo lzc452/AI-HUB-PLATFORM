@@ -33,6 +33,7 @@ vi.mock("../../modules/application/useApplication", () => ({
     complete: { isPending: false, mutateAsync: hoisted.complete },
     start: { isPending: false, mutateAsync: hoisted.start },
   }),
+  useArtifactUploadStatus: () => ({ data: undefined }),
   useCreateVersion: () => ({
     isPending: false,
     mutateAsync: hoisted.createVersion,

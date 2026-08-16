@@ -30,9 +30,21 @@ export const outboxHandlers: OutboxHandlerMap = {
 
 export function createOutboxHandlers(
   database: ReturnType<typeof createDatabase>,
+  artifactVerificationHandler?: OutboxHandler,
+  auditExportHandler?: OutboxHandler,
 ): OutboxHandlerMap {
   return {
     ...outboxHandlers,
+    ...(artifactVerificationHandler === undefined
+      ? {}
+      : {
+          "artifact.verification.requested": artifactVerificationHandler,
+          "artifact.verification.completed": systemProbeRequestedHandler,
+          "artifact.verification.failed": systemProbeRequestedHandler,
+        }),
+    ...(auditExportHandler === undefined
+      ? {}
+      : { "security.audit.export.requested": auditExportHandler }),
     "notification.created": createDingTalkNotificationOutboxHandler(
       new KyselyNotificationRepository(database),
       unavailableDingTalk,
@@ -79,6 +91,8 @@ export class WorkerModule {
     databaseOrUrl: string | Kysely<DatabaseSchema>,
     metrics: ObservabilityMetrics = new ObservabilityMetrics(),
     outboxLeaseDurationMs = 15 * 60 * 1000,
+    artifactVerificationHandler?: OutboxHandler,
+    auditExportHandler?: OutboxHandler,
   ) {
     const database =
       typeof databaseOrUrl === "string"
@@ -95,7 +109,11 @@ export class WorkerModule {
               new OutboxStore(database, {
                 leaseDurationMs: outboxLeaseDurationMs,
               }),
-              createOutboxHandlers(database),
+              createOutboxHandlers(
+                database,
+                artifactVerificationHandler,
+                auditExportHandler,
+              ),
               undefined,
               metrics,
             );

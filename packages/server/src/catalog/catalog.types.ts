@@ -41,6 +41,7 @@ export interface CatalogEntry {
     canSubmitFeedback: boolean;
     canModerateComments: boolean;
     canEditRisk: boolean;
+    canReplyOfficial?: boolean;
   };
   healthStatus: CatalogHealthStatus;
   deprecatedReason: string | null;
@@ -67,6 +68,7 @@ export interface CatalogListResult {
 
 export interface CatalogRepository {
   listVisible(input: CatalogSearchInput): Promise<readonly CatalogEntry[]>;
+  listVisiblePage?(input: CatalogSearchInput): Promise<CatalogListResult>;
   findVisible(
     actor: ActorContext,
     applicationId: string,

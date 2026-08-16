@@ -583,7 +583,7 @@
           {
             id: "test",
             name: "测试",
-            progress: 96,
+            progress: 98,
             goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
             tasks: [
               "server 98 tests, API 19 tests, DB 24 tests 通过",
@@ -595,17 +595,20 @@
               "demo-business seed 集成 2 tests、Swagger 文档真实 e2e 2 tests 通过",
               "权限矩阵定向验证：server 117/117、API 关键 10/10、DB registry/seed 3/3；数据库集成仍需 Docker runtime",
               "应用管理目标路由 4/4 通过，审核工作台 6/6 通过；全量 Web 仍有 2 个既有基线失败",
+              "Artifact Intake 异常注入 10/10 场景 Compose 证据通过（.verify/v1/artifact/）",
+              "五角色矩阵/流程 A/B/21 图四视口验收完成；Sidebar 校准 220px 并生成壳层像素矩阵（正文/图标字形逐像素比对留待人工）",
             ],
           },
           {
             id: "ops",
             name: "部署运维",
-            progress: 45,
+            progress: 48,
             goal: "Compose、CI、监控、生产安全、备份恢复和上线演练",
             tasks: [
               "开发/测试 Compose 和 CI/CD 已存在",
               "Phase 7 生产契约为本地验证通过",
               "真实双机部署、备份介质、恢复演练均未执行",
+              "Rancher Desktop WSL 直连方案恢复 Docker Engine（Windows 管道 ACL 仍待修复）",
             ],
           },
         ],
@@ -1513,8 +1516,168 @@
               "代理配置采用待合并分支版本；看板按时间顺序合并双方事件，并新增本次交付记录。",
             skip: "未改动产品业务逻辑；推送结果由本次交付流程单独验证。",
           },
+          {
+            id: "t-030",
+            phase: "test",
+            status: "已完成",
+            title: "Artifact Intake 异常注入运行时验收",
+            owner: "Codex",
+            start: "2026-08-15",
+            end: "2026-08-16",
+            progress:
+              "Docker 引擎经 Rancher Desktop WSL 直连恢复（主栈 8/8 healthy）后，在 ai_hub_inject 隔离库与 ai-hub-inject 桶完成 10 个场景：EICAR 恶意样本、伪造签名、staging 篡改/删除、Garage 写权限撤销（真实 403 copy 失败）、ClamAV 停止与冻结（30.07s 超时）、并发 complete CAS、60s 租约 verifying 超时回收；7 个失败分支均无最终对象且 Audit/Outbox 同事务成对落库，3 个成功分支 staging 清理，证据见 .verify/v1/artifact/。",
+            problem:
+              "Windows 侧 docker_engine 命名管道为只读 ACL 且被残留的提权 wsl-helper 占用，Windows Docker 客户端无法连接；ClamAV 超时依赖 30 秒冻结注入。",
+            solution:
+              "全部 Compose 操作改用 wsl.exe 直连发行版内 docker socket；隔离注入容器复用正式 API/worker 镜像，错误码、审计、Outbox 与对象清单全部落盘。",
+            skip: "Windows 管道 ACL 修复需用户以非提权方式重启 Rancher Desktop 后另行处理；流程 A 的恶意文件/错误摘要/签名浏览器断言留待五角色矩阵批次。",
+          },
+          {
+            id: "t-031",
+            phase: "test",
+            status: "已完成",
+            title: "Audit Export 失败态注入与安全页下载状态",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "隔离库/桶注入未就绪下载、非法日期生成失败、Garage 403 存储失败、过期回拨、结果对象缺失与失败后 Outbox retry CAS；3 completed / 2 failed，失败任务无存储键且下载均 404。前端补风险等级筛选、2s 轮询状态机与 completed 专属下载按钮。",
+            problem:
+              "Security 页原导出只提示创建成功，没有任务状态、失败提示和下载入口；风险等级筛选缺失；失败任务可能被误认为可下载。",
+            solution:
+              "新增 useAuditExport 状态机（completed/failed/expired/超时），completed 且未过期才提供下载（apiFetchBlob 带身份头）；risk 纳入筛选与导出快照；失败仅展示 failureCode。",
+            skip: "安全页浏览器视觉验收并入 21 图批次（镜像重建后执行）；failureCode 直接透传数据库错误文案留作后续脱敏候选。",
+          },
+          {
+            id: "t-032",
+            phase: "dev",
+            status: "已完成",
+            title: "Notification payload 回放与越权详情修复",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "空库全量 migration 后 0029 与 payload 列/object 约束落地；重复 migration 31→31、重复 demo seed 两次计数一致且 check:demo-data passed；详情 payload 优先、旧 message 回退；跨收件人详情修复为 404 NOTIFICATION_NOT_FOUND。",
+            problem:
+              "NotificationController.call() 把所有域错误统一映射为 400，收件人越权无法得到 403/404 语义。",
+            solution:
+              "新增 mapNotificationError：NOT_AUTHORIZED→403、NOTIFICATION_NOT_FOUND→404、其余 400，并补 3 个映射单测；server 通知模块 14/14。",
+            skip: "注入 API 已用 docker cp+restart 载入修复；主栈 API 镜像重建并入浏览器批次。",
+          },
+          {
+            id: "t-033",
+            phase: "dev",
+            status: "已完成",
+            title: "Catalog 大数据量性能与五角色受众隔离",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "303 应用 fixture 验证 audience-before-pagination、索引查询计划与稳定排序；log_statement=all 实测单请求 6 条目录 SQL（1 count + 1 page + 4 批量 IN）无逐行 N+1；五角色列表 250/280/240/220/220，direct-ID 未发布/撤回/归档/非受众全部 404。",
+            problem:
+              "推荐/最新/热门排序没有并列 tiebreaker，大数据量跨页可能重页或漏行；此前缺少查询计划与真实查询次数证据。",
+            solution:
+              "三类主排序统一追加 application_id 升序 tiebreaker；用 EXPLAIN ANALYZE BUFFERS 与数据库级 log_statement 窗口固化计划与 6 条查询预算，并按五角色跑 direct-ID 隔离矩阵。",
+            skip: "压测 fixture 仅写入隔离库 ai_hub_inject，未进入主库演示数据；include_children 部门子树语义留待组织同步批次复核。",
+          },
+          {
+            id: "t-034",
+            phase: "dev",
+            status: "已完成",
+            title: "Analytics 完整 read model 补齐",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "指标字典扩展为 23 项并支持 count/distinct_actor/distinct_aggregate/snapshot 四种口径；互动/反馈服务真实写入 5 类新行为事件；migration 0032 放宽事件名约束并固化 11 个新指标定义；平台 7 指标、应用 4 指标、风险 3 指标与 7/30/90 天、403、CSV(21 行) 均验证，demo seed 更新为 40 事件+1800 聚合。",
+            problem:
+              "平台 KPI 卡片引用的 active/published/pending 指标在字典中缺失，互动与反馈无行为事件、无 read model；种子聚合键与字典键不一致。",
+            solution:
+              "新增聚合口径与快照查询（published/pending 由看板服务 SQL 现算），Interaction/Feedback 模块注入 AnalyticsEventService，fixture 键对齐字典；新 migration 前向兼容旧库。",
+            skip: "反馈所有者处理已改为服务层 owner/maintainer 校验（浏览器矩阵并入下一批次）；快照指标暂按当前时刻口径。",
+          },
+          {
+            id: "t-035",
+            phase: "ops",
+            status: "已完成",
+            title: "主栈镜像重建与浏览器验收基建",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "重建 api/worker/web 三镜像并重创容器，主栈恢复 8/8 healthy，主库 migration 升至 0032；安装 Playwright 1.57 与 Chromium 143，登录页冒烟无 console 错误并截图；全仓 format/lint/typecheck/boundaries/scripts 全绿，server 168、database 383、API 42、web 105 全通过。",
+            problem:
+              "Windows docker_engine 命名管道仍为只读 ACL；本会话无 in-app Browser 的 Node REPL 工具，无法直接做浏览器验收。",
+            solution:
+              "全部 Docker 操作经 WSL 直连与 docker-compose 完成；改用本地 Playwright+Chromium 建立浏览器证据管线（.verify/v1/browser/playwright-smoke.mjs）。",
+            skip: "两条浏览器流程、五角色矩阵与 21 图四视口像素验收留待下一批次；Windows 管道 ACL 仍待用户非提权重启 Rancher Desktop。",
+          },
+          {
+            id: "t-036",
+            phase: "test",
+            status: "已完成",
+            title: "浏览器流程、五角色矩阵与 21 图四视口验收",
+            owner: "Codex",
+            start: "2026-08-16",
+            end: "2026-08-16",
+            progress:
+              "Playwright+Chromium 完成五角色菜单/403/受众 404/401/禁止自审矩阵；流程 A 补 EICAR 恶意上传失败与四渠道；流程 B 补点赞 toggle、受控评分、官方回复、所有者反馈管理、员工回看已解决、隐藏/恢复；21 页四视口截图无溢出/console/4xx 并置配对；Sidebar 修复为 220px（与规范 0px 偏差）并生成设计图 vs 运行时壳层几何/图标/Modal 程序化偏差矩阵。",
+            problem:
+              "无 in-app Browser 工具；组织用户表格伪造索引生成型角色/登录时间；反馈所有者无 UI；官方回复无入口；评分不回显；自审领取按钮未禁用。",
+            solution:
+              "安装本地 Playwright；后端员工摘要富化 roleNames/lastLoginAt 并接通详情 Modal；新增反馈 scope=all/PATCH 与官方回复 UI；评分受控回显；自审与失败上传按钮状态修复；AppShell 侧边栏校准为 220/64 并重建镜像；design-pixel-matrix.mjs 对 21 张原 PNG 做 Header/Sidebar/图标带/Modal 逐像素测量并与 DOM 实测对照。",
+            skip: "「原图 vs 实现」正文/图标字形逐像素 2px/1px 比对与原图 Modal 宽度基准留待图像可见会话或人工复核；Windows 管道 ACL 修复待用户非提权重启 Rancher Desktop。",
+          },
         ],
         events: [
+          {
+            date: "2026-08-16",
+            phase: "test",
+            title: "21 图壳层校准与像素矩阵完成",
+            body: "Sidebar 从 228 校准到规范 220（20 页 DOM 实测 Header 56/Sidebar 220/内容区 (220,56)，偏差 0px）；design-pixel-matrix.json 落地原图边框/图标/Modal 程序化测量，正文与图标字形逐像素比对仍待人工视觉复核。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "test",
+            title: "浏览器流程、五角色矩阵与 21 图验收完成",
+            body: "五角色 403/受众 404/401/禁止自审矩阵、流程 A EICAR+四渠道、流程 B 官方回复/反馈处理/回看/隐藏恢复全部通过；21 页四视口/键盘/状态/console 证据与并置原图落盘，仅原图像素级逐点比对留待视觉复核。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "ops",
+            title: "主栈镜像重建与 Playwright 基建就绪",
+            body: "最新后端/前端修复随镜像重建上线，8/8 healthy、migration 0032；Playwright+Chromium 本地浏览器管线打通，登录页冒烟无 console 错误，全部门禁复跑通过。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "dev",
+            title: "Analytics 互动/反馈 read model 完成",
+            body: "指标字典 23 项、四类聚合口径与快照查询落地；点赞/评分/评论/反馈提交/处理真实事件闭环；平台/应用/风险看板、7/30/90、403 与 CSV 行数全部验证。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "test",
+            title: "Catalog 性能与受众隔离证据完成",
+            body: "303 应用下 EXPLAIN 命中状态/受众索引，排序加 tiebreaker 后跨页 250/250 无重无漏；单请求仅 6 条目录 SQL；五角色列表与 direct-ID 404 矩阵全部符合受众预期。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "dev",
+            title: "通知 payload 回放与越权 404 修复完成",
+            body: "空库 0029 落地、重复 migration/seed 幂等、payload 优先与旧 message 回退均验证；controller 错误映射改为 403/404/400 分派，新增 3 测试，server 通知模块 14/14。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "test",
+            title: "Audit export 失败态与安全页下载状态完成",
+            body: "注入未就绪/生成失败/存储 403/过期/文件缺失/retry CAS 六个分支，失败任务不产生可下载假链接；安全页补风险筛选、导出轮询和 completed 专属下载，新增 3 个状态机测试，全量 web 105/105 通过。",
+          },
+          {
+            date: "2026-08-16",
+            phase: "test",
+            title: "Artifact 异常注入 10 场景全通过",
+            body: "Rancher WSL 直连恢复 8/8 healthy 后，隔离库/桶注入 EICAR、伪签名、摘要篡改、staging 缺失、Garage 403 copy、ClamAV 不可用/30s 超时、并发 CAS 与 verifying 超时回收；错误码、Audit/Outbox 原子性与 staging 清理证据落盘 .verify/v1/artifact/。",
+          },
           {
             date: "2026-08-14",
             phase: "dev",
@@ -1909,7 +2072,7 @@
           ];
         }
         if (dev) {
-          dev.progress = 0;
+          dev.progress = 22;
           dev.tasks = [
             "Compose + PostgreSQL + API + worker + 浏览器领域链验收 0/11；Wave 1 已完成共享 DatabaseRuntime 接线，业务链仍需容器和浏览器证据。",
           ];
@@ -2314,12 +2477,268 @@
           });
         }
         if (ops) {
-          ops.progress = 0;
+          ops.progress = 80;
           ops.tasks = [
-            "Rancher/Docker Linux engine 未运行，尚无本轮 PostgreSQL/API/worker 联调证据。",
+            "Rancher dockerd 已恢复；Compose 8/8 healthy，migration 0031、seed 幂等、重启持久化和正式 API/worker 镜像已验证。",
           ];
         }
+        const artifactTask = tasks.find(
+          (task) => task.id === "v1-artifact-intake-20260814",
+        );
+        const artifactTaskEvidence = {
+          id: "v1-artifact-intake-20260814",
+          phase: "dev",
+          status: "已完成",
+          title: "Artifact Intake CAS、staging/finalize 与安全适配器",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "已接入 verifying 状态、数据库 CAS claim/finalize/fail、事务内 Audit/Outbox、Garage S3 adapter、ClamAV INSTREAM、Ed25519 signer/verifier 和 worker handler；正式 Compose smoke 已完成正常文件 staging → clean → final。",
+          problem:
+            "恶意样本、错误摘要/签名、Garage copy 失败、stale verifying 恢复和并发 complete 尚未形成 Compose 专项证据。",
+          solution:
+            "上传 complete 只负责事务内 claim 并投递 artifact.verification.requested；worker 负责摘要、扫描、签名、staging copy、finalize CAS 与失败回滚，reconciliation 定时重置过期 verifying。",
+          skip: "真实企业签名凭据仍按外部阻塞处理；异常分支证据保留为 UNDO。",
+        };
+        if (artifactTask) Object.assign(artifactTask, artifactTaskEvidence);
+        else tasks.unshift(artifactTaskEvidence);
+        auditLedger.DONE.push(
+          "Artifact Intake 代码切片已完成 CAS claim/finalize、staging/final object adapter、Garage/ClamAV/Ed25519 seam 和 worker handler wiring；尚未有 Docker 运行证据。",
+        );
+        auditLedger.UNDO = auditLedger.UNDO.filter(
+          (item) => !item.includes("深化 Artifact Intake"),
+        );
+        auditLedger.UNDO.push(
+          "Artifact Intake 的恶意样本、错误摘要/签名、对象复制失败、stale verifying reconciliation 和并发 complete 仍未完成 Compose 专项验收。",
+        );
+        auditLedger.TODO.unshift(
+          "P0：补 Artifact 恶意样本、错误摘要/签名、Garage copy 失败、stale verifying 和并发 complete 的 Compose e2e。",
+        );
+        const addDoneOnce = (item) => {
+          if (!auditLedger.DONE.includes(item)) auditLedger.DONE.push(item);
+        };
+        const addUndoOnce = (item) => {
+          if (!auditLedger.UNDO.includes(item)) auditLedger.UNDO.push(item);
+        };
+        const addTodoOnce = (item) => {
+          if (!auditLedger.TODO.includes(item)) auditLedger.TODO.push(item);
+        };
+        addDoneOnce(
+          "统一 Audit event catalog 已建立，Security audit export job 已支持 queued/processing/completed/failed、对象存储文件和 status/download API；尚无 Docker worker 运行证据。",
+        );
+        addDoneOnce(
+          "通知 payload 已进入 contracts、schema、0029 migration、repository/service、demo seed、API DTO 和详情 Modal；旧 message 字段保持兼容。",
+        );
+        addDoneOnce(
+          "Catalog 列表已改为 PostgreSQL count/limit/offset，页面附属 tags/labels/deliveries/attachments 改为批量查询；0030 索引 migration 已注册。",
+        );
+        addDoneOnce(
+          "Analytics 看板时间范围和导出 CTA 已接真实 API；应用详情/审核预览移除固定版本、评分、附件大小、截图和发布历史，工作区返回真实 assets。",
+        );
+        addUndoOnce(
+          "Audit export worker、Garage/ClamAV 实际容器调用、通知 0029 和 Catalog 0030 migration 尚未在 PostgreSQL/Compose 中运行验收。",
+        );
+        addUndoOnce(
+          "Analytics 其余平台排行、部门热力、需求漏斗和 SLA 指标仍受现有 daily aggregate metric dictionary 限制；未生成数据时必须显示空态。",
+        );
+        addTodoOnce(
+          "P0：Docker 恢复后执行 0025–0030 空库/重复 migration、seed 幂等、Audit export worker、notification payload 和 Catalog SQL 分页回归。",
+        );
+        addTodoOnce(
+          "P1：为 Analytics 读模型补齐排行/部门/漏斗/SLA 所需 metric keys 或独立 read model，并对导出下载保存浏览器证据。",
+        );
+        auditLedger.staticData = auditLedger.staticData.map((entry) => {
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "审计事件目录、导出 job、worker、status/download 已接真实代码；Docker worker 和对象存储文件仍待运行验收",
+            ];
+          }
+          if (entry[0] === "审核工作台") {
+            return [
+              entry[0],
+              "认领/释放/审核已接 API；审核预览的版本、摘要、SHA、签名和附件信息来自真实查询，暂无截图/附件时显示空态",
+            ];
+          }
+          if (entry[0] === "应用版本") {
+            return [
+              entry[0],
+              "版本数和制品元数据来自 API；版本对比按钮仍 disabled，等待 V1 comparison contract",
+            ];
+          }
+          return entry;
+        });
+        auditLedger.apiGaps = auditLedger.apiGaps.map((entry) => {
+          if (entry[0] === "通知") {
+            return [
+              entry[0],
+              "notification detail 与结构化 payload 已接 migration/contract/seed/API/Modal；重复 migration 和浏览器 Modal 证据待 Docker",
+            ];
+          }
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "audit export status/download、对象存储文件和 worker 已接；overview 风险筛选与 Compose 运行证据仍待补",
+            ];
+          }
+          return entry;
+        });
+        const auditExportTask = tasks.find(
+          (task) => task.id === "v1-audit-export-20260814",
+        );
+        const auditExportEvidence = {
+          id: "v1-audit-export-20260814",
+          phase: "dev",
+          status: "已完成",
+          title: "统一 Audit event catalog 与 Security export worker",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "事件目录、导出 job 状态机、Garage JSONL、status/download API 和 Outbox handler 已通过正式 Compose smoke；queued → processing → completed 可观察。",
+          problem:
+            "安全审计导出此前只有前端占位或同步结果，无法表达 queued/processing/failed、过期和大结果文件。",
+          solution:
+            "Audit repository 在同一 transaction 写 job、security audit 和 Outbox；worker claim 后分页写对象存储，完成/失败状态可查询并受过期控制。",
+          skip: "failed/expired/storage failure 注入和浏览器 Security 页面证据仍待专项验收。",
+        };
+        if (auditExportTask)
+          Object.assign(auditExportTask, auditExportEvidence);
+        else tasks.unshift(auditExportEvidence);
+        const notificationTask = tasks.find(
+          (task) => task.id === "v1-notification-payload-20260814",
+        );
+        const notificationEvidence = {
+          id: "v1-notification-payload-20260814",
+          phase: "dev",
+          status: "进行中",
+          title: "通知结构化 payload 契约与详情 Modal",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "payload 已同步 contracts、schema、0029 migration、repository/service、seed、DTO、Web client 和详情 Modal。",
+          problem:
+            "详情 Modal 只能从列表 message/meta 猜测标题、正文和跳转信息，扩展通知类型会丢失结构化数据。",
+          solution:
+            "新增 nullable-compatible NotificationPayload，旧 message 回填 title/body，详情优先展示 payload 并保留旧字段回退。",
+          skip: "空库 migration、重复 migration、seed 幂等和浏览器详情证据待 Docker/Rancher。",
+        };
+        if (notificationTask)
+          Object.assign(notificationTask, notificationEvidence);
+        else tasks.unshift(notificationEvidence);
+        const catalogTask = tasks.find(
+          (task) => task.id === "v1-catalog-sql-read-model-20260814",
+        );
+        const catalogEvidence = {
+          id: "v1-catalog-sql-read-model-20260814",
+          phase: "dev",
+          status: "进行中",
+          title: "Catalog PostgreSQL 分页/count 与批量附属数据读取",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "visibility/audience/filter/count/limit/offset 已下推 SQL；tags、labels、deliveries、attachments 按当前页批量读取，0030 索引已注册。",
+          problem:
+            "旧列表先加载候选再 JS 分页，并逐应用查询附属数据，数据量增长时 count 不稳定且存在 N+1。",
+          solution:
+            "使用同一 visible query 生成 count 与分页结果，按 applicationId 集合批量加载关联行并组装 read model。",
+          skip: "真实 PostgreSQL 执行计划、五角色受众隔离和大数据压测待 Docker/Rancher。",
+        };
+        if (catalogTask) Object.assign(catalogTask, catalogEvidence);
+        else tasks.unshift(catalogEvidence);
+        const analyticsTask = tasks.find(
+          (task) => task.id === "v1-analytics-read-model-20260814",
+        );
+        const analyticsEvidence = {
+          id: "v1-analytics-read-model-20260814",
+          phase: "dev",
+          status: "进行中",
+          title: "Analytics read model、时间范围和导出接线",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "Web 已把 7/30/90 天筛选转换为 from/to，DashboardCard 和平台总览复用 daily aggregate API，导出 CTA 调用真实 export API 并生成 CSV。",
+          problem:
+            "时间筛选只改变本地按钮，接口始终返回默认范围；导出按钮无行为，应用详情/审核预览保留设计稿静态数据。",
+          solution:
+            "共享 AnalyticsDateRange、query cache key 和 createAnalyticsExport；无后端 metric 行时保持空态，不用示例数填充。",
+          skip: "排行/部门/漏斗/SLA 完整 metric read model、浏览器导出和后端大数据性能证据待下一切片。",
+        };
+        if (analyticsTask) Object.assign(analyticsTask, analyticsEvidence);
+        else tasks.unshift(analyticsEvidence);
+        const composeTask = tasks.find(
+          (task) => task.id === "v1-compose-rancher-20260814",
+        );
+        const composeEvidence = {
+          id: "v1-compose-rancher-20260814",
+          phase: "ops",
+          status: "已完成",
+          title: "Rancher Compose 迁移、迁移/seed 幂等与 8 服务健康",
+          owner: "Codex",
+          start: "2026-08-14",
+          end: "2026-08-14",
+          progress:
+            "Rancher dockerd 已恢复；默认库已执行到 0031；隔离库迁移、seed 连续两次和 check:demo-data 均通过；正式重建 API/worker 后 8 个 Compose 服务均 healthy。",
+          problem:
+            "旧 API 镜像中的 analytics fixture 与数据库约束不一致，且聚合 upsert 冲突键多包含不存在的 metric_version，导致 seed 在真实 PostgreSQL 中失败。",
+          solution:
+            "修正允许的 15 个 analytics event_name、180 天 retention 和三列主键冲突键；使用隔离数据库重复执行 seed 并通过计数校验。",
+          skip: "恶意样本/错误摘要/签名、事务回滚和两条浏览器主流程仍需单独证据。",
+        };
+        if (composeTask) Object.assign(composeTask, composeEvidence);
+        else tasks.unshift(composeEvidence);
         const events = value.events ?? (value.events = []);
+        const checkpointEvents = [
+          {
+            title: "V1 Rancher Compose 8 服务与隔离库 seed 验收",
+            body: "docker compose config 可解析 8 个服务且全部 healthy；默认库已执行到 0031，隔离库连续两次 seed 和 check:demo-data 均通过；正式 API/worker 镜像重建和重启持久化已验证。",
+          },
+          {
+            title: "V1 Artifact/Garage/ClamAV 与 Audit export runtime smoke",
+            body: "真实 demo 登录完成 Artifact staging → ClamAV INSTREAM clean → Garage final → worker finalize；Audit export 完成 queued → processing → JSONL 对象 → status/download，证据保存于 .verify/v1/runtime-smoke-20260815.md。异常分支和浏览器主流程仍为 UNDO。",
+          },
+          {
+            title: "V1 Audit catalog 与 Security export worker 接线",
+            body: "统一安全事件目录、导出 job 状态机、分页写 JSONL 到对象存储、status/download API 和 Outbox handler 已完成代码接线；真实 worker/存储运行证据仍待 Docker。",
+          },
+          {
+            title: "V1 Notification payload 契约同步",
+            body: "NotificationPayload 已同步 contracts、0029 migration、schema、seed、repository/service、API DTO 和详情 Modal，旧 message 字段保持兼容。",
+          },
+          {
+            title: "V1 Catalog SQL read model 接线",
+            body: "Catalog 可见列表使用 PostgreSQL count/limit/offset 和 audience-first filter，tags/labels/deliveries/attachments 按页批量加载，0030 索引已注册。",
+          },
+          {
+            title: "V1 Analytics 与应用预览静态数据清理",
+            body: "Analytics 时间筛选和导出调用真实 API；应用详情/审核预览移除固定版本、评分、附件大小、截图和发布历史，改用真实 application/version/workspace assets 或空态。",
+          },
+        ];
+        for (const checkpoint of checkpointEvents) {
+          if (!events.some((event) => event.title === checkpoint.title)) {
+            events.unshift({
+              date: "2026-08-14",
+              phase: "development",
+              ...checkpoint,
+            });
+          }
+        }
+        if (
+          !events.some(
+            (event) => event.title === "V1 Artifact Intake 安全链路接线",
+          )
+        ) {
+          events.unshift({
+            date: "2026-08-14",
+            phase: "development",
+            title: "V1 Artifact Intake 安全链路接线",
+            body: "上传 complete 已改为事务内 CAS claim 并写入 Audit/Outbox；worker 负责 Garage staging/finalize、ClamAV INSTREAM、Ed25519 签名校验和失败状态收敛。真实容器与数据库证据仍待 Rancher/Docker。",
+          });
+        }
         if (
           !events.some(
             (event) =>
@@ -2365,7 +2784,7 @@
         );
         if (healthEvent) {
           healthEvent.body =
-            "根门禁复验为 8/9：format、lint、typecheck、boundaries、build、文档链接、治理和 Compose config 通过；root database integration 因 Docker Server 不可用超时。Catalog visibility、Feedback transaction 与 Application lifecycle CAS 已完成代码整改，剩余安全审计、Catalog 列表和运行验收。";
+            "根门禁已通过 format、lint、typecheck、boundaries、build、文档链接、治理和 Compose config；Rancher Docker Server 已恢复，隔离 PostgreSQL migration/seed/check 已通过。剩余安全导出运行时、Catalog 大数据计划、浏览器主流程和 21 张设计图证据。";
         } else {
           events.unshift({
             date: "2026-08-14",
@@ -2419,6 +2838,85 @@
             body: "确认发布链与市场消费链均未闭环；已列出生产静态数据、已有待接接口、新增 API、0018–0020 migration 建议以及 DONE/UNDO/TODO/疑点。",
           });
         }
+        auditLedger.updatedAt = "2026-08-15";
+        auditLedger.metrics = [
+          ["设计图验收", "20/21（运行时截图；像素比对未完成）"],
+          ["端到端领域链", "2/11（流程 A/B 核心路径；五角色未完成）"],
+          ["工程门禁", "9/9（基础门禁已复跑；test/build 由全量验证证据覆盖）"],
+          ["本地 Compose", "8/8 healthy；migration 0031；seed/重启通过"],
+        ];
+        const runtimeDone = [
+          "Artifact worker 异常分支回归已通过：DIGEST_MISMATCH、ClamAV unavailable、INVALID_SIGNATURE、Garage copy failure、stale verification recovery；Artifact API 并发 complete CAS 9/9。",
+          "Rancher Compose 8/8 healthy；默认库 0031、隔离库 seed/check、重启持久化和正式 API/worker 镜像已验证。",
+          "Artifact 正常文件已通过真实 Garage staging/final、ClamAV INSTREAM、worker finalize、Audit/Outbox；证据见 .verify/v1/runtime-smoke-20260815.md。",
+          "Security export 已通过真实 worker queued/processing/completed、Garage JSONL、status/download 和 Content-Disposition；failed/expired 分支仍待专项注入。",
+          "浏览器流程 A 已完成创建、Artifact、四渠道、提交审核、非本人认领/通过、发布和市场可见；流程 B 已完成 resolve/download 入口、点赞幂等、4 星评分、评论和反馈提交。证据见 .verify/v1/browser/。",
+          "21 张设计屏已完成本次运行截图，其中 20/21 达到运行时可检查；截图索引见 .verify/v1/design-audit-20260815.md。",
+        ];
+        for (const item of runtimeDone) {
+          if (!auditLedger.DONE.includes(item)) auditLedger.DONE.push(item);
+        }
+        auditLedger.UNDO = auditLedger.UNDO.filter(
+          (item) =>
+            !item.includes("Docker Server 不可用") &&
+            !item.includes("Audit export worker、Garage/ClamAV 实际容器调用") &&
+            !item.includes("真实 Garage/ClamAV 调用"),
+        );
+        auditLedger.UNDO.push(
+          "Artifact 恶意样本、错误摘要/签名、Garage copy 失败、stale verifying 和并发 complete 的 Compose 专项注入证据。",
+          "Audit export failed/expired/storage failure 注入、事务回滚和 Analytics 完整 read model。",
+          "流程 B 所有者处理反馈后的用户回看、五角色权限矩阵和 21 张设计图的像素/响应式/可访问性证据。",
+        );
+        auditLedger.TODO = auditLedger.TODO.filter(
+          (item) =>
+            !item.includes("启动 Rancher/Docker Server") &&
+            !item.includes("Docker 恢复后执行 0025–0030"),
+        );
+        auditLedger.TODO.unshift(
+          "P0：运行 Artifact 异常分支与并发 complete Compose e2e，并保存状态、日志和对象清理证据。",
+          "P0：运行 Audit export failed/expired/storage failure 与事务回滚注入，补 Analytics read model 缺口。",
+          "P0：补流程 B feedback 处理回看、五角色 401/403，并按目标 viewport 做 21 张设计图并置验收。",
+        );
+        auditLedger.staticData = (auditLedger.staticData ?? []).map((entry) => {
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "审计目录、导出 worker、Garage JSONL、status/download 已真实运行；安全配置/会话/扫描仍为明确不可交互说明态",
+            ];
+          }
+          return entry;
+        });
+        auditLedger.apiGaps = (auditLedger.apiGaps ?? []).map((entry) => {
+          if (entry[0] === "安全" || entry[0] === "Security") {
+            return [
+              entry[0],
+              "overview/risk filter 与导出失败/过期/重试状态仍需补齐；status/download 和 worker 已有运行证据",
+            ];
+          }
+          return entry;
+        });
+        auditLedger.staticData = (auditLedger.staticData ?? []).map((entry) => {
+          if (entry[0] === "组织管理" || entry[0] === "Organization") {
+            return [
+              entry[0],
+              "用户/部门/角色/同步列表已接真实 API；用户角色与最近登录仍在前端按索引生成，用户详情 Modal 尚未接线",
+            ];
+          }
+          return entry;
+        });
+        // verify 已完成九项根门禁；使用索引覆盖旧 seedData 的过期口径。
+        if (
+          Array.isArray(auditLedger.metrics) &&
+          auditLedger.metrics.length >= 3
+        ) {
+          auditLedger.metrics[2][1] = "9/9";
+        }
+        auditLedger.DONE = auditLedger.DONE.filter(
+          (item) => !item.includes("根门禁 8/9"),
+        );
+        auditLedger.DONE.push(
+          "pnpm verify 9/9 通过：format、lint、typecheck、boundaries、test、build、文档链接、治理和 Compose config 均通过。",
+        );
         return value;
       }
       function loadData() {

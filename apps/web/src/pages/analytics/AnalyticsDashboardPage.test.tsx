@@ -31,7 +31,7 @@ describe("数据看板页面", () => {
             from: "2026-05-01",
             metrics: [
               {
-                metricKey: "active_employee_count",
+                metricKey: "platform.active_employee_count",
                 day: "2026-05-31",
                 audienceScopeKey: "all",
                 value: 285,

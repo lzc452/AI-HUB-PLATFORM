@@ -1,0 +1,35 @@
+BEGIN
+INSERT 0 300
+INSERT 0 300
+UPDATE 300
+INSERT 0 300
+INSERT 0 300
+INSERT 0 450
+INSERT 0 100
+INSERT 0 100
+INSERT 0 300
+INSERT 0 150
+INSERT 0 300
+INSERT 0 900
+INSERT 0 150
+INSERT 0 3
+INSERT 0 2
+UPDATE 2
+INSERT 0 3
+INSERT 0 3
+COMMIT
+    metric    |  n  
+--------------+-----
+ fixture_apps | 303
+(1 row)
+
+      metric      |  n  
+------------------+-----
+ fixture_versions | 302
+(1 row)
+
+      metric       |  n  
+-------------------+-----
+ fixture_audiences | 303
+(1 row)
+

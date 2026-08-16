@@ -162,6 +162,21 @@ export class EmployeeSummaryDto {
 
   @ApiProperty({ type: String, description: "主部门 ID", example: "demo-rnd" })
   primaryDepartmentId!: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: "激活角色展示名（可能多个）",
+    example: ["普通员工", "应用管理员"],
+  })
+  roleNames?: string[];
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "最近登录时间（ISO 8601），无会话记录为 null",
+    example: "2026-08-15T12:00:00.000Z",
+  })
+  lastLoginAt?: string | null;
 }
 
 /** 部门摘要。 */

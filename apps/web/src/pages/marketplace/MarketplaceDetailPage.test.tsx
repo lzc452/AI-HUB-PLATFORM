@@ -6,7 +6,14 @@ import type { CatalogEntry } from "@ai-hub/contracts";
 import { ApiError } from "../../shared/api/client";
 import { App } from "../../App";
 
-const { catalogEntryState, recommendedState } = vi.hoisted(() => {
+const {
+  applicationFeedbackState,
+  catalogEntryState,
+  commentMutateAsync,
+  commentsState,
+  feedbackMutate,
+  recommendedState,
+} = vi.hoisted(() => {
   const catalogEntryState = {
     data: undefined as CatalogEntry | undefined,
     error: undefined as ApiError | undefined,
@@ -59,7 +66,47 @@ const { catalogEntryState, recommendedState } = vi.hoisted(() => {
     isError: false,
     isPending: false,
   };
-  return { catalogEntryState, recommendedState };
+  const commentsState = {
+    data: { items: [], total: 0 } as {
+      items: Array<{
+        applicationId: string;
+        applicationVersionId: string;
+        authorEmployeeId: string;
+        body: string;
+        commentId: string;
+        createdAt: string;
+        displayAnonymously: boolean;
+        hiddenAt: string | null;
+        parentCommentId: string | null;
+        updatedAt: string;
+      }>;
+      total: number;
+    },
+  };
+  const commentMutateAsync = vi.fn();
+  const feedbackMutate = vi.fn();
+  const applicationFeedbackState = {
+    data: [] as Array<{
+      applicationId: string;
+      applicationVersionId: string | null;
+      body: string;
+      creatorEmployeeId: string;
+      createdAt: string;
+      feedbackId: string;
+      resolution: string | null;
+      resolvedAt: string | null;
+      status: string;
+      type: string;
+    }>,
+  };
+  return {
+    applicationFeedbackState,
+    catalogEntryState,
+    commentMutateAsync,
+    commentsState,
+    feedbackMutate,
+    recommendedState,
+  };
 });
 
 vi.mock("../../modules/marketplace/useCatalog", () => ({
@@ -94,12 +141,20 @@ vi.mock("../../modules/interaction/useInteraction", () => ({
     mutate: vi.fn(),
   }),
   useRatings: () => ({ data: { items: [], total: 0 }, isPending: false }),
-  useComments: () => ({ data: { items: [], total: 0 }, isPending: false }),
+  useComments: () => ({ data: commentsState.data, isPending: false }),
   useHideComment: () => ({ isPending: false, mutate: vi.fn() }),
   useRestoreComment: () => ({ isPending: false, mutate: vi.fn() }),
-  useCreateComment: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useCreateComment: () => ({
+    isPending: false,
+    mutateAsync: commentMutateAsync,
+  }),
   useCreateFeedback: () => ({ isPending: false, mutateAsync: vi.fn() }),
   useMyFeedback: () => ({ data: [], isPending: false }),
+  useApplicationFeedback: () => ({
+    data: applicationFeedbackState.data,
+    isPending: false,
+  }),
+  useUpdateFeedbackStatus: () => ({ isPending: false, mutate: feedbackMutate }),
 }));
 
 function mockEntry(): CatalogEntry {
@@ -140,6 +195,8 @@ function mockEntry(): CatalogEntry {
 describe("MarketplaceDetailPage", () => {
   beforeEach(() => {
     catalogEntryState.data = mockEntry();
+    commentsState.data = { items: [], total: 0 };
+    applicationFeedbackState.data = [];
     catalogEntryState.error = undefined;
     catalogEntryState.isError = false;
     catalogEntryState.isPending = false;
@@ -230,5 +287,105 @@ describe("MarketplaceDetailPage", () => {
 
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByText("OCR 票据识别")).not.toBeInTheDocument();
+  });
+
+  it("允许所有者对根评论发表官方回复", async () => {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      capabilities: {
+        canResolveDelivery: true,
+        canLike: true,
+        canRate: true,
+        canComment: true,
+        canSubmitFeedback: true,
+        canModerateComments: false,
+        canEditRisk: false,
+        canReplyOfficial: true,
+      },
+    };
+    commentsState.data = {
+      items: [
+        {
+          applicationId: "app-ocr",
+          applicationVersionId: "ver-1",
+          authorEmployeeId: "E200",
+          body: "希望支持批量识别",
+          commentId: "comment-1",
+          createdAt: "2026-08-15T10:00:00.000Z",
+          displayAnonymously: false,
+          hiddenAt: null,
+          parentCommentId: null,
+          updatedAt: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+      total: 1,
+    };
+    commentMutateAsync.mockResolvedValue({});
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "评价管理" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "回复 comment-1" }),
+    );
+    fireEvent.change(screen.getByLabelText("官方回复内容"), {
+      target: { value: "该能力已在规划中" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送回复" }));
+
+    expect(commentMutateAsync).toHaveBeenCalledWith({
+      parentCommentId: "comment-1",
+      body: "该能力已在规划中",
+    });
+  });
+
+  it("所有者可在反馈管理中处理员工反馈", async () => {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      capabilities: {
+        canResolveDelivery: true,
+        canLike: true,
+        canRate: true,
+        canComment: true,
+        canSubmitFeedback: true,
+        canModerateComments: false,
+        canEditRisk: false,
+        canReplyOfficial: true,
+      },
+    };
+    applicationFeedbackState.data = [
+      {
+        applicationId: "app-ocr",
+        applicationVersionId: "ver-1",
+        body: "希望支持批量识别",
+        creatorEmployeeId: "E200",
+        createdAt: "2026-08-15T10:00:00.000Z",
+        feedbackId: "feedback-1",
+        resolution: null,
+        resolvedAt: null,
+        status: "open",
+        type: "suggestion",
+      },
+    ];
+    feedbackMutate.mockImplementation(() => undefined);
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "评价管理" }));
+    expect(await screen.findByText("反馈管理")).toBeInTheDocument();
+    expect(screen.getByText("希望支持批量识别")).toBeInTheDocument();
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "反馈处理状态" }));
+    fireEvent.click(await screen.findByTitle("已解决"));
+    fireEvent.change(screen.getByLabelText("反馈处理说明"), {
+      target: { value: "已排期处理" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /保\s*存/ }));
+
+    expect(feedbackMutate).toHaveBeenCalledWith({
+      feedbackId: "feedback-1",
+      status: "resolved",
+      resolution: "已排期处理",
+    });
   });
 });

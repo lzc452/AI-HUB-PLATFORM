@@ -39,6 +39,7 @@ export interface FeedbackRepository {
     applicationId: string,
     creatorEmployeeId: string,
   ): Promise<readonly FeedbackRecord[]>;
+  listByApplication(applicationId: string): Promise<readonly FeedbackRecord[]>;
   findFeedback(feedbackId: string): Promise<FeedbackRecord | null>;
   updateFeedback(
     feedbackId: string,

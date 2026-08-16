@@ -105,6 +105,12 @@ class MemoryFeedbackRepository implements FeedbackRepository {
     );
   }
 
+  async listByApplication(applicationId: string) {
+    return this.records.filter(
+      (record) => record.applicationId === applicationId,
+    );
+  }
+
   async findFeedback(feedbackId: string) {
     return (
       this.records.find((record) => record.feedbackId === feedbackId) ?? null
@@ -225,5 +231,57 @@ describe("FeedbackService", () => {
     });
     expect(reopened.resolution).toBeNull();
     expect(reopened.resolvedAt).toBeNull();
+  });
+
+  it("records feedback_submitted and feedback_resolved behavior events", async () => {
+    const repository = new MemoryFeedbackRepository();
+    const recorded: Array<{ eventName: string; aggregateId: string }> = [];
+    const service = new FeedbackService(repository, visibleCatalog, {
+      record: async (_actor, input) => {
+        recorded.push({
+          eventName: input.eventName,
+          aggregateId: input.aggregateId,
+        });
+        return { inserted: true };
+      },
+    });
+    const created = await service.createFeedback(employee, {
+      applicationId: "app-1",
+      type: "bug",
+      body: "事件冒烟",
+    });
+    await service.updateFeedbackStatus(owner, {
+      applicationId: "app-1",
+      feedbackId: created.feedbackId,
+      status: "resolved",
+      resolution: "已修复",
+    });
+
+    expect(recorded).toHaveLength(2);
+    expect(recorded[0]).toMatchObject({
+      eventName: "feedback_submitted",
+      aggregateId: created.feedbackId,
+    });
+    expect(recorded[1]).toMatchObject({
+      eventName: "feedback_resolved",
+      aggregateId: created.feedbackId,
+    });
+  });
+
+  it("only exposes the full feedback list to owner or maintainer", async () => {
+    const repository = new MemoryFeedbackRepository();
+    const service = new FeedbackService(repository, visibleCatalog);
+    await service.createFeedback(employee, {
+      applicationId: "app-1",
+      type: "bug",
+      body: "冒烟反馈",
+    });
+
+    await expect(
+      service.listApplicationFeedback(employee, "app-1"),
+    ).rejects.toThrow("OFFICIAL_FEEDBACK_VIEW_FORBIDDEN");
+    await expect(
+      service.listApplicationFeedback(owner, "app-1"),
+    ).resolves.toHaveLength(1);
   });
 });

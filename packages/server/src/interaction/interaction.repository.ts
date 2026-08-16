@@ -191,8 +191,10 @@ export class KyselyInteractionRepository implements InteractionRepository {
       .selectAll()
       .where("application_id", "=", input.applicationId);
 
-    const countResult = await baseQuery
+    const countResult = await this.db
+      .selectFrom("application_ratings")
       .select((eb) => eb.fn.countAll<number>().as("total"))
+      .where("application_id", "=", input.applicationId)
       .executeTakeFirstOrThrow();
 
     const rows = await baseQuery
@@ -218,8 +220,11 @@ export class KyselyInteractionRepository implements InteractionRepository {
       .where("application_id", "=", input.applicationId)
       .where("parent_comment_id", "is", null);
 
-    const countResult = await baseQuery
+    const countResult = await this.db
+      .selectFrom("application_comments")
       .select((eb) => eb.fn.countAll<number>().as("total"))
+      .where("application_id", "=", input.applicationId)
+      .where("parent_comment_id", "is", null)
       .executeTakeFirstOrThrow();
 
     const rootRows = await baseQuery

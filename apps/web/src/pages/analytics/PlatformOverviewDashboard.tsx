@@ -22,6 +22,7 @@ import { KpiMetricCard } from "../../components/common";
 import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { usePlatformOverview } from "../../modules/analytics/usePlatformOverview";
+import type { AnalyticsDateRange } from "../../modules/analytics/analytics.client";
 
 const ReactECharts = lazy(() => import("echarts-for-react"));
 
@@ -57,8 +58,12 @@ const trendMetaMap = {
   up: { color: "#52c41a", icon: CaretUpOutlined },
 };
 
-export function PlatformOverviewDashboard() {
-  const { data, error, isError, isPending } = usePlatformOverview();
+export function PlatformOverviewDashboard({
+  range,
+}: {
+  range?: AnalyticsDateRange;
+}) {
+  const { data, error, isError, isPending } = usePlatformOverview(range);
   const [deliveryGranularity, setDeliveryGranularity] = useState("day");
 
   if (isPending) {

@@ -13,6 +13,8 @@ import { DingTalkApiClient } from "./dingtalk-api.client.js";
 import { SecurityController } from "./security.controller.js";
 import { AuditService } from "../system/security/audit.service.js";
 import { KyselyAuditRepository } from "../system/security/audit.repository.js";
+import { SECURITY_AUDIT_STORAGE } from "../system/security/security.tokens.js";
+import type { ReadableObjectStoragePort } from "../application/storage.port.js";
 
 export const IDENTITY_SERVICE = Symbol("IDENTITY_SERVICE");
 
@@ -24,6 +26,7 @@ export interface IdentityModuleOptions {
     corpId: string;
     redirectUri: string;
   };
+  auditExportStorage?: ReadableObjectStoragePort;
 }
 
 @Module({})
@@ -74,6 +77,12 @@ export class IdentityModule {
         ],
       },
     ];
+    if (options?.auditExportStorage !== undefined) {
+      providers.push({
+        provide: SECURITY_AUDIT_STORAGE,
+        useValue: options.auditExportStorage,
+      });
+    }
 
     // Conditionally register DingTalk SSO.
     if (options?.dingtalkSso !== undefined) {
@@ -124,6 +133,7 @@ export class IdentityModule {
               status: "queued",
               createdAt: new Date(),
             }),
+            getExportJob: async () => null,
             recordEvent: async () => undefined,
           } as unknown as AuditService,
         },

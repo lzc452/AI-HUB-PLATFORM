@@ -1,0 +1,94 @@
+{
+  "mode": "complete",
+  "label": "eicar",
+  "applicationId": "cbb61d34-6372-4c4f-9930-aa09b6f8dd67",
+  "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+  "completeStatus": 200,
+  "completeBody": {
+    "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+    "objectKey": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content",
+    "fileName": "eicar.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 68,
+    "uploadStatus": "verifying",
+    "scanStatus": "pending",
+    "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+    "signature": "",
+    "errorCode": null,
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:10.989Z"
+  },
+  "final": {
+    "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+    "objectKey": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content",
+    "fileName": "eicar.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 68,
+    "uploadStatus": "failed",
+    "scanStatus": "failed",
+    "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+    "signature": "",
+    "errorCode": "MALWARE_DETECTED",
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:10.989Z"
+  },
+  "expectedError": "MALWARE_DETECTED",
+  "s3After": [
+    "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content"
+  ],
+  "evidence": {
+    "upload": [
+      {
+        "upload_status": "failed",
+        "scan_status": "failed",
+        "error_code": "MALWARE_DETECTED",
+        "verification_attempts": 1,
+        "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+        "signature": "",
+        "object_key": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content",
+        "staging_object_key": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content",
+        "completed_at": null
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "application.artifact.verification.requested",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+          "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+          "stagingObjectKey": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content"
+        },
+        "created_at": "2026-08-15T19:29:11.305Z"
+      },
+      {
+        "event_type": "application.artifact.verification.failed",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+          "errorCode": "MALWARE_DETECTED"
+        },
+        "created_at": "2026-08-15T19:29:11.821Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "e56d3ea5-4c0f-467e-93ed-bd21fcfe8c1f",
+        "event_type": "artifact.verification.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:11.825Z"
+      },
+      {
+        "id": "3c680810-8574-4971-a06f-2a9add9840dd",
+        "event_type": "artifact.verification.failed",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:11.831Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:29:11.860Z"
+}

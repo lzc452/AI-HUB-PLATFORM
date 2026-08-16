@@ -1,13 +1,10 @@
-import { LeftOutlined } from "@ant-design/icons";
-import { Tabs, Typography } from "antd";
+import { DownloadOutlined, LeftOutlined } from "@ant-design/icons";
+import { Button, Tabs, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common";
-import {
-  createAuditExport,
-  useSecurityAuditLogs,
-} from "../../modules/security";
+import { useAuditExport, useSecurityAuditLogs } from "../../modules/security";
 import { ROUTES } from "../../router/routes";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
@@ -44,6 +41,7 @@ export default function SecurityPage() {
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
 
   const { data, isPending } = useSecurityAuditLogs();
+  const auditExport = useAuditExport();
   const allRows = useMemo(() => data ?? [], [data]);
   const filteredRows = useAuditLogRows(allRows, filters);
 
@@ -80,19 +78,22 @@ export default function SecurityPage() {
 
   const handleExport = async () => {
     try {
-      const result = await createAuditExport({
-        action: filters.actionType,
+      await auditExport.startExport({
+        action: filters.actionType || null,
         from: filters.range?.[0]?.toISOString() ?? null,
-        keyword: filters.searchText,
-        module: filters.module,
-        operator: filters.operator,
+        keyword: filters.searchText.trim() || null,
+        module: filters.module || null,
+        operator: filters.operator || null,
+        risk: filters.risk || null,
         to: filters.range?.[1]?.toISOString() ?? null,
       });
-      showSuccessMessage(`审计导出任务已创建（${result.status}）`);
+      showSuccessMessage("审计导出任务已创建，处理完成后可下载");
     } catch (error) {
       showErrorMessage(error, "创建审计导出任务失败");
     }
   };
+
+  const exportStatus = auditExport.state;
 
   return (
     <div className="space-y-2">
@@ -118,6 +119,7 @@ export default function SecurityPage() {
                 <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">
                   <AuditFilterBar
                     actionTypeOptions={actionTypeOptions}
+                    exporting={exportStatus.phase === "polling"}
                     moduleOptions={moduleOptions}
                     onChange={(patch) =>
                       setFilters((prev) => ({ ...prev, ...patch }))
@@ -126,6 +128,50 @@ export default function SecurityPage() {
                     operatorOptions={operatorOptions}
                     value={filters}
                   />
+                  {exportStatus.phase !== "idle" && (
+                    <div className="flex flex-wrap items-center gap-2 px-1 pt-2 text-[13px]">
+                      {exportStatus.phase === "polling" && (
+                        <span className="text-[#1677ff]">
+                          审计导出任务处理中（{exportStatus.exportJobId}
+                          ），完成后可下载
+                        </span>
+                      )}
+                      {exportStatus.phase === "completed" && (
+                        <>
+                          <span className="text-[#52c41a]">
+                            审计导出已完成，可下载
+                          </span>
+                          <Button
+                            icon={<DownloadOutlined />}
+                            onClick={() => {
+                              if (exportStatus.phase !== "completed") return;
+                              void auditExport
+                                .download(exportStatus.exportJobId)
+                                .catch((error: unknown) =>
+                                  showErrorMessage(error, "下载审计导出失败"),
+                                );
+                            }}
+                            size="small"
+                            type="primary"
+                          >
+                            下载导出文件
+                          </Button>
+                        </>
+                      )}
+                      {exportStatus.phase === "expired" && (
+                        <span className="text-[#fa8c16]">
+                          审计导出已过期，请重新导出
+                        </span>
+                      )}
+                      {exportStatus.phase === "failed" && (
+                        <span className="text-[#ff4d4f]">
+                          审计导出失败（
+                          {exportStatus.failureCode ?? "未知原因"}
+                          ），请重新导出
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col gap-[16px] lg:flex-row lg:items-start">
                   <div className="min-w-0 flex-1 rounded-xl border border-solid border-[#d9d9d9] bg-white p-2">

@@ -5,12 +5,14 @@ import type {
   ReportRecord,
 } from "./interaction.types.js";
 import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy.js";
+import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 
 export class InteractionService {
   constructor(
     private readonly repository: InteractionRepository,
     private readonly authorization: InteractionAuthorizationPort,
     private readonly visibility: CatalogVisibilityPort,
+    private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
   ) {}
 
   async toggleLike(actor: ActorContext, applicationId: string) {
@@ -34,6 +36,16 @@ export class InteractionService {
           ? "interaction.like.removed"
           : "interaction.like.added",
       });
+      if (!liked) {
+        await this.analyticsEvents?.record(actor, {
+          eventName: "application_liked",
+          aggregateType: "application",
+          aggregateId: applicationId,
+          occurredAt: new Date().toISOString(),
+          idempotencyKey: `application-liked:${applicationId}:${actor.employeeId}:${Date.now()}`,
+          metadata: { source: "interaction.like" },
+        });
+      }
       return { liked: !liked };
     });
   }
@@ -74,6 +86,14 @@ export class InteractionService {
         applicationId: application.applicationId,
         eventType: "interaction.rating.updated",
       });
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_rated",
+        aggregateType: "application",
+        aggregateId: input.applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-rated:${rating.ratingId}`,
+        metadata: { source: "interaction.rating" },
+      });
       return rating;
     });
   }
@@ -110,6 +130,14 @@ export class InteractionService {
       await repository.emitOutbox?.({
         applicationId: input.applicationId,
         eventType: "interaction.comment.created",
+      });
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_commented",
+        aggregateType: "application",
+        aggregateId: input.applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-commented:${comment.commentId}`,
+        metadata: { source: "interaction.comment" },
       });
       return comment;
     });
@@ -159,6 +187,14 @@ export class InteractionService {
       await repository.emitOutbox?.({
         applicationId: input.applicationId,
         eventType: "interaction.comment.created",
+      });
+      await this.analyticsEvents?.record(actor, {
+        eventName: "application_commented",
+        aggregateType: "application",
+        aggregateId: input.applicationId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `application-commented:${comment.commentId}`,
+        metadata: { source: "interaction.comment.official" },
       });
       return comment;
     });

@@ -27,6 +27,18 @@ const schema = z.object({
     .min(1)
     .max(64 * 1024 * 1024)
     .default(64 * 1024 * 1024),
+  OBJECT_STORAGE_DRIVER: z.enum(["disk", "garage"]).default("disk"),
+  OBJECT_STORAGE_ENDPOINT: z.string().url().optional(),
+  OBJECT_STORAGE_REGION: z.string().default("garage"),
+  OBJECT_STORAGE_BUCKET: z.string().min(1).default("ai-hub"),
+  OBJECT_STORAGE_ACCESS_KEY: z.string().optional(),
+  OBJECT_STORAGE_SECRET_KEY: z.string().optional(),
+  OBJECT_STORAGE_FORCE_PATH_STYLE: booleanFromEnv,
+  CLAMAV_HOST: z.string().default("127.0.0.1"),
+  CLAMAV_PORT: z.coerce.number().int().min(1).max(65535).default(3310),
+  CLAMAV_TIMEOUT_MS: z.coerce.number().int().min(100).default(30_000),
+  ARTIFACT_SIGNING_PRIVATE_KEY: z.string().optional(),
+  ARTIFACT_SIGNING_PUBLIC_KEY: z.string().optional(),
   ENABLE_API_DOCS: booleanFromEnv,
   DEMO_DATA_ENABLED: booleanFromEnv,
   DEMO_MODE: booleanFromEnv,
@@ -50,6 +62,18 @@ export interface RuntimeConfig {
   artifactUploadEnabled: boolean;
   storageDirectory: string;
   artifactMaxSizeBytes: number;
+  objectStorageDriver: "disk" | "garage";
+  objectStorageEndpoint: string | undefined;
+  objectStorageRegion: string;
+  objectStorageBucket: string;
+  objectStorageAccessKey: string | undefined;
+  objectStorageSecretKey: string | undefined;
+  objectStorageForcePathStyle: boolean;
+  clamavHost: string;
+  clamavPort: number;
+  clamavTimeoutMs: number;
+  artifactSigningPrivateKey: string | undefined;
+  artifactSigningPublicKey: string | undefined;
   enableApiDocs: boolean;
   demoDataEnabled: boolean;
   demoMode: boolean;
@@ -104,7 +128,16 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
   }
 
   if (value.NODE_ENV === "production" && value.ARTIFACT_UPLOAD_ENABLED) {
-    throw new Error("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
+    if (
+      value.OBJECT_STORAGE_DRIVER !== "garage" ||
+      value.OBJECT_STORAGE_ENDPOINT === undefined ||
+      value.OBJECT_STORAGE_ACCESS_KEY === undefined ||
+      value.OBJECT_STORAGE_SECRET_KEY === undefined ||
+      value.ARTIFACT_SIGNING_PRIVATE_KEY === undefined ||
+      value.ARTIFACT_SIGNING_PUBLIC_KEY === undefined
+    ) {
+      throw new Error("ARTIFACT_UPLOAD_PRODUCTION_ADAPTER_REQUIRED");
+    }
   }
 
   // DingTalk SSO: if enabled, all required fields must be present.
@@ -158,6 +191,18 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     artifactUploadEnabled: value.ARTIFACT_UPLOAD_ENABLED,
     storageDirectory: value.STORAGE_DIRECTORY,
     artifactMaxSizeBytes: value.ARTIFACT_MAX_SIZE_BYTES,
+    objectStorageDriver: value.OBJECT_STORAGE_DRIVER,
+    objectStorageEndpoint: value.OBJECT_STORAGE_ENDPOINT,
+    objectStorageRegion: value.OBJECT_STORAGE_REGION,
+    objectStorageBucket: value.OBJECT_STORAGE_BUCKET,
+    objectStorageAccessKey: value.OBJECT_STORAGE_ACCESS_KEY,
+    objectStorageSecretKey: value.OBJECT_STORAGE_SECRET_KEY,
+    objectStorageForcePathStyle: value.OBJECT_STORAGE_FORCE_PATH_STYLE,
+    clamavHost: value.CLAMAV_HOST,
+    clamavPort: value.CLAMAV_PORT,
+    clamavTimeoutMs: value.CLAMAV_TIMEOUT_MS,
+    artifactSigningPrivateKey: value.ARTIFACT_SIGNING_PRIVATE_KEY,
+    artifactSigningPublicKey: value.ARTIFACT_SIGNING_PUBLIC_KEY,
     enableApiDocs: value.ENABLE_API_DOCS,
     demoDataEnabled: value.DEMO_DATA_ENABLED,
     demoMode: value.DEMO_MODE,

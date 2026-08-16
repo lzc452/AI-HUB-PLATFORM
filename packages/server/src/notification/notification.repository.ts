@@ -1,4 +1,5 @@
 import type { DatabaseSchema } from "@ai-hub/database";
+import type { NotificationPayload } from "@ai-hub/contracts";
 import { sql, type Kysely, type Selectable } from "kysely";
 import type {
   NotificationRecord,
@@ -58,6 +59,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
         aggregate_id: input.aggregateId,
         idempotency_key: input.idempotencyKey,
         message: input.message,
+        payload: input.payload ?? {},
         read_at: input.readAt,
         delivery_status: "pending",
         delivery_attempts: 0,
@@ -141,6 +143,7 @@ export class KyselyNotificationRepository implements NotificationRepository {
       aggregateId: row.aggregate_id,
       idempotencyKey: row.idempotency_key,
       message: row.message,
+      payload: (row.payload ?? {}) as NotificationPayload,
       readAt: row.read_at,
       createdAt: row.created_at,
     };
