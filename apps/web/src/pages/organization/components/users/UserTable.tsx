@@ -100,13 +100,13 @@ export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
         <div className="flex items-center gap-3 whitespace-nowrap">
           <Button
             aria-label={`编辑 ${row.displayName}`}
-            className="px-0"
+            className="!px-0"
             onClick={() => onEdit(row)}
             type="link"
           >
             编辑
           </Button>
-          <Button className="px-0" type="link">
+          <Button className="!px-0" type="link">
             重置密码
           </Button>
           <Dropdown
@@ -122,7 +122,7 @@ export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
               ],
             }}
           >
-            <Button className="px-0" type="link">
+            <Button className="!px-0" type="link">
               更多 <DownOutlined className="text-xs" />
             </Button>
           </Dropdown>

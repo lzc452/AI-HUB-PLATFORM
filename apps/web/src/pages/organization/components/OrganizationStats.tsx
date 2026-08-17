@@ -22,7 +22,7 @@ export function OrganizationStats({
   return (
     <section
       aria-label="组织统计"
-      className="grid grid-cols-2 gap-2 md:grid-cols-4"
+      className="grid grid-cols-2 gap-2 md:grid-cols-4 w-full"
     >
       <KpiCard
         icon={<UserOutlined className="text-lg text-[#1677ff]" />}

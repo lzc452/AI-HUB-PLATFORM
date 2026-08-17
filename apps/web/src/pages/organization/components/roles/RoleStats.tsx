@@ -20,7 +20,7 @@ export function RoleStats({ rows }: RoleStatsProps) {
   const assignedUsers = rows.reduce((sum, r) => sum + r.memberCount, 0);
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 w-full">
       <KpiCard
         icon={<TeamOutlined className="text-lg text-[#1677ff]" />}
         label="角色总数"

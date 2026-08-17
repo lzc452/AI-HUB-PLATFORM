@@ -25,7 +25,7 @@ export function DepartmentStats({
   return (
     <section
       aria-label="部门统计"
-      className="grid grid-cols-2 gap-2 md:grid-cols-4"
+      className="grid grid-cols-2 gap-2 md:grid-cols-4 w-full"
     >
       <KpiCard
         icon={<ApartmentOutlined className="text-lg text-[#722ed1]" />}

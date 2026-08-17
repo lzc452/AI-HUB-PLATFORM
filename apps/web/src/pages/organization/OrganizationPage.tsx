@@ -2,7 +2,7 @@ import { Tabs } from "antd";
 import { useMemo, useState } from "react";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
-import { OrganizationHeader } from "./components/OrganizationHeader";
+import { Header } from "../../components/common/Header";
 import { OrganizationStats } from "./components/OrganizationStats";
 import { DepartmentManagementTab } from "./components/departments/DepartmentManagementTab";
 import { DepartmentStats } from "./components/departments/DepartmentStats";
@@ -14,6 +14,7 @@ import { SyncStats } from "./components/sync/SyncStats";
 import { SyncManagementTab } from "./components/sync/SyncManagementTab";
 import { useSyncRows } from "./components/sync/hooks/useSyncRows";
 import { UserManagementTab } from "./components/users/UserManagementTab";
+import { TeamOutlined } from "@ant-design/icons";
 
 /**
  * 组织管理页容器：唯一的数据获取与统计计算位置。
@@ -63,7 +64,6 @@ export default function OrganizationPage() {
   return (
     <div className="space-y-4 bg-white p-4 rounded-md">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
-        <OrganizationHeader />
         {activeTab === "roles" ? (
           <RoleStats rows={roles.data ?? []} />
         ) : activeTab === "departments" ? (

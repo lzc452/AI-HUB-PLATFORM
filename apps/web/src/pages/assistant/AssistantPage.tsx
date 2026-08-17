@@ -47,7 +47,7 @@ function AppRecommendationCard({
     <article
       className={`assistant-rise flex flex-col gap-2 rounded-xl border border-[#f0f0f0] bg-white p-3 shadow-sm transition-shadow hover:border-[#91caff] hover:shadow-md ${className}`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2">
         <div
           aria-hidden="true"
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-lg font-semibold"
@@ -233,35 +233,6 @@ export default function AssistantPage() {
   return (
     <ConfigProvider theme={assistantTheme}>
       <div className="flex h-full flex-col gap-4">
-        <header className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden="true"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white"
-              style={{ background: "#695af3" }}
-            >
-              AI
-            </span>
-            <Title className="!mb-0 !mt-0" level={1}>
-              AI 助手
-            </Title>
-          </div>
-          <Text type="secondary">{assistantGreeting.subtitle}</Text>
-          {!hasUserMessage ? (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {exampleQuestions.map((question) => (
-                <Button
-                  key={question}
-                  onClick={() => send(question)}
-                  size="small"
-                  type="default"
-                >
-                  {question}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-        </header>
 
         <div className="flex min-h-0 flex-1 gap-4">
           <section
@@ -311,7 +282,7 @@ export default function AssistantPage() {
                           </Paragraph>
                         )}
                         {message.recommendations ? (
-                          <div className="mt-3 flex max-w-[560px] flex-col gap-3">
+                          <div className="mt-2 max-w-[560px] ">
                             {message.recommendations.map((app, cardIndex) => (
                               <Fragment key={app.applicationId}>
                                 <AppRecommendationCard
@@ -323,7 +294,7 @@ export default function AssistantPage() {
                                   }
                                 />
                                 {cardIndex === 0 && index === 0 ? (
-                                  <Paragraph className="!mb-0 !text-xs !text-[#8c8c8c]">
+                                  <Paragraph className="!my-2  !text-xs !text-[#8c8c8c]">
                                     {assistantGreeting.followUp}
                                   </Paragraph>
                                 ) : null}
@@ -347,8 +318,22 @@ export default function AssistantPage() {
             </div>
 
             <div className="border-t border-[#f0f0f0] p-3">
+              {!hasUserMessage ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {exampleQuestions.map((question) => (
+                    <Button
+                      key={question}
+                      onClick={() => send(question)}
+                      size="small"
+                      type="default"
+                    >
+                      {question}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
               <div className="flex items-end gap-2">
-                <div className="flex items-center gap-1 pb-1">
+                {/* <div className="flex items-center gap-1 pb-1">
                   <Button
                     aria-label="添加附件"
                     className="!text-[#8c8c8c]"
@@ -365,7 +350,7 @@ export default function AssistantPage() {
                   >
                     <PictureOutlined aria-hidden="true" />
                   </Button>
-                </div>
+                </div> */}
                 <Input.TextArea
                   aria-label="问题输入"
                   autoSize={{ maxRows: 4, minRows: 1 }}

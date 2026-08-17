@@ -1,4 +1,4 @@
-import { DownloadOutlined, LeftOutlined } from "@ant-design/icons";
+import { SafetyOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Button, Tabs, Typography } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,7 @@ import {
 import { useAuditLogRows } from "./components/hooks/useAuditLogRows";
 import { SecurityKpiStats } from "./components/SecurityKpiStats";
 import { SecurityOverviewCard } from "./components/SecurityOverviewCard";
+import{ Header } from "../../components/common/Header";
 
 const { Title } = Typography;
 
@@ -97,19 +98,7 @@ export default function SecurityPage() {
 
   return (
     <div className="space-y-2">
-      <button
-        aria-label="返回上一页"
-        className="flex cursor-pointer items-center gap-1 rounded-md border-0 bg-transparent p-0 text-[13px] text-[#8c8c8c] transition-colors duration-200 hover:text-[#1677ff]"
-        onClick={handleBack}
-        type="button"
-      >
-        <LeftOutlined className="text-[12px]" />
-        系统安全
-      </button>
-      <Title className="!mb-0" level={2}>
-        系统安全
-      </Title>
-      <SecurityKpiStats rows={allRows} />
+      
       <Tabs
         activeKey={activeTab}
         items={[

@@ -45,7 +45,7 @@ export function SyncStats({ stats = EMPTY_SYNC_STATS }: SyncStatsProps) {
   return (
     <section
       aria-label="同步统计"
-      className="grid grid-cols-2 gap-2 md:grid-cols-3"
+      className="grid grid-cols-2 gap-2 md:grid-cols-4 w-full"
     >
       <KpiCard
         icon={<SyncOutlined className="text-lg text-[#1677ff]" />}

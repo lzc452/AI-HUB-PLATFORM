@@ -65,30 +65,25 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <Title className="!mb-0" level={1}>
-        站内通知
-      </Title>
+    <div className="space-y-4 bg-white p-2 rounded-lg">
 
-      <Card className="border-[#d9d9d9]" styles={{ body: { padding: 16 } }}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Tabs
-            activeKey={activeTab}
-            className="!mb-0 min-w-[140px]"
-            items={TAB_ITEMS}
-            onChange={handleTabChange}
-            size="small"
-          />
-          <Button
-            disabled={unreadIds.length === 0 || markAllRead.isPending}
-            loading={markAllRead.isPending}
-            onClick={handleMarkAllRead}
-            type="link"
-          >
-            全部标记已读
-          </Button>
-        </div>
-      </Card>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Tabs
+          activeKey={activeTab}
+          className="!mb-0 min-w-[140px]"
+          items={TAB_ITEMS}
+          onChange={handleTabChange}
+          size="small"
+        />
+        <Button
+          disabled={unreadIds.length === 0 || markAllRead.isPending}a
+          loading={markAllRead.isPending}
+          onClick={handleMarkAllRead}
+          type="link"
+        >
+          全部标记已读
+        </Button>
+      </div>
 
       {isPending ? (
         <div className="py-12 text-center">
@@ -107,92 +102,88 @@ export default function NotificationsPage() {
       ) : null}
 
       {!isPending && filtered.length > 0 ? (
-        <Card className="border-[#d9d9d9]" styles={{ body: { padding: 0 } }}>
-          <ul aria-label="通知列表" className="m-0 list-none p-0" role="list">
-            {paged.map((notification) => {
-              const meta = resolveNotificationMeta(notification);
-              const Icon = meta.icon;
-              const isUnread = notification.readAt === null;
+        <ul aria-label="通知列表" className="m-0 list-none p-0" role="list">
+          {paged.map((notification) => {
+            const meta = resolveNotificationMeta(notification);
+            const Icon = meta.icon;
+            const isUnread = notification.readAt === null;
 
-              return (
-                <li
-                  className={`group cursor-pointer border-b border-[#f0f0f0] p-4 transition-colors last:border-b-0 hover:bg-[#f5f5f5] ${
-                    isUnread ? "bg-white" : "bg-white"
-                  }`}
-                  key={notification.notificationId}
-                  onClick={() => setSelected(notification)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setSelected(notification);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex shrink-0 flex-col items-center pt-1">
-                      <span
-                        aria-hidden="true"
-                        className={`mb-2 block h-2 w-2 rounded-full ${
-                          isUnread ? "bg-[#1677ff]" : "bg-transparent"
-                        }`}
-                      />
-                      <Avatar
-                        className="flex items-center justify-center rounded-xl text-lg"
-                        icon={<Icon />}
-                        shape="square"
-                        size={40}
-                        style={{
-                          backgroundColor: meta.iconBg,
-                          color: meta.iconColor,
-                        }}
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <Text
-                        className={`block truncate text-sm ${
-                          isUnread
-                            ? "font-semibold text-[#1f1f1f]"
-                            : "text-[#1f1f1f]"
-                        }`}
-                      >
-                        {meta.title}
-                      </Text>
-                      <Text className="block truncate text-sm" type="secondary">
-                        {meta.subtitle}
-                      </Text>
-                    </div>
-                    <div className="hidden shrink-0 text-right sm:block">
-                      <Text className="text-sm" type="secondary">
-                        {formatRelativeTime(notification.createdAt)}
-                      </Text>
-                    </div>
+            return (
+              <li
+                className={`group cursor-pointer border-b border-[#f0f0f0] p-4 transition-colors last:border-b-0 hover:bg-[#f5f5f5] ${
+                  isUnread ? "bg-white" : "bg-white"
+                }`}
+                key={notification.notificationId}
+                onClick={() => setSelected(notification)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setSelected(notification);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex shrink-0 flex-col items-center pt-1">
+                    <span
+                      aria-hidden="true"
+                      className={`mb-2 block h-2 w-2 rounded-full ${
+                        isUnread ? "bg-[#1677ff]" : "bg-transparent"
+                      }`}
+                    />
+                    <Avatar
+                      className="flex items-center justify-center rounded-xl text-lg"
+                      icon={<Icon />}
+                      shape="square"
+                      size={40}
+                      style={{
+                        backgroundColor: meta.iconBg,
+                        color: meta.iconColor,
+                      }}
+                    />
                   </div>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+                  <div className="min-w-0 flex-1">
+                    <Text
+                      className={`block truncate text-sm ${
+                        isUnread
+                          ? "font-semibold text-[#1f1f1f]"
+                          : "text-[#1f1f1f]"
+                      }`}
+                    >
+                      {meta.title}
+                    </Text>
+                    <Text className="block truncate text-sm" type="secondary">
+                      {meta.subtitle}
+                    </Text>
+                  </div>
+                  <div className="hidden shrink-0 text-right sm:block">
+                    <Text className="text-sm" type="secondary">
+                      {formatRelativeTime(notification.createdAt)}
+                    </Text>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : null}
 
       {!isPending && total > 0 ? (
-        <Card className="border-[#d9d9d9]" styles={{ body: { padding: 12 } }}>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Text className="text-sm text-[#595959]">共 {total} 条</Text>
-            <Pagination
-              current={page}
-              onChange={setPage}
-              onShowSizeChange={(_, size) => {
-                setPageSize(size);
-                setPage(1);
-              }}
-              pageSize={pageSize}
-              pageSizeOptions={PAGE_SIZE_OPTIONS}
-              showSizeChanger
-              total={total}
-            />
-          </div>
-        </Card>
+       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <Text className="text-sm text-[#595959]">共 {total} 条</Text>
+          <Pagination
+            current={page}
+            onChange={setPage}
+            onShowSizeChange={(_, size) => {
+              setPageSize(size);
+              setPage(1);
+            }}
+            pageSize={pageSize}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
+            showSizeChanger
+            total={total}
+          />
+        </div>
       ) : null}
 
       <NotificationDetailModal
