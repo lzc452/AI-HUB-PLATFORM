@@ -113,11 +113,6 @@ export default function LoginPage() {
                 cause={error}
                 title="登录失败"
               />
-              {error ? (
-                <div className="mb-3 text-sm text-red-600" role="alert">
-                  {error}
-                </div>
-              ) : null}
 
               <form aria-label="登录表单" noValidate onSubmit={onSubmit}>
                 {/* component={false} 仅提供 vertical 布局上下文，避免嵌套 form */}
@@ -125,7 +120,7 @@ export default function LoginPage() {
                   <Form.Item
                     className="!mb-4"
                     help={errors.employeeId?.message}
-                    label="工号 / 邮箱"
+                    label="工号"
                     validateStatus={errors.employeeId ? "error" : ""}
                   >
                     <Controller
@@ -134,9 +129,9 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <Input
                           {...field}
-                          aria-label="工号 / 邮箱"
+                          aria-label="工号"
                           autoComplete="username"
-                          placeholder="请输入工号或邮箱"
+                          placeholder="请输入工号"
                           prefix={<UserOutlined className="text-gray-400" />}
                           size="large"
                         />
@@ -191,7 +186,7 @@ export default function LoginPage() {
                 >
                   登录
                 </Button>
-                <Button
+                {/* <Button
                   block
                   className="!mt-3"
                   onClick={() => {
@@ -213,7 +208,7 @@ export default function LoginPage() {
 
                 <p className="mt-3 text-center text-xs text-gray-400">
                   首次登录请绑定钉钉并设置本地密码 &gt;
-                </p>
+                </p> */}
               </form>
             </div>
           </div>
@@ -234,7 +229,8 @@ export default function LoginPage() {
       <footer className="relative z-10 flex shrink-0 items-center justify-center gap-4 py-1">
         <span>--------</span>
         <span className="text-xs">
-          企业内网访问 · 安全登录 · 支持账号密码与钉钉 SSO
+          {/* 企业内网访问 · 安全登录 · 支持账号密码与钉钉 SSO */}
+          企业内网访问 · 安全登录
         </span>
         <span>--------</span>
       </footer>

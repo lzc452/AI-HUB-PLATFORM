@@ -62,7 +62,8 @@ export default function OrganizationPage() {
 
   return (
     <div className="space-y-4 bg-white p-4 rounded-md">
-      <OrganizationHeader />
+      {/* 这个Header 要删掉，不许再改回来来了！！ */}
+      {/* <OrganizationHeader /> */}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         {activeTab === "roles" ? (
           <RoleStats rows={roles.data ?? []} />

@@ -180,11 +180,11 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
                       },
                     ]
                   : [{ disabled: true, key: "creator", label: "创作者中心" }]),
-                {
-                  disabled: true,
-                  key: "account",
-                  label: "账号安全（后续版本）",
-                },
+                // {
+                //   disabled: true,
+                //   key: "account",
+                //   label: "账号安全（后续版本）",
+                // },
                 { type: "divider" },
                 {
                   danger: true,
@@ -201,7 +201,7 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
               type="text"
             >
               <span className="hidden sm:inline">
-                {actor?.employeeId ?? "未登录"}
+                {actor?.displayName ?? actor?.employeeId ?? "未登录"}
               </span>
               <DownOutlined aria-hidden="true" />
             </Button>

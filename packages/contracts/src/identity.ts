@@ -167,6 +167,8 @@ export function hasAllPermissions(
 
 export interface ActorContext {
   employeeId: EmployeeId;
+  /** 员工姓名；登录与 actor 接口始终返回，可选以兼容旧上下文/测试夹具。 */
+  displayName?: string;
   roleCodes: readonly string[];
   /** 登录和 actor 接口始终返回该字段；可选以兼容内部测试/服务调用者旧上下文。 */
   permissions?: readonly PermissionCode[];

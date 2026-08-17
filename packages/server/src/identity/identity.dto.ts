@@ -73,6 +73,13 @@ export class ActorContextDto {
   })
   employeeId!: string;
 
+  @ApiProperty({
+    type: String,
+    description: "员工姓名",
+    example: "演示普通员工",
+  })
+  displayName!: string;
+
   @ApiProperty({ description: "角色编码列表", type: [String] })
   roleCodes!: string[];
 

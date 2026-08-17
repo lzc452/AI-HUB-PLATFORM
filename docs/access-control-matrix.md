@@ -6,7 +6,7 @@
 
 | 系统角色 | 规范权限包（叠加 `employee` 的角色除外） | 说明 |
 |---|---|---|
-| `employee` | `catalog.read`、`demand.create`、`demand.read`、`demand.update`、`demand.submit`、`demand.interact`、`application.read`、`application.update`、`creator.read`、`interaction.interact`、`notification.read`、`identity.department.read` | 所有在职员工的基础角色；资源服务仍校验负责人、维护者及受众范围 |
+| `employee` | `catalog.read`、`demand.create`、`demand.read`、`demand.update`、`demand.submit`、`demand.interact`、`application.create`、`application.read`、`application.update`、`creator.read`、`interaction.interact`、`notification.read`、`identity.department.read` | 所有在职员工的基础角色；资源服务仍校验负责人、维护者及受众范围 |
 | `application_admin` | `application.manage`、`application.create`、`application.review`、`application.publish`、`analytics.application.read`、`analytics.review.read` | 应用管理、评审和发布 |
 | `demand_operator` | `application.create`、`demand.review`、`demand.claim`、`demand.collaborate`、`demand.prioritize`、`demand.progress`、`demand.manage`、`demand.merge`、`demand.associate_application`、`demand.moderate`、`demand.anonymous_audit`、`analytics.innovation.read` | 创新需求全生命周期运营；允许通过需求桥接创建应用草稿 |
 | `demand_reviewer` | `demand.review`、`demand.claim`、`analytics.review.read` | 需求和审核队列评审 |
@@ -40,7 +40,7 @@
 | 应用市场详情 | `/marketplace/:applicationId` | 应用市场（详情不单列） | `catalog.read` | 所有在职员工及其专业角色 | 受众不匹配返回 `403`，不泄露资源存在性 |
 | 创新广场 | `/innovation` | 创新广场 | `demand.read` | 所有在职员工及其专业角色 | 需求列表按公开、部门、员工受众过滤 |
 | 创新需求详情 | `/innovation/:demandId` | 创新广场（详情不单列） | `demand.read` | 所有在职员工及其专业角色 | 受众、状态和匿名投影由服务层校验 |
-| 应用管理 | `/applications` | 应用管理 | `application.manage` 或 `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 入口只显示给拥有管理或审核权限的账号 |
+| 应用管理 | `/applications` | 应用管理 | `application.read`、`application.manage` 或 `application.review` | `employee`（负责人/维护者）、`application_admin`、`super_admin`（custom role 以实际权限为准） | 列表与 KPI 由服务层按负责人/维护者范围过滤，管理员与审核员保持全量 |
 | 应用管理详情 | `/applications/:applicationId` | 应用管理 > 应用详情 | `application.read` | `employee`（负责人/维护者）、`application_admin`、`super_admin` | 普通员工只能查看自己负责或维护的应用 |
 | 版本管理 | `/applications/:applicationId/versions` | 应用管理 > 版本管理 | `application.read` | `employee`（负责人/维护者）、`application_admin`、`super_admin` | 写操作还需 `application.update` 和负责人（owner）条件；维护者当前只读 |
 | 审核工作台 | `/applications/:applicationId/review` | 应用管理 > 审核工作台 | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 不得审核自己创建的版本；队列认领状态由服务层约束 |
@@ -80,7 +80,9 @@
 
 | Method | Path | Guard 权限 | 可用系统角色 | 资源条件 |
 |---|---|---|---|---|
-| POST | `/internal/applications` | `application.create` | `application_admin`、`demand_operator`、`super_admin`（custom role 以实际权限为准） | 创建者必须是当前 actor |
+| POST | `/internal/applications` | `application.create` | `employee`、`application_admin`、`demand_operator`、`super_admin`（custom role 以实际权限为准） | 创建者必须是当前 actor；所有在职员工可创建草稿并提交应用（规格 §5.4） |
+| GET | `/internal/applications/admin-list` | `application.read`、`application.manage` 或 `application.review` | `employee`（负责人/维护者）、`application_admin`、`super_admin`（custom role 以实际权限为准） | 非管理账号只返回本人负责人或维护者的应用 |
+| GET | `/internal/applications/admin-kpis` | `application.read`、`application.manage` 或 `application.review` | `employee`（负责人/维护者）、`application_admin`、`super_admin`（custom role 以实际权限为准） | KPI 仅统计当前账号可见范围；非管理账号按负责人/维护者过滤 |
 | POST | `/internal/applications/:applicationId/versions` | `application.update` | `employee`、`application_admin`、`super_admin` | 负责人（owner），且应用未归档；维护者当前不能写入 |
 | PUT | `/internal/applications/:applicationId/deliveries/:channel` | `application.update` | `employee`、`application_admin`、`super_admin` | 负责人（owner）；渠道和版本状态合法 |
 | POST | `/internal/applications/versions/:applicationVersionId/submit-review` | `application.update` | `employee`、`application_admin`、`super_admin` | 版本创建者提交，状态必须为草稿 |

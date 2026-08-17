@@ -423,7 +423,11 @@ export class ApplicationController {
 
   @Get("admin-list")
   @RequiresPermissions({
-    anyOf: [PERMISSIONS.APPLICATION_MANAGE, PERMISSIONS.APPLICATION_REVIEW],
+    anyOf: [
+      PERMISSIONS.APPLICATION_READ,
+      PERMISSIONS.APPLICATION_MANAGE,
+      PERMISSIONS.APPLICATION_REVIEW,
+    ],
   })
   @ApiOperation({ summary: "应用管理列表" })
   @ApiIdentityHeaders()
@@ -470,7 +474,11 @@ export class ApplicationController {
 
   @Get("admin-kpis")
   @RequiresPermissions({
-    anyOf: [PERMISSIONS.APPLICATION_MANAGE, PERMISSIONS.APPLICATION_REVIEW],
+    anyOf: [
+      PERMISSIONS.APPLICATION_READ,
+      PERMISSIONS.APPLICATION_MANAGE,
+      PERMISSIONS.APPLICATION_REVIEW,
+    ],
   })
   @ApiOperation({ summary: "应用管理 KPI" })
   @ApiIdentityHeaders()

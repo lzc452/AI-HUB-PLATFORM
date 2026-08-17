@@ -1210,6 +1210,7 @@ export class IdentityService {
 
     return {
       employeeId,
+      displayName: employee.displayName,
       roleCodes: roles
         .map((role) => role.roleCode)
         .sort((left, right) => {

@@ -66,9 +66,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-4 bg-white p-2 rounded-lg">
-      <Typography.Title className="!my-0" level={1}>
-        站内通知
-      </Typography.Title>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs

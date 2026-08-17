@@ -533,7 +533,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-14",
+        updatedAt: "2026-08-17",
         phases: [
           {
             id: "product",
@@ -1023,6 +1023,38 @@
           },
         ],
         tasks: [
+          {
+            id: "t-employee-application-access-20260817",
+            phase: "dev",
+            status: "已完成",
+            title: "普通员工可查看/创建应用并访问创作者中心",
+            owner: "Codex",
+            start: "2026-08-17",
+            end: "2026-08-17",
+            progress:
+              "employee 角色补充 application.create（system-roles 定义 + migration 0037 数据同步）；后端 admin-list/admin-kpis 门禁放宽为 application.read/manage/review，前端 ROUTE_ACCESS.applications 同步放宽；列表/KPI 服务层保持负责人/维护者范围过滤。角色注册、demo-seed、权限守卫与应用服务测试通过，三个包 typecheck 通过。",
+            problem:
+              "按规格 §5.4 所有正常员工应能创建草稿并提交应用，但 employee 角色缺 application.create，且应用管理列表/KPI 与前端入口仅放行 application.manage/review，导致普通员工只能看到应用市场。",
+            solution:
+              "在 employee 规范权限包中补 application.create；新增数据迁移 0037 将数据库 registry 与 SYSTEM_ROLE_DEFINITIONS 对齐（不改表结构）；admin-list/admin-kpis 与前端 ROUTE_ACCESS.applications 改为 application.read/manage/review 任选，普通员工仅可见本人负责人/维护者的应用；同步更新 docs/access-control-matrix.md。",
+            skip: "真实 PostgreSQL 与浏览器联调需执行 pnpm migrate 后复验；完整 Web 套件当前 5 个失败由并行 UI 改动（登录页/通知页标题等）导致，与本次改动无关。",
+          },
+          {
+            id: "t-header-display-name-20260817",
+            phase: "ui",
+            status: "已完成",
+            title: "Header 右上角显示员工姓名",
+            owner: "Codex",
+            start: "2026-08-17",
+            end: "2026-08-17",
+            progress:
+              "ActorContext 增量可选 displayName 字段，服务端 actor 构造（登录与会话恢复共用路径）与 ActorContextDto 补齐该字段；Header 用户菜单改为优先展示姓名、缺失时回退工号。",
+            problem:
+              "Header 右上角展示 employeeId（如 DEMO-EMPLOYEE），不符合按姓名识别用户的交互预期。",
+            solution:
+              "复用 employees.display_name 现有字段，在登录/actor 响应中返回 displayName（向后兼容的增量字段，不改表结构、不改端点语义），Header 展示姓名。",
+            skip: "无。",
+          },
           {
             id: "v1-wave0-feedback-loop-20260814",
             phase: "test",
@@ -1630,6 +1662,18 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-17",
+            phase: "dev",
+            title: "普通员工应用权限修复完成",
+            body: "employee 角色补 application.create，admin-list/admin-kpis 与前端应用管理入口放宽到 application.read；新增 migration 0037 数据同步；角色/权限/前端菜单测试与 typecheck 通过。",
+          },
+          {
+            date: "2026-08-17",
+            phase: "ui",
+            title: "Header 显示员工姓名",
+            body: "登录/actor 响应增量返回 displayName，Header 右上角由 employeeId 改为姓名（缺失时回退工号）。",
+          },
           {
             date: "2026-08-16",
             phase: "test",

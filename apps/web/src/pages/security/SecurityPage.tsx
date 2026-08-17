@@ -81,10 +81,7 @@ export default function SecurityPage() {
   const exportStatus = auditExport.state;
 
   return (
-    <div className="space-y-2">
-      <Typography.Title className="!my-0" level={1}>
-        系统安全
-      </Typography.Title>
+    <div className="space-y-2 px-2 py-2 lg:px-4 lg:py-4 bg-white rounded-xl">
       <Tabs
         activeKey={activeTab}
         items={[
