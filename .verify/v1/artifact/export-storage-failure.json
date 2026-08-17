@@ -1,0 +1,65 @@
+{
+  "mode": "export-poll",
+  "label": "storage-failure",
+  "exportJobId": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+  "status": {
+    "exportId": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+    "status": "failed",
+    "resultStorageKey": null,
+    "failureCode": "Forbidden: Operation is not allowed for this key.",
+    "expiresAt": null,
+    "createdAt": "2026-08-15T19:40:57.167Z",
+    "completedAt": "2026-08-15T19:40:58.171Z"
+  },
+  "evidence": {
+    "job": [
+      {
+        "export_job_id": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+        "requested_by_employee_id": "DEMO-SUPER-ADMIN",
+        "filter_snapshot": {},
+        "status": "failed",
+        "result_storage_key": null,
+        "expires_at": null,
+        "failure_code": "Forbidden: Operation is not allowed for this key.",
+        "created_at": "2026-08-15T19:40:57.167Z",
+        "completed_at": "2026-08-15T19:40:58.171Z"
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "security.audit.export.requested",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+        "result": "success",
+        "risk": "high",
+        "details": {
+          "filterSnapshot": {}
+        },
+        "created_at": "2026-08-15T19:40:57.167Z"
+      },
+      {
+        "event_type": "security.audit.export.failed",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+        "result": "error",
+        "risk": "high",
+        "details": {
+          "exportJobId": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+          "failureCode": "Forbidden: Operation is not allowed for this key."
+        },
+        "created_at": "2026-08-15T19:40:58.175Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "4afebdfa-dab4-40cd-8702-e8259f1bbdf0",
+        "event_type": "security.audit.export.requested",
+        "status": "pending",
+        "attempts": 1,
+        "last_error": "OUTBOX_HANDLER_FAILED",
+        "completed_at": null
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:40:58.206Z"
+}

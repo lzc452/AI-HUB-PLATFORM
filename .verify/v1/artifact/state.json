@@ -1,0 +1,122 @@
+{
+  "control": {
+    "applicationId": "19ea5243-b028-4b58-ac25-1a4258b1f948",
+    "uploadId": "f308dad9-e45e-4ee6-a045-1637f624fe75",
+    "stagingKey": "applications/19ea5243-b028-4b58-ac25-1a4258b1f948/uploads/0fc064f7-664e-4509-a48d-ea2f55197ae5/content",
+    "sha256": "612d9e1af0b4acb0c29003f6c73025ba7a8f67d59792f3553f25507bb52947b0",
+    "preparedAt": "2026-08-15T19:27:35.273Z"
+  },
+  "cas": {
+    "applicationId": "301902fa-dcc2-48f7-a66f-3b1f7aad6db3",
+    "uploadId": "e4d3e50a-011f-400f-b021-2a4ae4b3f8da",
+    "stagingKey": "applications/301902fa-dcc2-48f7-a66f-3b1f7aad6db3/uploads/fd877ba1-4e9d-4bd2-a247-183741fe2f37/content",
+    "sha256": "abc05ec1d2cd48a0bcc5e6235f702ef93f7d14f210f946e04b8f26d95abd351f",
+    "preparedAt": "2026-08-15T19:28:03.264Z"
+  },
+  "eicar": {
+    "applicationId": "cbb61d34-6372-4c4f-9930-aa09b6f8dd67",
+    "uploadId": "cf3bad4b-0a72-4ab4-b0ec-472ae9914a5e",
+    "stagingKey": "applications/cbb61d34-6372-4c4f-9930-aa09b6f8dd67/uploads/8b4d9968-7ad8-450e-8ee2-7dfec967b8fa/content",
+    "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+    "preparedAt": "2026-08-15T19:29:11.005Z"
+  },
+  "bad-signature": {
+    "applicationId": "3d14b913-ddf7-467b-89ef-b0272124af94",
+    "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+    "stagingKey": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content",
+    "sha256": "8f98fbf733411d04d044b14c8940bec0a2730eab8141b8203b2fb9de230f6180",
+    "preparedAt": "2026-08-15T19:29:21.550Z"
+  },
+  "digest-mismatch": {
+    "applicationId": "9acc927e-446c-48bc-9d2e-aaa906a55600",
+    "uploadId": "92e5c470-e9d4-4dac-86bf-de672a852456",
+    "stagingKey": "applications/9acc927e-446c-48bc-9d2e-aaa906a55600/uploads/d090fdac-b578-4e21-82d4-a53beccf9138/content",
+    "sha256": "ba3cc8b9e6ab300ff2f3daab07224b5f385f28ef5c663a083cba3db529fe7be2",
+    "preparedAt": "2026-08-15T19:29:22.700Z"
+  },
+  "not-found": {
+    "applicationId": "1188c629-1d94-4e14-a3bd-3f807876ce6f",
+    "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+    "stagingKey": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content",
+    "sha256": "339ba402ce86f9cec43c693c147e5d9b9b772baba19a3cf1fe73bd26830b133e",
+    "preparedAt": "2026-08-15T19:29:34.774Z"
+  },
+  "storage-copy-fail": {
+    "applicationId": "6562ae10-129e-4313-b2fb-69baeeded64a",
+    "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+    "stagingKey": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content",
+    "sha256": "d0a4b7f3dd7e8180d6208edc4cf960ff8cc4ee659c980c75158e5067ea91757e",
+    "preparedAt": "2026-08-15T19:29:47.755Z"
+  },
+  "security-unavailable": {
+    "applicationId": "2e2c90d0-5a4d-47dc-ab31-d5db815f5e5e",
+    "uploadId": "a7f24f4a-7857-4b3c-83fe-3d5bd417615a",
+    "stagingKey": "applications/2e2c90d0-5a4d-47dc-ab31-d5db815f5e5e/uploads/1d968e4e-e263-4728-bf97-275a16860f00/content",
+    "sha256": "6ca6bae08a0f3f582e98df68a8fc386635c2b005cc571ad9c9fdab53c9e9f9b2",
+    "preparedAt": "2026-08-15T19:30:03.949Z"
+  },
+  "security-timeout": {
+    "applicationId": "70bafaed-e41f-440d-8bdd-bbcbf371c77b",
+    "uploadId": "08e5c526-4523-45a8-ac55-c77cdd487f2d",
+    "stagingKey": "applications/70bafaed-e41f-440d-8bdd-bbcbf371c77b/uploads/c8998e26-cce1-4449-95e8-46f834622488/content",
+    "sha256": "a0a419bb8e92f8b2e34055f1d68a2160a6f45ab392d01d0139e7e10f967226e2",
+    "preparedAt": "2026-08-15T19:30:30.313Z"
+  },
+  "stale": {
+    "applicationId": "87cef1bb-6b71-4087-b02a-002f564bae5e",
+    "uploadId": "55bc671d-4400-4a8a-aff9-85d4c2c47065",
+    "stagingKey": "applications/87cef1bb-6b71-4087-b02a-002f564bae5e/uploads/76c44b37-dc4a-4779-a61c-17429a90efea/content",
+    "sha256": "8d6ccdf53590427e76326131d206d701d3fc78eb9df16791f1e588d64512cf23",
+    "preparedAt": "2026-08-15T19:31:11.488Z",
+    "completeStatus": 200,
+    "completeBody": {
+      "uploadId": "55bc671d-4400-4a8a-aff9-85d4c2c47065",
+      "objectKey": "applications/87cef1bb-6b71-4087-b02a-002f564bae5e/uploads/76c44b37-dc4a-4779-a61c-17429a90efea/content",
+      "fileName": "stale.txt",
+      "mimeType": "text/plain",
+      "sizeBytes": 36,
+      "uploadStatus": "verifying",
+      "scanStatus": "pending",
+      "sha256": "8d6ccdf53590427e76326131d206d701d3fc78eb9df16791f1e588d64512cf23",
+      "signature": "",
+      "errorCode": null,
+      "verificationAttempts": 1,
+      "expiresAt": "2026-08-16T19:31:11.402Z"
+    },
+    "outboxEvents": [
+      {
+        "id": "58d9a8ee-1f41-4bfb-8c7a-864c15be7b2a",
+        "event_type": "artifact.verification.requested",
+        "status": "pending",
+        "attempts": 0
+      }
+    ]
+  },
+  "not-ready": {
+    "exportJobId": "7f7be58b-6126-475a-bca9-7f36a735c30d",
+    "filterSnapshot": {},
+    "createdAt": "2026-08-15T19:39:45.105Z"
+  },
+  "generation-failure": {
+    "exportJobId": "e944761a-7151-4c1d-bbc0-36cacb984869",
+    "filterSnapshot": {
+      "from": "not-a-date"
+    },
+    "createdAt": "2026-08-15T19:40:45.405Z"
+  },
+  "storage-failure": {
+    "exportJobId": "6568f9a0-92cc-4501-b535-b9761133c4ac",
+    "filterSnapshot": {},
+    "createdAt": "2026-08-15T19:40:57.175Z"
+  },
+  "expired": {
+    "exportJobId": "b39f4592-57a0-493a-9322-ac49366d42d2",
+    "filterSnapshot": {},
+    "createdAt": "2026-08-15T19:41:06.933Z"
+  },
+  "file-not-found": {
+    "exportJobId": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+    "filterSnapshot": {},
+    "createdAt": "2026-08-15T19:41:16.885Z"
+  }
+}

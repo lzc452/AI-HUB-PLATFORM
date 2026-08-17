@@ -226,12 +226,16 @@ export class ApplicationService {
         scanStatus: "passed",
         createdByEmployeeId: actor.employeeId,
       });
-      await repository.snapshotVersionContent(version.applicationVersionId, draft);
-
-      const updated = await repository.setApplicationStatus(
-        applicationId,
-        "in_review",
+      await repository.snapshotVersionContent(
+        version.applicationVersionId,
+        draft,
       );
+
+      const updated = await repository.setApplicationStatus({
+        applicationId,
+        expectedStatus: application.status,
+        status: "in_review",
+      });
       await repository.createReviewQueue({
         applicationId,
         applicationVersionId: version.applicationVersionId,
@@ -338,10 +342,11 @@ export class ApplicationService {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
-        "in_review",
-      );
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: application.status,
+        status: "in_review",
+      });
       await repository.createReviewQueue({
         applicationId: application.applicationId,
         applicationVersionId,
@@ -463,10 +468,11 @@ export class ApplicationService {
           decision,
           comment,
         });
-        const updated = await repository.setApplicationStatus(
-          application.applicationId,
-          nextStatus,
-        );
+        const updated = await repository.setApplicationStatus({
+          applicationId: application.applicationId,
+          expectedStatus: "in_review",
+          status: nextStatus,
+        });
         await this.recordChange(
           repository,
           "application.reviewed",
@@ -521,11 +527,12 @@ export class ApplicationService {
       throw new Error("DELIVERY_CHANNELS_INCOMPLETE");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
-        "published",
-        applicationVersionId,
-      );
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: "approved",
+        status: "published",
+        currentVersionId: applicationVersionId,
+      });
       await repository.registerToCatalog({
         applicationId: application.applicationId,
         name: application.name,
@@ -581,11 +588,12 @@ export class ApplicationService {
       throw new Error("ROLLBACK_TARGET_IS_CURRENT");
     }
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
+      const updated = await repository.setApplicationStatus({
         applicationId,
-        "published",
-        applicationVersionId,
-      );
+        expectedStatus: "published",
+        status: "published",
+        currentVersionId: applicationVersionId,
+      });
       await this.recordChange(
         repository,
         "application.rolled_back",
@@ -681,6 +689,13 @@ export class ApplicationService {
     return this.repository.listAdmin(actor, input);
   }
 
+  async getAdminKpis(actor: ActorContext) {
+    if (this.repository.getAdminKpis === undefined) {
+      throw new Error("APPLICATION_ADMIN_KPIS_UNAVAILABLE");
+    }
+    return this.repository.getAdminKpis(actor);
+  }
+
   async listVersions(applicationId: string, actor?: ActorContext) {
     const application = await this.requireApplication(applicationId);
     if (actor !== undefined) {
@@ -694,10 +709,11 @@ export class ApplicationService {
     actor?: ActorContext,
   ): Promise<ApplicationWorkspace> {
     const application = await this.getApplication(applicationId, actor);
-    const [versions, deliveries, reviews] = await Promise.all([
+    const [versions, deliveries, reviews, assets] = await Promise.all([
       this.repository.listVersions(applicationId),
       this.repository.listDeliveries(applicationId),
       this.repository.listReviews(applicationId),
+      this.repository.listAssets(applicationId),
     ]);
     const latestVersion = versions[0];
     const reviewQueue = latestVersion
@@ -711,6 +727,7 @@ export class ApplicationService {
       deliveries,
       reviews,
       reviewQueue,
+      assets,
     };
   }
 
@@ -798,18 +815,19 @@ export class ApplicationService {
     actorEmployeeId?: string,
     applicationVersionId?: string,
   ) {
-    void reason;
     return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus(
-        application.applicationId,
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: application.status,
         status,
-      );
+      });
       await this.recordChange(
         repository,
         eventType,
         application.applicationId,
         applicationVersionId ?? application.currentVersionId,
         actorEmployeeId ?? null,
+        reason === undefined ? undefined : { reason },
       );
       return updated;
     });
@@ -881,17 +899,20 @@ export class ApplicationService {
     applicationId: string,
     applicationVersionId: string | null,
     actorEmployeeId: string | null,
+    details?: unknown,
   ): Promise<void> {
     await repository.recordAudit({
       applicationId,
       applicationVersionId,
       actorEmployeeId,
       eventType,
+      details,
     });
     await repository.emitOutbox({
       applicationId,
       applicationVersionId,
       eventType,
+      details,
     });
   }
 }
@@ -915,7 +936,10 @@ export function validateDraftCompleteness(
   } else if (draft.name.length > 160) {
     fail("DRAFT_NAME_TOO_LONG", "应用名称不能超过 160 字");
   }
-  if (typeof draft.departmentId !== "string" || draft.departmentId.length === 0) {
+  if (
+    typeof draft.departmentId !== "string" ||
+    draft.departmentId.length === 0
+  ) {
     fail("DRAFT_DEPARTMENT_REQUIRED", "归属部门不能为空");
   }
   if (typeof draft.categoryId !== "string" || draft.categoryId.length === 0) {
@@ -951,11 +975,15 @@ export function validateDraftCompleteness(
     fail("DRAFT_SCREENSHOTS_COUNT", "截图数量需在 1–6 张之间");
   }
 
-  if (typeof draft.summaryHtml !== "string" || draft.summaryHtml.trim().length === 0) {
+  if (
+    typeof draft.summaryHtml !== "string" ||
+    draft.summaryHtml.trim().length === 0
+  ) {
     fail("DRAFT_SUMMARY_REQUIRED", "简介不能为空");
   }
   const hasManual =
-    (typeof draft.manualHtml === "string" && draft.manualHtml.trim().length > 0) ||
+    (typeof draft.manualHtml === "string" &&
+      draft.manualHtml.trim().length > 0) ||
     (typeof draft.manualAssetId === "string" && draft.manualAssetId.length > 0);
   if (!hasManual) {
     fail("DRAFT_MANUAL_REQUIRED", "操作手册需提供富文本或附件");
@@ -963,7 +991,8 @@ export function validateDraftCompleteness(
   const hasExamples =
     (typeof draft.examplesHtml === "string" &&
       draft.examplesHtml.trim().length > 0) ||
-    (typeof draft.examplesAssetId === "string" && draft.examplesAssetId.length > 0);
+    (typeof draft.examplesAssetId === "string" &&
+      draft.examplesAssetId.length > 0);
   if (!hasExamples) {
     fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件");
   }
@@ -985,7 +1014,10 @@ export function validateDraftCompleteness(
     if (booleans.some((value) => typeof value !== "boolean")) {
       fail("DRAFT_RISK_OPTION_REQUIRED", "AI 风险选项需逐项选择是/否");
     }
-    if (!Array.isArray(risk.modelProviders) || risk.modelProviders.length === 0) {
+    if (
+      !Array.isArray(risk.modelProviders) ||
+      risk.modelProviders.length === 0
+    ) {
       fail("DRAFT_RISK_PROVIDER_REQUIRED", "需选择模型 / AI 提供方");
     }
     if (

@@ -15,6 +15,7 @@ import {
   Query,
   Req,
   Res,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
@@ -46,15 +47,21 @@ import {
   DepartmentSummaryDto,
   EmployeePageResultDto,
   EmployeeSummaryDto,
+  CreateRoleRequestDto,
+  IdentityRoleSummaryDto,
   LoginRequestDto,
   LoginResponseDto,
   LogoutRequestDto,
   RevokeSessionsRequestDto,
   RevokeSessionsResultDto,
   RoleRecordDto,
+  SyncConfigDto,
   SyncRunDto,
+  SyncRunItemDto,
   UpdateDepartmentRequestDto,
   UpdateEmployeeRequestDto,
+  UpdateRoleRequestDto,
+  UpdateSyncConfigRequestDto,
   UpsertDepartmentRequestDto,
 } from "./identity.dto.js";
 import {
@@ -99,6 +106,102 @@ export class IdentityController {
   @ApiProblemResponses([400, 401, 403])
   async listDepartments() {
     return this.identity.listDepartments();
+  }
+
+  @Get("/organization-overview")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_READ)
+  @ApiOperation({ summary: "组织管理概览" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "组织管理概览" })
+  @ApiProblemResponses([400, 401, 403])
+  async organizationOverview() {
+    return this.identity.getOrganizationOverview();
+  }
+
+  @Post("/employees/imports")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @HttpCode(202)
+  @ApiOperation({ summary: "导入组织员工" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "导入服务不可用时返回 503" })
+  @ApiProblemResponses([400, 401, 403, 503])
+  async importEmployees() {
+    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
+  }
+
+  @Get("/roles")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_READ)
+  @ApiOperation({ summary: "角色列表" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({
+    description: "角色列表",
+    type: IdentityRoleSummaryDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async listRoles() {
+    const roles = await this.identity.listRoles();
+    return roles.map((role) => ({
+      roleId: role.roleCode,
+      roleName: role.name,
+      roleType: role.isSystem ? "system" : "custom",
+      scope: role.permissions.includes("*") ? "全局" : "按权限授权",
+      memberCount: role.memberCount,
+      creator: role.creatorName,
+      status: role.status,
+      updatedAt: role.updatedAt.toISOString(),
+    }));
+  }
+
+  @Post("/roles")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "创建角色" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: CreateRoleRequestDto })
+  @ApiOkResponse({ description: "角色已创建" })
+  @ApiProblemResponses([400, 401, 403])
+  async createRole(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: CreateRoleRequestDto,
+  ) {
+    await this.call(() => this.identity.createRole(actor, body));
+    return { created: true };
+  }
+
+  @Patch("/roles/:roleId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @ApiOperation({ summary: "更新角色" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "roleId", description: "角色编码" })
+  @ApiBody({ type: UpdateRoleRequestDto })
+  @ApiOkResponse({ description: "角色已更新" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async updateRole(
+    @Param("roleId") roleCode: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: UpdateRoleRequestDto,
+  ) {
+    await this.call(() => this.identity.updateRole(actor, roleCode, body));
+    return { updated: true };
+  }
+
+  @Delete("/roles/:roleId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "停用角色" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "roleId", description: "角色编码" })
+  @ApiOkResponse({ description: "角色已停用" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async disableRole(
+    @Param("roleId") roleCode: string,
+    @CurrentActor() actor: ActorContext,
+  ) {
+    await this.call(() =>
+      this.identity.updateRole(actor, roleCode, { status: "disabled" }),
+    );
+    return { disabled: true };
   }
 
   @Get("/employees/:employeeId/roles")
@@ -249,18 +352,108 @@ export class IdentityController {
     );
   }
 
+  @Get("/sync/overview")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_MANAGE)
+  @ApiOperation({ summary: "组织同步概览" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "同步概览" })
+  @ApiProblemResponses([400, 401, 403])
+  async syncOverview() {
+    const [config, runs] = await Promise.all([
+      this.identity.getSyncConfig(),
+      this.identity.listSyncRuns(5),
+    ]);
+    return {
+      config: config === null ? null : this.toSyncConfig(config),
+      recentRuns: runs,
+    };
+  }
+
+  @Get("/sync/config")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_MANAGE)
+  @ApiOperation({ summary: "读取组织同步配置" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "同步配置", type: SyncConfigDto })
+  @ApiProblemResponses([400, 401, 403])
+  async getSyncConfig() {
+    const config = await this.identity.getSyncConfig();
+    return config === null ? null : this.toSyncConfig(config);
+  }
+
+  @Put("/sync/config")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_MANAGE)
+  @ApiOperation({ summary: "更新组织同步配置" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: UpdateSyncConfigRequestDto })
+  @ApiOkResponse({ description: "同步配置已更新", type: SyncConfigDto })
+  @ApiProblemResponses([400, 401, 403])
+  async updateSyncConfig(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: UpdateSyncConfigRequestDto,
+  ) {
+    const config = await this.call(() =>
+      this.identity.updateSyncConfig(actor, body),
+    );
+    return this.toSyncConfig(config);
+  }
+
+  @Get("/sync-runs/:runId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @ApiOperation({ summary: "同步运行详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "runId", description: "同步运行 ID" })
+  @ApiOkResponse({ description: "同步运行详情", type: SyncRunDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getSyncRun(@Param("runId") runId: string) {
+    const run = await this.identity.getSyncRun(runId);
+    if (run === null) throw new NotFoundException("SYNC_RUN_NOT_FOUND");
+    return run;
+  }
+
+  @Get("/sync-runs/:runId/items")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @ApiOperation({ summary: "同步运行明细" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "runId", description: "同步运行 ID" })
+  @ApiOkResponse({
+    description: "同步明细",
+    type: SyncRunItemDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async listSyncRunItems(@Param("runId") runId: string) {
+    const run = await this.identity.getSyncRun(runId);
+    if (run === null) throw new NotFoundException("SYNC_RUN_NOT_FOUND");
+    const items = await this.identity.listSyncRunItems(runId);
+    return items.map((item) => ({
+      ...item,
+      startedAt: item.startedAt?.toISOString() ?? null,
+      finishedAt: item.finishedAt?.toISOString() ?? null,
+    }));
+  }
+
   @Post("/sync/run")
   @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
-  @HttpCode(200)
-  @ApiOperation({ summary: "触发组织同步（V1 占位）" })
+  @HttpCode(503)
+  @ApiOperation({ summary: "触发组织同步（需配置 provider）" })
   @ApiIdentityHeaders()
-  @ApiOkResponse({ description: "同步任务已创建" })
-  @ApiProblemResponses([400, 401, 403])
-  async triggerSync() {
-    return {
-      accepted: true,
-      note: "V1 仅记录同步会话，请在接入钉钉目录后启用",
-    };
+  @ApiProblemResponses([401, 403, 503])
+  async triggerSync(): Promise<never> {
+    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
+  }
+
+  @Post("/sync-runs/:runId/retry")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @HttpCode(200)
+  @ApiOperation({ summary: "重试同步运行" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "runId", description: "同步运行 ID" })
+  @ApiOkResponse({ description: "重试结果" })
+  @ApiProblemResponses([400, 401, 403, 404, 503])
+  async retrySync(@Param("runId") runId: string) {
+    const run = await this.identity.getSyncRun(runId);
+    if (run === null) throw new NotFoundException("SYNC_RUN_NOT_FOUND");
+    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
   }
 
   @Post("/employees/:employeeId/revoke-sessions")
@@ -480,6 +673,22 @@ export class IdentityController {
       }
       throw error;
     }
+  }
+
+  private toSyncConfig(config: {
+    enabled: boolean;
+    schedule: string | null;
+    externalOrgId: string | null;
+    lastUpdatedByEmployeeId: string | null;
+    updatedAt: Date;
+  }) {
+    return {
+      enabled: config.enabled,
+      schedule: config.schedule,
+      externalOrgId: config.externalOrgId,
+      lastUpdatedByEmployeeId: config.lastUpdatedByEmployeeId,
+      updatedAt: config.updatedAt.toISOString(),
+    };
   }
 
   private async call<T>(operation: () => Promise<T>): Promise<T> {

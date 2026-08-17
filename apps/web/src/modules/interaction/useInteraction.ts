@@ -5,12 +5,14 @@ import {
   createComment,
   createFeedback,
   hideComment,
+  listApplicationFeedback,
   listComments,
   listMyFeedback,
   listRatings,
   rateApplication,
   restoreComment,
   toggleLike,
+  updateFeedbackStatus,
 } from "./interaction.client";
 
 function useInvalidateCatalog() {
@@ -134,5 +136,34 @@ export function useMyFeedback(applicationId: string | undefined) {
     enabled: Boolean(applicationId),
     queryFn: () => listMyFeedback(applicationId as string),
     queryKey: ["interactions", "feedback", applicationId],
+  });
+}
+
+/** 所有者/维护者查看应用全部反馈。 */
+export function useApplicationFeedback(applicationId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(applicationId),
+    queryFn: () => listApplicationFeedback(applicationId as string),
+    queryKey: ["interactions", "feedback", applicationId, "all"],
+  });
+}
+
+/** 所有者/维护者更新反馈处理状态。 */
+export function useUpdateFeedbackStatus(applicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      feedbackId: string;
+      status: "open" | "in_progress" | "resolved" | "closed";
+      resolution: string;
+    }) =>
+      updateFeedbackStatus(applicationId as string, input.feedbackId, input),
+    onError: (error) => showErrorMessage(error, "更新反馈状态失败"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["interactions", "feedback", applicationId],
+      });
+      showSuccessMessage("反馈状态已更新");
+    },
   });
 }

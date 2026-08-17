@@ -1,0 +1,25 @@
+{
+  "mode": "export-download",
+  "label": "not-ready",
+  "exportJobId": "7f7be58b-6126-475a-bca9-7f36a735c30d",
+  "status": 200,
+  "contentType": "application/x-ndjson; charset=utf-8",
+  "contentDisposition": "attachment; filename=\"audit-export-7f7be58b-6126-475a-bca9-7f36a735c30d.jsonl\"",
+  "body": {
+    "auditEventId": "5e1f2b6d-9331-4eda-ad5d-84d911d4d863",
+    "traceId": null,
+    "module": "security",
+    "action": "security.audit.export.requested",
+    "actorEmployeeId": "DEMO-SUPER-ADMIN",
+    "subject": "7f7be58b-6126-475a-bca9-7f36a735c30d",
+    "result": "success",
+    "risk": "high",
+    "ipAddress": null,
+    "userAgent": null,
+    "details": {
+      "filterSnapshot": {}
+    },
+    "createdAt": "2026-08-15T19:39:45.099Z"
+  },
+  "verifiedAt": "2026-08-15T19:40:09.722Z"
+}

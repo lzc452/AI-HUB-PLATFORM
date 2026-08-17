@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { ConfigProvider } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useEffect, useRef, type PropsWithChildren } from "react";
@@ -8,8 +8,9 @@ import { aiHubTheme } from "@ai-hub/ui";
 import { AuthProvider } from "./modules/auth/auth.context";
 import { clearLastViewedApplicationId } from "./modules/application/last-viewed";
 import { useAuth } from "./modules/auth/useAuth";
+import { queryClient } from "./query-client";
 
-const queryClient = new QueryClient();
+export { queryClient } from "./query-client";
 
 function sessionKey(session: { employeeId: string; sessionId: string } | null) {
   return session ? `${session.employeeId}:${session.sessionId}` : null;

@@ -64,11 +64,24 @@ export class AnalyticsDashboardService {
             }),
       });
       const allowed = new Set(metrics);
+      const snapshots = (await repository.readSnapshotCounts())
+        .filter((snapshot) => allowed.has(snapshot.metricKey))
+        .map((snapshot) => ({
+          metricKey: snapshot.metricKey,
+          metricVersion: 1,
+          day: to,
+          audienceScopeKey: "platform:snapshot",
+          value: snapshot.value,
+          sourceEventCount: 0,
+        }));
       const dashboardResult = {
         dashboardKey,
         from,
         to,
-        metrics: result.filter((row) => allowed.has(row.metricKey)),
+        metrics: [
+          ...result.filter((row) => allowed.has(row.metricKey)),
+          ...snapshots,
+        ],
       };
       const aggregateId = `${dashboardKey}:${from}:${to}`;
       await repository.recordAudit({

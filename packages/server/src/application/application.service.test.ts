@@ -58,12 +58,41 @@ class MemoryApplicationRepository implements ApplicationRepository {
     sortOrder?: number;
     version?: string | null;
   }> = [];
+  failOutbox = false;
   nextId = 1;
+  private transactionQueue: Promise<void> = Promise.resolve();
 
   async withTransaction<T>(
     operation: (repository: this) => Promise<T>,
   ): Promise<T> {
-    return operation(this);
+    const previous = this.transactionQueue;
+    let release!: () => void;
+    this.transactionQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    const snapshot = {
+      applications: new Map(this.applications),
+      versions: new Map(this.versions),
+      deliveries: [...this.deliveries],
+      reviews: [...this.reviews],
+      reviewQueue: [...this.reviewQueue],
+      uploads: new Map(this.uploads),
+      assets: new Map(this.assets),
+      audits: [...this.audits],
+      events: [...this.events],
+      catalogRegistrations: [...this.catalogRegistrations],
+      deliveryAssets: [...this.deliveryAssets],
+      nextId: this.nextId,
+    };
+    try {
+      return await operation(this);
+    } catch (error) {
+      Object.assign(this, snapshot);
+      throw error;
+    } finally {
+      release();
+    }
   }
   async createApplication(input: {
     ownerEmployeeId: string;
@@ -89,8 +118,14 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async findApplication(id: string) {
     return this.applications.get(id) ?? null;
   }
-  drafts = new Map<string, { draft: import("@ai-hub/contracts").ApplicationDraft; updatedAt: Date }>();
-  async upsertDraft(applicationId: string, draft: import("@ai-hub/contracts").ApplicationDraft) {
+  drafts = new Map<
+    string,
+    { draft: import("@ai-hub/contracts").ApplicationDraft; updatedAt: Date }
+  >();
+  async upsertDraft(
+    applicationId: string,
+    draft: import("@ai-hub/contracts").ApplicationDraft,
+  ) {
     this.drafts.set(applicationId, { draft, updatedAt: new Date() });
   }
   async findDraft(applicationId: string) {
@@ -120,7 +155,10 @@ class MemoryApplicationRepository implements ApplicationRepository {
   ) {
     // no-op in memory repository
   }
-  async snapshotVersionContent(_applicationVersionId: string, _payload: unknown) {
+  async snapshotVersionContent(
+    _applicationVersionId: string,
+    _payload: unknown,
+  ) {
     // no-op in memory repository
   }
   async getApplicationType(applicationId: string) {
@@ -214,19 +252,23 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async deleteAsset(assetId: string) {
     this.assets.delete(assetId);
   }
-  async setApplicationStatus(
-    id: string,
-    status: ApplicationRecord["status"],
-    currentVersionId?: string,
-  ) {
-    const current = this.applications.get(id);
+  async setApplicationStatus(input: {
+    applicationId: string;
+    expectedStatus: ApplicationRecord["status"];
+    status: ApplicationRecord["status"];
+    currentVersionId?: string;
+  }) {
+    const current = this.applications.get(input.applicationId);
     if (current === undefined) throw new Error("APPLICATION_NOT_FOUND");
+    if (current.status !== input.expectedStatus) {
+      throw new Error("APPLICATION_STATE_CONFLICT");
+    }
     const updated = {
       ...current,
-      status,
-      currentVersionId: currentVersionId ?? current.currentVersionId,
+      status: input.status,
+      currentVersionId: input.currentVersionId ?? current.currentVersionId,
     };
-    this.applications.set(id, updated);
+    this.applications.set(input.applicationId, updated);
     return updated;
   }
   async createDelivery(input: Omit<DeliveryRecord, "deliveryId">) {
@@ -302,6 +344,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
     this.audits.push(input.eventType);
   }
   async emitOutbox(input: { eventType: string }) {
+    if (this.failOutbox) throw new Error("OUTBOX_WRITE_FAILED");
     this.events.push(input.eventType);
   }
   async registerToCatalog(input: {
@@ -434,7 +477,12 @@ function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
     categoryId: "productivity",
     applicationType: "web_app",
     tagIds: ["ai"],
-    icon: { mode: "auto", backgroundColor: "#185FA5", text: "智", assetId: null },
+    icon: {
+      mode: "auto",
+      backgroundColor: "#185FA5",
+      text: "智",
+      assetId: null,
+    },
     screenshotAssetIds: ["asset-1"],
     summaryHtml: "<p>简介</p>",
     manualHtml: "<p>手册</p>",
@@ -472,6 +520,32 @@ function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
     version: "1.0.0",
     changelog: "首次发布",
   };
+}
+async function prepareApprovedApplication(
+  service: ApplicationService,
+): Promise<{
+  application: ApplicationRecord;
+  version: ApplicationVersionRecord;
+}> {
+  const application = await service.createApplication(owner, {
+    name: "Copilot",
+    summary: "Internal assistant",
+  });
+  const version = await service.createVersion(
+    owner,
+    application.applicationId,
+    versionInput,
+  );
+  await service.submitForReview(owner, version.applicationVersionId);
+  await service.claimReview(reviewer, version.applicationVersionId);
+  await service.review(
+    reviewer,
+    version.applicationVersionId,
+    "approve",
+    "Approved",
+  );
+  await configureAllDeliveryChannels(service, application.applicationId);
+  return { application, version };
 }
 
 describe("ApplicationService", () => {
@@ -677,6 +751,49 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("DELIVERY_CHANNELS_INCOMPLETE");
   });
 
+  it("allows only one concurrent publication through expected-state CAS", async () => {
+    const { service, repository } = makeService();
+    const { application, version } = await prepareApprovedApplication(service);
+
+    const results = await Promise.allSettled([
+      service.publish(owner, version.applicationVersionId),
+      service.publish(owner, version.applicationVersionId),
+    ]);
+
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    expect(rejected).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "APPLICATION_STATE_CONFLICT",
+      }),
+    });
+    expect(repository.catalogRegistrations).toEqual([
+      application.applicationId,
+    ]);
+    expect(
+      repository.events.filter((event) => event === "application.published"),
+    ).toHaveLength(1);
+  });
+
+  it("rolls back lifecycle state, catalog registration and audit when Outbox fails", async () => {
+    const { service, repository } = makeService();
+    const { application, version } = await prepareApprovedApplication(service);
+    repository.failOutbox = true;
+
+    await expect(
+      service.publish(owner, version.applicationVersionId),
+    ).rejects.toThrow("OUTBOX_WRITE_FAILED");
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ status: "approved", currentVersionId: null });
+    expect(repository.catalogRegistrations).toHaveLength(0);
+    expect(repository.audits).not.toContain("application.published");
+    expect(repository.events).not.toContain("application.published");
+  });
+
   it("rejects self-review and publication before approval", async () => {
     const { service } = makeService();
     const application = await service.createApplication(owner, {
@@ -863,14 +980,22 @@ describe("ApplicationService", () => {
 
     const version = [...repository.versions.values()][0]!;
     await service.claimReview(reviewer, version.applicationVersionId);
-    await service.review(reviewer, version.applicationVersionId, "approve", "ok");
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
     await service.configureDelivery(owner, application.applicationId, {
       channel: "web",
       entryUrl: "https://apps.example.com",
       enabled: true,
     });
 
-    const published = await service.publish(owner, version.applicationVersionId);
+    const published = await service.publish(
+      owner,
+      version.applicationVersionId,
+    );
     expect(published.status).toBe("published");
   });
 });

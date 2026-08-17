@@ -1,0 +1,94 @@
+{
+  "mode": "complete",
+  "label": "bad-signature",
+  "applicationId": "3d14b913-ddf7-467b-89ef-b0272124af94",
+  "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+  "completeStatus": 200,
+  "completeBody": {
+    "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+    "objectKey": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content",
+    "fileName": "bad-signature.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 44,
+    "uploadStatus": "verifying",
+    "scanStatus": "pending",
+    "sha256": "8f98fbf733411d04d044b14c8940bec0a2730eab8141b8203b2fb9de230f6180",
+    "signature": "Zm9yZ2VkLXNpZ25hdHVyZQ",
+    "errorCode": null,
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:21.532Z"
+  },
+  "final": {
+    "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+    "objectKey": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content",
+    "fileName": "bad-signature.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 44,
+    "uploadStatus": "failed",
+    "scanStatus": "failed",
+    "sha256": "8f98fbf733411d04d044b14c8940bec0a2730eab8141b8203b2fb9de230f6180",
+    "signature": "Zm9yZ2VkLXNpZ25hdHVyZQ",
+    "errorCode": "INVALID_SIGNATURE",
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:21.532Z"
+  },
+  "expectedError": "INVALID_SIGNATURE",
+  "s3After": [
+    "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content"
+  ],
+  "evidence": {
+    "upload": [
+      {
+        "upload_status": "failed",
+        "scan_status": "failed",
+        "error_code": "INVALID_SIGNATURE",
+        "verification_attempts": 1,
+        "sha256": "8f98fbf733411d04d044b14c8940bec0a2730eab8141b8203b2fb9de230f6180",
+        "signature": "Zm9yZ2VkLXNpZ25hdHVyZQ",
+        "object_key": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content",
+        "staging_object_key": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content",
+        "completed_at": null
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "application.artifact.verification.requested",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "8f98fbf733411d04d044b14c8940bec0a2730eab8141b8203b2fb9de230f6180",
+          "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+          "stagingObjectKey": "applications/3d14b913-ddf7-467b-89ef-b0272124af94/uploads/7a84030a-6eea-468a-8c90-b1aaffab094e/content"
+        },
+        "created_at": "2026-08-15T19:29:21.846Z"
+      },
+      {
+        "event_type": "application.artifact.verification.failed",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "uploadId": "506d8a95-32a8-44b4-8422-489850dc24b4",
+          "errorCode": "INVALID_SIGNATURE"
+        },
+        "created_at": "2026-08-15T19:29:21.891Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "aaee0c40-a169-49f3-b622-8ddf05a4e88b",
+        "event_type": "artifact.verification.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:21.894Z"
+      },
+      {
+        "id": "39dc3820-364a-455e-89cb-b726ea013752",
+        "event_type": "artifact.verification.failed",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:21.898Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:29:22.396Z"
+}

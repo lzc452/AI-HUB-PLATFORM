@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
@@ -10,6 +16,8 @@ describe("authentication", () => {
   });
 
   afterEach(() => {
+    cleanup();
+    setSession(null);
     vi.unstubAllGlobals();
   });
 
@@ -31,7 +39,9 @@ describe("authentication", () => {
 
     render(<App />);
 
-    fireEvent.submit(await screen.findByRole("form", { name: "登录表单" }));
+    await act(async () => {
+      fireEvent.submit(await screen.findByRole("form", { name: "登录表单" }));
+    });
 
     expect(await screen.findByText("请输入工号或邮箱")).toBeInTheDocument();
     expect(await screen.findByText("请输入密码")).toBeInTheDocument();
@@ -59,7 +69,9 @@ describe("authentication", () => {
     fireEvent.change(screen.getByLabelText("密码"), {
       target: { value: "wrong-password" },
     });
-    fireEvent.submit(screen.getByRole("form", { name: "登录表单" }));
+    await act(async () => {
+      fireEvent.submit(screen.getByRole("form", { name: "登录表单" }));
+    });
 
     expect(await screen.findByText(/工号或密码错误/)).toBeInTheDocument();
   });

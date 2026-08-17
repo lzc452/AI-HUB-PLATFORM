@@ -8,11 +8,11 @@ import {
   useNotifications,
 } from "../../modules/notification/useNotification";
 import type { NotificationRecord } from "../../modules/notification/notification.client";
-import { NotificationDetailModal } from "./NotificationDetailModal";
+import { NotificationDetailModal } from "../../components/common/NotificationDetailModal";
 import {
   formatRelativeTime,
   resolveNotificationMeta,
-} from "./notificationMeta";
+} from "../../modules/notification/notificationMeta";
 
 const { Text, Title } = Typography;
 

@@ -511,7 +511,10 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
@@ -525,7 +528,10 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
@@ -539,11 +545,93 @@ function ContentStep() {
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <RichTextEditor value={field.value ?? ""} onChange={field.onChange} />
+            <RichTextEditor
+              value={field.value ?? ""}
+              onChange={field.onChange}
+            />
           </Form.Item>
         )}
       />
     </Form>
+  );
+}
+
+function DeliveryStep() {
+  const { control } = useFormContext<FieldValues>();
+  return (
+    <Controller
+      control={control}
+      name="applicationType"
+      render={({ field }) => (
+        <Form.Item label="应用类型" required>
+          <Radio.Group
+            {...field}
+            optionType="button"
+            options={[
+              { value: "web_app", label: "Web 应用" },
+              { value: "desktop_app", label: "桌面端应用" },
+              { value: "mobile_app", label: "移动端应用" },
+              { value: "mini_program", label: "小程序" },
+            ]}
+          />
+        </Form.Item>
+      )}
+    />
+  );
+}
+
+function AudienceStep({ options }: { options: PublishingOptions }) {
+  const { control } = useFormContext<FieldValues>();
+  return (
+    <Controller
+      control={control}
+      name="audience.0.audienceType"
+      render={({ field, fieldState }) => (
+        <Form.Item
+          label="受众规则"
+          required
+          validateStatus={fieldState.error ? "error" : ""}
+          help={fieldState.error?.message}
+        >
+          <Radio.Group
+            {...field}
+            options={[
+              { value: "all", label: "全体员工" },
+              { value: "department", label: "指定部门" },
+              { value: "employee", label: "指定员工" },
+            ]}
+          />
+          <DepartmentSelect options={options} />
+        </Form.Item>
+      )}
+    />
+  );
+}
+
+function DepartmentSelect({ options }: { options: PublishingOptions }) {
+  const { control, watch } = useFormContext<FieldValues>();
+  const audienceType = watch("audience.0.audienceType");
+  if (audienceType !== "department" && audienceType !== "employee") return null;
+  const name =
+    audienceType === "department"
+      ? "audience.0.departmentId"
+      : "audience.0.employeeId";
+  const opts =
+    audienceType === "department" ? options.departments : options.employees;
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <Select
+          {...field}
+          mode={audienceType === "department" ? "multiple" : "multiple"}
+          placeholder={audienceType === "department" ? "选择部门" : "选择员工"}
+          options={opts as { value: string; label: string }[]}
+          style={{ width: "100%", marginTop: 12 }}
+        />
+      )}
+    />
   );
 }
 
@@ -606,7 +694,10 @@ function RiskStep() {
           </Form.Item>
         )}
       />
-      {yesNo("5. 是否影响人事、财务、法务等高风险决策？", "risk.affectsHighRiskDecisions")}
+      {yesNo(
+        "5. 是否影响人事、财务、法务等高风险决策？",
+        "risk.affectsHighRiskDecisions",
+      )}
       <Controller
         control={control}
         name="risk.inputRestrictionDisclaimer"
@@ -628,9 +719,13 @@ function RiskStep() {
               type="link"
               style={{ paddingLeft: 0 }}
               onClick={() =>
-                setValue("risk.inputRestrictionDisclaimer", DISCLAIMER_TEMPLATE, {
-                  shouldDirty: true,
-                })
+                setValue(
+                  "risk.inputRestrictionDisclaimer",
+                  DISCLAIMER_TEMPLATE,
+                  {
+                    shouldDirty: true,
+                  },
+                )
               }
             >
               填入默认模板
@@ -743,7 +838,9 @@ export function createWizardSteps(
         "version",
         "changelog",
       ],
-      render: () => <BasicInfoStep options={options} applicationId={applicationId} />,
+      render: () => (
+        <BasicInfoStep options={options} applicationId={applicationId} />
+      ),
     },
     {
       key: "content",

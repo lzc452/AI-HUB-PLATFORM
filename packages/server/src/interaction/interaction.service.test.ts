@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 import { InteractionService } from "./interaction.service.js";
+import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy.js";
+import type { CatalogEntry } from "../catalog/catalog.types.js";
 import type {
   CommentRecord,
   InteractionRepository,
@@ -106,6 +108,11 @@ class MemoryInteractionRepository implements InteractionRepository {
     this.reports.push(report);
     return report;
   }
+  async findReport(reportId: string) {
+    return (
+      this.reports.find((candidate) => candidate.reportId === reportId) ?? null
+    );
+  }
   async resolveReport(
     reportId: string,
     status: ReportRecord["status"],
@@ -185,10 +192,40 @@ const allowAll = async (): Promise<AuthorizationDecision> => ({
   reasonCode: "ALLOW_TEST",
 });
 
+const visibleCatalog: CatalogVisibilityPort = {
+  requireVisible: async (_actor: ActorContext, applicationId: string) => {
+    if (applicationId !== "app-1") {
+      throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+    }
+    const entry: CatalogEntry = {
+      applicationId,
+      name: "平台助手",
+      summary: "平台流程自动化",
+      departmentId: "dept-platform",
+      categoryId: "cat-productivity",
+      tagIds: [],
+      trustLabels: ["verified"],
+      currentVersionId: "version-1",
+      publishedAt: new Date("2026-08-01T00:00:00.000Z"),
+      deliveryChannels: ["web"],
+      likeCount: 0,
+      ratingAverage: null,
+      healthStatus: "healthy",
+      deprecatedReason: null,
+      replacementApplicationId: null,
+    };
+    return entry;
+  },
+};
+
 describe("InteractionService", () => {
   it("toggles a like without creating duplicate rows", async () => {
     const repository = new MemoryInteractionRepository();
-    const service = new InteractionService(repository, { authorize: allowAll });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
 
     await expect(service.toggleLike(employee, "app-1")).resolves.toMatchObject({
       liked: true,
@@ -201,7 +238,11 @@ describe("InteractionService", () => {
 
   it("validates a rating and updates the employee's single application rating", async () => {
     const repository = new MemoryInteractionRepository();
-    const service = new InteractionService(repository, { authorize: allowAll });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
 
     await expect(
       service.rate(employee, { applicationId: "app-1", stars: 6, body: "bad" }),
@@ -222,7 +263,11 @@ describe("InteractionService", () => {
 
   it("allows any employee to create a root comment; only the team may reply", async () => {
     const repository = new MemoryInteractionRepository();
-    const service = new InteractionService(repository, { authorize: allowAll });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
 
     const root = await service.createComment(employee, {
       applicationId: "app-1",
@@ -256,7 +301,11 @@ describe("InteractionService", () => {
 
   it("rejects empty comment bodies", async () => {
     const repository = new MemoryInteractionRepository();
-    const service = new InteractionService(repository, { authorize: allowAll });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
 
     await expect(
       service.createComment(employee, {
@@ -268,7 +317,11 @@ describe("InteractionService", () => {
 
   it("keeps reports non-destructive and audits anonymous identity lookup", async () => {
     const repository = new MemoryInteractionRepository();
-    const service = new InteractionService(repository, { authorize: allowAll });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
     const comment = await service.createComment(owner, {
       applicationId: "app-1",
       body: "content",
@@ -285,5 +338,24 @@ describe("InteractionService", () => {
     expect(repository.audits).toContain(
       "interaction.anonymous_identity.viewed",
     );
+  });
+
+  it("rejects direct-ID interaction when the application is outside the actor audience", async () => {
+    const repository = new MemoryInteractionRepository();
+    const hiddenCatalog: CatalogVisibilityPort = {
+      requireVisible: async () => {
+        throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+      },
+    };
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      hiddenCatalog,
+    );
+
+    await expect(service.toggleLike(employee, "app-1")).rejects.toThrow(
+      "CATALOG_APPLICATION_NOT_FOUND",
+    );
+    expect(repository.liked.size).toBe(0);
   });
 });

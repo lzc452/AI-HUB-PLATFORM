@@ -7,12 +7,12 @@ describe("buildAnalyticsFixture", () => {
 
   // ── counts ─────────────────────────────────────────────────────────────────
 
-  it("produces 30 behavior events", () => {
-    expect(fixture.behaviorEvents).toHaveLength(30);
+  it("produces 40 behavior events", () => {
+    expect(fixture.behaviorEvents).toHaveLength(40);
   });
 
-  it("produces 1080 daily aggregates (30 days × 12 metrics × 3 scopes)", () => {
-    expect(fixture.dailyAggregates).toHaveLength(1080);
+  it("produces 1800 daily aggregates (30 days × 20 metrics × 3 scopes)", () => {
+    expect(fixture.dailyAggregates).toHaveLength(1800);
   });
 
   it("produces 3 export jobs", () => {
@@ -34,7 +34,7 @@ describe("buildAnalyticsFixture", () => {
     for (const e of fixture.behaviorEvents) {
       counts.set(e.event_name, (counts.get(e.event_name) ?? 0) + 1);
     }
-    expect(counts.size).toBe(15);
+    expect(counts.size).toBe(20);
     for (const count of counts.values()) {
       expect(count).toBe(2);
     }
@@ -61,10 +61,10 @@ describe("buildAnalyticsFixture", () => {
     }
   });
 
-  it("behavior event expires_at is 90 days after occurred_at", () => {
+  it("behavior event expires_at is 180 days after occurred_at", () => {
     for (const e of fixture.behaviorEvents) {
       const delta = e.expires_at.getTime() - e.occurred_at.getTime();
-      expect(delta).toBe(90 * 24 * 60 * 60 * 1000);
+      expect(delta).toBe(180 * 24 * 60 * 60 * 1000);
     }
   });
 
@@ -90,7 +90,7 @@ describe("buildAnalyticsFixture", () => {
     );
     expect(withDept.length).toBeGreaterThan(0);
     expect(withEmp.length).toBeGreaterThan(0);
-    expect(withEmp.length).toBeLessThan(30); // some have null employee audience
+    expect(withEmp.length).toBeLessThan(40); // some have null employee audience
   });
 
   // ── daily aggregates ───────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ describe("buildAnalyticsFixture", () => {
     }
   });
 
-  it("daily aggregates span all 30 days, 12 metrics, and 3 scopes", () => {
+  it("daily aggregates span all 30 days, 20 metrics, and 3 scopes", () => {
     const days = new Set<string>();
     const metrics = new Set<string>();
     const scopes = new Set<string>();
@@ -114,7 +114,7 @@ describe("buildAnalyticsFixture", () => {
       scopes.add(a.audience_scope_key);
     }
     expect(days.size).toBe(30);
-    expect(metrics.size).toBe(12);
+    expect(metrics.size).toBe(20);
     expect(scopes.size).toBe(3);
   });
 
@@ -235,8 +235,8 @@ describe("buildAnalyticsFixture", () => {
     const f1 = buildAnalyticsFixture(anchor);
     const f2 = buildAnalyticsFixture(anchor);
     expect(f1.dailyAggregates[0]?.value).toBe(f2.dailyAggregates[0]?.value);
-    expect(f1.dailyAggregates[1079]?.value).toBe(
-      f2.dailyAggregates[1079]?.value,
+    expect(f1.dailyAggregates[1799]?.value).toBe(
+      f2.dailyAggregates[1799]?.value,
     );
   });
 });

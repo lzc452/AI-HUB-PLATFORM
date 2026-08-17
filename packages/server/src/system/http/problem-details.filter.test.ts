@@ -18,6 +18,7 @@ describe("toProblemDetails", () => {
       title: "Internal Server Error",
       status: 500,
       code: "INTERNAL_ERROR",
+      message: "Internal Server Error",
       traceId,
     });
     expect(JSON.stringify(problem)).not.toContain("secret");
@@ -34,6 +35,7 @@ describe("toProblemDetails", () => {
       title: "Bad Request",
       status: 400,
       code: "RATING_STARS_INVALID",
+      message: "Bad Request",
       traceId,
     });
   });
@@ -56,6 +58,7 @@ describe("toProblemDetails", () => {
       title: "Validation Failed",
       status: 400,
       code: "VALIDATION_ERROR",
+      message: "Validation Failed",
       traceId,
       fieldErrors: {
         displayName: [expect.any(String)],

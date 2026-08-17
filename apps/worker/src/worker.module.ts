@@ -1,5 +1,7 @@
 import { Module, type OnApplicationShutdown } from "@nestjs/common";
 import { createDatabase, OutboxStore } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
+import type { Kysely } from "kysely";
 import {
   HealthModule,
   ObservabilityMetrics,
@@ -28,9 +30,21 @@ export const outboxHandlers: OutboxHandlerMap = {
 
 export function createOutboxHandlers(
   database: ReturnType<typeof createDatabase>,
+  artifactVerificationHandler?: OutboxHandler,
+  auditExportHandler?: OutboxHandler,
 ): OutboxHandlerMap {
   return {
     ...outboxHandlers,
+    ...(artifactVerificationHandler === undefined
+      ? {}
+      : {
+          "artifact.verification.requested": artifactVerificationHandler,
+          "artifact.verification.completed": systemProbeRequestedHandler,
+          "artifact.verification.failed": systemProbeRequestedHandler,
+        }),
+    ...(auditExportHandler === undefined
+      ? {}
+      : { "security.audit.export.requested": auditExportHandler }),
     "notification.created": createDingTalkNotificationOutboxHandler(
       new KyselyNotificationRepository(database),
       unavailableDingTalk,
@@ -38,17 +52,17 @@ export function createOutboxHandlers(
   };
 }
 
-const createWorkerDatabaseCheck = (databaseUrl: string) => {
+const createWorkerDatabaseCheck = (database: Kysely<DatabaseSchema>) => {
   return async () => {
-    const db = createDatabase(databaseUrl);
-
     try {
-      await db.selectFrom("outbox_events").select("id").limit(1).execute();
+      await database
+        .selectFrom("outbox_events")
+        .select("id")
+        .limit(1)
+        .execute();
       return true;
     } catch {
       return false;
-    } finally {
-      await db.destroy();
     }
   };
 };
@@ -74,23 +88,32 @@ export function createRetentionRunner(retention: {
 @Module({})
 export class WorkerModule {
   static register(
-    databaseUrl: string,
+    databaseOrUrl: string | Kysely<DatabaseSchema>,
     metrics: ObservabilityMetrics = new ObservabilityMetrics(),
     outboxLeaseDurationMs = 15 * 60 * 1000,
+    artifactVerificationHandler?: OutboxHandler,
+    auditExportHandler?: OutboxHandler,
   ) {
+    const database =
+      typeof databaseOrUrl === "string"
+        ? createDatabase(databaseOrUrl)
+        : databaseOrUrl;
     return {
       module: WorkerModule,
-      imports: [HealthModule.register(createWorkerDatabaseCheck(databaseUrl))],
+      imports: [HealthModule.register(createWorkerDatabaseCheck(database))],
       providers: [
         {
           provide: WorkerOutboxRuntime,
           useFactory: () => {
-            const database = createDatabase(databaseUrl);
             const outboxWorker = new OutboxWorker(
               new OutboxStore(database, {
                 leaseDurationMs: outboxLeaseDurationMs,
               }),
-              createOutboxHandlers(database),
+              createOutboxHandlers(
+                database,
+                artifactVerificationHandler,
+                auditExportHandler,
+              ),
               undefined,
               metrics,
             );

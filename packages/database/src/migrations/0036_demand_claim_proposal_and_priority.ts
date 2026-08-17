@@ -15,7 +15,9 @@ const newStatuses = [
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   // 1. 移除旧状态检查约束（状态值将迁移为 10 态）。
-  await sql`alter table ai_demands drop constraint if exists ai_demands_status_check`.execute(db);
+  await sql`alter table ai_demands drop constraint if exists ai_demands_status_check`.execute(
+    db,
+  );
 
   // 2. 新增 9 组表单字段对应的列（可空，兼容存量数据；新提交由服务层强制非空）。
   await db.schema
@@ -40,9 +42,15 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   // 4. 状态值迁移：published → pending_claim，in_progress → claimed，completed → converted。
-  await sql`update ai_demands set status = 'pending_claim' where status = 'published'`.execute(db);
-  await sql`update ai_demands set status = 'claimed' where status = 'in_progress'`.execute(db);
-  await sql`update ai_demands set status = 'converted' where status = 'completed'`.execute(db);
+  await sql`update ai_demands set status = 'pending_claim' where status = 'published'`.execute(
+    db,
+  );
+  await sql`update ai_demands set status = 'claimed' where status = 'in_progress'`.execute(
+    db,
+  );
+  await sql`update ai_demands set status = 'converted' where status = 'completed'`.execute(
+    db,
+  );
 
   // 5. 重建状态检查约束（10 态）。
   await sql`
@@ -150,17 +158,31 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  await sql`drop trigger if exists ai_demand_claim_proposals_no_delete on ai_demand_claim_proposals`.execute(db);
+  await sql`drop trigger if exists ai_demand_claim_proposals_no_delete on ai_demand_claim_proposals`.execute(
+    db,
+  );
   await db.schema.dropTable("ai_demand_attachments").execute();
   await db.schema.dropTable("ai_demand_claim_proposals").execute();
 
-  await sql`alter table ai_demands drop constraint if exists ai_demands_confirmed_priority_check`.execute(db);
-  await sql`alter table ai_demands drop constraint if exists ai_demands_priority7_range_check`.execute(db);
-  await sql`alter table ai_demands drop constraint if exists ai_demands_status_check`.execute(db);
+  await sql`alter table ai_demands drop constraint if exists ai_demands_confirmed_priority_check`.execute(
+    db,
+  );
+  await sql`alter table ai_demands drop constraint if exists ai_demands_priority7_range_check`.execute(
+    db,
+  );
+  await sql`alter table ai_demands drop constraint if exists ai_demands_status_check`.execute(
+    db,
+  );
 
-  await sql`update ai_demands set status = 'published' where status = 'pending_claim'`.execute(db);
-  await sql`update ai_demands set status = 'in_progress' where status = 'claimed'`.execute(db);
-  await sql`update ai_demands set status = 'completed' where status = 'converted'`.execute(db);
+  await sql`update ai_demands set status = 'published' where status = 'pending_claim'`.execute(
+    db,
+  );
+  await sql`update ai_demands set status = 'in_progress' where status = 'claimed'`.execute(
+    db,
+  );
+  await sql`update ai_demands set status = 'completed' where status = 'converted'`.execute(
+    db,
+  );
 
   await sql`
     alter table ai_demands

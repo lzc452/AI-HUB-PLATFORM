@@ -1,4 +1,5 @@
 import { apiFetch } from "../../shared/api/client";
+import type { NotificationPayload } from "@ai-hub/contracts";
 
 export interface NotificationRecord {
   notificationId: string;
@@ -7,12 +8,21 @@ export interface NotificationRecord {
   aggregateId: string;
   idempotencyKey: string;
   message: string;
+  payload?: NotificationPayload;
   readAt: string | null;
   createdAt: string;
 }
 
 export function listNotifications(): Promise<NotificationRecord[]> {
   return apiFetch<NotificationRecord[]>("/internal/notifications");
+}
+
+export function getNotification(
+  notificationId: string,
+): Promise<NotificationRecord> {
+  return apiFetch<NotificationRecord>(
+    `/internal/notifications/${encodeURIComponent(notificationId)}`,
+  );
 }
 
 export function markNotificationRead(

@@ -1,0 +1,66 @@
+{
+  "mode": "export-poll",
+  "label": "file-not-found",
+  "exportJobId": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+  "status": {
+    "exportId": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+    "status": "completed",
+    "resultStorageKey": "security/audit-exports/b0270ab7-ab42-4669-b48f-e765a8d74364.jsonl",
+    "failureCode": null,
+    "expiresAt": "2026-08-22T19:41:17.387Z",
+    "createdAt": "2026-08-15T19:41:16.881Z",
+    "completedAt": "2026-08-15T19:41:17.387Z"
+  },
+  "evidence": {
+    "job": [
+      {
+        "export_job_id": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+        "requested_by_employee_id": "DEMO-SUPER-ADMIN",
+        "filter_snapshot": {},
+        "status": "completed",
+        "result_storage_key": "security/audit-exports/b0270ab7-ab42-4669-b48f-e765a8d74364.jsonl",
+        "expires_at": "2026-08-22T19:41:17.387Z",
+        "failure_code": null,
+        "created_at": "2026-08-15T19:41:16.881Z",
+        "completed_at": "2026-08-15T19:41:17.387Z"
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "security.audit.export.requested",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+        "result": "success",
+        "risk": "high",
+        "details": {
+          "filterSnapshot": {}
+        },
+        "created_at": "2026-08-15T19:41:16.881Z"
+      },
+      {
+        "event_type": "security.audit.export.completed",
+        "actor_employee_id": "DEMO-SUPER-ADMIN",
+        "subject": "b0270ab7-ab42-4669-b48f-e765a8d74364",
+        "result": "success",
+        "risk": "low",
+        "details": {
+          "rowCount": 9,
+          "storageKey": "security/audit-exports/b0270ab7-ab42-4669-b48f-e765a8d74364.jsonl",
+          "exportJobId": "b0270ab7-ab42-4669-b48f-e765a8d74364"
+        },
+        "created_at": "2026-08-15T19:41:17.389Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "b78e3961-7b9e-4188-b241-130186669c1f",
+        "event_type": "security.audit.export.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:41:17.391Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:41:17.697Z"
+}

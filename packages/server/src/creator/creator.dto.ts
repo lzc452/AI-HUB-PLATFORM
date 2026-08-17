@@ -15,7 +15,11 @@ export class CreatorVersionDiffDto {
 
 /** 校验报告。 */
 export class CreatorValidationReportDto {
-  @ApiProperty({ type: String, description: "校验结果", enum: ["passed", "failed"] })
+  @ApiProperty({
+    type: String,
+    description: "校验结果",
+    enum: ["passed", "failed"],
+  })
   status!: "passed" | "failed";
 
   @ApiProperty({

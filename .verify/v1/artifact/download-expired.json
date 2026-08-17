@@ -1,0 +1,17 @@
+{
+  "mode": "export-download",
+  "label": "expired",
+  "exportJobId": "b39f4592-57a0-493a-9322-ac49366d42d2",
+  "status": 404,
+  "contentType": "application/problem+json; charset=utf-8",
+  "contentDisposition": null,
+  "body": {
+    "type": "about:blank",
+    "title": "Not Found",
+    "status": 404,
+    "code": "AUDIT_EXPORT_EXPIRED",
+    "message": "Not Found",
+    "traceId": "01M03F2F95ADYKNPRHV6MAY9BP"
+  },
+  "verifiedAt": "2026-08-15T19:41:08.268Z"
+}

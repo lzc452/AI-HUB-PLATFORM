@@ -15,6 +15,8 @@ const event = (
   eventId: idempotencyKey,
   idempotencyKey,
   eventName,
+  aggregateId: "demand-1",
+  actorEmployeeId: "employee-1",
   occurredAt: new Date(occurredAt),
   audienceScopeKey: "department:department-1",
 });

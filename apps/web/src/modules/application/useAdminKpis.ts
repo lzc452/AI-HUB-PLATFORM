@@ -1,13 +1,9 @@
+import type { ApplicationAdminKpis } from "@ai-hub/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getAdminApplicationList } from "./adminList.client";
+import { getAdminApplicationKpis } from "./application.client";
 
-export interface AdminKpiSummary {
-  deliveryFailed: number;
-  pendingReview: number;
-  published: number;
-  total: number;
-}
+export type AdminKpiSummary = ApplicationAdminKpis;
 
 const QUERY_KEY = ["applications", "admin-kpis"] as const;
 
@@ -17,19 +13,7 @@ const QUERY_KEY = ["applications", "admin-kpis"] as const;
 export function useAdminKpis() {
   const queryClient = useQueryClient();
   const query = useQuery({
-    queryFn: async (): Promise<AdminKpiSummary> => {
-      const result = await getAdminApplicationList({ pageSize: 200 });
-      const items = result.items;
-      return {
-        deliveryFailed: items.filter(
-          (row) =>
-            row.deliveryChannels.length === 0 || row.status === "withdrawn",
-        ).length,
-        pendingReview: items.filter((row) => row.status === "in_review").length,
-        published: items.filter((row) => row.status === "published").length,
-        total: result.total,
-      };
-    },
+    queryFn: getAdminApplicationKpis,
     queryKey: QUERY_KEY,
     staleTime: 30_000,
   });

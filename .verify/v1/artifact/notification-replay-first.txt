@@ -1,0 +1,42 @@
+     metric     |                   name                   |        timestamp         
+----------------+------------------------------------------+--------------------------
+ migration_list | 0001_system_foundation                   | 2026-08-15T19:50:04.211Z
+ migration_list | 0002_identity_organization_authorization | 2026-08-15T19:50:04.222Z
+ migration_list | 0003_application_delivery_review         | 2026-08-15T19:50:04.236Z
+ migration_list | 0004_catalog_interaction                 | 2026-08-15T19:50:04.256Z
+ migration_list | 0005_notification_creator                | 2026-08-15T19:50:04.259Z
+ migration_list | 0006_ai_demand_innovation                | 2026-08-15T19:50:04.276Z
+ migration_list | 0007_demand_collaboration_constraints    | 2026-08-15T19:50:04.277Z
+ migration_list | 0008_analytics_events                    | 2026-08-15T19:50:04.286Z
+ migration_list | 0009_analytics_exports                   | 2026-08-15T19:50:04.287Z
+ migration_list | 0010_analytics_roles                     | 2026-08-15T19:50:04.288Z
+ migration_list | 0011_analytics_aggregate_versions        | 2026-08-15T19:50:04.289Z
+ migration_list | 0012_request_replay_nonces               | 2026-08-15T19:50:04.290Z
+ migration_list | 0013_unified_authorization               | 2026-08-15T19:50:04.298Z
+ migration_list | 0014_demand_comment_likes_and_priority   | 2026-08-15T19:50:04.301Z
+ migration_list | 0015_login_security_and_dingtalk_sso     | 2026-08-15T19:50:04.303Z
+ migration_list | 0016_application_risk_description        | 2026-08-15T19:50:04.303Z
+ migration_list | 0017_application_workspace               | 2026-08-15T19:50:04.307Z
+ migration_list | 0018_organization_sync_fields            | 2026-08-15T19:50:04.312Z
+ migration_list | 0019_artifact_uploads                    | 2026-08-15T19:50:04.318Z
+ migration_list | 0020_security_audit_feedback             | 2026-08-15T19:50:04.323Z
+ migration_list | 0021_identity_authorization_integrity    | 2026-08-15T19:50:04.328Z
+ migration_list | 0022_outbox_claim_lease                  | 2026-08-15T19:50:04.329Z
+ migration_list | 0023_login_challenges                    | 2026-08-15T19:50:04.330Z
+ migration_list | 0024_outbox_quarantine                   | 2026-08-15T19:50:04.331Z
+ migration_list | 0025_artifact_integrity                  | 2026-08-15T19:50:04.341Z
+ migration_list | 0026_engagement_integrity                | 2026-08-15T19:50:04.345Z
+ migration_list | 0027_security_audit_integrity            | 2026-08-15T19:50:04.347Z
+ migration_list | 0028_directory_sync_integrity            | 2026-08-15T19:50:04.350Z
+ migration_list | 0029_notification_payload                | 2026-08-15T19:50:04.351Z
+ migration_list | 0030_catalog_read_model_indexes          | 2026-08-15T19:50:04.357Z
+ migration_list | 0031_artifact_runtime_compatibility      | 2026-08-15T19:50:04.360Z
+
+     metric     | column_name | data_type | column_default | is_nullable 
+----------------+-------------+-----------+----------------+-------------
+ payload_column | payload     | jsonb     | '{}'::jsonb    | NO
+
+    metric     |              conname               |                    definition                    
+---------------+------------------------------------+--------------------------------------------------
+ payload_check | notifications_payload_object_check | CHECK ((jsonb_typeof(payload) = 'object'::text))
+

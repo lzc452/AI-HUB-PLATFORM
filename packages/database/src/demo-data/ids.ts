@@ -227,9 +227,9 @@ const NOTIFICATIONS = Object.freeze(
   Array.from({ length: 20 }, (_, i) => uuid("00000030", i + 1)),
 );
 
-/* Behavior events (30) */
+/* Behavior events (40) */
 const BEHAVIOR_EVENTS = Object.freeze(
-  Array.from({ length: 30 }, (_, i) => uuid("00000040", i + 1)),
+  Array.from({ length: 40 }, (_, i) => uuid("00000040", i + 1)),
 );
 
 /* Analytics audit events (6) */
@@ -242,20 +242,28 @@ const ANALYTICS_EXPORT_JOBS = Object.freeze(
   Array.from({ length: 3 }, (_, i) => uuid("00000042", i + 1)),
 );
 
-/** Analytics metric keys (12).  String keys used in daily aggregates. */
+/** Analytics 事件型 metric keys（20，快照型由看板服务实时计算）。 */
 const ANALYTICS_METRIC_KEYS = Object.freeze([
-  "app_views",
-  "app_likes",
-  "app_ratings",
-  "app_comments",
-  "app_delivery_actions",
-  "demand_created",
-  "demand_published",
-  "demand_completed",
-  "demand_likes",
-  "demand_comments",
-  "active_users",
-  "total_events",
+  "platform.application_views",
+  "market.application_deliveries",
+  "application.downloads",
+  "innovation.demand_views",
+  "review.decisions",
+  "review.sla_breaches",
+  "department.demand_views",
+  "risk.reported_interactions",
+  "runtime.notification_retries",
+  "runtime.notification_queued",
+  "integration.assistant_requests",
+  "integration.assistant_failures",
+  "platform.active_employee_count",
+  "platform.active_application_count",
+  "platform.delivery_action_count",
+  "application.likes",
+  "application.comments",
+  "application.ratings",
+  "risk.feedback_submissions",
+  "risk.feedback_resolutions",
 ] as const);
 
 /** Analytics audience scope keys (3). */
@@ -413,7 +421,7 @@ export const IDS = Object.freeze({
   /** 20 notification UUIDs (index 0..19). */
   notification: NOTIFICATIONS,
 
-  /** 30 behavior-event UUIDs (index 0..29). */
+  /** 40 behavior-event UUIDs (index 0..39). */
   behaviorEvent: BEHAVIOR_EVENTS,
 
   /** 6 analytics audit-event UUIDs (index 0..5). */
@@ -422,7 +430,7 @@ export const IDS = Object.freeze({
   /** 3 analytics export-job UUIDs (index 0..2). */
   analyticsExportJob: ANALYTICS_EXPORT_JOBS,
 
-  /** 12 analytics metric keys. */
+  /** 20 analytics 事件型 metric keys。 */
   analyticsMetric: ANALYTICS_METRIC_KEYS,
 
   /** 3 analytics audience scope keys. */

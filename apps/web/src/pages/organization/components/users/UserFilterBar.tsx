@@ -2,14 +2,11 @@ import { SearchOutlined } from "@ant-design/icons";
 import { Button, Input, Select } from "antd";
 import type { ReactNode } from "react";
 
-import {
-  ROLE_OPTIONS,
-  SOURCE_OPTIONS,
-  type UserFilterValue,
-} from "../constants";
+import { SOURCE_OPTIONS, type UserFilterValue } from "../constants";
 
 interface UserFilterBarProps {
   departmentOptions: { label: string; value: string }[];
+  roleOptions: string[];
   statusOptions: { label: ReactNode; value: string }[];
   /** 当前筛选值（受控，由父组件持有）。 */
   value: UserFilterValue;
@@ -20,6 +17,7 @@ interface UserFilterBarProps {
 /** 筛选栏：纯受控展示组件，状态完全由 UserManagementTab 持有。 */
 export function UserFilterBar({
   departmentOptions,
+  roleOptions,
   statusOptions,
   value,
   onChange,
@@ -45,7 +43,7 @@ export function UserFilterBar({
       <Select
         allowClear
         onChange={(next) => onChange({ role: next })}
-        options={ROLE_OPTIONS.map((role) => ({ label: role, value: role }))}
+        options={roleOptions.map((role) => ({ label: role, value: role }))}
         placeholder="全部角色"
         style={{ width: 152 }}
         value={value.role}

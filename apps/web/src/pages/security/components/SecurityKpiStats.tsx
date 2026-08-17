@@ -1,15 +1,17 @@
 import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
 
-import { SECURITY_KPI_STATS } from "./constants";
+import type { AuditLogRow } from "../../../modules/security";
+
+import { getSecurityKpiStats } from "./constants";
 
 /**
  * KPI 指标行：4 张指标卡（48×48 rounded-xl 浅色方形图标容器 + 24px 图标 +
  * 数值 26px/700 + 趋势行）。hover 轻微上浮阴影，150-200ms 平滑过渡。
  */
-export function SecurityKpiStats() {
+export function SecurityKpiStats({ rows }: { rows: readonly AuditLogRow[] }) {
   return (
     <div className="grid grid-cols-2 gap-[16px] lg:grid-cols-4">
-      {SECURITY_KPI_STATS.map(
+      {getSecurityKpiStats(rows).map(
         ({
           Icon,
           iconBgClass,

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sql } from "kysely";
 import { createDatabase, runMigrations } from "@ai-hub/database";
+import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { KyselyLoginChallengeRepository } from "@ai-hub/server";
 
@@ -13,6 +14,7 @@ describe("real login challenge repository", () => {
     stop = container.stop;
     db = createDatabase(container.databaseUrl);
     await runMigrations(db);
+    await resetDatabase(db);
   }, 60_000);
 
   afterAll(async () => {

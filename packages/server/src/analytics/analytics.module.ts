@@ -1,5 +1,6 @@
-import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import type { Kysely } from "kysely";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { AnalyticsController } from "./analytics.controller.js";
@@ -20,14 +21,13 @@ import { KyselyAnalyticsEventRepository } from "./analytics.repository.js";
 
 @Module({})
 export class AnalyticsModule {
-  static register(databaseUrl: string): DynamicModule {
-    const database = createDatabase(databaseUrl);
+  static register(database: Kysely<DatabaseSchema>): DynamicModule {
     const analyticsEvents = new AnalyticsEventService(
       new KyselyAnalyticsEventRepository(database),
     );
     return {
       module: AnalyticsModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [IdentityModule.register(database)],
       controllers: [AnalyticsController],
       providers: [
         {

@@ -1,0 +1,1881 @@
+{
+  "generatedAt": "2026-08-15T23:02:12.859Z",
+  "spec": {
+    "headerHeight": 56,
+    "siderWidth": 220,
+    "siderCollapsed": 64
+  },
+  "note": "设计 PNG 的边框/图标测量为程序化像素分析；文案与图标字形之间的逐像素配对仍需人工视觉复核（本会话无图像输入）。",
+  "liveMarketplaceIcons": [
+    {
+      "label": "应用市场",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "创新广场",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "应用管理",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "审核工作台",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "数据看板",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "组织管理",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "系统安全",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "AI 助手",
+      "width": 14,
+      "height": 14
+    },
+    {
+      "label": "站内通知",
+      "width": 14,
+      "height": 14
+    }
+  ],
+  "designMarketplaceIconBands": [
+    {
+      "top": 82,
+      "bottom": 131,
+      "height": 50,
+      "minX": 12,
+      "maxX": 52,
+      "width": 41
+    },
+    {
+      "top": 153,
+      "bottom": 175,
+      "height": 23,
+      "minX": 23,
+      "maxX": 48,
+      "width": 26
+    },
+    {
+      "top": 215,
+      "bottom": 235,
+      "height": 21,
+      "minX": 27,
+      "maxX": 46,
+      "width": 20
+    },
+    {
+      "top": 274,
+      "bottom": 296,
+      "height": 23,
+      "minX": 24,
+      "maxX": 47,
+      "width": 24
+    },
+    {
+      "top": 335,
+      "bottom": 356,
+      "height": 22,
+      "minX": 24,
+      "maxX": 46,
+      "width": 23
+    },
+    {
+      "top": 396,
+      "bottom": 418,
+      "height": 23,
+      "minX": 25,
+      "maxX": 46,
+      "width": 22
+    },
+    {
+      "top": 870,
+      "bottom": 900,
+      "height": 31,
+      "minX": 14,
+      "maxX": 52,
+      "width": 39
+    }
+  ],
+  "modalLive": {
+    "candidateCount": 1,
+    "visibleCount": 1,
+    "wrapCount": 2,
+    "dialogs": [
+      {
+        "className": "ant-modal css-la24ln",
+        "ariaLabel": null,
+        "width": 520
+      }
+    ],
+    "modal": {
+      "x": 576,
+      "y": 100,
+      "width": 520,
+      "height": 283
+    },
+    "content": {
+      "x": 600,
+      "y": 152,
+      "width": 472,
+      "height": 211
+    },
+    "clickError": null
+  },
+  "rows": [
+    {
+      "key": "login",
+      "kind": "standalone",
+      "design": "登录页面.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 30,
+      "designSiderRight": null,
+      "designModal": null,
+      "designIcons": [],
+      "liveHeaderHeight": null,
+      "liveSiderWidth": null,
+      "liveMainX": null,
+      "specHeaderHeight": null,
+      "specSiderWidth": null,
+      "headerDeltaVsLive": null,
+      "siderDeltaVsLive": null
+    },
+    {
+      "key": "marketplace",
+      "kind": "shell",
+      "design": "应用市场.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 63,
+      "designSiderRight": 221,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 82,
+          "bottom": 131,
+          "height": 50,
+          "minX": 12,
+          "maxX": 52,
+          "width": 41
+        },
+        {
+          "top": 153,
+          "bottom": 175,
+          "height": 23,
+          "minX": 23,
+          "maxX": 48,
+          "width": 26
+        },
+        {
+          "top": 215,
+          "bottom": 235,
+          "height": 21,
+          "minX": 27,
+          "maxX": 46,
+          "width": 20
+        },
+        {
+          "top": 274,
+          "bottom": 296,
+          "height": 23,
+          "minX": 24,
+          "maxX": 47,
+          "width": 24
+        },
+        {
+          "top": 335,
+          "bottom": 356,
+          "height": 22,
+          "minX": 24,
+          "maxX": 46,
+          "width": 23
+        },
+        {
+          "top": 396,
+          "bottom": 418,
+          "height": 23,
+          "minX": 25,
+          "maxX": 46,
+          "width": 22
+        },
+        {
+          "top": 870,
+          "bottom": 900,
+          "height": 31,
+          "minX": 14,
+          "maxX": 52,
+          "width": 39
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7,
+      "siderDeltaVsLive": 1
+    },
+    {
+      "key": "app-detail",
+      "kind": "shell",
+      "design": "应用详情.png",
+      "designSize": [2730, 1536],
+      "scale": 1.6328,
+      "designHeaderBottom": 102,
+      "designSiderRight": 361,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 134,
+          "bottom": 215,
+          "height": 82,
+          "minX": 19,
+          "maxX": 85,
+          "width": 67
+        },
+        {
+          "top": 253,
+          "bottom": 285,
+          "height": 33,
+          "minX": 44,
+          "maxX": 74,
+          "width": 31
+        },
+        {
+          "top": 351,
+          "bottom": 367,
+          "height": 17,
+          "minX": 51,
+          "maxX": 67,
+          "width": 17
+        },
+        {
+          "top": 370,
+          "bottom": 384,
+          "height": 15,
+          "minX": 44,
+          "maxX": 76,
+          "width": 33
+        },
+        {
+          "top": 448,
+          "bottom": 483,
+          "height": 36,
+          "minX": 45,
+          "maxX": 74,
+          "width": 30
+        },
+        {
+          "top": 548,
+          "bottom": 582,
+          "height": 35,
+          "minX": 44,
+          "maxX": 75,
+          "width": 32
+        },
+        {
+          "top": 647,
+          "bottom": 680,
+          "height": 34,
+          "minX": 44,
+          "maxX": 75,
+          "width": 32
+        },
+        {
+          "top": 1422,
+          "bottom": 1469,
+          "height": 48,
+          "minX": 23,
+          "maxX": 85,
+          "width": 63
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 6.47,
+      "siderDeltaVsLive": 1.1
+    },
+    {
+      "key": "applications",
+      "kind": "shell",
+      "design": "应用管理.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 71,
+      "designSiderRight": 260,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 102,
+          "bottom": 123,
+          "height": 22,
+          "minX": 27,
+          "maxX": 52,
+          "width": 26
+        },
+        {
+          "top": 162,
+          "bottom": 184,
+          "height": 23,
+          "minX": 29,
+          "maxX": 50,
+          "width": 22
+        },
+        {
+          "top": 206,
+          "bottom": 261,
+          "height": 56,
+          "minX": 12,
+          "maxX": 52,
+          "width": 41
+        },
+        {
+          "top": 285,
+          "bottom": 308,
+          "height": 24,
+          "minX": 28,
+          "maxX": 51,
+          "width": 24
+        },
+        {
+          "top": 348,
+          "bottom": 370,
+          "height": 23,
+          "minX": 27,
+          "maxX": 52,
+          "width": 26
+        },
+        {
+          "top": 408,
+          "bottom": 431,
+          "height": 24,
+          "minX": 28,
+          "maxX": 50,
+          "width": 23
+        },
+        {
+          "top": 469,
+          "bottom": 493,
+          "height": 25,
+          "minX": 28,
+          "maxX": 52,
+          "width": 25
+        },
+        {
+          "top": 531,
+          "bottom": 556,
+          "height": 26,
+          "minX": 27,
+          "maxX": 52,
+          "width": 26
+        },
+        {
+          "top": 594,
+          "bottom": 618,
+          "height": 25,
+          "minX": 29,
+          "maxX": 50,
+          "width": 22
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 15,
+      "siderDeltaVsLive": 40
+    },
+    {
+      "key": "application-detail",
+      "kind": "shell",
+      "design": "应用管理-应用详情.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 66,
+      "designSiderRight": 243,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 93,
+          "bottom": 112,
+          "height": 20,
+          "minX": 24,
+          "maxX": 49,
+          "width": 26
+        },
+        {
+          "top": 147,
+          "bottom": 167,
+          "height": 21,
+          "minX": 28,
+          "maxX": 46,
+          "width": 19
+        },
+        {
+          "top": 187,
+          "bottom": 233,
+          "height": 47,
+          "minX": 14,
+          "maxX": 52,
+          "width": 39
+        },
+        {
+          "top": 257,
+          "bottom": 277,
+          "height": 21,
+          "minX": 24,
+          "maxX": 47,
+          "width": 24
+        },
+        {
+          "top": 316,
+          "bottom": 334,
+          "height": 19,
+          "minX": 25,
+          "maxX": 46,
+          "width": 22
+        },
+        {
+          "top": 371,
+          "bottom": 393,
+          "height": 23,
+          "minX": 25,
+          "maxX": 46,
+          "width": 22
+        },
+        {
+          "top": 426,
+          "bottom": 446,
+          "height": 21,
+          "minX": 24,
+          "maxX": 45,
+          "width": 22
+        },
+        {
+          "top": 482,
+          "bottom": 502,
+          "height": 21,
+          "minX": 24,
+          "maxX": 48,
+          "width": 25
+        },
+        {
+          "top": 536,
+          "bottom": 557,
+          "height": 22,
+          "minX": 25,
+          "maxX": 45,
+          "width": 21
+        },
+        {
+          "top": 862,
+          "bottom": 900,
+          "height": 39,
+          "minX": 19,
+          "maxX": 52,
+          "width": 34
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 10,
+      "siderDeltaVsLive": 23
+    },
+    {
+      "key": "application-versions",
+      "kind": "shell",
+      "design": "应用管理-版本管理.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 63,
+      "designSiderRight": 230,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 91,
+          "bottom": 109,
+          "height": 19,
+          "minX": 23,
+          "maxX": 52,
+          "width": 30
+        },
+        {
+          "top": 142,
+          "bottom": 163,
+          "height": 22,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 183,
+          "bottom": 230,
+          "height": 48,
+          "minX": 11,
+          "maxX": 52,
+          "width": 42
+        },
+        {
+          "top": 252,
+          "bottom": 275,
+          "height": 24,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 309,
+          "bottom": 327,
+          "height": 19,
+          "minX": 23,
+          "maxX": 52,
+          "width": 30
+        },
+        {
+          "top": 361,
+          "bottom": 381,
+          "height": 21,
+          "minX": 23,
+          "maxX": 52,
+          "width": 30
+        },
+        {
+          "top": 415,
+          "bottom": 435,
+          "height": 21,
+          "minX": 24,
+          "maxX": 43,
+          "width": 20
+        },
+        {
+          "top": 469,
+          "bottom": 488,
+          "height": 20,
+          "minX": 23,
+          "maxX": 43,
+          "width": 21
+        },
+        {
+          "top": 521,
+          "bottom": 541,
+          "height": 21,
+          "minX": 23,
+          "maxX": 43,
+          "width": 21
+        },
+        {
+          "top": 877,
+          "bottom": 900,
+          "height": 24,
+          "minX": 16,
+          "maxX": 52,
+          "width": 37
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7,
+      "siderDeltaVsLive": 10
+    },
+    {
+      "key": "application-review",
+      "kind": "shell",
+      "design": "审核工作台.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 64,
+      "designSiderRight": 241,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 92,
+          "bottom": 109,
+          "height": 18,
+          "minX": 24,
+          "maxX": 46,
+          "width": 23
+        },
+        {
+          "top": 143,
+          "bottom": 163,
+          "height": 21,
+          "minX": 25,
+          "maxX": 45,
+          "width": 21
+        },
+        {
+          "top": 196,
+          "bottom": 216,
+          "height": 21,
+          "minX": 26,
+          "maxX": 50,
+          "width": 25
+        },
+        {
+          "top": 237,
+          "bottom": 282,
+          "height": 46,
+          "minX": 12,
+          "maxX": 52,
+          "width": 41
+        },
+        {
+          "top": 305,
+          "bottom": 322,
+          "height": 18,
+          "minX": 25,
+          "maxX": 47,
+          "width": 23
+        },
+        {
+          "top": 356,
+          "bottom": 375,
+          "height": 20,
+          "minX": 25,
+          "maxX": 45,
+          "width": 21
+        },
+        {
+          "top": 408,
+          "bottom": 427,
+          "height": 20,
+          "minX": 25,
+          "maxX": 44,
+          "width": 20
+        },
+        {
+          "top": 459,
+          "bottom": 480,
+          "height": 22,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 512,
+          "bottom": 533,
+          "height": 22,
+          "minX": 25,
+          "maxX": 47,
+          "width": 23
+        },
+        {
+          "top": 850,
+          "bottom": 894,
+          "height": 45,
+          "minX": 16,
+          "maxX": 52,
+          "width": 37
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 8,
+      "siderDeltaVsLive": 21
+    },
+    {
+      "key": "application-delivery",
+      "kind": "shell",
+      "design": "应用管理-交付配置.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 62,
+      "designSiderRight": 228,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 90,
+          "bottom": 108,
+          "height": 19,
+          "minX": 23,
+          "maxX": 44,
+          "width": 22
+        },
+        {
+          "top": 142,
+          "bottom": 162,
+          "height": 21,
+          "minX": 25,
+          "maxX": 41,
+          "width": 17
+        },
+        {
+          "top": 182,
+          "bottom": 226,
+          "height": 45,
+          "minX": 13,
+          "maxX": 52,
+          "width": 40
+        },
+        {
+          "top": 248,
+          "bottom": 269,
+          "height": 22,
+          "minX": 26,
+          "maxX": 44,
+          "width": 19
+        },
+        {
+          "top": 304,
+          "bottom": 321,
+          "height": 18,
+          "minX": 25,
+          "maxX": 43,
+          "width": 19
+        },
+        {
+          "top": 357,
+          "bottom": 375,
+          "height": 19,
+          "minX": 23,
+          "maxX": 43,
+          "width": 21
+        },
+        {
+          "top": 408,
+          "bottom": 427,
+          "height": 20,
+          "minX": 24,
+          "maxX": 42,
+          "width": 19
+        },
+        {
+          "top": 459,
+          "bottom": 481,
+          "height": 23,
+          "minX": 25,
+          "maxX": 45,
+          "width": 21
+        },
+        {
+          "top": 512,
+          "bottom": 531,
+          "height": 20,
+          "minX": 25,
+          "maxX": 42,
+          "width": 18
+        },
+        {
+          "top": 857,
+          "bottom": 900,
+          "height": 44,
+          "minX": 17,
+          "maxX": 52,
+          "width": 36
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 6,
+      "siderDeltaVsLive": 8
+    },
+    {
+      "key": "innovation",
+      "kind": "shell",
+      "design": "创新广场.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 66,
+      "designSiderRight": 237,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 96,
+          "bottom": 105,
+          "height": 10,
+          "minX": 26,
+          "maxX": 49,
+          "width": 24
+        },
+        {
+          "top": 107,
+          "bottom": 118,
+          "height": 12,
+          "minX": 24,
+          "maxX": 46,
+          "width": 23
+        },
+        {
+          "top": 138,
+          "bottom": 189,
+          "height": 52,
+          "minX": 12,
+          "maxX": 52,
+          "width": 41
+        },
+        {
+          "top": 213,
+          "bottom": 236,
+          "height": 24,
+          "minX": 26,
+          "maxX": 46,
+          "width": 21
+        },
+        {
+          "top": 272,
+          "bottom": 295,
+          "height": 24,
+          "minX": 26,
+          "maxX": 46,
+          "width": 21
+        },
+        {
+          "top": 334,
+          "bottom": 356,
+          "height": 23,
+          "minX": 24,
+          "maxX": 46,
+          "width": 23
+        },
+        {
+          "top": 392,
+          "bottom": 417,
+          "height": 26,
+          "minX": 25,
+          "maxX": 46,
+          "width": 22
+        },
+        {
+          "top": 858,
+          "bottom": 900,
+          "height": 43,
+          "minX": 11,
+          "maxX": 52,
+          "width": 42
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 10,
+      "siderDeltaVsLive": 17
+    },
+    {
+      "key": "innovation-detail",
+      "kind": "shell",
+      "design": "创新广场-详情.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 64,
+      "designSiderRight": 220,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 98,
+          "bottom": 117,
+          "height": 20,
+          "minX": 24,
+          "maxX": 49,
+          "width": 26
+        },
+        {
+          "top": 143,
+          "bottom": 193,
+          "height": 51,
+          "minX": 11,
+          "maxX": 52,
+          "width": 42
+        },
+        {
+          "top": 218,
+          "bottom": 239,
+          "height": 22,
+          "minX": 26,
+          "maxX": 45,
+          "width": 20
+        },
+        {
+          "top": 276,
+          "bottom": 298,
+          "height": 23,
+          "minX": 26,
+          "maxX": 46,
+          "width": 21
+        },
+        {
+          "top": 336,
+          "bottom": 358,
+          "height": 23,
+          "minX": 24,
+          "maxX": 50,
+          "width": 27
+        },
+        {
+          "top": 396,
+          "bottom": 417,
+          "height": 22,
+          "minX": 24,
+          "maxX": 48,
+          "width": 25
+        },
+        {
+          "top": 871,
+          "bottom": 900,
+          "height": 30,
+          "minX": 13,
+          "maxX": 52,
+          "width": 40
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 8,
+      "siderDeltaVsLive": 0
+    },
+    {
+      "key": "analytics",
+      "kind": "shell",
+      "design": "数据看板.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 62,
+      "designSiderRight": 239,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 87,
+          "bottom": 106,
+          "height": 20,
+          "minX": 26,
+          "maxX": 47,
+          "width": 22
+        },
+        {
+          "top": 138,
+          "bottom": 157,
+          "height": 20,
+          "minX": 25,
+          "maxX": 42,
+          "width": 18
+        },
+        {
+          "top": 187,
+          "bottom": 207,
+          "height": 21,
+          "minX": 26,
+          "maxX": 52,
+          "width": 27
+        },
+        {
+          "top": 238,
+          "bottom": 257,
+          "height": 20,
+          "minX": 26,
+          "maxX": 43,
+          "width": 18
+        },
+        {
+          "top": 275,
+          "bottom": 320,
+          "height": 46,
+          "minX": 12,
+          "maxX": 52,
+          "width": 41
+        },
+        {
+          "top": 339,
+          "bottom": 356,
+          "height": 18,
+          "minX": 25,
+          "maxX": 44,
+          "width": 20
+        },
+        {
+          "top": 387,
+          "bottom": 407,
+          "height": 21,
+          "minX": 26,
+          "maxX": 43,
+          "width": 18
+        },
+        {
+          "top": 438,
+          "bottom": 456,
+          "height": 19,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 486,
+          "bottom": 505,
+          "height": 20,
+          "minX": 24,
+          "maxX": 43,
+          "width": 20
+        },
+        {
+          "top": 848,
+          "bottom": 890,
+          "height": 43,
+          "minX": 18,
+          "maxX": 52,
+          "width": 35
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 6,
+      "siderDeltaVsLive": 19
+    },
+    {
+      "key": "organization",
+      "kind": "shell",
+      "design": "组织管理.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 63,
+      "designSiderRight": 240,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 89,
+          "bottom": 106,
+          "height": 18,
+          "minX": 23,
+          "maxX": 52,
+          "width": 30
+        },
+        {
+          "top": 139,
+          "bottom": 159,
+          "height": 21,
+          "minX": 24,
+          "maxX": 52,
+          "width": 29
+        },
+        {
+          "top": 191,
+          "bottom": 210,
+          "height": 20,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 242,
+          "bottom": 261,
+          "height": 20,
+          "minX": 25,
+          "maxX": 41,
+          "width": 17
+        },
+        {
+          "top": 296,
+          "bottom": 313,
+          "height": 18,
+          "minX": 22,
+          "maxX": 42,
+          "width": 21
+        },
+        {
+          "top": 334,
+          "bottom": 378,
+          "height": 45,
+          "minX": 9,
+          "maxX": 52,
+          "width": 44
+        },
+        {
+          "top": 397,
+          "bottom": 418,
+          "height": 22,
+          "minX": 25,
+          "maxX": 41,
+          "width": 17
+        },
+        {
+          "top": 449,
+          "bottom": 468,
+          "height": 20,
+          "minX": 22,
+          "maxX": 45,
+          "width": 24
+        },
+        {
+          "top": 500,
+          "bottom": 520,
+          "height": 21,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 852,
+          "bottom": 895,
+          "height": 44,
+          "minX": 17,
+          "maxX": 52,
+          "width": 36
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7,
+      "siderDeltaVsLive": 20
+    },
+    {
+      "key": "organization-departments",
+      "kind": "shell",
+      "design": "组织管理-部门管理.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 65,
+      "designSiderRight": 249,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 91,
+          "bottom": 109,
+          "height": 19,
+          "minX": 21,
+          "maxX": 46,
+          "width": 26
+        },
+        {
+          "top": 143,
+          "bottom": 163,
+          "height": 21,
+          "minX": 25,
+          "maxX": 41,
+          "width": 17
+        },
+        {
+          "top": 196,
+          "bottom": 217,
+          "height": 22,
+          "minX": 23,
+          "maxX": 51,
+          "width": 29
+        },
+        {
+          "top": 249,
+          "bottom": 269,
+          "height": 21,
+          "minX": 25,
+          "maxX": 42,
+          "width": 18
+        },
+        {
+          "top": 302,
+          "bottom": 322,
+          "height": 21,
+          "minX": 22,
+          "maxX": 43,
+          "width": 22
+        },
+        {
+          "top": 343,
+          "bottom": 389,
+          "height": 47,
+          "minX": 9,
+          "maxX": 52,
+          "width": 44
+        },
+        {
+          "top": 410,
+          "bottom": 429,
+          "height": 20,
+          "minX": 22,
+          "maxX": 42,
+          "width": 21
+        },
+        {
+          "top": 462,
+          "bottom": 484,
+          "height": 23,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 516,
+          "bottom": 536,
+          "height": 21,
+          "minX": 22,
+          "maxX": 43,
+          "width": 22
+        },
+        {
+          "top": 847,
+          "bottom": 890,
+          "height": 44,
+          "minX": 17,
+          "maxX": 52,
+          "width": 36
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 9,
+      "siderDeltaVsLive": 29
+    },
+    {
+      "key": "organization-roles",
+      "kind": "shell",
+      "design": "组织管理-角色管理.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 63,
+      "designSiderRight": 240,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 89,
+          "bottom": 107,
+          "height": 19,
+          "minX": 22,
+          "maxX": 52,
+          "width": 31
+        },
+        {
+          "top": 140,
+          "bottom": 160,
+          "height": 21,
+          "minX": 24,
+          "maxX": 52,
+          "width": 29
+        },
+        {
+          "top": 191,
+          "bottom": 210,
+          "height": 20,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 241,
+          "bottom": 264,
+          "height": 24,
+          "minX": 22,
+          "maxX": 43,
+          "width": 22
+        },
+        {
+          "top": 297,
+          "bottom": 313,
+          "height": 17,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 334,
+          "bottom": 378,
+          "height": 45,
+          "minX": 9,
+          "maxX": 52,
+          "width": 44
+        },
+        {
+          "top": 396,
+          "bottom": 418,
+          "height": 23,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 450,
+          "bottom": 467,
+          "height": 18,
+          "minX": 22,
+          "maxX": 52,
+          "width": 31
+        },
+        {
+          "top": 500,
+          "bottom": 520,
+          "height": 21,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 853,
+          "bottom": 895,
+          "height": 43,
+          "minX": 17,
+          "maxX": 52,
+          "width": 36
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7,
+      "siderDeltaVsLive": 20
+    },
+    {
+      "key": "organization-sync",
+      "kind": "shell",
+      "design": "组织管理-同步状态.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 63,
+      "designSiderRight": 239,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 90,
+          "bottom": 107,
+          "height": 18,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 140,
+          "bottom": 160,
+          "height": 21,
+          "minX": 24,
+          "maxX": 52,
+          "width": 29
+        },
+        {
+          "top": 191,
+          "bottom": 210,
+          "height": 20,
+          "minX": 23,
+          "maxX": 43,
+          "width": 21
+        },
+        {
+          "top": 243,
+          "bottom": 262,
+          "height": 20,
+          "minX": 22,
+          "maxX": 52,
+          "width": 31
+        },
+        {
+          "top": 297,
+          "bottom": 313,
+          "height": 17,
+          "minX": 23,
+          "maxX": 52,
+          "width": 30
+        },
+        {
+          "top": 334,
+          "bottom": 378,
+          "height": 45,
+          "minX": 8,
+          "maxX": 52,
+          "width": 45
+        },
+        {
+          "top": 398,
+          "bottom": 417,
+          "height": 20,
+          "minX": 21,
+          "maxX": 40,
+          "width": 20
+        },
+        {
+          "top": 449,
+          "bottom": 468,
+          "height": 20,
+          "minX": 22,
+          "maxX": 52,
+          "width": 31
+        },
+        {
+          "top": 500,
+          "bottom": 521,
+          "height": 22,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 852,
+          "bottom": 895,
+          "height": 44,
+          "minX": 16,
+          "maxX": 52,
+          "width": 37
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7,
+      "siderDeltaVsLive": 19
+    },
+    {
+      "key": "organization-user-detail",
+      "kind": "modal",
+      "design": "组织管理-用户详情.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 30,
+      "designSiderRight": 120,
+      "designModal": {
+        "left": 521,
+        "right": 1157,
+        "width": 637
+      },
+      "designIcons": [],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": -26,
+      "siderDeltaVsLive": -100
+    },
+    {
+      "key": "security",
+      "kind": "shell",
+      "design": "系统安全.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 61,
+      "designSiderRight": 239,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 89,
+          "bottom": 106,
+          "height": 18,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 139,
+          "bottom": 159,
+          "height": 21,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 191,
+          "bottom": 210,
+          "height": 20,
+          "minX": 20,
+          "maxX": 45,
+          "width": 26
+        },
+        {
+          "top": 242,
+          "bottom": 261,
+          "height": 20,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 296,
+          "bottom": 312,
+          "height": 17,
+          "minX": 21,
+          "maxX": 43,
+          "width": 23
+        },
+        {
+          "top": 347,
+          "bottom": 364,
+          "height": 18,
+          "minX": 21,
+          "maxX": 43,
+          "width": 23
+        },
+        {
+          "top": 385,
+          "bottom": 428,
+          "height": 44,
+          "minX": 10,
+          "maxX": 52,
+          "width": 43
+        },
+        {
+          "top": 447,
+          "bottom": 468,
+          "height": 22,
+          "minX": 22,
+          "maxX": 52,
+          "width": 31
+        },
+        {
+          "top": 500,
+          "bottom": 519,
+          "height": 20,
+          "minX": 21,
+          "maxX": 52,
+          "width": 32
+        },
+        {
+          "top": 853,
+          "bottom": 894,
+          "height": 42,
+          "minX": 18,
+          "maxX": 52,
+          "width": 35
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 5,
+      "siderDeltaVsLive": 19
+    },
+    {
+      "key": "notifications",
+      "kind": "shell",
+      "design": "站内通知.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 67,
+      "designSiderRight": 261,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 98,
+          "bottom": 118,
+          "height": 21,
+          "minX": 30,
+          "maxX": 52,
+          "width": 23
+        },
+        {
+          "top": 155,
+          "bottom": 179,
+          "height": 25,
+          "minX": 29,
+          "maxX": 52,
+          "width": 24
+        },
+        {
+          "top": 213,
+          "bottom": 234,
+          "height": 22,
+          "minX": 30,
+          "maxX": 52,
+          "width": 23
+        },
+        {
+          "top": 270,
+          "bottom": 292,
+          "height": 23,
+          "minX": 30,
+          "maxX": 51,
+          "width": 22
+        },
+        {
+          "top": 330,
+          "bottom": 349,
+          "height": 20,
+          "minX": 30,
+          "maxX": 52,
+          "width": 23
+        },
+        {
+          "top": 385,
+          "bottom": 409,
+          "height": 25,
+          "minX": 31,
+          "maxX": 52,
+          "width": 22
+        },
+        {
+          "top": 442,
+          "bottom": 465,
+          "height": 24,
+          "minX": 31,
+          "maxX": 51,
+          "width": 21
+        },
+        {
+          "top": 501,
+          "bottom": 522,
+          "height": 22,
+          "minX": 30,
+          "maxX": 52,
+          "width": 23
+        },
+        {
+          "top": 547,
+          "bottom": 591,
+          "height": 45,
+          "minX": 20,
+          "maxX": 52,
+          "width": 33
+        },
+        {
+          "top": 851,
+          "bottom": 897,
+          "height": 47,
+          "minX": 20,
+          "maxX": 52,
+          "width": 33
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 11,
+      "siderDeltaVsLive": 41
+    },
+    {
+      "key": "notifications-detail",
+      "kind": "modal",
+      "design": "站内通知详情.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 30,
+      "designSiderRight": 120,
+      "designModal": {
+        "left": 815,
+        "right": 1346,
+        "width": 532
+      },
+      "designIcons": [],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": -26,
+      "siderDeltaVsLive": -100
+    },
+    {
+      "key": "creator",
+      "kind": "shell",
+      "design": "创作者中心.png",
+      "designSize": [2730, 1536],
+      "scale": 1.6328,
+      "designHeaderBottom": 103,
+      "designSiderRight": 360,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 158,
+          "bottom": 190,
+          "height": 33,
+          "minX": 38,
+          "maxX": 82,
+          "width": 45
+        },
+        {
+          "top": 253,
+          "bottom": 286,
+          "height": 34,
+          "minX": 44,
+          "maxX": 75,
+          "width": 32
+        },
+        {
+          "top": 351,
+          "bottom": 367,
+          "height": 17,
+          "minX": 51,
+          "maxX": 67,
+          "width": 17
+        },
+        {
+          "top": 370,
+          "bottom": 385,
+          "height": 16,
+          "minX": 43,
+          "maxX": 82,
+          "width": 40
+        },
+        {
+          "top": 449,
+          "bottom": 484,
+          "height": 36,
+          "minX": 44,
+          "maxX": 74,
+          "width": 31
+        },
+        {
+          "top": 548,
+          "bottom": 583,
+          "height": 36,
+          "minX": 44,
+          "maxX": 75,
+          "width": 32
+        },
+        {
+          "top": 625,
+          "bottom": 702,
+          "height": 78,
+          "minX": 16,
+          "maxX": 85,
+          "width": 70
+        },
+        {
+          "top": 1422,
+          "bottom": 1469,
+          "height": 48,
+          "minX": 23,
+          "maxX": 85,
+          "width": 63
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 7.08,
+      "siderDeltaVsLive": 0.48
+    },
+    {
+      "key": "assistant",
+      "kind": "shell",
+      "design": "AI助手.png",
+      "designSize": [1672, 941],
+      "scale": 1,
+      "designHeaderBottom": 66,
+      "designSiderRight": 248,
+      "designModal": null,
+      "designIcons": [
+        {
+          "top": 94,
+          "bottom": 112,
+          "height": 19,
+          "minX": 24,
+          "maxX": 46,
+          "width": 23
+        },
+        {
+          "top": 148,
+          "bottom": 169,
+          "height": 22,
+          "minX": 25,
+          "maxX": 45,
+          "width": 21
+        },
+        {
+          "top": 203,
+          "bottom": 224,
+          "height": 22,
+          "minX": 25,
+          "maxX": 52,
+          "width": 28
+        },
+        {
+          "top": 259,
+          "bottom": 279,
+          "height": 21,
+          "minX": 26,
+          "maxX": 45,
+          "width": 20
+        },
+        {
+          "top": 316,
+          "bottom": 334,
+          "height": 19,
+          "minX": 25,
+          "maxX": 44,
+          "width": 20
+        },
+        {
+          "top": 370,
+          "bottom": 393,
+          "height": 24,
+          "minX": 25,
+          "maxX": 46,
+          "width": 22
+        },
+        {
+          "top": 426,
+          "bottom": 447,
+          "height": 22,
+          "minX": 24,
+          "maxX": 47,
+          "width": 24
+        },
+        {
+          "top": 468,
+          "bottom": 515,
+          "height": 48,
+          "minX": 11,
+          "maxX": 52,
+          "width": 42
+        },
+        {
+          "top": 537,
+          "bottom": 560,
+          "height": 24,
+          "minX": 25,
+          "maxX": 47,
+          "width": 23
+        },
+        {
+          "top": 857,
+          "bottom": 900,
+          "height": 44,
+          "minX": 16,
+          "maxX": 52,
+          "width": 37
+        }
+      ],
+      "liveHeaderHeight": 56,
+      "liveSiderWidth": 220,
+      "liveMainX": 220,
+      "specHeaderHeight": 56,
+      "specSiderWidth": 220,
+      "headerDeltaVsLive": 10,
+      "siderDeltaVsLive": 28
+    }
+  ]
+}

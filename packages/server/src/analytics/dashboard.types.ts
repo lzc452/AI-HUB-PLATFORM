@@ -29,6 +29,9 @@ export interface AnalyticsDashboardRepository {
   readDailyAggregates(
     input: DashboardReadInput,
   ): Promise<readonly DailyAggregate[]>;
+  readSnapshotCounts(): Promise<
+    readonly { metricKey: string; value: number }[]
+  >;
   recordAudit(input: {
     actorEmployeeId: string;
     action: string;

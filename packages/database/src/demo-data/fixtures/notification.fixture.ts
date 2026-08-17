@@ -335,6 +335,7 @@ export function buildNotificationFixture(
         String(plan.notificationIdx),
       ),
       message: plan.message,
+      payload: { title: plan.eventType, body: plan.message },
       read_at: plan.isRead ? daysAgo(anchor, plan.daysOffset - 1) : null,
       delivery_status: plan.deliveryStatus,
       delivery_attempts: plan.deliveryAttempts,

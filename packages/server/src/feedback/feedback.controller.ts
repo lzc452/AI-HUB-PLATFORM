@@ -10,6 +10,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common";
 import {
   ApiBody,
@@ -17,6 +18,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from "@nestjs/swagger";
 import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
@@ -51,6 +53,12 @@ export class FeedbackController {
   @ApiOperation({ summary: "提交应用反馈" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiQuery({
+    name: "scope",
+    description: "mine=我的反馈；all=所有者/维护者查看全部反馈",
+    required: false,
+    enum: ["mine", "all"],
+  })
   @ApiBody({ type: CreateFeedbackRequestDto })
   @ApiCreatedResponse({ description: "反馈记录", type: FeedbackDto })
   @ApiProblemResponses([400, 401, 403, 404])
@@ -83,17 +91,17 @@ export class FeedbackController {
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
+    @Query("scope") scope?: "mine" | "all",
   ) {
-    return this.call(async () =>
-      this.feedback.listMyFeedback(
-        await this.actor(employeeId, sessionId),
-        applicationId,
-      ),
-    );
+    return this.call(async () => {
+      const actor = await this.actor(employeeId, sessionId);
+      return scope === "all"
+        ? this.feedback.listApplicationFeedback(actor, applicationId)
+        : this.feedback.listMyFeedback(actor, applicationId);
+    });
   }
 
   @Patch(":applicationId/interactions/feedback/:feedbackId")
-  @RequiresPermissions(PERMISSIONS.INTERACTION_MODERATE)
   @ApiOperation({ summary: "更新反馈处理状态（所有者/维护者）" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })

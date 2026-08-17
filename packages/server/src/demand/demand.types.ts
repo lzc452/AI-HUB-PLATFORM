@@ -2,7 +2,6 @@ import type {
   ActorContext,
   AuthorizationDecision,
   CreateDemandInput,
-  DemandAttachment,
   DemandCollaboratorRole,
   DemandApplicationRole,
   DemandStatus,
@@ -283,10 +282,7 @@ export interface DemandRepository {
     sha256: string;
     uploadedByEmployeeId: string;
   }): Promise<DemandAttachmentRecord>;
-  linkAttachmentToDemand(
-    attachmentId: string,
-    demandId: string,
-  ): Promise<void>;
+  linkAttachmentToDemand(attachmentId: string, demandId: string): Promise<void>;
   listAttachments(demandId: string): Promise<readonly DemandAttachmentRecord[]>;
   deleteAttachment(attachmentId: string): Promise<void>;
   recordAudit(input: {

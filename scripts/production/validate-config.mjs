@@ -44,11 +44,7 @@ export function validateProductionConfig(environment, composeText) {
     errors.push("NODE_ROLE must be active or standby");
   }
 
-  for (const key of [
-    "PUBLIC_HOSTNAME",
-    "PUBLIC_ORIGIN",
-    ...requiredSecrets,
-  ]) {
+  for (const key of ["PUBLIC_HOSTNAME", "PUBLIC_ORIGIN", ...requiredSecrets]) {
     if (!environment[key]) {
       errors.push(`${key} is required`);
     }

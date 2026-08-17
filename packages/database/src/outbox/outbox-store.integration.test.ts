@@ -624,12 +624,12 @@ describe("OutboxStore", () => {
       {
         table_name: "application_versions",
         column_name: "artifact_sha256",
-        is_nullable: "NO",
+        is_nullable: "YES",
       },
       {
         table_name: "application_versions",
         column_name: "artifact_signature",
-        is_nullable: "NO",
+        is_nullable: "YES",
       },
       {
         table_name: "applications",

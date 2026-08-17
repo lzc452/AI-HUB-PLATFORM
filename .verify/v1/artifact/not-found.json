@@ -1,0 +1,92 @@
+{
+  "mode": "complete",
+  "label": "not-found",
+  "applicationId": "1188c629-1d94-4e14-a3bd-3f807876ce6f",
+  "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+  "completeStatus": 200,
+  "completeBody": {
+    "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+    "objectKey": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content",
+    "fileName": "not-found.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 40,
+    "uploadStatus": "verifying",
+    "scanStatus": "pending",
+    "sha256": "339ba402ce86f9cec43c693c147e5d9b9b772baba19a3cf1fe73bd26830b133e",
+    "signature": "",
+    "errorCode": null,
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:34.758Z"
+  },
+  "final": {
+    "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+    "objectKey": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content",
+    "fileName": "not-found.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 40,
+    "uploadStatus": "failed",
+    "scanStatus": "failed",
+    "sha256": "339ba402ce86f9cec43c693c147e5d9b9b772baba19a3cf1fe73bd26830b133e",
+    "signature": "",
+    "errorCode": "ARTIFACT_NOT_FOUND",
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:34.758Z"
+  },
+  "expectedError": "ARTIFACT_NOT_FOUND",
+  "s3After": [],
+  "evidence": {
+    "upload": [
+      {
+        "upload_status": "failed",
+        "scan_status": "failed",
+        "error_code": "ARTIFACT_NOT_FOUND",
+        "verification_attempts": 1,
+        "sha256": "339ba402ce86f9cec43c693c147e5d9b9b772baba19a3cf1fe73bd26830b133e",
+        "signature": "",
+        "object_key": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content",
+        "staging_object_key": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content",
+        "completed_at": null
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "application.artifact.verification.requested",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "339ba402ce86f9cec43c693c147e5d9b9b772baba19a3cf1fe73bd26830b133e",
+          "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+          "stagingObjectKey": "applications/1188c629-1d94-4e14-a3bd-3f807876ce6f/uploads/b4965aad-a599-4f6e-ad07-73f59aefec82/content"
+        },
+        "created_at": "2026-08-15T19:29:35.082Z"
+      },
+      {
+        "event_type": "application.artifact.verification.failed",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "uploadId": "4017df47-9885-4f3b-a3d1-d4b1b568c916",
+          "errorCode": "ARTIFACT_NOT_FOUND"
+        },
+        "created_at": "2026-08-15T19:29:36.020Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "c2a87151-2aeb-414b-96f0-77e9fc818f25",
+        "event_type": "artifact.verification.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:36.024Z"
+      },
+      {
+        "id": "30713a60-7e75-4c9e-9fc4-acd5ef0fd2b9",
+        "event_type": "artifact.verification.failed",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:36.028Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:29:36.133Z"
+}

@@ -48,9 +48,7 @@ describe("buildDemandFixture", () => {
   });
 
   it("has exactly 3 claimed demands", () => {
-    const count = fixture.demands.filter(
-      (d) => d.status === "claimed",
-    ).length;
+    const count = fixture.demands.filter((d) => d.status === "claimed").length;
     expect(count).toBe(3);
   });
 
@@ -175,9 +173,7 @@ describe("buildDemandFixture", () => {
   });
 
   it("provides claimed demands for demand.status.transition", () => {
-    const inProgress = fixture.demands.filter(
-      (d) => d.status === "claimed",
-    );
+    const inProgress = fixture.demands.filter((d) => d.status === "claimed");
     expect(inProgress.length).toBe(3);
     for (const d of inProgress) {
       expect(d.owner_employee_id).not.toBeNull();

@@ -40,10 +40,7 @@ class TestStorage implements ReadableObjectStoragePort {
     this.objects.set(key, Buffer.from(content));
   }
 
-  async putStream(
-    key: string,
-    stream: NodeJS.ReadableStream,
-  ): Promise<number> {
+  async putStream(key: string, stream: NodeJS.ReadableStream): Promise<number> {
     const chunks: Buffer[] = [];
     for await (const chunk of stream) chunks.push(Buffer.from(chunk));
     const content = Buffer.concat(chunks);
@@ -143,6 +140,19 @@ class TestApplicationRepository {
   }
 }
 
+type CasRepository = TestApplicationRepository & {
+  claimArtifactVerification: (input: {
+    expectedSha256: string;
+    requestedSignature?: string | null;
+    uploadId: string;
+  }) => Promise<ArtifactUploadRecord | null>;
+  emitOutbox: (input: unknown) => Promise<boolean>;
+  recordAudit: (input: unknown) => Promise<void>;
+  withTransaction: <T>(
+    operation: (repository: CasRepository) => Promise<T>,
+  ) => Promise<T>;
+};
+
 describe("artifact upload API", () => {
   let app: INestApplication;
   let storage: TestStorage;
@@ -184,10 +194,7 @@ describe("artifact upload API", () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
-    configureApiBodyParsers(
-      app as NestExpressApplication,
-      MAX_ARTIFACT_BYTES,
-    );
+    configureApiBodyParsers(app as NestExpressApplication, MAX_ARTIFACT_BYTES);
     await app.init();
   });
 
@@ -197,6 +204,11 @@ describe("artifact upload API", () => {
     storage.objects.clear();
     storage.completionEvents.length = 0;
     storage.failDelete = false;
+    const casRepository = repository as Partial<CasRepository>;
+    delete casRepository.claimArtifactVerification;
+    delete casRepository.emitOutbox;
+    delete casRepository.recordAudit;
+    delete casRepository.withTransaction;
   });
 
   afterAll(async () => {
@@ -212,7 +224,11 @@ describe("artifact upload API", () => {
     return request(app.getHttpServer())
       .post("/internal/applications/app-1/artifact-uploads")
       .set(ownerHeaders)
-      .send({ fileName: "artifact.zip", mimeType: "application/zip", sizeBytes });
+      .send({
+        fileName: "artifact.zip",
+        mimeType: "application/zip",
+        sizeBytes,
+      });
   }
 
   it("accepts an application/octet-stream body and preserves its exact bytes", async () => {
@@ -229,7 +245,7 @@ describe("artifact upload API", () => {
       .expect(200);
 
     expect(uploaded.body.sha256).toBe(
-      "c7c5c1d70c5dec44c05970fba15e1207557e2b98fbde3d4f933a7e005995ed45",
+      "c7c5c1d70c5dec4416ab6158afd0b223ef40c29b1dc1f97ed9428b94d4cadb1c",
     );
     expect(storage.objects.get(created.body.objectKey)).toEqual(content);
   });
@@ -298,6 +314,71 @@ describe("artifact upload API", () => {
     ).toEqual(content);
   });
 
+  it("uses an atomic CAS claim so concurrent complete requests yield one success and one conflict", async () => {
+    const content = Buffer.from("artifact");
+    const created = await createUpload(content.byteLength).expect(201);
+    await request(app.getHttpServer())
+      .put(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/content`,
+      )
+      .set(ownerHeaders)
+      .set("content-type", "application/octet-stream")
+      .send(content)
+      .expect(200);
+
+    const casRepository = repository as CasRepository;
+    casRepository.withTransaction = async (operation) =>
+      operation(casRepository);
+    casRepository.claimArtifactVerification = async ({
+      expectedSha256,
+      requestedSignature,
+      uploadId,
+    }) => {
+      const current = casRepository.uploads.get(uploadId);
+      if (
+        current === undefined ||
+        current.uploadStatus !== "uploading" ||
+        current.sha256 !== expectedSha256
+      ) {
+        return null;
+      }
+      const claimed = {
+        ...current,
+        signature: requestedSignature ?? null,
+        updatedAt: new Date(),
+        uploadStatus: "verifying" as const,
+        verificationAttempts: (current.verificationAttempts ?? 0) + 1,
+        verificationStartedAt: new Date(),
+      };
+      casRepository.uploads.set(uploadId, claimed);
+      return claimed;
+    };
+    casRepository.recordAudit = async () => undefined;
+    casRepository.emitOutbox = async () => true;
+
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post(
+          `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/complete`,
+        )
+        .set(ownerHeaders)
+        .send({ signature: "valid-signature" }),
+      request(app.getHttpServer())
+        .post(
+          `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/complete`,
+        )
+        .set(ownerHeaders)
+        .send({ signature: "valid-signature" }),
+    ]);
+
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      200, 400,
+    ]);
+    expect(casRepository.uploads.get(created.body.uploadId)?.uploadStatus).toBe(
+      "verifying",
+    );
+  });
+
   it("fails closed when verification is unavailable", async () => {
     const content = Buffer.from("artifact");
     const created = await createUpload(content.byteLength).expect(201);
@@ -346,7 +427,11 @@ describe("artifact upload API", () => {
         "x-employee-id": "E200",
         "x-session-id": "session-E200",
       })
-      .send({ fileName: "artifact.zip", mimeType: "application/zip", sizeBytes: 8 })
+      .send({
+        fileName: "artifact.zip",
+        mimeType: "application/zip",
+        sizeBytes: 8,
+      })
       .expect(403);
 
     const created = await createUpload(8).expect(201);

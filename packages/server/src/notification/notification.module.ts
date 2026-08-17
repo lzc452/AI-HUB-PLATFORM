@@ -1,5 +1,6 @@
-import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import type { Kysely } from "kysely";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { NotificationController } from "./notification.controller.js";
@@ -21,102 +22,97 @@ const unavailableDingTalk: DingTalkNotificationPort = {
 };
 
 async function authorizeDingTalkResource(
-  databaseUrl: string,
+  database: Kysely<DatabaseSchema>,
   role: string,
   aggregateId: string,
   recipientEmployeeId: string,
   actor: { employeeId: string; sessionId: string },
 ): Promise<boolean> {
-  const database = createDatabase(databaseUrl);
-  try {
-    switch (role) {
-      case "application_reviewer":
-        return (
-          (await database
-            .selectFrom("application_review_queue")
-            .select("review_queue_id")
-            .where("application_id", "=", aggregateId)
-            .executeTakeFirst()) !== undefined
-        );
-      case "application_owner":
-        return (
-          (await database
-            .selectFrom("applications")
-            .select("application_id")
-            .where("application_id", "=", aggregateId)
-            .where("owner_employee_id", "=", recipientEmployeeId)
-            .executeTakeFirst()) !== undefined
-        );
-      case "demand_submitter":
-        return (
-          (await database
-            .selectFrom("ai_demands")
-            .select("demand_id")
-            .where("demand_id", "=", aggregateId)
-            .where("requester_employee_id", "=", recipientEmployeeId)
-            .executeTakeFirst()) !== undefined
-        );
-      case "demand_owner":
-        return (
-          (await database
-            .selectFrom("ai_demands")
-            .select("demand_id")
-            .where("demand_id", "=", aggregateId)
-            .where("owner_employee_id", "=", recipientEmployeeId)
-            .executeTakeFirst()) !== undefined
-        );
-      case "demand_collaborator":
-        return (
-          (await database
-            .selectFrom("ai_demand_collaborators")
-            .select("demand_id")
-            .where("demand_id", "=", aggregateId)
-            .where("employee_id", "=", recipientEmployeeId)
-            .where("role", "=", "collaborator")
-            .executeTakeFirst()) !== undefined
-        );
-      case "export_requester":
-        return (
-          (await database
-            .selectFrom("analytics_export_jobs")
-            .select("export_id")
-            .where("export_id", "=", aggregateId)
-            .where("requested_by_employee_id", "=", recipientEmployeeId)
-            .executeTakeFirst()) !== undefined
-        );
-      case "assistant_requester":
-        return (
-          recipientEmployeeId === actor.employeeId &&
-          aggregateId === actor.sessionId
-        );
-      default:
-        return false;
-    }
-  } finally {
-    await database.destroy();
+  switch (role) {
+    case "application_reviewer":
+      return (
+        (await database
+          .selectFrom("application_review_queue")
+          .select("review_queue_id")
+          .where("application_id", "=", aggregateId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "application_owner":
+      return (
+        (await database
+          .selectFrom("applications")
+          .select("application_id")
+          .where("application_id", "=", aggregateId)
+          .where("owner_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "demand_submitter":
+      return (
+        (await database
+          .selectFrom("ai_demands")
+          .select("demand_id")
+          .where("demand_id", "=", aggregateId)
+          .where("requester_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "demand_owner":
+      return (
+        (await database
+          .selectFrom("ai_demands")
+          .select("demand_id")
+          .where("demand_id", "=", aggregateId)
+          .where("owner_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "demand_collaborator":
+      return (
+        (await database
+          .selectFrom("ai_demand_collaborators")
+          .select("demand_id")
+          .where("demand_id", "=", aggregateId)
+          .where("employee_id", "=", recipientEmployeeId)
+          .where("role", "=", "collaborator")
+          .executeTakeFirst()) !== undefined
+      );
+    case "export_requester":
+      return (
+        (await database
+          .selectFrom("analytics_export_jobs")
+          .select("export_id")
+          .where("export_id", "=", aggregateId)
+          .where("requested_by_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "assistant_requester":
+      return (
+        recipientEmployeeId === actor.employeeId &&
+        aggregateId === actor.sessionId
+      );
+    default:
+      return false;
   }
 }
 
 @Module({})
 export class NotificationModule {
   static register(
-    databaseUrl: string,
+    database: Kysely<DatabaseSchema>,
     dingtalk: DingTalkNotificationPort = unavailableDingTalk,
   ): DynamicModule {
     return {
       module: NotificationModule,
-      imports: [IdentityModule.register(databaseUrl)],
+      imports: [IdentityModule.register(database)],
       controllers: [NotificationController],
       providers: [
         {
           provide: NOTIFICATION_SERVICE,
           useFactory: (identity: IdentityService) =>
             new NotificationService(
-              new KyselyNotificationRepository(createDatabase(databaseUrl)),
+              new KyselyNotificationRepository(database),
               identity,
               dingtalk,
               new AnalyticsEventService(
-                new KyselyAnalyticsEventRepository(createDatabase(databaseUrl)),
+                new KyselyAnalyticsEventRepository(database),
               ),
             ),
           inject: [IdentityService],
@@ -157,7 +153,7 @@ export class NotificationModule {
                 return (
                   hasRole &&
                   (await authorizeDingTalkResource(
-                    databaseUrl,
+                    database,
                     role,
                     aggregateId,
                     employeeId,

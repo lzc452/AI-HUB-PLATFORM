@@ -1,0 +1,1301 @@
+{
+  "login": {
+    "design": "登录页面.png",
+    "path": "/login",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "login-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "login-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "login-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": null,
+      "sider": null,
+      "main": null,
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 7,
+      "firstFocusTag": "INPUT"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "marketplace": {
+    "design": "应用市场.png",
+    "path": "/marketplace",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "marketplace-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "marketplace-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "marketplace-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 27,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "activeTab": "推荐"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "app-detail": {
+    "design": "应用详情.png",
+    "path": "/marketplace/10000000-0000-4000-8000-000000000001",
+    "designViewport": [2730, 1536],
+    "screenshots": [
+      {
+        "name": "app-detail-2730x1536.png",
+        "width": 2730,
+        "height": 1536,
+        "overflowX": 0
+      },
+      {
+        "name": "app-detail-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "app-detail-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 2730,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 1480,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 2510,
+        "height": 1480,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 31,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "applications": {
+    "design": "应用管理.png",
+    "path": "/applications",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "applications-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "applications-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "applications-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 63,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "application-detail": {
+    "design": "应用管理-应用详情.png",
+    "path": "/applications/00000001-0000-4000-8000-000000000008",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "application-detail-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "application-detail-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "application-detail-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 17,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "application-versions": {
+    "design": "应用管理-版本管理.png",
+    "path": "/applications/00000001-0000-4000-8000-000000000008/versions",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "application-versions-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "application-versions-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "application-versions-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 22,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "application-review": {
+    "design": "审核工作台.png",
+    "path": "/applications/10000000-0000-4000-8000-000000000002/review",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "application-review-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "application-review-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "application-review-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 21,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "预览详情"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "application-delivery": {
+    "design": "应用管理-交付配置.png",
+    "path": "/applications/00000001-0000-4000-8000-000000000008/delivery",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "application-delivery-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "application-delivery-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "application-delivery-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 19,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "innovation": {
+    "design": "创新广场.png",
+    "path": "/innovation",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "innovation-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "innovation-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "innovation-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 36,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "innovation-detail": {
+    "design": "创新广场-详情.png",
+    "path": "/innovation/00000010-0000-4000-8000-000000000008",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "innovation-detail-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "innovation-detail-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "innovation-detail-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 22,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "analytics": {
+    "design": "数据看板.png",
+    "path": "/analytics",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "analytics-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "analytics-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "analytics-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 24,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": "平台总览"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "organization": {
+    "design": "组织管理.png",
+    "path": "/organization",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "organization-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 51,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": "用户管理"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "organization-departments": {
+    "design": "组织管理-部门管理.png",
+    "path": "/organization",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "organization-departments-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-departments-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-departments-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 64,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "部门管理"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "organization-roles": {
+    "design": "组织管理-角色管理.png",
+    "path": "/organization",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "organization-roles-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-roles-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-roles-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 115,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "角色管理"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "organization-sync": {
+    "design": "组织管理-同步状态.png",
+    "path": "/organization",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "organization-sync-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-sync-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-sync-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 51,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "同步状态"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "organization-user-detail": {
+    "design": "组织管理-用户详情.png",
+    "path": "/organization",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "organization-user-detail-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-user-detail-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "organization-user-detail-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 52,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "用户管理"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "security": {
+    "design": "系统安全.png",
+    "path": "/security",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "security-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "security-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "security-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 31,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": "审计日志"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "notifications": {
+    "design": "站内通知.png",
+    "path": "/notifications",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "notifications-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "notifications-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "notifications-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 25,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "activeTab": "全部"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "notifications-detail": {
+    "design": "站内通知详情.png",
+    "path": "/notifications",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "notifications-detail-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "notifications-detail-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "notifications-detail-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 29,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "none",
+      "activeTab": "全部"
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "creator": {
+    "design": "创作者中心.png",
+    "path": "/creator/00000001-0000-4000-8000-000000000008",
+    "designViewport": [2730, 1536],
+    "screenshots": [
+      {
+        "name": "creator-2730x1536.png",
+        "width": 2730,
+        "height": 1536,
+        "overflowX": 0
+      },
+      {
+        "name": "creator-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "creator-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 2730,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 1480,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 2510,
+        "height": 1480,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 64,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  },
+  "assistant": {
+    "design": "AI助手.png",
+    "path": "/assistant",
+    "designViewport": [1672, 941],
+    "screenshots": [
+      {
+        "name": "assistant-1672x941.png",
+        "width": 1672,
+        "height": 941,
+        "overflowX": 0
+      },
+      {
+        "name": "assistant-768x1024.png",
+        "width": 768,
+        "height": 1024,
+        "overflowX": 0
+      },
+      {
+        "name": "assistant-390x844.png",
+        "width": 390,
+        "height": 844,
+        "overflowX": 0
+      }
+    ],
+    "geometry": {
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 56,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(217, 217, 217)"
+      },
+      "sider": {
+        "x": 0,
+        "y": 56,
+        "width": 220,
+        "height": 885,
+        "backgroundColor": "rgb(255, 255, 255)",
+        "borderColor": "rgb(31, 31, 31) rgb(217, 217, 217) rgb(31, 31, 31) rgb(31, 31, 31)"
+      },
+      "main": {
+        "x": 220,
+        "y": 56,
+        "width": 1452,
+        "height": 885,
+        "backgroundColor": "rgb(245, 245, 245)",
+        "borderColor": "rgb(31, 31, 31)"
+      },
+      "overflowX": 0
+    },
+    "keyboard": {
+      "focusableCount": 25,
+      "firstFocusTag": "A"
+    },
+    "stateChecks": {
+      "focusOutline": "solid",
+      "activeTab": null
+    },
+    "consoleErrors": [],
+    "failedRequests": [],
+    "http4xx": []
+  }
+}

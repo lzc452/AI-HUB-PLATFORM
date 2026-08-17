@@ -209,7 +209,10 @@ export class DemandController {
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
   @ApiBody({ type: DemandClaimProposalRequestDto })
-  @ApiCreatedResponse({ description: "认领方案记录", type: DemandClaimProposalDto })
+  @ApiCreatedResponse({
+    description: "认领方案记录",
+    type: DemandClaimProposalDto,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   submitClaimProposal(
     @Param("demandId") demandId: string,
@@ -256,7 +259,10 @@ export class DemandController {
   @ApiIdentityHeaders()
   @ApiParam({ name: "demandId", description: "需求 ID" })
   @ApiParam({ name: "proposalId", description: "方案 ID" })
-  @ApiCreatedResponse({ description: "撤回后的方案记录", type: DemandClaimProposalDto })
+  @ApiCreatedResponse({
+    description: "撤回后的方案记录",
+    type: DemandClaimProposalDto,
+  })
   @ApiProblemResponses([400, 401, 403, 404])
   withdrawClaimProposal(
     @Param("demandId") demandId: string,
@@ -327,7 +333,8 @@ export class DemandController {
   @RequiresPermissions(PERMISSIONS.DEMAND_CREATE)
   @ApiOperation({
     summary: "上传需求附件",
-    description: "raw body（application/octet-stream）+ x-file-name / x-file-mime 头。",
+    description:
+      "raw body（application/octet-stream）+ x-file-name / x-file-mime 头。",
   })
   @ApiIdentityHeaders()
   @ApiCreatedResponse({ description: "附件记录", type: DemandAttachmentDto })

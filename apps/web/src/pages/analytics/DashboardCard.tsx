@@ -1,7 +1,10 @@
 import { Spin, Tag, Typography } from "antd";
 import ReactECharts from "echarts-for-react";
 
-import type { DashboardKey } from "../../modules/analytics/analytics.client";
+import type {
+  AnalyticsDateRange,
+  DashboardKey,
+} from "../../modules/analytics/analytics.client";
 import { useDashboard } from "../../modules/analytics/useAnalytics";
 
 const { Text, Title } = Typography;
@@ -9,6 +12,7 @@ const { Text, Title } = Typography;
 export interface DashboardCardProps {
   dashboardKey: DashboardKey;
   description: string;
+  range?: AnalyticsDateRange;
   title: string;
 }
 
@@ -22,9 +26,10 @@ function prefersReducedMotion(): boolean {
 export function DashboardCard({
   dashboardKey,
   description,
+  range,
   title,
 }: DashboardCardProps) {
-  const { data, isPending } = useDashboard(dashboardKey);
+  const { data, isPending } = useDashboard(dashboardKey, range);
 
   const total =
     data?.metrics.reduce((sum, metric) => sum + metric.value, 0) ?? 0;
@@ -45,7 +50,7 @@ export function DashboardCard({
       <Text type="secondary">{description}</Text>
       <div className="mt-4">
         <Tag color="blue">每日聚合</Tag>
-        <Tag>180 天重建</Tag>
+        <Tag>{data ? `${data.from} 至 ${data.to}` : "按所选时间范围"}</Tag>
       </div>
       {isPending ? <Spin aria-label={`${title} 数据加载中`} /> : null}
       {data ? (

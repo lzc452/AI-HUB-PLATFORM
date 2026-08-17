@@ -25,7 +25,14 @@ try {
   const result = await seedDemoDataset(db, {
     anchorDate,
     mode: "upsert",
-    domains: ["identity", "application", "catalog", "demand", "notification"],
+    domains: [
+      "identity",
+      "application",
+      "catalog",
+      "demand",
+      "notification",
+      "analytics",
+    ],
   });
   console.log(JSON.stringify(result, null, 2));
   console.log(`Seed complete in ${result.durationMs}ms`);

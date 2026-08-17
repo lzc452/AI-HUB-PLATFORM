@@ -6,6 +6,7 @@ describe("fixed analytics dashboard matrix", () => {
   it("exposes governance, department, risk, runtime, and integration keys with metric rules", () => {
     const repository: AnalyticsDashboardRepository = {
       readDailyAggregates: async () => [],
+      readSnapshotCounts: async () => [],
       withTransaction: async (operation) => operation(repository),
       recordAudit: async () => undefined,
       appendOutbox: async () => true,

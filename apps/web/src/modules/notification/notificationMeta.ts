@@ -10,7 +10,7 @@ import {
 } from "@ant-design/icons";
 import type { ComponentType } from "react";
 
-import type { NotificationRecord } from "../../modules/notification/notification.client";
+import type { NotificationRecord } from "./notification.client";
 
 export interface NotificationMeta {
   /** 列表/详情左上角图标组件 */

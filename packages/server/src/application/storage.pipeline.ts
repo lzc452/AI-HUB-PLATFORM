@@ -135,13 +135,19 @@ export class ArtifactPipeline implements ArtifactVerificationPort {
   /** 扫描已落盘的资产内容（用于把资产置为 passed）。
    * 生产环境无真实安全适配器时 scan 抛错，被捕获为失败关闭；
    * 非生产环境（createArtifactVerification 注入接受桩）scan 恒返回 clean。 */
-  async scanStoredAsset(input: {
-    assetKey: string;
-  }): Promise<{ scanStatus: "passed" | "failed"; sha256: string; reason?: string }> {
+  async scanStoredAsset(input: { assetKey: string }): Promise<{
+    scanStatus: "passed" | "failed";
+    sha256: string;
+    reason?: string;
+  }> {
     try {
       const content = await this.storage.get(input.assetKey);
       if (content === null) {
-        return { scanStatus: "failed", sha256: "", reason: "ARTIFACT_NOT_FOUND" };
+        return {
+          scanStatus: "failed",
+          sha256: "",
+          reason: "ARTIFACT_NOT_FOUND",
+        };
       }
       const sha256 = createHash("sha256").update(content).digest("hex");
       if ((await this.security.scan(content)) === "infected") {

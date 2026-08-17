@@ -22,6 +22,8 @@ import {
   createProductionSecurityMiddleware,
   ArtifactPipeline,
   DiskObjectStorage,
+  GarageObjectStorage,
+  type ReadableObjectStoragePort,
 } from "@ai-hub/server";
 
 import { ApiModule } from "./api.module.js";
@@ -31,9 +33,10 @@ import { configureSwagger, shouldEnableApiDocs } from "./swagger.js";
 async function bootstrap() {
   const config = parseRuntimeConfig(process.env);
   const logger = createApplicationLogger(config.logLevel);
-  const replayDatabase = createDatabase(config.databaseUrl);
+  const database = createDatabase(config.databaseUrl);
+  const replayDatabase = database;
   const metrics = new ObservabilityMetrics({
-    collectOutboxCounts: createOutboxCountCollector(config.databaseUrl),
+    collectOutboxCounts: createOutboxCountCollector(database),
   });
   const identityOptions: {
     loginEncryptionPrivateKey?: string;
@@ -63,18 +66,32 @@ async function bootstrap() {
     };
   }
 
-  const artifactStorage = config.artifactUploadEnabled
-    ? new DiskObjectStorage(config.storageDirectory)
-    : undefined;
+  const artifactStorage: ReadableObjectStoragePort | undefined =
+    config.artifactUploadEnabled
+      ? config.objectStorageDriver === "garage"
+        ? new GarageObjectStorage(config.objectStorageBucket, {
+            endpoint: config.objectStorageEndpoint as string,
+            region: config.objectStorageRegion,
+            accessKeyId: config.objectStorageAccessKey as string,
+            secretAccessKey: config.objectStorageSecretKey as string,
+            forcePathStyle: config.objectStorageForcePathStyle,
+          })
+        : new DiskObjectStorage(config.storageDirectory)
+      : undefined;
   const app = await NestFactory.create<NestExpressApplication>(
     ApiModule.register(
-      config.databaseUrl,
+      database,
       { logger, metrics },
       artifactStorage === undefined
         ? undefined
-        : createArtifactVerification(artifactStorage, config.nodeEnv !== "production"),
+        : createArtifactVerification(
+            artifactStorage,
+            config.nodeEnv !== "production",
+          ),
       identityOptions,
-      config.artifactUploadEnabled ? config.storageDirectory : undefined,
+      config.objectStorageDriver === "disk" && config.artifactUploadEnabled
+        ? config.storageDirectory
+        : undefined,
       config.artifactMaxSizeBytes,
       artifactStorage,
     ),
@@ -103,7 +120,7 @@ async function bootstrap() {
 /** 本地直传仅保留隔离链路；生产环境未接入真实扫描与签名 adapter 时必须失败关闭。
  * 非生产环境（本地开发/验证）使用接受桩，使发布链可在无安全适配器时跑通。 */
 function createArtifactVerification(
-  storage: DiskObjectStorage,
+  storage: import("@ai-hub/server").ObjectStoragePort,
   acceptInDevelopment: boolean,
 ): ArtifactPipeline {
   if (acceptInDevelopment) {

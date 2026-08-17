@@ -31,7 +31,9 @@ export default function ApplicationCreateWizardPage() {
   const [defaultValues, setDefaultValues] = useState<FieldValues>(
     applicationDraftDefaults as unknown as FieldValues,
   );
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
   const [loading, setLoading] = useState(true);
 
   // 数据源：部门/员工/分类/标签。
@@ -95,7 +97,6 @@ export default function ApplicationCreateWizardPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
@@ -130,7 +131,9 @@ export default function ApplicationCreateWizardPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", paddingTop: 120 }}>
+      <div
+        style={{ display: "flex", justifyContent: "center", paddingTop: 120 }}
+      >
         <Spin />
       </div>
     );

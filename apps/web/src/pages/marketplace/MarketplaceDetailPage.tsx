@@ -1,13 +1,15 @@
 import { Card, message, Modal, Skeleton, Tabs } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import type { TabsProps } from 'antd';
 
+import { useAuth } from "../../modules/auth/useAuth";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
 import { rememberLastViewedApplicationId } from "../../modules/application/last-viewed";
 import {
+  useApplicationFeedback,
   useComments,
   useCreateFeedback,
   useCreateComment,
@@ -17,6 +19,7 @@ import {
   useRatings,
   useRestoreComment,
   useToggleLike,
+  useUpdateFeedbackStatus,
 } from "../../modules/interaction/useInteraction";
 import {
   downloadDeliveryAsset,
@@ -60,6 +63,7 @@ function MarketplaceDetailSkeleton() {
 }
 
 export default function MarketplaceDetailPage() {
+  const { actor } = useAuth();
   const { applicationId } = useParams();
   const { data, error, isError, isPending } = useCatalogEntry(applicationId);
   const toggleLike = useToggleLike(applicationId);
@@ -84,6 +88,14 @@ export default function MarketplaceDetailPage() {
     ratingsPage,
     10,
   );
+  const myRatingsQuery = useRatings(applicationId, 1, 10);
+  const myRating = useMemo(
+    () =>
+      myRatingsQuery.data?.items.find(
+        (rating) => rating.employeeId === actor?.employeeId,
+      )?.stars ?? 0,
+    [actor?.employeeId, myRatingsQuery.data],
+  );
   const comments = useComments(
     activeTab === "reviews" ? applicationId : undefined,
     commentsPage,
@@ -101,6 +113,13 @@ export default function MarketplaceDetailPage() {
   const createFeedback = useCreateFeedback(applicationId);
   const myFeedback = useMyFeedback(
     activeTab === "reviews" ? applicationId : undefined,
+  );
+  const canReplyOfficial = data?.capabilities?.canReplyOfficial ?? false;
+  const applicationFeedback = useApplicationFeedback(
+    activeTab === "reviews" && canReplyOfficial ? applicationId : undefined,
+  );
+  const updateFeedback = useUpdateFeedbackStatus(
+    activeTab === "reviews" && canReplyOfficial ? applicationId : undefined,
   );
 
   useEffect(() => {
@@ -193,6 +212,7 @@ export default function MarketplaceDetailPage() {
       <MarketplaceDetailHeader
         entry={data}
         likePending={toggleLike.isPending}
+        myRating={myRating}
         onLike={() => toggleLike.mutate()}
         onRate={(stars) => rateApplication.mutate(stars)}
         onResolve={(channel) => void handleResolve(channel)}
@@ -221,12 +241,14 @@ export default function MarketplaceDetailPage() {
               )}
               {tab.key === "reviews" && (
                 <MarketplaceDetailReviews
+                  applicationFeedback={applicationFeedback.data}
+                  canReplyOfficial={canReplyOfficial}
                   comments={comments.data}
                   commentsPage={commentsPage}
                   commentsPending={comments.isPending}
                   createComment={createComment}
                   createFeedback={createFeedback}
-                  isModerator={false}
+                  isModerator={data.capabilities?.canModerateComments ?? false}
                   myFeedback={myFeedback.data}
                   onCommentsPageChange={setCommentsPage}
                   onHideComment={(id) => hideComment.mutate(id)}
@@ -235,6 +257,7 @@ export default function MarketplaceDetailPage() {
                   ratings={ratings.data}
                   ratingsPage={ratingsPage}
                   ratingsPending={ratings.isPending}
+                  updateFeedback={updateFeedback}
                 />
               )}
               {tab.key === "risk" && (

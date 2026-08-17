@@ -330,14 +330,20 @@ export default function InnovationDemandDetailPage() {
             </Paragraph>
           </Card>
           {demand.businessScenario ? (
-            <Card className="rounded-2xl border-[#edf0f5]" title="业务场景与当前流程">
+            <Card
+              className="rounded-2xl border-[#edf0f5]"
+              title="业务场景与当前流程"
+            >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
                 {demand.businessScenario}
               </Paragraph>
             </Card>
           ) : null}
           {demand.impact ? (
-            <Card className="rounded-2xl border-[#edf0f5]" title="影响对象、发生频率与耗时">
+            <Card
+              className="rounded-2xl border-[#edf0f5]"
+              title="影响对象、发生频率与耗时"
+            >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
                 {demand.impact}
               </Paragraph>
@@ -356,7 +362,10 @@ export default function InnovationDemandDetailPage() {
             </Card>
           ) : null}
           {demand.dataSensitivity ? (
-            <Card className="rounded-2xl border-[#edf0f5]" title="数据类型与敏感程度">
+            <Card
+              className="rounded-2xl border-[#edf0f5]"
+              title="数据类型与敏感程度"
+            >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
                 {demand.dataSensitivity}
               </Paragraph>

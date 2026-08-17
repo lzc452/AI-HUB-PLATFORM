@@ -81,7 +81,7 @@ export function AppShell() {
           <div className="relative h-full">
             <Sider
               collapsed={collapsed}
-              collapsedWidth={72}
+              collapsedWidth={64}
               style={{
                 background: "#fff",
                 borderRight: "1px solid #d9d9d9",
@@ -89,7 +89,7 @@ export function AppShell() {
               }}
               theme="light"
               trigger={null}
-              width={228}
+              width={220}
             >
               {sidebarContent}
             </Sider>

@@ -1,0 +1,94 @@
+{
+  "mode": "complete",
+  "label": "storage-copy-fail",
+  "applicationId": "6562ae10-129e-4313-b2fb-69baeeded64a",
+  "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+  "completeStatus": 200,
+  "completeBody": {
+    "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+    "objectKey": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content",
+    "fileName": "storage-copy-fail.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 48,
+    "uploadStatus": "verifying",
+    "scanStatus": "pending",
+    "sha256": "d0a4b7f3dd7e8180d6208edc4cf960ff8cc4ee659c980c75158e5067ea91757e",
+    "signature": "",
+    "errorCode": null,
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:47.739Z"
+  },
+  "final": {
+    "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+    "objectKey": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content",
+    "fileName": "storage-copy-fail.txt",
+    "mimeType": "text/plain",
+    "sizeBytes": 48,
+    "uploadStatus": "failed",
+    "scanStatus": "failed",
+    "sha256": "d0a4b7f3dd7e8180d6208edc4cf960ff8cc4ee659c980c75158e5067ea91757e",
+    "signature": "",
+    "errorCode": "STORAGE_FINALIZE_FAILED",
+    "verificationAttempts": 1,
+    "expiresAt": "2026-08-16T19:29:47.739Z"
+  },
+  "expectedError": "STORAGE_FINALIZE_FAILED",
+  "s3After": [
+    "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content"
+  ],
+  "evidence": {
+    "upload": [
+      {
+        "upload_status": "failed",
+        "scan_status": "failed",
+        "error_code": "STORAGE_FINALIZE_FAILED",
+        "verification_attempts": 1,
+        "sha256": "d0a4b7f3dd7e8180d6208edc4cf960ff8cc4ee659c980c75158e5067ea91757e",
+        "signature": "",
+        "object_key": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content",
+        "staging_object_key": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content",
+        "completed_at": null
+      }
+    ],
+    "audits": [
+      {
+        "event_type": "application.artifact.verification.requested",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "sha256": "d0a4b7f3dd7e8180d6208edc4cf960ff8cc4ee659c980c75158e5067ea91757e",
+          "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+          "stagingObjectKey": "applications/6562ae10-129e-4313-b2fb-69baeeded64a/uploads/6522ea02-e536-4f89-8261-b473ec02f98c/content"
+        },
+        "created_at": "2026-08-15T19:29:48.242Z"
+      },
+      {
+        "event_type": "application.artifact.verification.failed",
+        "actor_employee_id": "DEMO-APP-ADMIN",
+        "details": {
+          "uploadId": "65881f8e-0276-4bfa-96d2-54c2d3dc12b7",
+          "errorCode": "STORAGE_FINALIZE_FAILED"
+        },
+        "created_at": "2026-08-15T19:29:49.216Z"
+      }
+    ],
+    "outbox": [
+      {
+        "id": "41936c39-bdb1-4708-9ee3-39e16e7be8c3",
+        "event_type": "artifact.verification.requested",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:49.230Z"
+      },
+      {
+        "id": "a872570d-fdad-4a59-93f0-0bedf2d04551",
+        "event_type": "artifact.verification.failed",
+        "status": "completed",
+        "attempts": 1,
+        "last_error": null,
+        "completed_at": "2026-08-15T19:29:49.235Z"
+      }
+    ]
+  },
+  "verifiedAt": "2026-08-15T19:29:49.304Z"
+}

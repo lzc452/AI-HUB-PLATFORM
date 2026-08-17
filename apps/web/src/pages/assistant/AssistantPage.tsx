@@ -9,7 +9,7 @@ import {
   StarFilled,
 } from "@ant-design/icons";
 import { Button, ConfigProvider, Input, Tag, Typography } from "antd";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { aiHubTheme } from "@ai-hub/ui";
@@ -19,9 +19,9 @@ import {
   assistantGreeting,
   askAssistant,
   exampleQuestions,
-  recommendedApps,
   type RecommendedApp,
 } from "../../modules/assistant/assistant.client";
+import { useCatalogSearch } from "../../modules/marketplace/useCatalog";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -158,10 +158,33 @@ function CapabilityPanel() {
 
 /** AI 助手页：本地会话内消息，无对话后端时展示降级提示。 */
 export default function AssistantPage() {
+  const { data: catalog } = useCatalogSearch({
+    page: 1,
+    pageSize: 2,
+    query: "",
+    sort: "popular",
+  });
+  const recommendations = useMemo<RecommendedApp[]>(
+    () =>
+      (catalog?.items ?? []).map((entry, index) => ({
+        applicationId: entry.applicationId,
+        ...(entry.trustLabels.includes("recommended") ? { badge: "推荐" } : {}),
+        iconBackground: index % 2 === 0 ? "#0060f0" : "#4ac78c",
+        iconColor: "#ffffff",
+        iconText: entry.name.slice(0, 1),
+        name: entry.name,
+        rating: entry.ratingAverage ?? 0,
+        ratingCount: entry.ratingCount ?? 0,
+        summary: entry.summary,
+        tags: entry.tagIds,
+        usage: "暂无数据",
+      })),
+    [catalog],
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       from: "ai",
-      recommendations: recommendedApps,
+      recommendations: [],
       text: assistantGreeting.leadIn,
     },
   ]);
@@ -169,6 +192,16 @@ export default function AssistantPage() {
   const [degraded, setDegraded] = useState(false);
 
   const hasUserMessage = messages.some((message) => message.from === "user");
+
+  useEffect(() => {
+    setMessages((current) =>
+      current.map((message, index) =>
+        index === 0 && message.from === "ai"
+          ? { ...message, recommendations }
+          : message,
+      ),
+    );
+  }, [recommendations]);
 
   const send = (text: string) => {
     const trimmed = text.trim();

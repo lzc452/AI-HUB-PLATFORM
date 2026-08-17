@@ -22,7 +22,11 @@ import {
 } from "@nestjs/swagger";
 import { createHash, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import { PERMISSIONS, type ActorContext, type UploadKind } from "@ai-hub/contracts";
+import {
+  PERMISSIONS,
+  type ActorContext,
+  type UploadKind,
+} from "@ai-hub/contracts";
 import {
   Authenticated,
   RequiresPermissions,
@@ -65,7 +69,10 @@ export class UnifiedUploadController {
 
   @Post(":applicationId/uploads")
   @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
-  @ApiOperation({ summary: "创建统一上传会话", description: "按 kind 区分大小/扩展名/MIME 校验。" })
+  @ApiOperation({
+    summary: "创建统一上传会话",
+    description: "按 kind 区分大小/扩展名/MIME 校验。",
+  })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
   @ApiBody({ type: UnifiedUploadInitRequestDto })
@@ -156,7 +163,9 @@ export class UnifiedUploadController {
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
   @ApiParam({ name: "uploadId", description: "上传会话 ID" })
-  @ApiBody({ schema: { type: "object", properties: { signature: { type: "string" } } } })
+  @ApiBody({
+    schema: { type: "object", properties: { signature: { type: "string" } } },
+  })
   @ApiOkResponse({ description: "完成的会话状态", type: UnifiedUploadDto })
   @ApiProblemResponses([400, 401, 403, 404])
   async completeUpload(
@@ -179,7 +188,8 @@ export class UnifiedUploadController {
     const policy = UPLOAD_KIND_POLICIES[upload.kind];
 
     const content = await this.storage.get(upload.objectKey);
-    if (content === null) throw new BadRequestException("UPLOAD_CONTENT_MISSING");
+    if (content === null)
+      throw new BadRequestException("UPLOAD_CONTENT_MISSING");
     const ext = fileExtension(upload.fileName);
     assertMagicMatches(content, ext);
     if (policy.svgAllowed && ext === "svg") {
@@ -188,7 +198,9 @@ export class UnifiedUploadController {
 
     const finalKey = `applications/${applicationId}/assets/${uploadId}`;
     if (policy.createsAsset && policy.assetType !== undefined) {
-      const scan = await this.pipeline.scanStoredAsset({ assetKey: upload.objectKey });
+      const scan = await this.pipeline.scanStoredAsset({
+        assetKey: upload.objectKey,
+      });
       if (scan.scanStatus !== "passed") {
         const failed = await this.repository.updateArtifactUpload(uploadId, {
           uploadStatus: "failed",
@@ -285,7 +297,8 @@ export class UnifiedUploadController {
     actor: ActorContext,
   ): Promise<void> {
     const application = await this.repository.findApplication(applicationId);
-    if (application === null) throw new NotFoundException("APPLICATION_NOT_FOUND");
+    if (application === null)
+      throw new NotFoundException("APPLICATION_NOT_FOUND");
     if (application.ownerEmployeeId !== actor.employeeId) {
       throw new ForbiddenException("APPLICATION_OWNER_REQUIRED");
     }

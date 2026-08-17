@@ -1,5 +1,6 @@
-import { createDatabase } from "@ai-hub/database";
+import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
+import type { Kysely } from "kysely";
 import { APPLICATION_SERVICE } from "../application/application.tokens.js";
 import { ApplicationModule } from "../application/application.module.js";
 import type { ApplicationService } from "../application/application.service.js";
@@ -15,12 +16,15 @@ import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repositor
 
 @Module({})
 export class DemandModule {
-  static register(databaseUrl: string, storageDirectory?: string): DynamicModule {
+  static register(
+    database: Kysely<DatabaseSchema>,
+    storageDirectory?: string,
+  ): DynamicModule {
     return {
       module: DemandModule,
       imports: [
-        IdentityModule.register(databaseUrl),
-        ApplicationModule.registerService(databaseUrl),
+        IdentityModule.register(database),
+        ApplicationModule.registerService(database),
       ],
       controllers: [DemandController],
       providers: [
@@ -31,11 +35,11 @@ export class DemandModule {
             applications: ApplicationService,
           ) =>
             new DemandService(
-              new KyselyDemandRepository(createDatabase(databaseUrl)),
+              new KyselyDemandRepository(database),
               identity,
               applications,
               new AnalyticsEventService(
-                new KyselyAnalyticsEventRepository(createDatabase(databaseUrl)),
+                new KyselyAnalyticsEventRepository(database),
               ),
             ),
           inject: [IdentityService, APPLICATION_SERVICE],

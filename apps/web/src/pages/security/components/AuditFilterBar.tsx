@@ -2,7 +2,11 @@ import { DownloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, DatePicker, Input, Select } from "antd";
 import type { Dayjs } from "dayjs";
 
-import { ALL_FILTER_OPTION, type AuditFilterValue } from "./constants";
+import {
+  ALL_FILTER_OPTION,
+  RISK_FILTER_OPTIONS,
+  type AuditFilterValue,
+} from "./constants";
 
 const { RangePicker } = DatePicker;
 
@@ -13,8 +17,10 @@ export interface AuditFilterBarProps {
   actionTypeOptions: string[];
   /** 操作人选项（由容器从数据派生）。 */
   operatorOptions: string[];
-  /** 导出日志点击（demo 环境仅轻提示）。 */
+  /** 创建审计导出任务。 */
   onExport: () => void;
+  /** 导出任务是否正在创建/处理中（导出按钮加载态）。 */
+  exporting: boolean;
   /** 当前筛选值（受控，由 SecurityPage 持有）。 */
   value: AuditFilterValue;
   /** 增量更新回调，父组件负责合并状态。 */
@@ -28,6 +34,7 @@ export function AuditFilterBar({
   onChange,
   onExport,
   operatorOptions,
+  exporting,
   value,
 }: AuditFilterBarProps) {
   return (
@@ -76,6 +83,13 @@ export function AuditFilterBar({
         style={{ width: 128 }}
         value={value.module}
       />
+      <span className="text-[13px] text-[#1f1f1f]">风险等级</span>
+      <Select
+        onChange={(next: string) => onChange({ risk: next })}
+        options={[...RISK_FILTER_OPTIONS]}
+        style={{ width: 112 }}
+        value={value.risk}
+      />
       <Input
         allowClear
         className="!w-[240px]"
@@ -88,6 +102,7 @@ export function AuditFilterBar({
         className="ml-auto"
         ghost
         icon={<DownloadOutlined />}
+        loading={exporting}
         onClick={onExport}
         type="primary"
       >

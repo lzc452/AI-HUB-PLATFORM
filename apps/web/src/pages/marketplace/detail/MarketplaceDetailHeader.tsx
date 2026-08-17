@@ -26,6 +26,7 @@ export interface MarketplaceDetailHeaderProps {
   ratingDisabled: boolean;
   ratingPending: boolean;
   likePending: boolean;
+  myRating?: number;
 }
 
 
@@ -39,6 +40,7 @@ export function MarketplaceDetailHeader({
   resolving,
   ratingDisabled,
   ratingPending,
+  myRating = 0,
 }: MarketplaceDetailHeaderProps) {
   
   const departments = useDepartments();
@@ -47,7 +49,7 @@ export function MarketplaceDetailHeader({
   )?.name;
 
   const departmentLabel = departmentName ?? entry.departmentId;
-  const ownerName = deriveOwner(entry.applicationId);
+  const ownerName = deriveOwner(entry);
   const ratingLabel = entry.ratingAverage?.toFixed(1) ?? "暂无";
   const primaryChannel: DeliveryChannel | undefined = entry.deliveryChannels[0];
 
@@ -91,6 +93,7 @@ export function MarketplaceDetailHeader({
                 <Text strong className="!text-[#1f1f1f]">
                   {ratingLabel}
                 </Text>
+                <span>{buildRatingCountLabel(entry)}</span>
               </span>
               <span className="inline-flex items-center gap-1">
                 <LikeOutlined aria-hidden="true" />

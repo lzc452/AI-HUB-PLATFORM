@@ -1,6 +1,13 @@
 import { createDatabase } from "@ai-hub/database";
-import { Module, type DynamicModule } from "@nestjs/common";
+import type { DatabaseSchema } from "@ai-hub/database";
+import {
+  Inject,
+  Module,
+  type DynamicModule,
+  type OnApplicationShutdown,
+} from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
+import type { Kysely } from "kysely";
 import {
   HealthModule,
   ApplicationModule,
@@ -28,6 +35,7 @@ import {
   type IdentityService,
   type ApplicationService,
   type ArtifactVerificationPort,
+  type ReadableObjectStoragePort,
 } from "@ai-hub/server";
 
 export interface ApiModuleTestOptions {
@@ -48,22 +56,35 @@ export interface ApiModuleTestOptions {
   observability?: ObservabilityModuleOptions;
 }
 
+const API_DATABASE = Symbol("API_DATABASE");
+
+class ApiDatabaseLifecycle implements OnApplicationShutdown {
+  constructor(
+    @Inject(API_DATABASE)
+    private readonly database: Kysely<DatabaseSchema>,
+  ) {}
+
+  onApplicationShutdown(): Promise<void> {
+    return this.database.destroy();
+  }
+}
+
 const createProductionDatabaseCheck = (
-  databaseUrl: string,
+  database: Kysely<DatabaseSchema>,
   metrics: ObservabilityMetrics,
 ): DatabaseHealthCheck => {
   return async () => {
-    const db = createDatabase(databaseUrl);
-
     try {
-      await db.selectFrom("outbox_events").select("id").limit(1).execute();
+      await database
+        .selectFrom("outbox_events")
+        .select("id")
+        .limit(1)
+        .execute();
       metrics.recordDatabaseReadiness(true);
       return true;
     } catch {
       metrics.recordDatabaseReadiness(false);
       return false;
-    } finally {
-      await db.destroy();
     }
   };
 };
@@ -71,7 +92,7 @@ const createProductionDatabaseCheck = (
 @Module({})
 export class ApiModule {
   static register(
-    databaseUrl: string,
+    databaseOrUrl: string | Kysely<DatabaseSchema>,
     observability: ObservabilityModuleOptions = {},
     artifactVerification?: ArtifactVerificationPort,
     identityOptions?: {
@@ -82,34 +103,47 @@ export class ApiModule {
         corpId: string;
         redirectUri: string;
       };
+      auditExportStorage?: ReadableObjectStoragePort;
     },
     storageDirectory?: string,
     artifactMaxSizeBytes?: number,
-    artifactStorage?: import("@ai-hub/server").DiskObjectStorage,
+    artifactStorage?: ReadableObjectStoragePort,
   ): DynamicModule {
+    const database =
+      typeof databaseOrUrl === "string"
+        ? createDatabase(databaseOrUrl)
+        : databaseOrUrl;
     const metrics = observability.metrics ?? new ObservabilityMetrics();
     return {
       module: ApiModule,
-      providers: [{ provide: APP_GUARD, useClass: PermissionGuard }],
+      providers: [
+        { provide: APP_GUARD, useClass: PermissionGuard },
+        { provide: API_DATABASE, useValue: database },
+        ApiDatabaseLifecycle,
+      ],
       imports: [
         ObservabilityModule.register({ ...observability, metrics }),
-        IdentityModule.register(databaseUrl, identityOptions),
+        IdentityModule.register(database, {
+          ...identityOptions,
+          ...(artifactStorage === undefined
+            ? {}
+            : { auditExportStorage: artifactStorage }),
+        }),
         ApplicationModule.register(
-          databaseUrl,
+          database,
           artifactVerification,
           storageDirectory,
           artifactMaxSizeBytes,
+          artifactStorage,
         ),
-        CatalogModule.register(databaseUrl, artifactStorage),
-        InteractionModule.register(databaseUrl),
-        FeedbackModule.register(databaseUrl),
-        NotificationModule.register(databaseUrl),
-        CreatorModule.register(databaseUrl),
-        DemandModule.register(databaseUrl, storageDirectory),
-        AnalyticsModule.register(databaseUrl),
-        HealthModule.register(
-          createProductionDatabaseCheck(databaseUrl, metrics),
-        ),
+        CatalogModule.register(database, artifactStorage),
+        InteractionModule.register(database),
+        FeedbackModule.register(database),
+        NotificationModule.register(database),
+        CreatorModule.register(database),
+        DemandModule.register(database, storageDirectory),
+        AnalyticsModule.register(database),
+        HealthModule.register(createProductionDatabaseCheck(database, metrics)),
       ],
     };
   }

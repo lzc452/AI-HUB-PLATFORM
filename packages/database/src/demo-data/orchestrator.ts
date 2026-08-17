@@ -178,6 +178,14 @@ async function upsertApplication(
       )
       .execute();
   }
+  for (const current of data.publishedCurrentVersions) {
+    await db
+      .updateTable("applications")
+      .set({ current_version_id: current.current_version_id })
+      .where("application_id", "=", current.application_id)
+      .where("status", "=", "published")
+      .execute();
+  }
   if (data.applicationDeliveries.length > 0) {
     await db
       .insertInto("application_deliveries")
@@ -466,12 +474,7 @@ async function upsertAnalytics(
       .values(data.dailyAggregates as never)
       .onConflict((oc) =>
         oc
-          .columns([
-            "metric_key",
-            "metric_version",
-            "day",
-            "audience_scope_key",
-          ])
+          .columns(["metric_key", "day", "audience_scope_key"])
           .doUpdateSet((eb) => ({
             value: eb.ref("excluded.value"),
             source_event_count: eb.ref("excluded.source_event_count"),
@@ -592,7 +595,7 @@ export async function checkDemoDataset(
     catalog: 10,
     demand: 18,
     notification: 20,
-    analytics: 30,
+    analytics: 40,
   };
 
   for (const domain of domains) {
@@ -606,7 +609,7 @@ export async function checkDemoDataset(
               .select(db.fn.countAll<number>().as("c"))
               .where("employee_id", "like", "DEMO-%")
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
         case "application":
           count = (
@@ -614,7 +617,7 @@ export async function checkDemoDataset(
               .selectFrom("applications")
               .select(db.fn.countAll<number>().as("c"))
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
         case "catalog":
           count = (
@@ -622,7 +625,7 @@ export async function checkDemoDataset(
               .selectFrom("application_catalog_metadata")
               .select(db.fn.countAll<number>().as("c"))
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
         case "demand":
           count = (
@@ -630,7 +633,7 @@ export async function checkDemoDataset(
               .selectFrom("ai_demands")
               .select(db.fn.countAll<number>().as("c"))
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
         case "notification":
           count = (
@@ -639,7 +642,7 @@ export async function checkDemoDataset(
               .select(db.fn.countAll<number>().as("c"))
               .where("idempotency_key", "like", "demo:%")
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
         case "analytics":
           count = (
@@ -648,10 +651,10 @@ export async function checkDemoDataset(
               .select(db.fn.countAll<number>().as("c"))
               .where("idempotency_key", "like", "demo:%")
               .executeTakeFirstOrThrow()
-          ).c as number;
+          ).c as unknown as number;
           break;
       }
-      if (count !== expectedCounts[domain]) {
+      if (Number(count) !== expectedCounts[domain]) {
         failures.push({
           domain,
           message: `Expected ${expectedCounts[domain]}, found ${count}`,

@@ -1,0 +1,113 @@
+Pager usage is off.
+                                                                                            QUERY PLAN                                                                                             
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=24.33..33.99 rows=1 width=654) (actual time=0.891..0.960 rows=20.00 loops=1)
+   Buffers: shared hit=1458
+   ->  Result  (cost=24.33..33.99 rows=1 width=654) (actual time=0.891..0.958 rows=20.00 loops=1)
+         Buffers: shared hit=1458
+         ->  Sort  (cost=24.33..24.33 rows=1 width=650) (actual time=0.868..0.870 rows=20.00 loops=1)
+               Sort Key: metadata.recommendation_rank DESC, application.application_id
+               Sort Method: top-N heapsort  Memory: 28kB
+               Buffers: shared hit=1348
+               ->  Nested Loop Semi Join  (cost=10.49..24.32 rows=1 width=650) (actual time=0.161..0.812 rows=250.00 loops=1)
+                     Join Filter: (application.application_id = audience.application_id)
+                     Buffers: shared hit=1342
+                     ->  Hash Join  (cost=10.22..22.12 rows=1 width=666) (actual time=0.138..0.202 rows=300.00 loops=1)
+                           Hash Cond: (metadata.application_id = application.application_id)
+                           Buffers: shared hit=21
+                           ->  Seq Scan on application_catalog_metadata metadata  (cost=0.00..11.50 rows=150 width=166) (actual time=0.011..0.033 rows=313.00 loops=1)
+                                 Buffers: shared hit=7
+                           ->  Hash  (cost=10.20..10.20 rows=2 width=646) (actual time=0.115..0.116 rows=300.00 loops=1)
+                                 Buckets: 1024  Batches: 1  Memory Usage: 35kB
+                                 Buffers: shared hit=14
+                                 ->  Bitmap Heap Scan on applications application  (cost=4.29..10.20 rows=2 width=646) (actual time=0.039..0.066 rows=300.00 loops=1)
+                                       Recheck Cond: (((status)::text = 'published'::text) AND (current_version_id IS NOT NULL))
+                                       Heap Blocks: exact=9
+                                       Buffers: shared hit=14
+                                       ->  Bitmap Index Scan on applications_catalog_status_idx  (cost=0.00..4.29 rows=2 width=0) (actual time=0.032..0.032 rows=300.00 loops=1)
+                                             Index Cond: (((status)::text = 'published'::text) AND (current_version_id IS NOT NULL))
+                                             Index Searches: 1
+                                             Buffers: shared hit=5
+                     ->  Index Scan using application_audiences_department_idx on application_audiences audience  (cost=0.27..2.19 rows=1 width=16) (actual time=0.002..0.002 rows=0.83 loops=300)
+                           Index Cond: (application_id = metadata.application_id)
+                           Filter: (((audience_type)::text = 'all'::text) OR ((employee_id)::text = 'DEMO-EMPLOYEE'::text) OR ((department_id)::text = ANY ('{demo-rnd,demo-company}'::text[])))
+                           Rows Removed by Filter: 0
+                           Index Searches: 484
+                           Buffers: shared hit=1321
+         SubPlan 1
+           ->  Aggregate  (cost=9.63..9.65 rows=1 width=4) (actual time=0.004..0.004 rows=1.00 loops=20)
+                 Buffers: shared hit=110
+                 ->  Bitmap Heap Scan on application_likes like_row  (cost=4.29..9.63 rows=2 width=0) (actual time=0.002..0.003 rows=3.50 loops=20)
+                       Recheck Cond: (application_id = application.application_id)
+                       Heap Blocks: exact=70
+                       Buffers: shared hit=110
+                       ->  Bitmap Index Scan on application_likes_app_idx  (cost=0.00..4.29 rows=2 width=0) (actual time=0.001..0.001 rows=3.50 loops=20)
+                             Index Cond: (application_id = application.application_id)
+                             Index Searches: 20
+                             Buffers: shared hit=40
+ Planning:
+   Buffers: shared hit=478
+ Planning Time: 0.797 ms
+ Execution Time: 1.027 ms
+
+                                                                                      QUERY PLAN                                                                                       
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=24.32..24.33 rows=1 width=4) (actual time=0.740..0.741 rows=1.00 loops=1)
+   Buffers: shared hit=1340
+   ->  Nested Loop Semi Join  (cost=10.49..24.32 rows=1 width=0) (actual time=0.089..0.726 rows=250.00 loops=1)
+         Join Filter: (application.application_id = audience.application_id)
+         Buffers: shared hit=1340
+         ->  Hash Join  (cost=10.22..22.12 rows=1 width=32) (actual time=0.080..0.129 rows=300.00 loops=1)
+               Hash Cond: (metadata.application_id = application.application_id)
+               Buffers: shared hit=21
+               ->  Seq Scan on application_catalog_metadata metadata  (cost=0.00..11.50 rows=150 width=16) (actual time=0.005..0.023 rows=313.00 loops=1)
+                     Buffers: shared hit=7
+               ->  Hash  (cost=10.20..10.20 rows=2 width=16) (actual time=0.071..0.071 rows=300.00 loops=1)
+                     Buckets: 1024  Batches: 1  Memory Usage: 23kB
+                     Buffers: shared hit=14
+                     ->  Bitmap Heap Scan on applications application  (cost=4.29..10.20 rows=2 width=16) (actual time=0.025..0.047 rows=300.00 loops=1)
+                           Recheck Cond: (((status)::text = 'published'::text) AND (current_version_id IS NOT NULL))
+                           Heap Blocks: exact=9
+                           Buffers: shared hit=14
+                           ->  Bitmap Index Scan on applications_catalog_status_idx  (cost=0.00..4.29 rows=2 width=0) (actual time=0.022..0.022 rows=300.00 loops=1)
+                                 Index Cond: (((status)::text = 'published'::text) AND (current_version_id IS NOT NULL))
+                                 Index Searches: 1
+                                 Buffers: shared hit=5
+         ->  Index Scan using application_audiences_department_idx on application_audiences audience  (cost=0.27..2.19 rows=1 width=16) (actual time=0.002..0.002 rows=0.83 loops=300)
+               Index Cond: (application_id = metadata.application_id)
+               Filter: (((audience_type)::text = 'all'::text) OR ((employee_id)::text = 'DEMO-EMPLOYEE'::text) OR ((department_id)::text = ANY ('{demo-rnd,demo-company}'::text[])))
+               Rows Removed by Filter: 0
+               Index Searches: 484
+               Buffers: shared hit=1319
+ Planning Time: 0.187 ms
+ Execution Time: 0.765 ms
+
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=39.83..39.84 rows=4 width=162) (actual time=0.148..0.149 rows=30.00 loops=1)
+   Sort Key: tag_link.tag_id
+   Sort Method: quicksort  Memory: 26kB
+   Buffers: shared hit=23
+   ->  Hash Semi Join  (cost=24.44..39.79 rows=4 width=162) (actual time=0.091..0.136 rows=30.00 loops=1)
+         Hash Cond: (tag_link.application_id = applications.application_id)
+         Buffers: shared hit=20
+         ->  Seq Scan on application_tag_links tag_link  (cost=0.00..14.20 rows=420 width=162) (actual time=0.007..0.032 rows=473.00 loops=1)
+               Buffers: shared hit=4
+         ->  Hash  (cost=24.41..24.41 rows=2 width=16) (actual time=0.079..0.080 rows=20.00 loops=1)
+               Buckets: 1024  Batches: 1  Memory Usage: 9kB
+               Buffers: shared hit=16
+               ->  Limit  (cost=24.41..24.41 rows=2 width=16) (actual time=0.075..0.077 rows=20.00 loops=1)
+                     Buffers: shared hit=16
+                     ->  Sort  (cost=24.41..24.41 rows=2 width=16) (actual time=0.075..0.076 rows=20.00 loops=1)
+                           Sort Key: applications.application_id
+                           Sort Method: top-N heapsort  Memory: 18kB
+                           Buffers: shared hit=16
+                           ->  Seq Scan on applications  (cost=0.00..24.40 rows=2 width=16) (actual time=0.020..0.059 rows=303.00 loops=1)
+                                 Filter: ((application_id)::text ~~ '00000000-0000-4000-8000-%'::text)
+                                 Rows Removed by Filter: 30
+                                 Buffers: shared hit=16
+ Planning:
+   Buffers: shared hit=56
+ Planning Time: 0.153 ms
+ Execution Time: 0.160 ms
+

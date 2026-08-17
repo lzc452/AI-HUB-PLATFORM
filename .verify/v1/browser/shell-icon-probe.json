@@ -1,0 +1,331 @@
+{
+  "marketplace": {
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 1672,
+      "height": 56
+    },
+    "sider": {
+      "x": 0,
+      "y": 56,
+      "width": 220,
+      "height": 885
+    },
+    "menuItems": [
+      {
+        "label": "应用市场",
+        "item": {
+          "x": 4,
+          "y": 60,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 73,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "创新广场",
+        "item": {
+          "x": 4,
+          "y": 104,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 117,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "应用管理",
+        "item": {
+          "x": 4,
+          "y": 148,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 161,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "审核工作台",
+        "item": {
+          "x": 4,
+          "y": 192,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 205,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "数据看板",
+        "item": {
+          "x": 4,
+          "y": 236,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 249,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "组织管理",
+        "item": {
+          "x": 4,
+          "y": 280,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 293,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "系统安全",
+        "item": {
+          "x": 4,
+          "y": 324,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 337,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "AI 助手",
+        "item": {
+          "x": 4,
+          "y": 368,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 381,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "站内通知",
+        "item": {
+          "x": 4,
+          "y": 412,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 425,
+          "width": 14,
+          "height": 14
+        }
+      }
+    ],
+    "devicePixelRatio": 1
+  },
+  "organization": {
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 1672,
+      "height": 56
+    },
+    "sider": {
+      "x": 0,
+      "y": 56,
+      "width": 220,
+      "height": 885
+    },
+    "menuItems": [
+      {
+        "label": "应用市场",
+        "item": {
+          "x": 4,
+          "y": 60,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 73,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "创新广场",
+        "item": {
+          "x": 4,
+          "y": 104,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 117,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "应用管理",
+        "item": {
+          "x": 4,
+          "y": 148,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 161,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "审核工作台",
+        "item": {
+          "x": 4,
+          "y": 192,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 205,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "数据看板",
+        "item": {
+          "x": 4,
+          "y": 236,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 249,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "组织管理",
+        "item": {
+          "x": 4,
+          "y": 280,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 293,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "系统安全",
+        "item": {
+          "x": 4,
+          "y": 324,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 337,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "AI 助手",
+        "item": {
+          "x": 4,
+          "y": 368,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 381,
+          "width": 14,
+          "height": 14
+        }
+      },
+      {
+        "label": "站内通知",
+        "item": {
+          "x": 4,
+          "y": 412,
+          "width": 211,
+          "height": 40
+        },
+        "icon": {
+          "x": 28,
+          "y": 425,
+          "width": 14,
+          "height": 14
+        }
+      }
+    ],
+    "devicePixelRatio": 1
+  },
+  "organization-user-detail-modal": {
+    "candidateCount": 1,
+    "visibleCount": 1,
+    "wrapCount": 2,
+    "dialogs": [
+      {
+        "className": "ant-modal css-la24ln",
+        "ariaLabel": null,
+        "width": 520
+      }
+    ],
+    "modal": {
+      "x": 576,
+      "y": 100,
+      "width": 520,
+      "height": 283
+    },
+    "content": {
+      "x": 600,
+      "y": 152,
+      "width": 472,
+      "height": 211
+    },
+    "clickError": null
+  }
+}

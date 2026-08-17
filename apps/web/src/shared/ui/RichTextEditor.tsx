@@ -63,13 +63,25 @@ export function RichTextEditor({
         style={{ padding: "4px 8px", borderBottom: "1px solid #eee" }}
       >
         <Tooltip title="加粗">
-          <Button size="small" icon={<BoldOutlined />} onClick={() => exec("bold")} />
+          <Button
+            size="small"
+            icon={<BoldOutlined />}
+            onClick={() => exec("bold")}
+          />
         </Tooltip>
         <Tooltip title="斜体">
-          <Button size="small" icon={<ItalicOutlined />} onClick={() => exec("italic")} />
+          <Button
+            size="small"
+            icon={<ItalicOutlined />}
+            onClick={() => exec("italic")}
+          />
         </Tooltip>
         <Tooltip title="下划线">
-          <Button size="small" icon={<UnderlineOutlined />} onClick={() => exec("underline")} />
+          <Button
+            size="small"
+            icon={<UnderlineOutlined />}
+            onClick={() => exec("underline")}
+          />
         </Tooltip>
         <Button size="small" onClick={() => exec("formatBlock", "h2")}>
           H2
@@ -84,13 +96,25 @@ export function RichTextEditor({
           代码
         </Button>
         <Tooltip title="有序列表">
-          <Button size="small" icon={<OrderedListOutlined />} onClick={() => exec("insertOrderedList")} />
+          <Button
+            size="small"
+            icon={<OrderedListOutlined />}
+            onClick={() => exec("insertOrderedList")}
+          />
         </Tooltip>
         <Tooltip title="无序列表">
-          <Button size="small" icon={<UnorderedListOutlined />} onClick={() => exec("insertUnorderedList")} />
+          <Button
+            size="small"
+            icon={<UnorderedListOutlined />}
+            onClick={() => exec("insertUnorderedList")}
+          />
         </Tooltip>
         <Tooltip title="清除格式">
-          <Button size="small" icon={<ClearOutlined />} onClick={() => exec("removeFormat")} />
+          <Button
+            size="small"
+            icon={<ClearOutlined />}
+            onClick={() => exec("removeFormat")}
+          />
         </Tooltip>
       </Space>
       <div
