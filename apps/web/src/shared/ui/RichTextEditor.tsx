@@ -28,7 +28,8 @@ export function RichTextEditor({
   placeholder = "请输入内容…",
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const lastEmittedRef = useRef<string>(value);
+  // 初始为 null：编辑器以预填内容挂载（如编辑回显）时也能执行首次同步。
+  const lastEmittedRef = useRef<string | null>(null);
 
   useEffect(() => {
     const element = editorRef.current;

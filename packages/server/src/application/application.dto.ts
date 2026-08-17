@@ -241,6 +241,16 @@ export class ApplicationDto {
   currentVersionId?: string | null;
 }
 
+/** 移交责任人请求。 */
+export class TransferOwnerRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "新责任人工号",
+    example: "DEMO-EMPLOYEE",
+  })
+  ownerEmployeeId!: string;
+}
+
 /** 应用版本记录。 */
 export class ApplicationVersionDto {
   @ApiProperty({ type: String, description: "版本 ID" })
@@ -439,6 +449,18 @@ export class ReviewQueueDto {
 export class ApplicationWorkspaceDto {
   @ApiProperty({ type: ApplicationDto })
   application!: ApplicationDto;
+
+  @ApiProperty({ type: String, description: "责任人姓名" })
+  ownerName!: string;
+
+  @ApiProperty({ type: String, description: "维护人姓名" })
+  maintainerName!: string;
+
+  @ApiProperty({ type: String, description: "所属部门名称" })
+  departmentName!: string;
+
+  @ApiProperty({ type: String, description: "应用最近更新时间（ISO）" })
+  updatedAt!: string;
 
   @ApiProperty({ type: ApplicationVersionDto, isArray: true })
   versions!: ApplicationVersionDto[];

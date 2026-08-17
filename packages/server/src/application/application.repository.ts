@@ -57,6 +57,159 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return this.mapApplication(row);
   }
 
+  /**
+   * 级联删除草稿应用及其子表数据（仅允许草稿状态，由服务层校验）。
+   * 由服务层 withTransaction 包裹，此处直接基于当前 db（事务）顺序执行。
+   */
+  async deleteDraftApplication(applicationId: string): Promise<void> {
+    const deliveryIds = await this.db
+      .selectFrom("application_deliveries")
+      .select("delivery_id")
+      .where("application_id", "=", applicationId)
+      .execute();
+    if (deliveryIds.length > 0) {
+      await this.db
+        .deleteFrom("application_delivery_assets")
+        .where(
+          "delivery_id",
+          "in",
+          deliveryIds.map((row) => row.delivery_id),
+        )
+        .execute();
+    }
+    const versionIds = await this.db
+      .selectFrom("application_versions")
+      .select("application_version_id")
+      .where("application_id", "=", applicationId)
+      .execute();
+    if (versionIds.length > 0) {
+      const versionIdList = versionIds.map(
+        (row) => row.application_version_id,
+      );
+      await this.db
+        .deleteFrom("application_version_snapshots")
+        .where("application_version_id", "in", versionIdList)
+        .execute();
+      await this.db
+        .deleteFrom("application_validation_checks")
+        .where("application_version_id", "in", versionIdList)
+        .execute();
+    }
+    await this.db
+      .deleteFrom("application_assets")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_artifact_uploads")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_audit_events")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_likes")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_ratings")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_comments")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_feedback")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_reports")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("catalog_delivery_actions")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_catalog_labels")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("ai_demand_applications")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .updateTable("ai_demand_pilots")
+      .set({ application_id: null })
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_deliveries")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_reviews")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_review_queue")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_versions")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_drafts")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_catalog_metadata")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_tag_links")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("application_audiences")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
+      .deleteFrom("applications")
+      .where("application_id", "=", applicationId)
+      .execute();
+  }
+
+  /** 移交责任人：目标员工必须存在且在职，成功后返回更新后的应用。 */
+  async transferOwner(
+    applicationId: string,
+    newOwnerEmployeeId: string,
+  ): Promise<ApplicationRecord | null> {
+    const employee = await this.db
+      .selectFrom("employees")
+      .select(["employee_id", "status"])
+      .where("employee_id", "=", newOwnerEmployeeId)
+      .executeTakeFirst();
+    if (employee === undefined) {
+      throw new Error("EMPLOYEE_NOT_FOUND");
+    }
+    if (employee.status !== "active") {
+      throw new Error("EMPLOYEE_NOT_ACTIVE");
+    }
+    const row = await this.db
+      .updateTable("applications")
+      .set({
+        owner_employee_id: newOwnerEmployeeId,
+        updated_at: new Date(),
+      })
+      .where("application_id", "=", applicationId)
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : this.mapApplication(row);
+  }
+
   async findApplication(
     applicationId: string,
   ): Promise<ApplicationRecord | null> {
@@ -66,6 +219,49 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .executeTakeFirst();
     return row === undefined ? null : this.mapApplication(row);
+  }
+
+  /** 查询应用详情展示所需的姓名与更新时间（负责人/维护人/部门名称）。 */
+  async findApplicationMeta(
+    applicationId: string,
+  ): Promise<{
+    ownerName: string;
+    maintainerName: string;
+    departmentName: string;
+    updatedAt: Date;
+  } | null> {
+    const row = await this.db
+      .selectFrom("applications as application")
+      .innerJoin(
+        "employees as owner",
+        "owner.employee_id",
+        "application.owner_employee_id",
+      )
+      .leftJoin(
+        "employees as maintainer",
+        "maintainer.employee_id",
+        "application.maintainer_employee_id",
+      )
+      .leftJoin(
+        "departments as department",
+        "department.department_id",
+        "application.department_id",
+      )
+      .select([
+        "owner.display_name as ownerName",
+        "maintainer.display_name as maintainerName",
+        "department.name as departmentName",
+        "application.updated_at as updatedAt",
+      ])
+      .where("application.application_id", "=", applicationId)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      ownerName: row.ownerName,
+      maintainerName: row.maintainerName ?? "",
+      departmentName: row.departmentName ?? "",
+      updatedAt: row.updatedAt,
+    };
   }
 
   async upsertDraft(

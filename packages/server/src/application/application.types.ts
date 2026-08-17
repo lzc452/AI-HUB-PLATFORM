@@ -130,6 +130,10 @@ export type ReviewQueueView = ReviewQueueRecord & {
 
 export interface ApplicationWorkspace {
   application: ApplicationRecord;
+  ownerName: string;
+  maintainerName: string;
+  departmentName: string;
+  updatedAt: string;
   versions: readonly ApplicationVersionRecord[];
   deliveries: readonly DeliveryRecord[];
   reviews: readonly ReviewRecord[];
@@ -187,7 +191,18 @@ export interface ApplicationRepository {
     name: string;
     summary: string;
   }): Promise<ApplicationRecord>;
+  deleteDraftApplication(applicationId: string): Promise<void>;
+  transferOwner(
+    applicationId: string,
+    newOwnerEmployeeId: string,
+  ): Promise<ApplicationRecord | null>;
   findApplication(applicationId: string): Promise<ApplicationRecord | null>;
+  findApplicationMeta(applicationId: string): Promise<{
+    ownerName: string;
+    maintainerName: string;
+    departmentName: string;
+    updatedAt: Date;
+  } | null>;
   upsertDraft(applicationId: string, draft: ApplicationDraft): Promise<void>;
   findDraft(
     applicationId: string,

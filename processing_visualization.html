@@ -1024,6 +1024,38 @@
         ],
         tasks: [
           {
+            id: "t-application-admin-polish-20260817b",
+            phase: "dev",
+            status: "已完成",
+            title: "应用删除/编辑回显/摘要容错/姓名展示修复",
+            owner: "Codex",
+            start: "2026-08-17",
+            end: "2026-08-17",
+            progress:
+              "草稿删除级联补齐全部子表（审计/点赞/评论/反馈/举报/目录动作/需求关联等），修复外键导致的 400；向导支持 type=add/edit 路由，编辑回显截图/图标/富文本，提交走保存+送审（不再新建）；创作者摘要对无版本草稿返回空差异；published-version 对未发布应用不再报错；详情页部门/责任人/维护人显示姓名、可见部门/目标用户映射名称、最近操作显示应用更新时间（工作区接口补充 4 个字段）。",
+            problem:
+              "删除草稿时子表外键未级联清理报 BAD_REQUEST；编辑与新建未区分、编辑不回显截图/内容且提交像新建；无版本草稿的创作者摘要 400、published-version 404；详情页字段展示 ID 而非姓名，最近操作无数据源。",
+            solution:
+              "按表级联删除（不改表结构）；路由携带 type 区分 add/edit 并全量回显草稿；getVersionDiff 容错、前端按 currentVersionId 门控 published-version 查询；工作区接口补 ownerName/maintainerName/departmentName/updatedAt，受众规则映射部门/员工姓名。",
+            skip: "真实 PostgreSQL/浏览器联调需执行 pnpm migrate 后复验；Web 套件 7 个失败均为并行 UI 改动（登录标签/通知与组织页标题/AI 助手菜单）导致。",
+          },
+          {
+            id: "t-application-admin-self-service-20260817",
+            phase: "dev",
+            status: "已完成",
+            title: "应用管理/详情页自助管理能力补齐",
+            owner: "Codex",
+            start: "2026-08-17",
+            end: "2026-08-17",
+            progress:
+              "新增资产内容读取端点（图标/截图/附件展示）；新增草稿删除端点（负责人可删 status=draft，级联清理+审计）；新增责任人移交端点（负责人/应用管理员，目标须在职，审计）；应用管理页四个按钮接线（编辑跳向导、下架/归档按状态+权限启用、移交弹窗选人）；详情页分类/标签接真实数据、截图与 Hero 图标改为真实图片或名称首字母。",
+            problem:
+              "应用详情 Hero 硬编码 OCR 图标；分类字段取错、标签/受众硬编码；编辑/下架/归档/移交全部硬编码置灰；草稿删除提示 V1 不支持；截图预览只渲染文件名卡片不渲染图片；资产无内容读取端点。",
+            solution:
+              "后端新增 GET 资产内容、DELETE 草稿、POST 移交三个端点（接口新增，不改表结构、不改既有端点语义），employee 角色补 application.publish（0037 迁移覆盖，服务层仍校验负责人）；前端按状态/权限启用按钮并接真实接口。",
+            skip: "真实 PostgreSQL/浏览器联调需 pnpm migrate + 重新登录后复验；完整 Web 套件 7 个失败均来自并行 UI 改动（登录标签/通知与组织页标题/AI 助手菜单被注释），与本次改动无关。",
+          },
+          {
             id: "t-employee-application-access-20260817",
             phase: "dev",
             status: "已完成",
@@ -1662,6 +1694,12 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-17",
+            phase: "dev",
+            title: "应用管理自助能力补齐",
+            body: "新增资产内容读取、草稿删除、责任人移交三个端点；员工补 application.publish；应用管理页编辑/下架/归档/移交启用，详情页图标、分类、标签、截图接真实数据。服务端 177/177、相关前端测试通过，typecheck 全绿。",
+          },
           {
             date: "2026-08-17",
             phase: "dev",

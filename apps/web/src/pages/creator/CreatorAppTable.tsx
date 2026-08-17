@@ -1,5 +1,5 @@
 import { LikeOutlined, PlusOutlined, StarFilled } from "@ant-design/icons";
-import { Button, Select, Skeleton, Table, Tag, Typography } from "antd";
+import { Button, Modal, Select, Skeleton, Table, Tag, Typography } from "antd";
 import type { TableProps } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,7 +10,10 @@ import type {
   CreatorApplicationList,
   CreatorApplicationRecord,
 } from "../../modules/application/application.client";
-import { useWithdrawApplication } from "../../modules/application/useApplication";
+import {
+  useDeleteApplication,
+  useWithdrawApplication,
+} from "../../modules/application/useApplication";
 import { MessageError } from "../../shared/ui/message";
 import {
   formatCount,
@@ -43,6 +46,17 @@ export function CreatorAppTable({
   isPending,
 }: CreatorAppTableProps) {
   const navigate = useNavigate();
+  const deleteApplication = useDeleteApplication();
+  const handleDelete = (record: CreatorApplicationRecord) => {
+    Modal.confirm({
+      cancelText: "取消",
+      content: `确认删除草稿「${record.name}」？删除后不可恢复。`,
+      okText: "确认删除",
+      okType: "danger",
+      onOk: () => deleteApplication.mutate(record.applicationId),
+      title: "删除草稿",
+    });
+  };
   const withdraw = useWithdrawApplication();
 
   const [statusFilter, setStatusFilter] = useState<string>();
@@ -236,13 +250,23 @@ export function CreatorAppTable({
                 size="small"
                 type="link"
               >
+                查看
+              </Button>
+              <Button
+                onClick={() =>
+                  navigate(
+                    `/creator/create?type=edit&applicationId=${encodeURIComponent(record.applicationId)}`,
+                  )
+                }
+                size="small"
+                type="link"
+              >
                 继续编辑
               </Button>
               <Button
                 danger
-                disabled
                 size="small"
-                title="暂不支持删除草稿应用（待后端状态机扩展）"
+                onClick={() => handleDelete(record)}
                 type="link"
               >
                 删除

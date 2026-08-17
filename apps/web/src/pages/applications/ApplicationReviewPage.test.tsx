@@ -46,6 +46,32 @@ const hoisted = vi.hoisted(() => {
     mockReviewQueue,
     settled,
     useApplication: vi.fn((): Query => ({ ...settled, data: mockApp })),
+    useApplicationWorkspace: vi.fn(
+      (): Query => ({
+        ...settled,
+        data: {
+          application: mockApp,
+          assets: [],
+          deliveries: [],
+          reviews: [],
+          reviewQueue: null,
+          versions: [mockVersion],
+        },
+      }),
+    ),
+    useAssetImage: vi.fn(() => ({ objectUrl: null, failed: false })),
+    useWithdrawApplication: vi.fn(() => ({
+      isPending: false,
+      mutate: vi.fn(),
+    })),
+    useArchiveApplication: vi.fn(() => ({
+      isPending: false,
+      mutate: vi.fn(),
+    })),
+    useTransferApplicationOwner: vi.fn(() => ({
+      isPending: false,
+      mutate: vi.fn(),
+    })),
     useApplicationReviews: vi.fn((): Query => ({ ...settled, data: [] })),
     useApplicationVersions: vi.fn(
       (): Query => ({ ...settled, data: [mockVersion] }),
@@ -58,7 +84,10 @@ const hoisted = vi.hoisted(() => {
       mutate: hoisted.reviewMutate,
     })),
     reviewMutate: vi.fn(),
-    useAuth: vi.fn(() => ({ actor: { employeeId: "李小龙" } })),
+    useAuth: vi.fn(() => ({
+      actor: { employeeId: "李小龙" },
+      canAccess: () => true,
+    })),
   };
 });
 
@@ -68,6 +97,11 @@ vi.mock("../../modules/auth/useAuth", () => ({
 
 vi.mock("../../modules/application/useApplication", () => ({
   useApplication: hoisted.useApplication,
+  useApplicationWorkspace: hoisted.useApplicationWorkspace,
+  useAssetImage: hoisted.useAssetImage,
+  useWithdrawApplication: hoisted.useWithdrawApplication,
+  useArchiveApplication: hoisted.useArchiveApplication,
+  useTransferApplicationOwner: hoisted.useTransferApplicationOwner,
   useApplicationVersions: hoisted.useApplicationVersions,
   useApplicationReviews: hoisted.useApplicationReviews,
   useReviewQueue: hoisted.useReviewQueue,
@@ -200,6 +234,7 @@ describe("ApplicationReviewPage", () => {
   it("禁止审核自己提交的应用：所有者视角领取按钮禁用", () => {
     hoisted.useAuth.mockReturnValue({
       actor: { employeeId: "李小龙" },
+      canAccess: () => true,
     });
     renderPage();
 
@@ -209,6 +244,7 @@ describe("ApplicationReviewPage", () => {
   it("他人提交的应用允许领取任务", () => {
     hoisted.useAuth.mockReturnValue({
       actor: { employeeId: "E900" },
+      canAccess: () => true,
     });
     renderPage();
 

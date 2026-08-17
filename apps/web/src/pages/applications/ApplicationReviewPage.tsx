@@ -24,6 +24,7 @@ import {
   ApplicationAdminPage,
   OcrApplicationIcon,
 } from "../../components/common/ApplicationAdminPage";
+import { SlaCountdown } from "../../components/common/SlaCountdown";
 import type {
   ApplicationRecord,
   ApplicationVersionRecord,
@@ -181,9 +182,6 @@ function TaskInfoCard({
 }) {
   const selfReview =
     app !== undefined && app.ownerEmployeeId === actorEmployeeId;
-  const slaLabel = reviewQueue
-    ? `${Math.max(0, Math.ceil((new Date(reviewQueue.slaDueAt).getTime() - Date.now()) / 36e5))}h`
-    : "-";
   return (
     <Card
       className="app-admin-card"
@@ -192,7 +190,10 @@ function TaskInfoCard({
     >
       <div className="space-y-3 text-[13px]">
         <InfoLine label="SLA 剩余时间">
-          <strong className="text-[18px] text-[#f59e0b]">{slaLabel}</strong>
+          <SlaCountdown
+            className="text-[18px] font-semibold text-[#f59e0b]"
+            dueAt={reviewQueue?.slaDueAt}
+          />
         </InfoLine>
         <InfoLine label="提交人">{app?.ownerEmployeeId ?? "-"}</InfoLine>
         <InfoLine label="提交时间">

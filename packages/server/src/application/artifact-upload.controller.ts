@@ -12,6 +12,7 @@ import {
   Param,
   Post,
   Put,
+  StreamableFile,
 } from "@nestjs/common";
 import {
   ApiBody,
@@ -23,7 +24,11 @@ import {
 } from "@nestjs/swagger";
 import { createHash, randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
-import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import {
   Authenticated,
   RequiresPermissions,
@@ -349,6 +354,50 @@ export class ArtifactUploadController {
       throw new BadRequestException("ASSET_APPLICATION_MISMATCH");
     }
     await this.repository.deleteAsset(assetId);
+  }
+
+  @Get(":applicationId/assets/:assetId/content")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
+  @ApiOperation({
+    summary: "读取资产内容（图标/截图/附件）",
+    description:
+      "负责人/维护人/应用管理员可读取；按资产存储键流式返回，用于详情页图标与截图预览。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "assetId", description: "资产 ID" })
+  @ApiOkResponse({ description: "资产文件流" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getAssetContent(
+    @Param("applicationId") applicationId: string,
+    @Param("assetId") assetId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    const asset = await this.repository.findAsset(assetId);
+    if (asset === null || asset.applicationId !== applicationId) {
+      throw new NotFoundException("ASSET_NOT_FOUND");
+    }
+    const application = await this.repository.findApplication(applicationId);
+    if (
+      application === null ||
+      (application.ownerEmployeeId !== actor.employeeId &&
+        application.maintainerEmployeeId !== actor.employeeId &&
+        !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE))
+    ) {
+      throw new ForbiddenException("APPLICATION_ACCESS_FORBIDDEN");
+    }
+    const stream = await this.storage.openReadStream(asset.storageKey);
+    if (stream === null) {
+      throw new NotFoundException("ASSET_CONTENT_NOT_FOUND");
+    }
+    return new StreamableFile(
+      stream instanceof Readable
+        ? stream
+        : Readable.from(stream as AsyncIterable<Uint8Array>),
+      { type: asset.mimeType },
+    );
   }
 
   @Post(":applicationId/deliveries/:channel/assets")

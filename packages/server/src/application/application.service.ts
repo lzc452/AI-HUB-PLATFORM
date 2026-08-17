@@ -721,8 +721,13 @@ export class ApplicationService {
           latestVersion.applicationVersionId,
         )
       : null;
+    const meta = await this.repository.findApplicationMeta(applicationId);
     return {
       application,
+      ownerName: meta?.ownerName ?? "",
+      maintainerName: meta?.maintainerName ?? "",
+      departmentName: meta?.departmentName ?? "",
+      updatedAt: (meta?.updatedAt ?? new Date()).toISOString(),
       versions,
       deliveries,
       reviews,
@@ -798,13 +803,74 @@ export class ApplicationService {
     return version;
   }
 
+  /**
+   * 删除草稿应用：仅允许负责人删除 status=draft 的应用，级联清理子表数据，
+   * 写入审计与 outbox 事件（先落事件再删主记录，避免审计外键受限）。
+   */
   async deleteApplication(
     actor: ActorContext,
     applicationId: string,
-  ): Promise<never> {
-    void actor;
-    void applicationId;
-    throw new Error("PHYSICAL_DELETE_FORBIDDEN");
+  ): Promise<void> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const application = await this.requireApplication(applicationId);
+    if (application.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    if (application.status !== "draft") {
+      throw new Error("APPLICATION_DELETE_STATUS_INVALID");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      await this.recordChange(
+        repository,
+        "application.deleted",
+        applicationId,
+        null,
+        actor.employeeId,
+        { name: application.name },
+      );
+      await repository.deleteDraftApplication(applicationId);
+    });
+  }
+
+  /** 移交责任人：负责人本人或应用管理员可将应用移交给在职员工。 */
+  async transferOwner(
+    actor: ActorContext,
+    applicationId: string,
+    newOwnerEmployeeId: string,
+  ): Promise<ApplicationRecord> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const application = await this.requireApplication(applicationId);
+    if (
+      application.ownerEmployeeId !== actor.employeeId &&
+      !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    if (newOwnerEmployeeId === application.ownerEmployeeId) {
+      throw new Error("OWNER_UNCHANGED");
+    }
+    if (application.status === "archived") {
+      throw new Error("APPLICATION_NOT_EDITABLE");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const updated = await repository.transferOwner(
+        applicationId,
+        newOwnerEmployeeId,
+      );
+      if (updated === null) throw new Error("APPLICATION_NOT_FOUND");
+      await this.recordChange(
+        repository,
+        "application.owner.transferred",
+        applicationId,
+        null,
+        actor.employeeId,
+        {
+          from: application.ownerEmployeeId,
+          to: newOwnerEmployeeId,
+        },
+      );
+      return updated;
+    });
   }
 
   private async transition(

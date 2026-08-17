@@ -4,7 +4,7 @@ import type {
   DeliveryChannel,
 } from "@ai-hub/contracts";
 
-import { apiFetch, apiUpload } from "../../shared/api/client";
+import { apiFetch, apiFetchBlob, apiUpload } from "../../shared/api/client";
 
 export interface ApplicationRecord {
   applicationId: string;
@@ -64,6 +64,10 @@ export interface ReviewQueueRecord {
 
 export interface ApplicationWorkspace {
   application: ApplicationRecord;
+  ownerName: string;
+  maintainerName: string;
+  departmentName: string;
+  updatedAt: string;
   versions: ApplicationVersionRecord[];
   deliveries: DeliveryRecord[];
   reviews: ReviewRecord[];
@@ -194,6 +198,27 @@ export function archiveApplication(
     {
       body: JSON.stringify({}),
       method: "POST",
+    },
+  );
+}
+
+/** 删除草稿应用（仅负责人可删除 status=draft 的应用）。 */
+export function deleteApplication(applicationId: string): Promise<void> {
+  return apiFetch<void>(applicationsPath(applicationId), {
+    method: "DELETE",
+  });
+}
+
+/** 移交责任人（负责人本人或应用管理员）。 */
+export function transferApplicationOwner(
+  applicationId: string,
+  ownerEmployeeId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `${applicationsPath(applicationId)}/transfer`,
+    {
+      method: "POST",
+      body: JSON.stringify({ ownerEmployeeId }),
     },
   );
 }
@@ -388,6 +413,17 @@ export interface AssetRecord {
 
 export function listAssets(applicationId: string): Promise<AssetRecord[]> {
   return apiFetch<AssetRecord[]>(`${applicationsPath(applicationId)}/assets`);
+}
+
+/** 读取资产内容（图标/截图/附件），供详情页图片预览使用。 */
+export async function getAssetContent(
+  applicationId: string,
+  assetId: string,
+): Promise<Blob> {
+  const { blob } = await apiFetchBlob(
+    `${applicationsPath(applicationId)}/assets/${encodeURIComponent(assetId)}/content`,
+  );
+  return blob;
 }
 
 export function createAsset(

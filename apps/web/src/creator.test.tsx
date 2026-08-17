@@ -24,6 +24,11 @@ vi.mock("./modules/application/useApplication", () => ({
     mutate: vi.fn(),
     mutateAsync: vi.fn(),
   }),
+  useDeleteApplication: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+  }),
   useCreatorApplications: () => state.creatorApplications,
   useCreatorSummary: () => ({
     data: undefined,

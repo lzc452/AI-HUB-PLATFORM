@@ -19,6 +19,7 @@ import { useAdminKpis } from "../../modules/application/useAdminKpis";
 import {
   publishApplication,
 } from "../../modules/application/application.client";
+import { useDeleteApplication } from "../../modules/application/useApplication";
 import { ROUTES } from "../../router/routes";
 
 import { ApplicationAdminHero } from "./ApplicationAdminHero";
@@ -84,6 +85,7 @@ const KPI_ACCENTS = {
 export default function ApplicationsPage() {
   const list = useAdminApplicationList({ pageSize: 10 });
   const kpisQuery = useAdminKpis();
+  const deleteApplication = useDeleteApplication();
   const [pendingAction, setPendingAction] = useState<{
     action: ApplicationRowAction;
     row: AdminApplicationRow;
@@ -149,7 +151,7 @@ export default function ApplicationsPage() {
         }
         if (action === "edit") {
           window.location.assign(
-            `/creator/${encodeURIComponent(row.applicationId)}`,
+            `/creator/create?type=edit&applicationId=${encodeURIComponent(row.applicationId)}`,
           );
           return;
         }
@@ -171,7 +173,12 @@ export default function ApplicationsPage() {
           list.refetch();
           return;
         }
-        // delete / republish：V1 后端无对应状态机入口，明确提示，不伪装成功。
+        if (action === "delete") {
+          deleteApplication.mutate(row.applicationId);
+          modal.destroy();
+          return;
+        }
+        // republish：V1 后端无对应状态机入口，明确提示，不伪装成功。
         showErrorMessage(new Error(plan.content), "操作不可用");
         modal.destroy();
       },
@@ -262,10 +269,10 @@ function describeAction(
   switch (action) {
     case "delete":
       return {
-        content: `「${row.name}」为草稿，V1 暂不支持在管理台删除，请在创作者中心处理。`,
+        content: `确认删除草稿「${row.name}」？删除后不可恢复。`,
         danger: true,
-        okText: "知道了",
-        success: "",
+        okText: "确认删除",
+        success: "应用已删除",
         title: "删除草稿",
       };
     case "edit":

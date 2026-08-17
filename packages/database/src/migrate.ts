@@ -36,6 +36,7 @@ import * as unifiedUpload from "./migrations/0034_unified_upload.js";
 import * as versionArtifactNullable from "./migrations/0035_version_artifact_nullable.js";
 import * as demandClaimProposalAndPriority from "./migrations/0036_demand_claim_proposal_and_priority.js";
 import * as employeeApplicationCreate from "./migrations/0037_employee_application_create.js";
+import * as employeeApplicationPublish from "./migrations/0038_employee_application_publish.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -77,6 +78,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0035_version_artifact_nullable": versionArtifactNullable,
   "0036_demand_claim_proposal_and_priority": demandClaimProposalAndPriority,
   "0037_employee_application_create": employeeApplicationCreate,
+  "0038_employee_application_publish": employeeApplicationPublish,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Space, Steps } from "antd";
 import { FormProvider, useForm } from "react-hook-form";
@@ -56,6 +56,11 @@ export function FormWizard({
     mode: "onChange",
     ...(resolver ? { resolver } : {}),
   });
+
+  // 编辑模式异步加载草稿后回显：defaultValues 变化时重置整个表单。
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues]);
 
   const isFirst = current === 0;
   const isLast = current === steps.length - 1;

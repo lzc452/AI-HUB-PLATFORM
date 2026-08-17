@@ -6,7 +6,7 @@
 
 | 系统角色 | 规范权限包（叠加 `employee` 的角色除外） | 说明 |
 |---|---|---|
-| `employee` | `catalog.read`、`demand.create`、`demand.read`、`demand.update`、`demand.submit`、`demand.interact`、`application.create`、`application.read`、`application.update`、`creator.read`、`interaction.interact`、`notification.read`、`identity.department.read` | 所有在职员工的基础角色；资源服务仍校验负责人、维护者及受众范围 |
+| `employee` | `catalog.read`、`demand.create`、`demand.read`、`demand.update`、`demand.submit`、`demand.interact`、`application.create`、`application.read`、`application.update`、`application.publish`、`creator.read`、`interaction.interact`、`notification.read`、`identity.department.read` | 所有在职员工的基础角色；资源服务仍校验负责人、维护者及受众范围；`application.publish` 只对本人负责的应用生效（发布/下架/归档/回滚） |
 | `application_admin` | `application.manage`、`application.create`、`application.review`、`application.publish`、`analytics.application.read`、`analytics.review.read` | 应用管理、评审和发布 |
 | `demand_operator` | `application.create`、`demand.review`、`demand.claim`、`demand.collaborate`、`demand.prioritize`、`demand.progress`、`demand.manage`、`demand.merge`、`demand.associate_application`、`demand.moderate`、`demand.anonymous_audit`、`analytics.innovation.read` | 创新需求全生命周期运营；允许通过需求桥接创建应用草稿 |
 | `demand_reviewer` | `demand.review`、`demand.claim`、`analytics.review.read` | 需求和审核队列评审 |
@@ -90,10 +90,13 @@
 | POST | `/internal/applications/versions/:applicationVersionId/claim-review` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 只能认领可用队列项 |
 | POST | `/internal/applications/versions/:applicationVersionId/release-review` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 只能释放本人已认领队列项 |
 | GET | `/internal/applications/versions/:applicationVersionId/review-queue` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 返回当前审核范围队列 |
-| POST | `/internal/applications/:applicationId/publish` | `application.publish` | `application_admin`、`super_admin` | 负责人（owner）、审核通过、交付渠道和扫描状态合法 |
-| POST | `/internal/applications/:applicationId/withdraw` | `application.publish` | `application_admin`、`super_admin` | 负责人（owner）且应用处于可撤回状态 |
-| POST | `/internal/applications/:applicationId/rollback` | `application.publish` | `application_admin`、`super_admin` | 目标版本已发布且回滚状态合法 |
-| POST | `/internal/applications/:applicationId/archive` | `application.publish` | `application_admin`、`super_admin` | 负责人（owner）且无进行中的发布操作 |
+| POST | `/internal/applications/:applicationId/publish` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）、审核通过、交付渠道和扫描状态合法 |
+| POST | `/internal/applications/:applicationId/withdraw` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）且应用处于可撤回状态 |
+| POST | `/internal/applications/:applicationId/rollback` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 目标版本已发布且回滚状态合法 |
+| POST | `/internal/applications/:applicationId/archive` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）且无进行中的发布操作 |
+| DELETE | `/internal/applications/:applicationId` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | 仅删除 `status=draft` 的应用；级联清理子表并写入审计 |
+| POST | `/internal/applications/:applicationId/transfer` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人本人或应用管理员可移交；目标员工必须在职；写入审计 |
+| GET | `/internal/applications/:applicationId/assets/:assetId/content` | `application.read` | `employee`（负责人/维护人）、`application_admin`、`super_admin` | 按资产存储键流式返回，用于图标与截图预览 |
 | GET | `/internal/applications/:applicationId` | `application.read` | `employee`、`application_admin`、`super_admin` | 普通员工仅负责人/维护者；管理员可按管理范围读取 |
 | GET | `/internal/applications/:applicationId/versions` | `application.read` | `employee`、`application_admin`、`super_admin` | 同应用详情的资源范围 |
 | GET | `/internal/applications/:applicationId/deliveries` | `application.read` | `employee`、`application_admin`、`super_admin` | 同应用详情的资源范围 |

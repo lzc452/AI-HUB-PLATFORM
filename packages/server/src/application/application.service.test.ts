@@ -118,6 +118,27 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async findApplication(id: string) {
     return this.applications.get(id) ?? null;
   }
+  async findApplicationMeta(applicationId: string) {
+    const current = this.applications.get(applicationId);
+    if (current === undefined) return null;
+    return {
+      ownerName: `owner-${current.ownerEmployeeId}`,
+      maintainerName: `maintainer-${current.maintainerEmployeeId}`,
+      departmentName: `dept-${current.departmentId}`,
+      updatedAt: new Date(),
+    };
+  }
+  async deleteDraftApplication(applicationId: string) {
+    this.applications.delete(applicationId);
+    this.drafts.delete(applicationId);
+  }
+  async transferOwner(applicationId: string, newOwnerEmployeeId: string) {
+    const current = this.applications.get(applicationId);
+    if (current === undefined) return null;
+    const updated = { ...current, ownerEmployeeId: newOwnerEmployeeId };
+    this.applications.set(applicationId, updated);
+    return updated;
+  }
   drafts = new Map<
     string,
     { draft: import("@ai-hub/contracts").ApplicationDraft; updatedAt: Date }
@@ -814,15 +835,44 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
   });
 
-  it("does not allow physical deletion", async () => {
-    const { service } = makeService();
+  it("allows owner to delete own draft application with audit", async () => {
+    const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
       name: "Copilot",
       summary: "Internal assistant",
     });
     await expect(
       service.deleteApplication(owner, application.applicationId),
-    ).rejects.toThrow("PHYSICAL_DELETE_FORBIDDEN");
+    ).resolves.toBeUndefined();
+    expect(repository.applications.has(application.applicationId)).toBe(false);
+    expect(repository.audits).toContain("application.deleted");
+  });
+
+  it("rejects deletion by non-owner", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await expect(
+      service.deleteApplication(outsider, application.applicationId),
+    ).rejects.toThrow("APPLICATION_OWNER_REQUIRED");
+  });
+
+  it("rejects deletion of non-draft applications", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await repository.setApplicationStatus({
+      applicationId: application.applicationId,
+      expectedStatus: "draft",
+      status: "in_review",
+    });
+    await expect(
+      service.deleteApplication(owner, application.applicationId),
+    ).rejects.toThrow("APPLICATION_DELETE_STATUS_INVALID");
   });
 
   it("keeps older versions readable and supports audited rollback", async () => {
