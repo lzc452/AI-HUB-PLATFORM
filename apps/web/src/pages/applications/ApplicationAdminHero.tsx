@@ -22,7 +22,7 @@ export function ApplicationAdminHero({
   return (
     <section
       aria-label="应用管理概览"
-      className="relative isolate flex flex-col items-stretch gap-4 overflow-hidden rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 sm:p-6 lg:flex-row lg:items-center lg:gap-6"
+      className="relative isolate flex flex-col items-stretch gap-4 overflow-hidden rounded-xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 sm:p-6 lg:flex-row lg:items-center lg:gap-6"
     >
       <div className="min-w-0 flex-1 space-y-2">
         <Title

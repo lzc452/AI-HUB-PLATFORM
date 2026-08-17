@@ -252,16 +252,9 @@ export default function InnovationDemandDetailPage() {
   const owner = demand.ownerDisplayName ?? demand.ownerEmployeeId ?? "待认领";
 
   return (
-    <div className="space-y-5">
-      <nav aria-label="面包屑" className="text-sm text-[#8c8c8c]">
-        <Link className="hover:text-[#1677ff]" to="/innovation">
-          创新广场
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-[#1f1f1f]">{demand.title}</span>
-      </nav>
-      <header className="rounded-2xl border border-[#d6e4ff] bg-[#eaf4ff] px-5 py-6 lg:px-8 lg:py-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-4">
+      <header className="rounded-xl border border-[#d6e4ff] bg-[#eaf4ff] p-4 lg:p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Tag color={demandStatusColor[demand.status]}>
@@ -280,31 +273,21 @@ export default function InnovationDemandDetailPage() {
             </Text>
           </div>
           <div className="flex items-center justify-end gap-2">
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: "governance",
-                    label: "需求治理",
-                    onClick: () => setGovernanceOpen(true),
-                  },
-                  {
-                    key: "report",
-                    icon: <FlagOutlined />,
-                    label: "举报需求",
-                    onClick: () => openReport(),
-                  },
-                ],
-              }}
-              trigger={["click"]}
+            <Button
+              aria-label="需求治理"
+              type="primary"
+              onClick={() => setGovernanceOpen(true)}
             >
-              <Button
-                aria-label="更多需求操作"
-                icon={<MoreOutlined />}
-                size="large"
-                type="text"
-              />
-            </Dropdown>
+              需求治理
+            </Button>
+            <Button
+              aria-label="举报需求"
+              icon={<FlagOutlined />}
+              type="default"
+              onClick={() => openReport()}
+            >
+              举报需求
+            </Button>
             <Button
               aria-label={demand.likedByCurrentActor ? "取消点赞" : "点赞"}
               className="min-w-28"
@@ -313,25 +296,24 @@ export default function InnovationDemandDetailPage() {
               }
               loading={likeDemand.isPending}
               onClick={() => likeDemand.mutate()}
-              size="large"
-              type="primary"
+              type={demand.likedByCurrentActor ? "primary" : "default"}
             >
-              点赞 {demand.likeCount}
+              {demand.likedByCurrentActor ? "取消点赞" : "点赞"}
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)]">
-        <main className="space-y-5">
-          <Card className="rounded-2xl border-[#edf0f5]" title="当前问题">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)]">
+        <main className="space-y-4 flex flex-col gap-4">
+          <Card className="rounded-xl border-[#edf0f5]" title="当前问题">
             <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
               {demand.problemStatement}
             </Paragraph>
           </Card>
           {demand.businessScenario ? (
             <Card
-              className="rounded-2xl border-[#edf0f5]"
+              className="rounded-xl border-[#edf0f5]"
               title="业务场景与当前流程"
             >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
@@ -341,7 +323,7 @@ export default function InnovationDemandDetailPage() {
           ) : null}
           {demand.impact ? (
             <Card
-              className="rounded-2xl border-[#edf0f5]"
+              className="rounded-xl border-[#edf0f5]"
               title="影响对象、发生频率与耗时"
             >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
@@ -349,13 +331,13 @@ export default function InnovationDemandDetailPage() {
               </Paragraph>
             </Card>
           ) : null}
-          <Card className="rounded-2xl border-[#edf0f5]" title="期望结果">
+          <Card className="rounded-xl border-[#edf0f5]" title="期望结果">
             <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
               {demand.desiredOutcome}
             </Paragraph>
           </Card>
           {demand.currentWorkaround ? (
-            <Card className="rounded-2xl border-[#edf0f5]" title="当前替代方案">
+            <Card className="rounded-xl border-[#edf0f5]" title="当前替代方案">
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
                 {demand.currentWorkaround}
               </Paragraph>
@@ -363,7 +345,7 @@ export default function InnovationDemandDetailPage() {
           ) : null}
           {demand.dataSensitivity ? (
             <Card
-              className="rounded-2xl border-[#edf0f5]"
+              className="rounded-xl border-[#edf0f5]"
               title="数据类型与敏感程度"
             >
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
@@ -372,13 +354,13 @@ export default function InnovationDemandDetailPage() {
             </Card>
           ) : null}
           {demand.aiSolutionIdea ? (
-            <Card className="rounded-2xl border-[#edf0f5]" title="AI 方案设想">
+            <Card className="rounded-xl border-[#edf0f5]" title="AI 方案设想">
               <Paragraph className="!mb-0 whitespace-pre-wrap leading-7">
                 {demand.aiSolutionIdea}
               </Paragraph>
             </Card>
           ) : null}
-          <Card className="rounded-2xl border-[#edf0f5]" title="优先级评估">
+          <Card className="rounded-xl border-[#edf0f5]" title="优先级评估">
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <Metric
                 label="业务价值"
@@ -453,7 +435,7 @@ export default function InnovationDemandDetailPage() {
               </div>
             ) : null}
           </Card>
-          <Card className="rounded-2xl border-[#edf0f5]" title="需求信息">
+          <Card className="rounded-xl border-[#edf0f5]" title="需求信息">
             <div className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
                 <Text type="secondary">可见范围</Text>
@@ -482,7 +464,7 @@ export default function InnovationDemandDetailPage() {
             </div>
           </Card>
           <Card
-            className="rounded-2xl border-[#edf0f5]"
+            className="rounded-xl border-[#edf0f5]"
             title={`附件 (${attachments.length})`}
           >
             {attachments.length ? (
@@ -506,7 +488,7 @@ export default function InnovationDemandDetailPage() {
               <Text type="secondary">暂无附件</Text>
             )}
           </Card>
-          <Card className="rounded-2xl border-[#edf0f5]" title="治理说明">
+          <Card className="rounded-xl border-[#edf0f5]" title="治理说明">
             <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-[#595959]">
               <li>讨论支持文字、Emoji 与一级回复，不展示图片附件。</li>
               <li>举报、匿名追溯与状态推进会写入审计记录。</li>
@@ -516,7 +498,7 @@ export default function InnovationDemandDetailPage() {
         </main>
         <aside className="min-w-0">
           <Card
-            className="rounded-2xl border-[#edf0f5]"
+            className="rounded-xl border-[#edf0f5]"
             title={
               <div className="flex items-center justify-between">
                 <span>

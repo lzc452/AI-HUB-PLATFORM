@@ -311,9 +311,15 @@ export default function InnovationSquarePage() {
     <div className="space-y-4">
       <section className="flex flex-col justify-between gap-4 rounded-xl border border-[#d6e4ff] bg-[#eaf4ff] p-4 sm:flex-row sm:items-center">
         <div>
-          <Typography.Title className="!mb-2" level={1}>
-            创新广场
-          </Typography.Title>
+          
+          <div className="flex items-baseline gap-2">
+            <Typography.Title className="!mb-2 !mt-0" level={1}>
+              创新广场
+            </Typography.Title>
+            <Typography.Text id="innovation-demand-list" type="secondary">
+              共 {data?.total ?? 0} 个公开需求
+            </Typography.Text>
+          </div>
           <Typography.Paragraph className="!mb-0 text-[#595959]">
             结构化需求与受众治理 · 把真实业务问题变成可协作、可推进的创新需求
           </Typography.Paragraph>
@@ -386,15 +392,7 @@ export default function InnovationSquarePage() {
         </div>
       </Card>
 
-      <section aria-labelledby="innovation-demand-list" className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Typography.Text id="innovation-demand-list" type="secondary">
-            共 {data?.total ?? 0} 个公开需求
-          </Typography.Text>
-          <Typography.Text type="secondary">
-            按{sortLabel[sort]}排序
-          </Typography.Text>
-        </div>
+      <section aria-labelledby="innovation-demand-list" className="space-y-4 mt-4">
         {isPending ? (
           <div className="flex justify-center py-16">
             <Spin aria-label="需求列表加载中" />
