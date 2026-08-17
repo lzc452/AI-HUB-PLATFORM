@@ -28,10 +28,11 @@ export const applicationIconSchema = z
   .refine(
     (icon) =>
       icon.mode === "auto"
-        ? typeof icon.text === "string" && icon.text.length > 0
+        ? typeof icon.backgroundColor === "string" &&
+          icon.backgroundColor.trim().length > 0
         : typeof icon.assetId === "string" && icon.assetId.length > 0,
     {
-      message: "图标二选一：自动模式需字符，上传模式需图标资产",
+      message: "图标二选一：自动生成需背景色，上传模式需图标资产",
       path: ["mode"],
     },
   );
@@ -213,9 +214,9 @@ export const applicationDraftDefaults: ApplicationDraftFormValues = {
   icon: { mode: "auto", backgroundColor: "#185FA5", text: "", assetId: null },
   screenshotAssetIds: [],
   summaryHtml: "",
-  manualHtml: null,
+  manualHtml: "",
   manualAssetId: null,
-  examplesHtml: null,
+  examplesHtml: "",
   examplesAssetId: null,
   faq: [],
   audience: [

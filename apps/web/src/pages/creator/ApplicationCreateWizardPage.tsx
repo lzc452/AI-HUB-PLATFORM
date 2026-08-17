@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { App, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import type { FieldValues, Resolver } from "react-hook-form";
@@ -24,6 +24,7 @@ import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 
 export default function ApplicationCreateWizardPage() {
   const { message } = App.useApp();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdFromQuery = searchParams.get("applicationId");
 
@@ -82,7 +83,11 @@ export default function ApplicationCreateWizardPage() {
           const record = await getApplicationDraft(draftIdFromQuery);
           if (!cancelled) {
             setApplicationId(draftIdFromQuery);
-            setDefaultValues(record.draft as unknown as FieldValues);
+            setDefaultValues({
+              ...(record.draft as unknown as FieldValues),
+              manualHtml: record.draft.manualHtml ?? "",
+              examplesHtml: record.draft.examplesHtml ?? "",
+            });
           }
         } else {
           const created = await createApplicationDraft();
@@ -127,6 +132,7 @@ export default function ApplicationCreateWizardPage() {
     await saveApplicationDraft(applicationId, withDeliveries(values));
     await submitApplicationDraft(applicationId);
     message.success("已提交审核");
+    navigate(`/creator/${applicationId}`);
   };
 
   if (loading) {

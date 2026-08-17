@@ -191,47 +191,64 @@ export class UnifiedUploadController {
     if (content === null)
       throw new BadRequestException("UPLOAD_CONTENT_MISSING");
     const ext = fileExtension(upload.fileName);
-    assertMagicMatches(content, ext);
-    if (policy.svgAllowed && ext === "svg") {
-      assertSafeSvg(Buffer.from(content).toString("utf8"));
+    try {
+      assertMagicMatches(content, ext);
+      if (policy.svgAllowed && ext === "svg") {
+        assertSafeSvg(Buffer.from(content).toString("utf8"));
+      }
+    } catch (error) {
+      throw new BadRequestException({
+        message: "UPLOAD_VALIDATION_FAILED",
+        detail:
+          error instanceof Error ? error.message : "UPLOAD_VALIDATION_FAILED",
+      });
     }
 
     const finalKey = `applications/${applicationId}/assets/${uploadId}`;
     if (policy.createsAsset && policy.assetType !== undefined) {
-      const scan = await this.pipeline.scanStoredAsset({
-        assetKey: upload.objectKey,
-      });
-      if (scan.scanStatus !== "passed") {
-        const failed = await this.repository.updateArtifactUpload(uploadId, {
-          uploadStatus: "failed",
-          scanStatus: "failed",
-          errorCode: scan.reason ?? "ASSET_SCAN_FAILED",
+      try {
+        const scan = await this.pipeline.scanStoredAsset({
+          assetKey: upload.objectKey,
         });
-        return this.toDto(failed ?? upload);
+        if (scan.scanStatus !== "passed") {
+          const failed = await this.repository.updateArtifactUpload(uploadId, {
+            uploadStatus: "failed",
+            scanStatus: "failed",
+            errorCode: scan.reason ?? "ASSET_SCAN_FAILED",
+          });
+          return this.toDto(failed ?? upload);
+        }
+        await this.storage.copy(upload.objectKey, finalKey);
+        const updated = await this.repository.updateArtifactUpload(uploadId, {
+          uploadStatus: "completed",
+          scanStatus: "passed",
+          completedAt: new Date(),
+          objectKey: finalKey,
+          signature: "",
+        });
+        if (updated === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
+        const asset = await this.repository.createAsset({
+          applicationId,
+          applicationVersionId: null,
+          assetType: policy.assetType,
+          name: upload.fileName,
+          storageKey: finalKey,
+          mimeType: upload.mimeType,
+          sizeBytes: upload.sizeBytes,
+          sortOrder: 0,
+          sha256: upload.sha256,
+          scanStatus: "passed",
+          uploadedByEmployeeId: actor.employeeId,
+        });
+        await this.storage.delete(upload.objectKey).catch(() => undefined);
+        return this.toDto(updated, asset.assetId);
+      } catch (error) {
+        throw new BadRequestException({
+          message: "UPLOAD_COMPLETE_FAILED",
+          detail:
+            error instanceof Error ? error.message : "UPLOAD_COMPLETE_FAILED",
+        });
       }
-      await this.storage.copy(upload.objectKey, finalKey);
-      const updated = await this.repository.updateArtifactUpload(uploadId, {
-        uploadStatus: "completed",
-        scanStatus: "passed",
-        completedAt: new Date(),
-        objectKey: finalKey,
-      });
-      if (updated === null) throw new NotFoundException("UPLOAD_NOT_FOUND");
-      const asset = await this.repository.createAsset({
-        applicationId,
-        applicationVersionId: null,
-        assetType: policy.assetType,
-        name: upload.fileName,
-        storageKey: finalKey,
-        mimeType: upload.mimeType,
-        sizeBytes: upload.sizeBytes,
-        sortOrder: 0,
-        sha256: upload.sha256,
-        scanStatus: "passed",
-        uploadedByEmployeeId: actor.employeeId,
-      });
-      await this.storage.delete(upload.objectKey).catch(() => undefined);
-      return this.toDto(updated, asset.assetId);
     }
 
     // artifact kind：复用签名校验管线。

@@ -147,7 +147,14 @@ export async function uploadAsset(
   });
   await uploadContent(applicationId, session.uploadId, file);
   const completed = await completeUpload(applicationId, session.uploadId);
-  return { assetId: completed.assetId ?? "" };
+  if (
+    completed.uploadStatus !== "completed" ||
+    completed.assetId === null ||
+    completed.assetId === ""
+  ) {
+    throw new Error(completed.errorCode ?? "UPLOAD_COMPLETE_FAILED");
+  }
+  return { assetId: completed.assetId };
 }
 
 // ---------------------------------------------------------------------------

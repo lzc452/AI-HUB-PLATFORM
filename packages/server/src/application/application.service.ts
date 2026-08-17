@@ -956,8 +956,11 @@ export function validateDraftCompleteness(
   if (icon === undefined || icon === null) {
     fail("DRAFT_ICON_REQUIRED", "应用图标不能为空");
   } else if (icon.mode === "auto") {
-    if (typeof icon.text !== "string" || icon.text.length === 0) {
-      fail("DRAFT_ICON_TEXT_REQUIRED", "自动图标需指定展示字符");
+    if (
+      typeof icon.backgroundColor !== "string" ||
+      icon.backgroundColor.trim().length === 0
+    ) {
+      fail("DRAFT_ICON_BACKGROUND_REQUIRED", "自动图标需指定背景色");
     }
   } else if (icon.mode === "upload") {
     if (typeof icon.assetId !== "string" || icon.assetId.length === 0) {

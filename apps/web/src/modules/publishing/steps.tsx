@@ -6,6 +6,7 @@ import {
   Descriptions,
   Form,
   Input,
+  message,
   Modal,
   Radio,
   Select,
@@ -68,7 +69,8 @@ const DISCLAIMER_TEMPLATE =
 // ---------------------------------------------------------------------------
 
 function IconField({ applicationId }: { applicationId: string }) {
-  const { control, watch, setValue } = useFormContext<FieldValues>();
+  const { control, watch, setValue, trigger } =
+    useFormContext<FieldValues>();
   const mode = watch("icon.mode");
   const name = watch("name");
   const bg = watch("icon.backgroundColor");
@@ -88,6 +90,10 @@ function IconField({ applicationId }: { applicationId: string }) {
         <div>
           <Radio.Group
             {...field}
+            onChange={(event) => {
+              field.onChange(event);
+              void trigger(["icon.mode", "icon.assetId"]);
+            }}
             optionType="button"
             options={[
               { value: "upload", label: "上传图标图片" },
@@ -124,7 +130,7 @@ function IconField({ applicationId }: { applicationId: string }) {
                 </span>
               </div>
             ) : (
-              <Controller
+          <Controller
                 control={control}
                 name="icon.assetId"
                 render={({ field: assetField }) => (
@@ -133,10 +139,34 @@ function IconField({ applicationId }: { applicationId: string }) {
                     listType="picture-card"
                     showUploadList={false}
                     beforeUpload={(file) => {
+                      const uid = `${Date.now()}-${Math.random()
+                        .toString(36)
+                        .slice(2)}`;
                       setIconUrl(URL.createObjectURL(file as File));
+                      setValue("icon.assetId", uid, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
                       void uploadAsset(applicationId, "icon", file as File).then(
-                        (asset) => setValue("icon.assetId", asset.assetId),
-                      );
+                        (asset) => {
+                          setValue("icon.assetId", asset.assetId, {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          void trigger(["icon.mode", "icon.assetId"]);
+                        },
+                      ).catch((error: unknown) => {
+                        setValue("icon.assetId", "", {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                        void trigger(["icon.mode", "icon.assetId"]);
+                        message.error(
+                          `图标上传失败：${
+                            error instanceof Error ? error.message : "上传服务或存储配置异常"
+                          }`,
+                        );
+                      });
                       return false;
                     }}
                   >
@@ -176,7 +206,7 @@ interface ScreenshotFile {
 }
 
 function ScreenshotField({ applicationId }: { applicationId: string }) {
-  const { control } = useFormContext<FieldValues>();
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
   // 本地保存已上传图片的预览地址，保证步骤间切换（组件常驻挂载）后缩略图不丢失。
   const filesRef = useRef<ScreenshotFile[]>([]);
   const [files, setFiles] = useState<ScreenshotFile[]>([]);
@@ -193,17 +223,22 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
     <Controller
       control={control}
       name="screenshotAssetIds"
-      render={({ field, fieldState }) => {
+      render={({ fieldState }) => {
         const commit = (next: ScreenshotFile[]) => {
           syncFiles(next);
-          field.onChange(next.map((f) => f.assetId).filter(Boolean));
+          setValue(
+            "screenshotAssetIds",
+            next.map((f) => f.assetId),
+            { shouldDirty: true, shouldValidate: true },
+          );
+          void trigger("screenshotAssetIds");
         };
         const handleUpload = (file: File) => {
           const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
           const url = URL.createObjectURL(file);
           const optimistic = [
             ...filesRef.current,
-            { uid, assetId: "", url, name: file.name },
+            { uid, assetId: uid, url, name: file.name },
           ].slice(0, 6);
           commit(optimistic);
           void uploadAsset(applicationId, "screenshot", file).then((asset) => {
@@ -211,6 +246,13 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
               filesRef.current.map((p) =>
                 p.uid === uid ? { ...p, assetId: asset.assetId } : p,
               ),
+            );
+          }).catch((error: unknown) => {
+            commit(filesRef.current.filter((p) => p.uid !== uid));
+            message.error(
+              `截图上传失败：${
+                error instanceof Error ? error.message : "上传服务或存储配置异常"
+              }`,
             );
           });
         };
@@ -504,6 +546,7 @@ function ContentStep() {
       <Controller
         control={control}
         name="summaryHtml"
+        rules={{ required: "简介不能为空" }}
         render={({ field, fieldState }) => (
           <Form.Item
             label="简介"
@@ -521,6 +564,7 @@ function ContentStep() {
       <Controller
         control={control}
         name="manualHtml"
+        rules={{ required: "操作手册不能为空" }}
         render={({ field, fieldState }) => (
           <Form.Item
             label="操作手册（富文本）"
@@ -538,6 +582,7 @@ function ContentStep() {
       <Controller
         control={control}
         name="examplesHtml"
+        rules={{ required: "使用示例不能为空" }}
         render={({ field, fieldState }) => (
           <Form.Item
             label="使用示例（富文本）"

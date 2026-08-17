@@ -58,7 +58,32 @@ function httpExceptionCode(exception: HttpException, fallback: string): string {
       return message;
     }
   }
+  if (
+    typeof response === "object" &&
+    response !== null &&
+    "code" in response &&
+    typeof response.code === "string" &&
+    SAFE_DOMAIN_CODE.test(response.code)
+  ) {
+    return response.code;
+  }
   return fallback;
+}
+
+function httpExceptionDetail(exception: HttpException): string | undefined {
+  const response = exception.getResponse();
+  if (typeof response === "string") {
+    return response;
+  }
+  if (
+    typeof response === "object" &&
+    response !== null &&
+    "detail" in response &&
+    typeof response.detail === "string"
+  ) {
+    return response.detail;
+  }
+  return undefined;
 }
 
 function zodFieldErrors(error: ZodError): Record<string, string[]> {
@@ -92,12 +117,13 @@ export function toProblemDetails(
       title: "Request Failed",
       code: "HTTP_ERROR",
     };
+    const detail = httpExceptionDetail(exception);
     return {
       type: "about:blank",
       title: details.title,
       status,
       code: httpExceptionCode(exception, details.code),
-      message: details.title,
+      message: detail ?? details.title,
       traceId,
     };
   }

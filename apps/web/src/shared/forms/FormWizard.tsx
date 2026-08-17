@@ -53,6 +53,7 @@ export function FormWizard({
   const [submitting, setSubmitting] = useState(false);
   const form = useForm<FieldValues>({
     defaultValues,
+    mode: "onChange",
     ...(resolver ? { resolver } : {}),
   });
 
