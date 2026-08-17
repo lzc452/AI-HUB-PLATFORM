@@ -66,12 +66,6 @@ const sortItems = [
   { key: "hot", label: "热度" },
 ];
 
-const sortLabel: Record<DemandSort, string> = {
-  hot: "热度",
-  priority: "优先级",
-  recent: "最新",
-};
-
 function dateText(value: string) {
   const d = new Date(value);
   const year = d.getFullYear();

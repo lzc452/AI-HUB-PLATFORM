@@ -12,6 +12,9 @@ import {
 interface RoleFilterBarProps {
   /** 当前已选中的行数，用于控制批量操作可用性。 */
   selectedCount: number;
+  onBatchDisable: () => void;
+  onCreate: () => void;
+  onPermissionTemplate: () => void;
   /** 当前筛选值（受控，由父组件持有）。 */
   value: RoleFilterValue;
   /** 增量更新回调，父组件负责合并状态。 */
@@ -21,6 +24,9 @@ interface RoleFilterBarProps {
 /** 角色筛选栏：纯受控展示组件，状态完全由 RoleManagementTab 持有。 */
 export function RoleFilterBar({
   selectedCount,
+  onBatchDisable,
+  onCreate,
+  onPermissionTemplate,
   value,
   onChange,
 }: RoleFilterBarProps) {
@@ -63,11 +69,12 @@ export function RoleFilterBar({
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">新建角色</Button>
-        <Button>权限模板</Button>
+        <Button onClick={onCreate} type="primary">新建角色</Button>
+        <Button onClick={onPermissionTemplate}>权限模板</Button>
         <Button
           danger
           disabled={selectedCount === 0}
+          onClick={onBatchDisable}
           title={selectedCount === 0 ? "请先勾选要禁用的角色" : undefined}
         >
           批量禁用 {selectedCount > 0 ? `(${selectedCount})` : ""}

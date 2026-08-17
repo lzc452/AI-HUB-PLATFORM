@@ -588,3 +588,17 @@ h6 {
     animation: assistant-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
+
+/* 组织管理只读表单：保留正常输入视觉，隐藏禁用态灰色底。 */
+.readonly-form .ant-input-disabled,
+.readonly-form .ant-select-disabled .ant-select-selector,
+.readonly-form .ant-picker-disabled {
+  background-color: #ffffff;
+  color: rgba(0, 0, 0, 0.88);
+  cursor: default;
+}
+
+.readonly-form .ant-input-disabled,
+.readonly-form .ant-select-selection-item {
+  opacity: 1;
+}

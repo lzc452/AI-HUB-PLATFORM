@@ -1,8 +1,6 @@
 import {
   BulbOutlined,
   LikeOutlined,
-  PaperClipOutlined,
-  PictureOutlined,
   RightOutlined,
   SearchOutlined,
   SendOutlined,

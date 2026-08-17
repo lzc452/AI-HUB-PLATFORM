@@ -10,11 +10,21 @@ import {
 
 interface SyncTaskTableProps {
   rows: SyncTaskSummary[];
+  onCancel: (row: SyncTaskSummary) => void;
+  onDetail: (row: SyncTaskSummary) => void;
+  onLogs: (row: SyncTaskSummary) => void;
+  onRetry: (row: SyncTaskSummary) => void;
 }
 
 /** 任务对象图标：按同步对象映射到已有 antd 图标与颜色，无自定义 SVG。 */
 /** 最近同步任务表格：列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
-export function SyncTaskTable({ rows }: SyncTaskTableProps) {
+export function SyncTaskTable({
+  rows,
+  onCancel,
+  onDetail,
+  onLogs,
+  onRetry,
+}: SyncTaskTableProps) {
   const columns = [
     {
       dataIndex: "taskName",
@@ -82,18 +92,18 @@ export function SyncTaskTable({ rows }: SyncTaskTableProps) {
       key: "action",
       render: (_value: unknown, record: SyncTaskSummary) => (
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onLogs(record)} type="link">
             查看日志
           </Button>
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onDetail(record)} type="link">
             详情
           </Button>
           {record.status === "failed" ? (
-            <Button className="!px-0" type="link">
+            <Button className="!px-0" onClick={() => onRetry(record)} type="link">
               重试
             </Button>
           ) : record.status === "pending" ? (
-            <Button className="!px-0" type="link">
+            <Button className="!px-0" onClick={() => onCancel(record)} type="link">
               取消
             </Button>
           ) : null}

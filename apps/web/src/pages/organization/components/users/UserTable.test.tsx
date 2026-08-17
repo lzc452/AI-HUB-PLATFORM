@@ -22,7 +22,16 @@ describe("组织用户表格与详情 Modal", () => {
   it("编辑与查看详情都会打开用户详情 Modal", () => {
     const onEdit = vi.fn();
     const onDetail = vi.fn();
-    render(<UserTable onDetail={onDetail} onEdit={onEdit} rows={[row]} />);
+    render(
+      <UserTable
+        onDelete={vi.fn()}
+        onDetail={onDetail}
+        onDisable={vi.fn()}
+        onEdit={onEdit}
+        onResetPassword={vi.fn()}
+        rows={[row]}
+      />,
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: "编辑 演示应用管理员" }),

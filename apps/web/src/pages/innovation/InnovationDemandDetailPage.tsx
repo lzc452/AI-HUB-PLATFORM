@@ -25,7 +25,7 @@ import {
 } from "antd";
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { z } from "zod";
 
 import { ErrorBlock } from "../../components/common/ErrorBlock";

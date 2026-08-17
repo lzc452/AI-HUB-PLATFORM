@@ -1,4 +1,3 @@
-import { TeamOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
 const { Title } = Typography;

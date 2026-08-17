@@ -144,6 +144,73 @@ export async function seedDemoAccounts(
         .execute();
     }
 
+    await transaction
+      .insertInto("identity_sync_config")
+      .values({
+        id: true,
+        enabled: true,
+        schedule: "0 3 * * *",
+        external_org_id: "demo-dingtalk",
+        secret_reference: null,
+        last_updated_by_employee_id: null,
+      })
+      .onConflict((oc) =>
+        oc.column("id").doUpdateSet({
+          enabled: true,
+          schedule: "0 3 * * *",
+          external_org_id: "demo-dingtalk",
+          updated_at: new Date(),
+        }),
+      )
+      .execute();
+
+    const demoSyncRuns = [
+      {
+        syncRunId: "00000000-0000-4000-8000-000000000001",
+        mode: "daily",
+        status: "completed",
+        startedAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+        finishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 1000 * 60 * 4),
+        summary: {
+          departments: 4,
+          employees: 5,
+          createdEmployees: 0,
+          boundEmployees: 5,
+        },
+      },
+      {
+        syncRunId: "00000000-0000-4000-8000-000000000002",
+        mode: "event",
+        status: "completed",
+        startedAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
+        finishedAt: new Date(Date.now() - 1000 * 60 * 60 * 3 + 1000 * 60),
+        summary: { departments: 0, employees: 1, createdEmployees: 0 },
+      },
+      {
+        syncRunId: "00000000-0000-4000-8000-000000000003",
+        mode: "manual",
+        status: "failed",
+        startedAt: new Date(Date.now() - 1000 * 60 * 30),
+        finishedAt: new Date(Date.now() - 1000 * 60 * 30 + 1000 * 12),
+        summary: { error: "DINGTALK_UNAVAILABLE" },
+      },
+    ] as const;
+
+    for (const run of demoSyncRuns) {
+      await transaction
+        .insertInto("dingtalk_sync_runs")
+        .values({
+          sync_run_id: run.syncRunId,
+          mode: run.mode,
+          status: run.status,
+          started_at: run.startedAt,
+          finished_at: run.finishedAt,
+          summary: sql<unknown>`${JSON.stringify(run.summary)}::jsonb`,
+        })
+        .onConflict((oc) => oc.column("sync_run_id").doNothing())
+        .execute();
+    }
+
     for (const account of DEMO_ACCOUNT_DEFINITIONS) {
       await transaction
         .insertInto("employees")

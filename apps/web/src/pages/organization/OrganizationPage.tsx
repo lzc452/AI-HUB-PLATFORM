@@ -2,7 +2,7 @@ import { Tabs } from "antd";
 import { useMemo, useState } from "react";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
-import { Header } from "../../components/common/Header";
+import { OrganizationHeader } from "./components/OrganizationHeader";
 import { OrganizationStats } from "./components/OrganizationStats";
 import { DepartmentManagementTab } from "./components/departments/DepartmentManagementTab";
 import { DepartmentStats } from "./components/departments/DepartmentStats";
@@ -14,7 +14,6 @@ import { SyncStats } from "./components/sync/SyncStats";
 import { SyncManagementTab } from "./components/sync/SyncManagementTab";
 import { useSyncRows } from "./components/sync/hooks/useSyncRows";
 import { UserManagementTab } from "./components/users/UserManagementTab";
-import { TeamOutlined } from "@ant-design/icons";
 
 /**
  * 组织管理页容器：唯一的数据获取与统计计算位置。

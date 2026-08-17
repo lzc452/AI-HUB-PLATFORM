@@ -1,6 +1,6 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
-import { LikeOutlined, LikeFilled, StarFilled, StarOutlined } from "@ant-design/icons";
-import { Button, Dropdown, Rate, Tag, Tooltip, Typography } from "antd";
+import { LikeOutlined, StarFilled } from "@ant-design/icons";
+import { Button, Dropdown, Rate, Tag, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import type { DeliveryChannel } from "../../../modules/marketplace/marketplace.client";
@@ -40,7 +40,6 @@ export function MarketplaceDetailHeader({
   resolving,
   ratingDisabled,
   ratingPending,
-  myRating = 0,
 }: MarketplaceDetailHeaderProps) {
   
   const departments = useDepartments();

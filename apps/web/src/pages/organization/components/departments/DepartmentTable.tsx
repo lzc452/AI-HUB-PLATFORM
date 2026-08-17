@@ -15,10 +15,23 @@ interface DepartmentTableProps {
   rows: DepartmentRow[];
   /** 部门 ID → 部门名称，用于渲染「上级部门」列。 */
   parentNameMap: Map<string, string>;
+  onDelete: (row: DepartmentRow) => void;
+  onDisable: (row: DepartmentRow) => void;
+  onEdit: (row: DepartmentRow) => void;
+  onMembers: (row: DepartmentRow) => void;
+  onSync: (row: DepartmentRow) => void;
 }
 
 /** 部门表格：树形列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
-export function DepartmentTable({ rows, parentNameMap }: DepartmentTableProps) {
+export function DepartmentTable({
+  rows,
+  parentNameMap,
+  onDelete,
+  onDisable,
+  onEdit,
+  onMembers,
+  onSync,
+}: DepartmentTableProps) {
   const treeData = buildDepartmentTree(rows);
 
   const columns = [
@@ -113,20 +126,20 @@ export function DepartmentTable({ rows, parentNameMap }: DepartmentTableProps) {
     },
     {
       key: "action",
-      render: () => (
+      render: (_value: unknown, row: DepartmentTreeNode) => (
         <div className="flex items-center gap-2 whitespace-nowrap">
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onEdit(row)} type="link">
             编辑
           </Button>
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onMembers(row)} type="link">
             查看成员
           </Button>
           <Dropdown
             menu={{
               items: [
-                { key: "sync", label: "立即同步" },
-                { key: "disable", label: "停用" },
-                { key: "delete", label: "删除" },
+                { key: "sync", label: "立即同步", onClick: () => onSync(row) },
+                { key: "disable", label: "停用", onClick: () => onDisable(row) },
+                { key: "delete", label: "删除", onClick: () => onDelete(row) },
               ],
             }}
           >

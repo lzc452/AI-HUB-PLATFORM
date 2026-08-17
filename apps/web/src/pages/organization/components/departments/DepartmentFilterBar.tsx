@@ -12,6 +12,9 @@ import {
 interface DepartmentFilterBarProps {
   /** 当前筛选值（受控，由父组件持有）。 */
   value: DepartmentFilterValue;
+  onBatchImport: () => void;
+  onCreate: () => void;
+  onSync: () => void;
   /** 增量更新回调，父组件负责合并状态。 */
   onChange: (patch: Partial<DepartmentFilterValue>) => void;
 }
@@ -19,6 +22,9 @@ interface DepartmentFilterBarProps {
 /** 部门筛选栏：纯受控展示组件，状态完全由 DepartmentManagementTab 持有。 */
 export function DepartmentFilterBar({
   value,
+  onBatchImport,
+  onCreate,
+  onSync,
   onChange,
 }: DepartmentFilterBarProps) {
   const statusOptions = Object.entries(DEPARTMENT_STATUS_META).map(
@@ -62,9 +68,9 @@ export function DepartmentFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">新建部门</Button>
-        <Button>批量导入</Button>
-        <Button>发起同步</Button>
+        <Button onClick={onCreate} type="primary">新建部门</Button>
+        <Button onClick={onBatchImport}>批量导入</Button>
+        <Button onClick={onSync}>发起同步</Button>
       </div>
     </div>
   );

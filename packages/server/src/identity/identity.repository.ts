@@ -40,12 +40,22 @@ export class KyselyIdentityRepository implements IdentityRepository {
         name: input.name,
         parent_department_id: input.parentDepartmentId,
         source: input.source,
+        status: input.status ?? "active",
+        manager_employee_id: input.managerEmployeeId ?? null,
+        last_synced_at: input.lastSyncedAt
+          ? new Date(input.lastSyncedAt)
+          : null,
       })
       .onConflict((oc) =>
         oc.column("department_id").doUpdateSet({
           name: input.name,
           parent_department_id: input.parentDepartmentId,
           source: input.source,
+          status: input.status ?? "active",
+          manager_employee_id: input.managerEmployeeId ?? null,
+          last_synced_at: input.lastSyncedAt
+            ? new Date(input.lastSyncedAt)
+            : null,
           updated_at: new Date(),
         }),
       )
@@ -279,6 +289,79 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .execute();
   }
 
+  async findRole(roleCode: string): Promise<IdentityRoleRecord | null> {
+    const row = await this.db
+      .selectFrom("roles")
+      .leftJoin(
+        "employees",
+        "employees.employee_id",
+        "roles.created_by_employee_id",
+      )
+      .select([
+        "roles.role_code",
+        "roles.name",
+        "roles.permissions",
+        "roles.is_system",
+        "roles.status",
+        "roles.created_by_employee_id",
+        "roles.created_at",
+        "roles.updated_at",
+        "employees.display_name as creator_name",
+      ])
+      .where("roles.role_code", "=", roleCode)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    const countRow = await this.db
+      .selectFrom("employee_roles")
+      .select(sql<{ count: number }>`count(*)::int`.as("member_count"))
+      .where("role_code", "=", roleCode)
+      .executeTakeFirst();
+    return {
+      roleCode: row.role_code,
+      name: row.name,
+      permissions: row.permissions,
+      isSystem: row.is_system,
+      status: row.status,
+      createdByEmployeeId: row.created_by_employee_id,
+      creatorName: row.creator_name,
+      memberCount: Number(countRow?.member_count ?? 0),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  async deleteRole(roleCode: string): Promise<void> {
+    await this.db.deleteFrom("roles").where("role_code", "=", roleCode).execute();
+  }
+
+  async copyRole(input: {
+    roleCode: string;
+    name: string;
+    permissions: readonly string[];
+    createdByEmployeeId: string;
+  }): Promise<void> {
+    await this.db
+      .insertInto("roles")
+      .values({
+        role_code: input.roleCode,
+        name: input.name,
+        permissions: input.permissions,
+        is_system: false,
+        status: "active",
+        created_by_employee_id: input.createdByEmployeeId,
+      })
+      .execute();
+  }
+
+  async countRoleMembers(roleCode: string): Promise<number> {
+    const row = await this.db
+      .selectFrom("employee_roles")
+      .select(sql<{ count: number }>`count(*)::int`.as("member_count"))
+      .where("role_code", "=", roleCode)
+      .executeTakeFirst();
+    return Number(row?.member_count ?? 0);
+  }
+
   async listEmployeesPage(input?: {
     keyword?: string;
     page?: number;
@@ -424,7 +507,12 @@ export class KyselyIdentityRepository implements IdentityRepository {
 
   async updateDepartment(
     departmentId: string,
-    input: { name?: string; parentDepartmentId?: string | null },
+    input: {
+      name?: string;
+      parentDepartmentId?: string | null;
+      managerEmployeeId?: string | null;
+      status?: "active" | "disabled";
+    },
   ): Promise<void> {
     await this.db
       .updateTable("departments")
@@ -433,6 +521,11 @@ export class KyselyIdentityRepository implements IdentityRepository {
         ...(input.parentDepartmentId === undefined
           ? {}
           : { parent_department_id: input.parentDepartmentId }),
+        ...(input.managerEmployeeId === undefined
+          ? {}
+          : { manager_employee_id: input.managerEmployeeId }),
+        ...(input.status === undefined ? {} : { status: input.status }),
+        updated_at: new Date(),
       })
       .where("department_id", "=", departmentId)
       .execute();
@@ -507,6 +600,62 @@ export class KyselyIdentityRepository implements IdentityRepository {
       completedAt: row.finished_at,
       summary: row.summary,
     }));
+  }
+
+  async createIdentitySyncRunItem(input: {
+    syncRunId: string;
+    objectType: string;
+    objectId: string;
+    status: string;
+    processedCount: number;
+    successCount: number;
+    failureCount: number;
+    errorCode?: string | null;
+    startedAt?: Date | null;
+    finishedAt?: Date | null;
+  }): Promise<void> {
+    await this.db
+      .insertInto("identity_sync_run_items")
+      .values({
+        sync_run_id: input.syncRunId,
+        object_type: input.objectType,
+        object_id: input.objectId,
+        status: input.status,
+        processed_count: input.processedCount,
+        success_count: input.successCount,
+        failure_count: input.failureCount,
+        error_code: input.errorCode ?? null,
+        started_at: input.startedAt ?? null,
+        finished_at: input.finishedAt ?? null,
+      })
+      .execute();
+  }
+
+  async updateSyncRunStatus(
+    syncRunId: string,
+    status: "started" | "completed" | "failed" | "cancelled",
+    summary?: unknown,
+  ): Promise<void> {
+    await this.db
+      .updateTable("dingtalk_sync_runs")
+      .set({
+        status,
+        ...(summary === undefined ? {} : { summary }),
+        finished_at: status === "started" ? null : new Date(),
+      })
+      .where("sync_run_id", "=", syncRunId)
+      .execute();
+  }
+
+  async markDepartmentSynced(
+    departmentId: string,
+    syncedAt: Date,
+  ): Promise<void> {
+    await this.db
+      .updateTable("departments")
+      .set({ last_synced_at: syncedAt, updated_at: new Date() })
+      .where("department_id", "=", departmentId)
+      .execute();
   }
 
   async findSyncRun(syncRunId: string) {

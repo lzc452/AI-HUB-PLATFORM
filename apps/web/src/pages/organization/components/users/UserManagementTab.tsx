@@ -1,9 +1,23 @@
 import { useMemo, useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Spin, Tag } from "antd";
+import { Modal, Spin, Tag, Typography } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import type { Key } from "react";
 
 import type { DepartmentSummary, EmployeeSummary } from "@ai-hub/contracts";
 
+import {
+  useArchiveEmployee,
+  useApplyEmployeeImport,
+  useBulkDisableEmployees,
+  useCreateEmployee,
+  useResetEmployeePassword,
+  useUpdateEmployee,
+} from "../../../../modules/auth/useIdentity";
+import {
+  previewEmployeeImport,
+  type EmployeeImportPreviewRow,
+} from "../../../../modules/auth/auth.client";
 import { MessageError } from "../../../../shared/ui/message";
 import {
   STATUS_META,
@@ -11,10 +25,13 @@ import {
   type UserTableRow,
   type UserFilterValue,
 } from "../constants";
+import { useRoleRows } from "../roles/hooks/useRoleRows";
+import { CsvImportModal } from "../shared/CsvImportModal";
 import { useUserTableRows } from "./hooks/useUserTableRows";
+import { PasswordResetModal } from "./PasswordResetModal";
 import { UserFilterBar } from "./UserFilterBar";
+import { UserFormModal } from "./UserFormModal";
 import { UserTable } from "./UserTable";
-import { UserDetailModal } from "./UserDetailModal";
 
 interface UserManagementTabProps {
   departments: UseQueryResult<DepartmentSummary[], Error>;
@@ -23,11 +40,83 @@ interface UserManagementTabProps {
   isPending: boolean;
 }
 
-/**
- * 用户管理页签容器：唯一持有筛选状态与过滤派生逻辑。
- * 数据查询在 OrganizationPage 中获取后传入，本组件只做展示态的派生与合并，
- * 通过 onChange 把筛选变更回传给自身 state（props 向下、回调向上）。
- */
+interface FormModalState {
+  mode: "create" | "edit" | "view";
+  row?: UserTableRow | null;
+}
+
+const IMPORT_COLUMNS: ColumnsType<EmployeeImportPreviewRow> = [
+  {
+    dataIndex: "employeeId",
+    render: (value: string, row) => (
+      <Typography.Text
+        {...(row.conflicts.employeeId ? { type: "danger" as const } : {})}
+      >
+        {value}
+      </Typography.Text>
+    ),
+    title: "工号",
+  },
+  {
+    dataIndex: "displayName",
+    render: (value: string, row) => (
+      <Typography.Text
+        {...(row.conflicts.displayName ? { type: "danger" as const } : {})}
+      >
+        {value}
+      </Typography.Text>
+    ),
+    title: "姓名",
+  },
+  {
+    dataIndex: "primaryDepartmentId",
+    render: (value: string, row) => (
+      <Typography.Text
+        {...(row.conflicts.primaryDepartmentId
+          ? { type: "danger" as const }
+          : {})}
+      >
+        {value}
+      </Typography.Text>
+    ),
+    title: "部门 ID",
+  },
+  {
+    dataIndex: "roleCodes",
+    render: (value: string[], row) => (
+      <Typography.Text
+        {...(row.conflicts.roleCodes ? { type: "danger" as const } : {})}
+      >
+        {value.join("、") || "—"}
+      </Typography.Text>
+    ),
+    title: "角色",
+  },
+  {
+    dataIndex: "status",
+    render: (value: EmployeeImportPreviewRow["status"], row) => (
+      <Typography.Text
+        {...(row.conflicts.status ? { type: "danger" as const } : {})}
+      >
+        {STATUS_META[value].text}
+      </Typography.Text>
+    ),
+    title: "状态",
+  },
+  {
+    render: (_, row) =>
+      row.conflicts && Object.keys(row.conflicts).length > 0
+        ? Object.entries(row.conflicts).map(([key, diff]) => (
+            <Typography.Text key={key} type="danger">
+              {key}: {diff.current || "—"} → {diff.incoming}
+              <br />
+            </Typography.Text>
+          ))
+        : "无差异",
+    title: "差异",
+  },
+];
+
 export function UserManagementTab({
   departments,
   employees,
@@ -37,17 +126,41 @@ export function UserManagementTab({
   const [filters, setFilters] = useState<UserFilterValue>(
     createDefaultFilters(),
   );
-  const [selectedRow, setSelectedRow] = useState<UserTableRow | null>(null);
+  const [formModal, setFormModal] = useState<FormModalState | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [resetRow, setResetRow] = useState<UserTableRow | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
 
   const rows = useUserTableRows(employees, departments);
+  const roleRows = useRoleRows();
+  const createEmployee = useCreateEmployee();
+  const updateEmployee = useUpdateEmployee();
+  const archiveEmployee = useArchiveEmployee();
+  const bulkDisableEmployees = useBulkDisableEmployees();
+  const applyEmployeeImport = useApplyEmployeeImport();
+  const resetPassword = useResetEmployeePassword();
 
   const departmentOptions = useMemo(
     () =>
       departments.data?.map((dept) => ({
         label: dept.name,
-        value: dept.name,
+        value: dept.departmentId,
       })) ?? [],
     [departments.data],
+  );
+
+  const roleOptions = useMemo(
+    () =>
+      (roleRows.data ?? []).map((role) => ({
+        label: role.roleName,
+        value: role.roleId,
+      })),
+    [roleRows.data],
+  );
+
+  const filterRoleOptions = useMemo(
+    () => [...new Set(rows.flatMap((row) => row.roleNames ?? []))].sort(),
+    [rows],
   );
 
   const statusOptions = useMemo(
@@ -57,11 +170,6 @@ export function UserManagementTab({
         value: text,
       })),
     [],
-  );
-
-  const roleOptions = useMemo(
-    () => [...new Set(rows.flatMap((row) => row.roleNames ?? []))].sort(),
-    [rows],
   );
 
   const filteredRows = useMemo(() => {
@@ -88,6 +196,55 @@ export function UserManagementTab({
     });
   }, [rows, filters]);
 
+  const closeForm = () => setFormModal(null);
+
+  const handleSubmitForm = async (values: {
+    employeeId: string;
+    displayName: string;
+    primaryDepartmentId: string;
+    roleCodes: string[];
+    password?: string;
+    status: "active" | "disabled" | "pending_binding";
+  }) => {
+    if (formModal?.mode === "create") {
+      await createEmployee.mutateAsync({
+        employeeId: values.employeeId,
+        displayName: values.displayName,
+        primaryDepartmentId: values.primaryDepartmentId,
+        roleCodes: values.roleCodes,
+        password: values.password ?? "",
+        status: values.status,
+      });
+    } else if (formModal?.row !== undefined && formModal.row !== null) {
+      await updateEmployee.mutateAsync({
+        employeeId: formModal.row.employeeId,
+        input: {
+          displayName: values.displayName,
+          primaryDepartmentId: values.primaryDepartmentId,
+          roleCodes: values.roleCodes,
+          status: values.status,
+        },
+      });
+    }
+    closeForm();
+  };
+
+  const confirmDisable = (row: UserTableRow) => {
+    Modal.confirm({
+      content: `确认停用用户「${row.displayName}」吗？`,
+      onOk: () => bulkDisableEmployees.mutateAsync([row.employeeId]),
+      title: "停用用户",
+    });
+  };
+
+  const confirmDelete = (row: UserTableRow) => {
+    Modal.confirm({
+      content: `确认删除用户「${row.displayName}」吗？删除后将归档该用户。`,
+      onOk: () => archiveEmployee.mutateAsync(row.employeeId),
+      title: "删除用户",
+    });
+  };
+
   return (
     <section className="space-y-2 rounded-xl bg-white p-2">
       {isPending ? <Spin aria-label="组织数据加载中" /> : null}
@@ -98,17 +255,81 @@ export function UserManagementTab({
       />
       <UserFilterBar
         departmentOptions={departmentOptions}
-        roleOptions={roleOptions}
+        disabledCount={selectedRowKeys.length}
+        onBatchDisable={() => {
+          Modal.confirm({
+            content: `确认停用选中的 ${selectedRowKeys.length} 名用户吗？`,
+            onOk: () =>
+              bulkDisableEmployees.mutateAsync(selectedRowKeys.map(String)),
+            title: "批量停用",
+          });
+        }}
+        onBatchImport={() => setImportOpen(true)}
+        onCreate={() => setFormModal({ mode: "create" })}
+        roleOptions={filterRoleOptions}
         statusOptions={statusOptions}
         value={filters}
         onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
       />
       <UserTable
-        onDetail={setSelectedRow}
-        onEdit={setSelectedRow}
+        onDelete={confirmDelete}
+        onDetail={(row) => setFormModal({ mode: "view", row })}
+        onDisable={confirmDisable}
+        onEdit={(row) => setFormModal({ mode: "edit", row })}
+        onResetPassword={setResetRow}
         rows={filteredRows}
+        rowSelection={{
+          onChange: (keys: Key[]) => setSelectedRowKeys(keys),
+          selectedRowKeys,
+          type: "checkbox",
+        }}
       />
-      <UserDetailModal onClose={() => setSelectedRow(null)} row={selectedRow} />
+      <UserFormModal
+        departmentOptions={departmentOptions}
+        loading={createEmployee.isPending || updateEmployee.isPending}
+        mode={formModal?.mode ?? "create"}
+        onClose={closeForm}
+        onSubmit={handleSubmitForm}
+        open={formModal !== null}
+        roleOptions={roleOptions}
+        row={formModal?.row ?? null}
+      />
+      <PasswordResetModal
+        employeeId={resetRow?.employeeId ?? null}
+        loading={resetPassword.isPending}
+        onClose={() => setResetRow(null)}
+        onSubmit={(newPassword) => {
+          if (resetRow !== null) {
+            void resetPassword.mutateAsync({
+              employeeId: resetRow.employeeId,
+              newPassword,
+            }).then(() => setResetRow(null));
+          }
+        }}
+        open={resetRow !== null}
+      />
+      <CsvImportModal<EmployeeImportPreviewRow>
+        columns={IMPORT_COLUMNS}
+        onClose={() => setImportOpen(false)}
+        open={importOpen}
+        preview={previewEmployeeImport}
+        rowKey="employeeId"
+        submit={(rows) =>
+          applyEmployeeImport.mutateAsync(
+            rows.map((row) => ({
+              employeeId: row.employeeId,
+              displayName: row.displayName,
+              primaryDepartmentId: row.primaryDepartmentId,
+              roleCodes: row.roleCodes,
+              ...(row.password === undefined || row.password === null
+                ? {}
+                : { password: row.password }),
+              status: row.status,
+            })),
+          )
+        }
+        title="批量导入用户"
+      />
     </section>
   );
 }

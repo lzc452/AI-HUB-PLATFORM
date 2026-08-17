@@ -116,7 +116,7 @@ export interface DingTalkBindingsTable {
 export interface DingTalkSyncRunsTable {
   sync_run_id: Generated<string>;
   mode: "event" | "daily" | "manual";
-  status: "started" | "completed" | "failed";
+  status: "started" | "completed" | "failed" | "cancelled";
   started_at: ColumnType<Date, Date | undefined, never>;
   finished_at: Date | null;
   summary: unknown;

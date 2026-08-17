@@ -57,6 +57,85 @@ export const PERMISSIONS = Object.freeze({
   ANALYTICS_SCOPE_ALL: "analytics.scope.all",
 } as const);
 
+export const PERMISSION_LABELS: Readonly<Record<string, string>> =
+  Object.freeze({
+    [PERMISSIONS.IDENTITY_EMPLOYEE_READ]: "员工查看",
+    [PERMISSIONS.IDENTITY_DEPARTMENT_READ]: "部门查看",
+    [PERMISSIONS.IDENTITY_ROLE_READ]: "角色查看",
+    [PERMISSIONS.IDENTITY_SESSION_MANAGE]: "会话管理",
+    [PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE]: "员工管理",
+    [PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE]: "部门管理",
+    [PERMISSIONS.IDENTITY_ROLE_MANAGE]: "角色管理",
+    [PERMISSIONS.IDENTITY_SYNC_MANAGE]: "同步配置管理",
+    [PERMISSIONS.IDENTITY_SYNC_RUN]: "同步运行",
+    [PERMISSIONS.SECURITY_AUDIT_EXPORT]: "安全审计导出",
+    [PERMISSIONS.CATALOG_READ]: "应用目录查看",
+    [PERMISSIONS.APPLICATION_CREATE]: "应用创建",
+    [PERMISSIONS.APPLICATION_READ]: "应用查看",
+    [PERMISSIONS.APPLICATION_UPDATE]: "应用更新",
+    [PERMISSIONS.APPLICATION_REVIEW]: "应用审核",
+    [PERMISSIONS.APPLICATION_PUBLISH]: "应用发布",
+    [PERMISSIONS.APPLICATION_MANAGE]: "应用管理",
+    [PERMISSIONS.CREATOR_READ]: "创作者中心查看",
+    [PERMISSIONS.DEMAND_CREATE]: "需求创建",
+    [PERMISSIONS.DEMAND_READ]: "需求查看",
+    [PERMISSIONS.DEMAND_UPDATE]: "需求更新",
+    [PERMISSIONS.DEMAND_SUBMIT]: "需求提交",
+    [PERMISSIONS.DEMAND_REVIEW]: "需求审核",
+    [PERMISSIONS.DEMAND_CLAIM]: "需求认领",
+    [PERMISSIONS.DEMAND_COLLABORATE]: "需求协作",
+    [PERMISSIONS.DEMAND_PRIORITIZE]: "需求优先级",
+    [PERMISSIONS.DEMAND_PROGRESS]: "需求进展",
+    [PERMISSIONS.DEMAND_MANAGE]: "需求管理",
+    [PERMISSIONS.DEMAND_MERGE]: "需求合并",
+    [PERMISSIONS.DEMAND_ASSOCIATE_APPLICATION]: "关联应用",
+    [PERMISSIONS.DEMAND_INTERACT]: "需求互动",
+    [PERMISSIONS.DEMAND_MODERATE]: "需求内容管理",
+    [PERMISSIONS.DEMAND_ANONYMOUS_AUDIT]: "需求匿名审核",
+    [PERMISSIONS.INTERACTION_INTERACT]: "互动参与",
+    [PERMISSIONS.INTERACTION_MODERATE]: "互动内容管理",
+    [PERMISSIONS.INTERACTION_ANONYMOUS_AUDIT]: "互动匿名审核",
+    [PERMISSIONS.NOTIFICATION_READ]: "通知查看",
+    [PERMISSIONS.NOTIFICATION_DELIVER]: "通知投递",
+    [PERMISSIONS.SECURITY_READ]: "安全查看",
+    [PERMISSIONS.ANALYTICS_PLATFORM_READ]: "平台分析查看",
+    [PERMISSIONS.ANALYTICS_MARKET_READ]: "市场分析查看",
+    [PERMISSIONS.ANALYTICS_APPLICATION_READ]: "应用分析查看",
+    [PERMISSIONS.ANALYTICS_INNOVATION_READ]: "创新分析查看",
+    [PERMISSIONS.ANALYTICS_REVIEW_READ]: "审核分析查看",
+    [PERMISSIONS.ANALYTICS_DEPARTMENT_READ]: "部门分析查看",
+    [PERMISSIONS.ANALYTICS_RISK_READ]: "风险分析查看",
+    [PERMISSIONS.ANALYTICS_RUNTIME_READ]: "运行时分析查看",
+    [PERMISSIONS.ANALYTICS_INTEGRATION_READ]: "集成分析查看",
+    [PERMISSIONS.ANALYTICS_EXPORT]: "分析导出",
+    [PERMISSIONS.ANALYTICS_EXPORT_MANAGE]: "分析导出管理",
+    [PERMISSIONS.ANALYTICS_IDENTITY_EXPORT]: "身份分析导出",
+    [PERMISSIONS.ANALYTICS_ASSISTANT_USE]: "分析助手使用",
+    [PERMISSIONS.ANALYTICS_SCOPE_ALL]: "全量分析范围",
+    "*": "全局权限",
+  });
+
+export const PERMISSION_GROUP_LABELS: Readonly<Record<string, string>> =
+  Object.freeze({
+    identity: "身份与组织",
+    security: "安全",
+    catalog: "应用目录",
+    application: "应用",
+    creator: "创作者中心",
+    demand: "创新需求",
+    interaction: "互动",
+    notification: "通知",
+    analytics: "数据分析",
+  });
+
+export function permissionLabel(permission: string): string {
+  return PERMISSION_LABELS[permission] ?? permission;
+}
+
+export function permissionGroupLabel(group: string): string {
+  return PERMISSION_GROUP_LABELS[group] ?? group;
+}
+
 export type PermissionCode =
   | (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
   | "*"

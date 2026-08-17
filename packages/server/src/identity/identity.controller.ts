@@ -15,9 +15,11 @@ import {
   Query,
   Req,
   Res,
-  ServiceUnavailableException,
   UnauthorizedException,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request, Response } from "express";
 import {
   PERMISSIONS,
@@ -39,12 +41,18 @@ import {
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
-import { IdentityService } from "./identity.service.js";
+import { IdentityService, parseCsv } from "./identity.service.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import {
   ActorContextDto,
   AssignRolesRequestDto,
+  BulkDisableEmployeesRequestDto,
+  BulkDisableRolesRequestDto,
+  CopyRoleRequestDto,
+  CreateEmployeeRequestDto,
+  DepartmentImportCommitRequestDto,
   DepartmentSummaryDto,
+  EmployeeImportCommitRequestDto,
   EmployeePageResultDto,
   EmployeeSummaryDto,
   CreateRoleRequestDto,
@@ -52,9 +60,12 @@ import {
   LoginRequestDto,
   LoginResponseDto,
   LogoutRequestDto,
+  ResetPasswordRequestDto,
   RevokeSessionsRequestDto,
   RevokeSessionsResultDto,
+  RoleDetailDto,
   RoleRecordDto,
+  RoleTemplateDto,
   SyncConfigDto,
   SyncRunDto,
   SyncRunItemDto,
@@ -118,15 +129,109 @@ export class IdentityController {
     return this.identity.getOrganizationOverview();
   }
 
-  @Post("/employees/imports")
-  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
-  @HttpCode(202)
-  @ApiOperation({ summary: "导入组织员工" })
+  @Post("/employees")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "创建本地员工" })
   @ApiIdentityHeaders()
-  @ApiOkResponse({ description: "导入服务不可用时返回 503" })
-  @ApiProblemResponses([400, 401, 403, 503])
-  async importEmployees() {
-    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
+  @ApiBody({ type: CreateEmployeeRequestDto })
+  @ApiOkResponse({ description: "员工已创建" })
+  @ApiProblemResponses([400, 401, 403])
+  async createEmployee(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: CreateEmployeeRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.createEmployeeByAdmin(actor, {
+        employeeId: body.employeeId,
+        displayName: body.displayName,
+        primaryDepartmentId: body.primaryDepartmentId,
+        ...(body.roleCodes === undefined ? {} : { roleCodes: body.roleCodes }),
+        password: body.password ?? "",
+        ...(body.status === undefined ? {} : { status: body.status }),
+      }),
+    );
+    return { created: true };
+  }
+
+  @Post("/employees/imports/preview")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @UseInterceptors(FileInterceptor("file"))
+  @ApiOperation({ summary: "解析员工 CSV 导入文件并预览差异" })
+  @ApiIdentityHeaders()
+  @ApiProblemResponses([400, 401, 403])
+  async previewEmployeeImport(
+    @UploadedFile() file?: { buffer: Buffer },
+  ) {
+    if (file === undefined) throw new BadRequestException("IMPORT_FILE_REQUIRED");
+    const records = recordsFromCsv(file.buffer.toString("utf8"));
+    return this.identity.previewEmployeeImport(records);
+  }
+
+  @Post("/employees/imports")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({ summary: "确认并写入员工 CSV 导入" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: EmployeeImportCommitRequestDto })
+  @ApiProblemResponses([400, 401, 403])
+  async applyEmployeeImport(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: EmployeeImportCommitRequestDto,
+  ) {
+    return this.identity.applyEmployeeImport(actor, body.rows);
+  }
+
+  @Post("/employees/bulk-disable")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @ApiOperation({ summary: "批量停用员工" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: BulkDisableEmployeesRequestDto })
+  @ApiOkResponse({ description: "员工已停用" })
+  @ApiProblemResponses([400, 401, 403])
+  async bulkDisableEmployees(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: BulkDisableEmployeesRequestDto,
+  ) {
+    const disabled = await this.identity.bulkDisableEmployees(
+      actor,
+      body.employeeIds,
+    );
+    return { disabled };
+  }
+
+  @Delete("/employees/:employeeId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @ApiOperation({ summary: "归档员工" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "employeeId", description: "员工工号" })
+  @ApiOkResponse({ description: "员工已归档" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async archiveEmployee(
+    @Param("employeeId") employeeId: string,
+    @CurrentActor() actor: ActorContext,
+  ) {
+    await this.call(() => this.identity.archiveEmployee(actor, employeeId));
+    return { archived: true };
+  }
+
+  @Post("/employees/:employeeId/reset-password")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_EMPLOYEE_MANAGE)
+  @ApiOperation({ summary: "管理员重置员工密码" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "employeeId", description: "员工工号" })
+  @ApiBody({ type: ResetPasswordRequestDto })
+  @ApiOkResponse({ description: "密码已重置" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async resetEmployeePassword(
+    @Param("employeeId") employeeId: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: ResetPasswordRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.resetEmployeePassword(actor, employeeId, body.newPassword),
+    );
+    return { reset: true };
   }
 
   @Get("/roles")
@@ -153,6 +258,47 @@ export class IdentityController {
     }));
   }
 
+  @Get("/roles/permission-catalog")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_READ)
+  @ApiOperation({ summary: "角色权限目录" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ description: "按模块分组的权限节点" })
+  @ApiProblemResponses([400, 401, 403])
+  async permissionCatalog() {
+    return this.identity.getPermissionCatalog();
+  }
+
+  @Get("/roles/templates")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_READ)
+  @ApiOperation({ summary: "角色权限模板" })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({ type: RoleTemplateDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403])
+  async roleTemplates() {
+    return this.identity.listRoleTemplates();
+  }
+
+  @Get("/roles/:roleId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_READ)
+  @ApiOperation({ summary: "角色详情" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "roleId", description: "角色编码" })
+  @ApiOkResponse({ type: RoleDetailDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getRole(@Param("roleId") roleCode: string) {
+    const role = await this.call(() => this.identity.getRoleDetail(roleCode));
+    return {
+      roleId: role.roleCode,
+      roleName: role.name,
+      roleType: role.isSystem ? "system" : "custom",
+      permissions: [...role.permissions],
+      memberCount: role.memberCount,
+      creator: role.creatorName,
+      status: role.status,
+      updatedAt: role.updatedAt.toISOString(),
+    };
+  }
+
   @Post("/roles")
   @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
   @HttpCode(200)
@@ -165,7 +311,13 @@ export class IdentityController {
     @CurrentActor() actor: ActorContext,
     @Body() body: CreateRoleRequestDto,
   ) {
-    await this.call(() => this.identity.createRole(actor, body));
+    await this.call(() =>
+      this.identity.createRole(actor, {
+        ...(body.roleCode === undefined ? {} : { roleCode: body.roleCode }),
+        name: body.name,
+        permissions: body.permissions,
+      }),
+    );
     return { created: true };
   }
 
@@ -186,7 +338,7 @@ export class IdentityController {
     return { updated: true };
   }
 
-  @Delete("/roles/:roleId")
+  @Post("/roles/:roleId/disable")
   @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
   @HttpCode(200)
   @ApiOperation({ summary: "停用角色" })
@@ -202,6 +354,55 @@ export class IdentityController {
       this.identity.updateRole(actor, roleCode, { status: "disabled" }),
     );
     return { disabled: true };
+  }
+
+  @Post("/roles/:roleId/copy")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @ApiOperation({ summary: "复制角色" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "roleId", description: "源角色编码" })
+  @ApiBody({ type: CopyRoleRequestDto })
+  @ApiOkResponse({ description: "角色已复制" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async copyRole(
+    @Param("roleId") roleCode: string,
+    @CurrentActor() actor: ActorContext,
+    @Body() body: CopyRoleRequestDto,
+  ) {
+    await this.call(() =>
+      this.identity.copyRole(actor, roleCode, body),
+    );
+    return { created: true };
+  }
+
+  @Post("/roles/bulk-disable")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @ApiOperation({ summary: "批量停用角色" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: BulkDisableRolesRequestDto })
+  @ApiOkResponse({ description: "角色已停用" })
+  @ApiProblemResponses([400, 401, 403])
+  async bulkDisableRoles(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: BulkDisableRolesRequestDto,
+  ) {
+    const disabled = await this.identity.bulkDisableRoles(actor, body.roleIds);
+    return { disabled };
+  }
+
+  @Delete("/roles/:roleId")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_ROLE_MANAGE)
+  @ApiOperation({ summary: "删除角色（须无成员）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "roleId", description: "角色编码" })
+  @ApiOkResponse({ description: "角色已删除" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async deleteRole(
+    @Param("roleId") roleCode: string,
+    @CurrentActor() actor: ActorContext,
+  ) {
+    await this.call(() => this.identity.deleteRoleIfUnused(actor, roleCode));
+    return { deleted: true };
   }
 
   @Get("/employees/:employeeId/roles")
@@ -293,13 +494,46 @@ export class IdentityController {
   ) {
     await this.call(() =>
       this.identity.createDepartment(actor, {
-        departmentId: body.departmentId,
+        ...(body.departmentId === undefined
+          ? {}
+          : { departmentId: body.departmentId }),
         name: body.name,
         parentDepartmentId: body.parentDepartmentId ?? null,
         source: "local",
+        ...(body.managerEmployeeId === undefined
+          ? {}
+          : { managerEmployeeId: body.managerEmployeeId }),
+        ...(body.status === undefined ? {} : { status: body.status }),
       }),
     );
     return { created: true };
+  }
+
+  @Post("/departments/imports/preview")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE)
+  @UseInterceptors(FileInterceptor("file"))
+  @ApiOperation({ summary: "解析部门 CSV 导入文件并预览差异" })
+  @ApiIdentityHeaders()
+  @ApiProblemResponses([400, 401, 403])
+  async previewDepartmentImport(
+    @UploadedFile() file?: { buffer: Buffer },
+  ) {
+    if (file === undefined) throw new BadRequestException("IMPORT_FILE_REQUIRED");
+    const records = recordsFromCsv(file.buffer.toString("utf8"));
+    return this.identity.previewDepartmentImport(records);
+  }
+
+  @Post("/departments/imports")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_MANAGE)
+  @ApiOperation({ summary: "确认并写入部门 CSV 导入" })
+  @ApiIdentityHeaders()
+  @ApiBody({ type: DepartmentImportCommitRequestDto })
+  @ApiProblemResponses([400, 401, 403])
+  async applyDepartmentImport(
+    @CurrentActor() actor: ActorContext,
+    @Body() body: DepartmentImportCommitRequestDto,
+  ) {
+    return this.identity.applyDepartmentImport(actor, body.rows);
   }
 
   @Patch("/departments/:departmentId")
@@ -319,6 +553,28 @@ export class IdentityController {
       this.identity.updateDepartment(actor, departmentId, body),
     );
     return { updated: true };
+  }
+
+  @Get("/departments/:departmentId/members")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_DEPARTMENT_READ)
+  @ApiOperation({ summary: "部门成员列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "departmentId", description: "部门 ID" })
+  @ApiOkResponse({ type: EmployeeSummaryDto, isArray: true })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async listDepartmentMembers(@Param("departmentId") departmentId: string) {
+    return this.identity.listDepartmentMembers(departmentId);
+  }
+
+  @Post("/departments/:departmentId/sync")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @ApiOperation({ summary: "立即同步指定部门" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "departmentId", description: "部门 ID" })
+  @ApiOkResponse({ description: "同步任务已创建" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async syncDepartment(@Param("departmentId") departmentId: string) {
+    return this.identity.runLocalSync("manual", departmentId);
   }
 
   @Delete("/departments/:departmentId")
@@ -434,12 +690,13 @@ export class IdentityController {
 
   @Post("/sync/run")
   @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
-  @HttpCode(503)
-  @ApiOperation({ summary: "触发组织同步（需配置 provider）" })
+  @HttpCode(200)
+  @ApiOperation({ summary: "触发本地组织同步并入库" })
   @ApiIdentityHeaders()
-  @ApiProblemResponses([401, 403, 503])
-  async triggerSync(): Promise<never> {
-    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
+  @ApiOkResponse({ description: "同步任务已创建" })
+  @ApiProblemResponses([400, 401, 403])
+  async triggerSync() {
+    return this.identity.runLocalSync("manual");
   }
 
   @Post("/sync-runs/:runId/retry")
@@ -449,11 +706,21 @@ export class IdentityController {
   @ApiIdentityHeaders()
   @ApiParam({ name: "runId", description: "同步运行 ID" })
   @ApiOkResponse({ description: "重试结果" })
-  @ApiProblemResponses([400, 401, 403, 404, 503])
+  @ApiProblemResponses([400, 401, 403, 404])
   async retrySync(@Param("runId") runId: string) {
-    const run = await this.identity.getSyncRun(runId);
-    if (run === null) throw new NotFoundException("SYNC_RUN_NOT_FOUND");
-    throw new ServiceUnavailableException("INTEGRATION_UNAVAILABLE");
+    return this.call(() => this.identity.retryLocalSync(runId));
+  }
+
+  @Post("/sync-runs/:runId/cancel")
+  @RequiresPermissions(PERMISSIONS.IDENTITY_SYNC_RUN)
+  @ApiOperation({ summary: "取消待执行同步运行" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "runId", description: "同步运行 ID" })
+  @ApiOkResponse({ description: "同步运行已取消" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async cancelSyncRun(@Param("runId") runId: string) {
+    await this.call(() => this.identity.cancelSyncRun(runId));
+    return { cancelled: true };
   }
 
   @Post("/employees/:employeeId/revoke-sessions")
@@ -715,4 +982,17 @@ function readCookie(cookieHeader: string, name: string): string | undefined {
     if (key === name) return value.join("=") || undefined;
   }
   return undefined;
+}
+
+function recordsFromCsv(text: string): Record<string, string>[] {
+  const rows = parseCsv(text.replace(/^\uFEFF/, ""));
+  if (rows.length === 0) return [];
+  const headers = rows[0]!.map((header) => header.trim());
+  return rows.slice(1).map((values) => {
+    const record: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      record[header] = values[index]?.trim() ?? "";
+    });
+    return record;
+  });
 }

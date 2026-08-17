@@ -1,11 +1,9 @@
-import { SafetyOutlined, DownloadOutlined } from "@ant-design/icons";
+import { DownloadOutlined } from "@ant-design/icons";
 import { Button, Tabs, Typography } from "antd";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { EmptyBlock } from "../../components/common";
 import { useAuditExport, useSecurityAuditLogs } from "../../modules/security";
-import { ROUTES } from "../../router/routes";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 
 import { AuditFilterBar } from "./components/AuditFilterBar";
@@ -16,11 +14,7 @@ import {
   type AuditFilterValue,
 } from "./components/constants";
 import { useAuditLogRows } from "./components/hooks/useAuditLogRows";
-import { SecurityKpiStats } from "./components/SecurityKpiStats";
 import { SecurityOverviewCard } from "./components/SecurityOverviewCard";
-import{ Header } from "../../components/common/Header";
-
-const { Title } = Typography;
 
 /** 非审计页签占位（设计图仅给出审计日志页签内容）。 */
 const PLACEHOLDER_TABS = [
@@ -35,7 +29,6 @@ const PLACEHOLDER_TABS = [
  * 子组件纯展示，通过 onChange(patch) / onSelect 回传增量。
  */
 export default function SecurityPage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>("audit");
   const [filters, setFilters] =
     useState<AuditFilterValue>(createDefaultFilters);
@@ -68,15 +61,6 @@ export default function SecurityPage() {
     [allRows],
   );
 
-  const handleBack = () => {
-    // 无历史可回退时回首页，避免离开应用
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate(ROUTES.home);
-    }
-  };
-
   const handleExport = async () => {
     try {
       await auditExport.startExport({
@@ -98,7 +82,9 @@ export default function SecurityPage() {
 
   return (
     <div className="space-y-2">
-      
+      <Typography.Title className="!my-0" level={1}>
+        系统安全
+      </Typography.Title>
       <Tabs
         activeKey={activeTab}
         items={[

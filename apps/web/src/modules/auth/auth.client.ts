@@ -7,7 +7,7 @@ import type {
   LoginSession,
 } from "@ai-hub/contracts";
 
-import { apiFetch } from "../../shared/api/client";
+import { apiFetch, apiUploadMultipart } from "../../shared/api/client";
 
 export interface LoginResponse {
   actor: ActorContext;
@@ -100,7 +100,7 @@ export function listRoles(): Promise<IdentityRoleSummary[]> {
 }
 
 export function createRole(input: {
-  roleCode: string;
+  roleCode?: string;
   name: string;
   permissions: string[];
 }): Promise<{ created: boolean }> {
@@ -125,8 +125,63 @@ export function updateRole(
 }
 
 export function disableRole(roleId: string): Promise<{ disabled: boolean }> {
+  return apiFetch(`/internal/identity/roles/${encodeURIComponent(roleId)}/disable`, {
+    method: "POST",
+  });
+}
+
+export function deleteRole(roleId: string): Promise<{ deleted: boolean }> {
   return apiFetch(`/internal/identity/roles/${encodeURIComponent(roleId)}`, {
     method: "DELETE",
+  });
+}
+
+export interface PermissionNode {
+  key: string;
+  title: string;
+  children: string[];
+}
+
+export interface RoleTemplate {
+  roleCode: string;
+  name: string;
+  permissions: string[];
+}
+
+export interface RoleDetail extends IdentityRoleSummary {
+  permissions: string[];
+}
+
+export function listPermissionCatalog(): Promise<PermissionNode[]> {
+  return apiFetch<PermissionNode[]>("/internal/identity/roles/permission-catalog");
+}
+
+export function listRoleTemplates(): Promise<RoleTemplate[]> {
+  return apiFetch<RoleTemplate[]>("/internal/identity/roles/templates");
+}
+
+export function getRoleDetail(roleId: string): Promise<RoleDetail> {
+  return apiFetch<RoleDetail>(
+    `/internal/identity/roles/${encodeURIComponent(roleId)}`,
+  );
+}
+
+export function copyRole(
+  roleId: string,
+  input: { roleCode: string; name: string },
+): Promise<{ created: boolean }> {
+  return apiFetch(
+    `/internal/identity/roles/${encodeURIComponent(roleId)}/copy`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export function bulkDisableRoles(
+  roleIds: string[],
+): Promise<{ disabled: number }> {
+  return apiFetch("/internal/identity/roles/bulk-disable", {
+    method: "POST",
+    body: JSON.stringify({ roleIds }),
   });
 }
 
@@ -159,12 +214,104 @@ export function updateEmployee(
     displayName?: string;
     status?: "active" | "disabled" | "pending_binding";
     primaryDepartmentId?: string;
+    roleCodes?: string[];
   },
 ): Promise<{ updated: boolean }> {
   return apiFetch(
     `/internal/identity/employees/${encodeURIComponent(employeeId)}`,
     { body: JSON.stringify(input), method: "PATCH" },
   );
+}
+
+export interface CreateEmployeeInput {
+  employeeId: string;
+  displayName: string;
+  primaryDepartmentId: string;
+  roleCodes?: string[];
+  password: string;
+  status?: "active" | "disabled" | "pending_binding";
+}
+
+export function createEmployee(
+  input: CreateEmployeeInput,
+): Promise<{ created: boolean }> {
+  return apiFetch("/internal/identity/employees", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function archiveEmployee(
+  employeeId: string,
+): Promise<{ archived: boolean }> {
+  return apiFetch(
+    `/internal/identity/employees/${encodeURIComponent(employeeId)}`,
+    { method: "DELETE" },
+  );
+}
+
+export function bulkDisableEmployees(
+  employeeIds: string[],
+): Promise<{ disabled: number }> {
+  return apiFetch("/internal/identity/employees/bulk-disable", {
+    method: "POST",
+    body: JSON.stringify({ employeeIds }),
+  });
+}
+
+export function resetEmployeePassword(
+  employeeId: string,
+  newPassword: string,
+): Promise<{ reset: boolean }> {
+  return apiFetch(
+    `/internal/identity/employees/${encodeURIComponent(employeeId)}/reset-password`,
+    { method: "POST", body: JSON.stringify({ newPassword }) },
+  );
+}
+
+export interface EmployeeImportPreviewRow {
+  employeeId: string;
+  displayName: string;
+  primaryDepartmentId: string;
+  roleCodes: string[];
+  status: "active" | "disabled" | "pending_binding";
+  passwordProvided: boolean;
+  password?: string | null;
+  exists: boolean;
+  conflicts: Record<string, { current: string; incoming: string }>;
+}
+
+export interface EmployeeImportPreview {
+  rows: EmployeeImportPreviewRow[];
+  summary: { total: number; create: number; update: number; invalid: number };
+  errors: string[];
+}
+
+export function previewEmployeeImport(
+  file: File,
+): Promise<EmployeeImportPreview> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiUploadMultipart<EmployeeImportPreview>(
+    "/internal/identity/employees/imports/preview",
+    form,
+  );
+}
+
+export function applyEmployeeImport(
+  rows: Array<{
+    employeeId: string;
+    displayName: string;
+    primaryDepartmentId: string;
+    roleCodes?: string[];
+    password?: string | null;
+    status?: "active" | "disabled" | "pending_binding";
+  }>,
+): Promise<{ created: number; updated: number; failed: number; errors: string[] }> {
+  return apiFetch("/internal/identity/employees/imports", {
+    method: "POST",
+    body: JSON.stringify({ rows }),
+  });
 }
 
 export function assignEmployeeRoles(
@@ -178,19 +325,26 @@ export function assignEmployeeRoles(
 }
 
 export function createDepartment(input: {
-  departmentId: string;
+  departmentId?: string;
   name: string;
   parentDepartmentId?: string | null;
+  managerEmployeeId?: string | null;
+  status?: "active" | "disabled";
 }): Promise<{ created: boolean }> {
   return apiFetch("/internal/identity/departments", {
-    body: JSON.stringify({ ...input, source: "local" }),
+    body: JSON.stringify(input),
     method: "POST",
   });
 }
 
 export function updateDepartment(
   departmentId: string,
-  input: { name?: string; parentDepartmentId?: string | null },
+  input: {
+    name?: string;
+    parentDepartmentId?: string | null;
+    managerEmployeeId?: string | null;
+    status?: "active" | "disabled";
+  },
 ): Promise<{ updated: boolean }> {
   return apiFetch(
     `/internal/identity/departments/${encodeURIComponent(departmentId)}`,
@@ -205,6 +359,65 @@ export function deleteDepartment(
     `/internal/identity/departments/${encodeURIComponent(departmentId)}`,
     { method: "DELETE" },
   );
+}
+
+export function listDepartmentMembers(
+  departmentId: string,
+): Promise<EmployeeSummary[]> {
+  return apiFetch<EmployeeSummary[]>(
+    `/internal/identity/departments/${encodeURIComponent(departmentId)}/members`,
+  );
+}
+
+export function syncDepartment(
+  departmentId: string,
+): Promise<{ syncRunId: string }> {
+  return apiFetch(
+    `/internal/identity/departments/${encodeURIComponent(departmentId)}/sync`,
+    { method: "POST" },
+  );
+}
+
+export interface DepartmentImportPreviewRow {
+  departmentId: string;
+  name: string;
+  parentDepartmentId: string | null;
+  managerEmployeeId: string | null;
+  status: "active" | "disabled";
+  exists: boolean;
+  conflicts: Record<string, { current: string; incoming: string }>;
+}
+
+export interface DepartmentImportPreview {
+  rows: DepartmentImportPreviewRow[];
+  summary: { total: number; create: number; update: number; invalid: number };
+  errors: string[];
+}
+
+export function previewDepartmentImport(
+  file: File,
+): Promise<DepartmentImportPreview> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiUploadMultipart<DepartmentImportPreview>(
+    "/internal/identity/departments/imports/preview",
+    form,
+  );
+}
+
+export function applyDepartmentImport(
+  rows: Array<{
+    departmentId: string;
+    name: string;
+    parentDepartmentId?: string | null;
+    managerEmployeeId?: string | null;
+    status?: "active" | "disabled";
+  }>,
+): Promise<{ created: number; updated: number; failed: number; errors: string[] }> {
+  return apiFetch("/internal/identity/departments/imports", {
+    method: "POST",
+    body: JSON.stringify({ rows }),
+  });
 }
 
 export interface SyncRunRecord {
@@ -222,8 +435,52 @@ export function listSyncRuns(limit = 20): Promise<SyncRunRecord[]> {
   );
 }
 
-export function triggerSync(): Promise<never> {
+export function triggerSync(): Promise<{ syncRunId: string }> {
   return apiFetch("/internal/identity/sync/run", { method: "POST" });
+}
+
+export function retrySyncRun(
+  runId: string,
+): Promise<{ syncRunId: string }> {
+  return apiFetch(
+    `/internal/identity/sync-runs/${encodeURIComponent(runId)}/retry`,
+    { method: "POST" },
+  );
+}
+
+export function cancelSyncRun(
+  runId: string,
+): Promise<{ cancelled: boolean }> {
+  return apiFetch(
+    `/internal/identity/sync-runs/${encodeURIComponent(runId)}/cancel`,
+    { method: "POST" },
+  );
+}
+
+export interface SyncRunItem {
+  syncRunItemId: string;
+  syncRunId: string;
+  objectType: string;
+  objectId: string;
+  status: string;
+  processedCount: number;
+  successCount: number;
+  failureCount: number;
+  errorCode: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
+
+export function getSyncRun(runId: string): Promise<SyncRunRecord> {
+  return apiFetch<SyncRunRecord>(
+    `/internal/identity/sync-runs/${encodeURIComponent(runId)}`,
+  );
+}
+
+export function listSyncRunItems(runId: string): Promise<SyncRunItem[]> {
+  return apiFetch<SyncRunItem[]>(
+    `/internal/identity/sync-runs/${encodeURIComponent(runId)}/items`,
+  );
 }
 
 export interface SyncConfigRecord {

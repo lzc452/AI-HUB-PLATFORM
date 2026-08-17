@@ -28,6 +28,8 @@ export {
   hasAllPermissions,
   hasAnyPermission,
   hasPermission,
+  permissionGroupLabel,
+  permissionLabel,
 } from "./identity.js";
 export type {
   ApplicationId,

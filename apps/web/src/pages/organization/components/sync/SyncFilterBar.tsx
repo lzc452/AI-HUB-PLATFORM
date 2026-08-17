@@ -12,12 +12,21 @@ import {
 interface SyncFilterBarProps {
   /** 当前筛选值（受控，由父组件持有）。 */
   value: SyncFilterValue;
+  onExportLogs: () => void;
+  onFullSync: () => void;
+  onRetryFailed: () => void;
   /** 增量更新回调，父组件负责合并状态。 */
   onChange: (patch: Partial<SyncFilterValue>) => void;
 }
 
 /** 同步状态筛选栏：纯受控展示组件，状态完全由 SyncManagementTab 持有。 */
-export function SyncFilterBar({ value, onChange }: SyncFilterBarProps) {
+export function SyncFilterBar({
+  value,
+  onExportLogs,
+  onFullSync,
+  onRetryFailed,
+  onChange,
+}: SyncFilterBarProps) {
   const typeOptions = Object.entries(SYNC_TYPE_META).map(([key, { text }]) => ({
     label: text,
     value: key as SyncTaskType,
@@ -57,9 +66,9 @@ export function SyncFilterBar({ value, onChange }: SyncFilterBarProps) {
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button type="primary">发起全量同步</Button>
-        <Button>重新执行失败任务</Button>
-        <Button>导出日志</Button>
+        <Button onClick={onFullSync} type="primary">发起全量同步</Button>
+        <Button onClick={onRetryFailed}>重新执行失败任务</Button>
+        <Button onClick={onExportLogs}>导出日志</Button>
       </div>
     </div>
   );

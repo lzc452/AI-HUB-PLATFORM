@@ -13,8 +13,6 @@ import { MarketplaceFilters } from "./MarketplaceFilters";
 import { MarketplaceSidebar } from "./MarketplaceSidebar";
 import { MarketplaceHero, type MarketplaceSortMode } from "./MarketplaceHero";
 
-const { Paragraph } = Typography;
-
 const PAGE_SIZE = 6;
 
 export default function MarketplacePage() {
@@ -94,6 +92,12 @@ export default function MarketplacePage() {
 
   return (
     <div className="space-y-4">
+      <Typography.Title className="!my-0" level={1}>
+        发现企业内部 AI 应用
+      </Typography.Title>
+      <Typography.Paragraph className="!mb-0 text-sm text-[#595959]">
+        统一查找、体验与分享各部门 AI 工具
+      </Typography.Paragraph>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_230px]">
         <div className="min-w-0 space-y-4">
           {/* <section

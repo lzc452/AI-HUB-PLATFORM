@@ -30,6 +30,12 @@ import {
 
 interface RoleTableProps {
   rows: RoleSummary[];
+  onCopy: (row: RoleSummary) => void;
+  onDelete: (row: RoleSummary) => void;
+  onDetail: (row: RoleSummary) => void;
+  onDisable: (row: RoleSummary) => void;
+  onEdit: (row: RoleSummary) => void;
+  onPermissionConfig: (row: RoleSummary) => void;
   rowSelection?: TableRowSelection<RoleSummary>;
 }
 
@@ -99,7 +105,16 @@ function RoleIcon({ roleName }: { roleName: string }) {
 }
 
 /** 角色表格：列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
-export function RoleTable({ rows, rowSelection }: RoleTableProps) {
+export function RoleTable({
+  rows,
+  onCopy,
+  onDelete,
+  onDetail,
+  onDisable,
+  onEdit,
+  onPermissionConfig,
+  rowSelection,
+}: RoleTableProps) {
   const columns = [
     {
       dataIndex: "roleName",
@@ -166,23 +181,27 @@ export function RoleTable({ rows, rowSelection }: RoleTableProps) {
     },
     {
       key: "action",
-      render: () => (
+      render: (_value: unknown, row: RoleSummary) => (
         <div className="flex items-center gap-3 whitespace-nowrap">
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onEdit(row)} type="link">
             编辑
           </Button>
-          <Button className="!px-0" type="link">
+          <Button
+            className="!px-0"
+            onClick={() => onPermissionConfig(row)}
+            type="link"
+          >
             权限配置
           </Button>
-          <Button className="!px-0" type="link">
+          <Button className="!px-0" onClick={() => onCopy(row)} type="link">
             复制
           </Button>
           <Dropdown
             menu={{
               items: [
-                { key: "detail", label: "查看详情" },
-                { key: "disable", label: "停用" },
-                { key: "delete", label: "删除" },
+                { key: "detail", label: "查看详情", onClick: () => onDetail(row) },
+                { key: "disable", label: "停用", onClick: () => onDisable(row) },
+                { key: "delete", label: "删除", onClick: () => onDelete(row) },
               ],
             }}
           >

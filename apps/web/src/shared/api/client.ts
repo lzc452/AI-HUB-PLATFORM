@@ -40,11 +40,13 @@ function createReplayNonce(): string {
 
 function createApiHeaders(
   headers: HeadersInit | undefined,
-  contentType: string,
+  contentType: string | null,
   method: string = "GET",
 ): Record<string, string> {
   const result = Object.fromEntries(new Headers(headers).entries());
-  if (!("content-type" in result)) result["Content-Type"] = contentType;
+  if (contentType !== null && !("content-type" in result)) {
+    result["Content-Type"] = contentType;
+  }
   const session = getSession();
   if (session) {
     result["x-employee-id"] = session.employeeId;
@@ -215,6 +217,46 @@ export function apiUploadRaw<T>(
     request.onerror = () =>
       reject(new ApiError(0, "NETWORK_ERROR", "网络请求失败"));
     request.send(content);
+  });
+}
+
+/** 通过统一认证 seam 上传 multipart/form-data 内容。 */
+export function apiUploadMultipart<T>(
+  path: string,
+  form: FormData,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", `${BASE}${path}`);
+    for (const [name, value] of Object.entries(
+      createApiHeaders(undefined, null, "POST"),
+    )) {
+      request.setRequestHeader(name, value);
+    }
+    request.onload = () => {
+      if (request.status === 401) setSession(null);
+      if (request.status >= 200 && request.status < 300) {
+        resolve(JSON.parse(request.responseText) as T);
+        return;
+      }
+      let body: ErrorBody = {};
+      try {
+        body = JSON.parse(request.responseText) as ErrorBody;
+      } catch {
+        // 非 JSON 错误响应统一映射为 UNKNOWN。
+      }
+      reject(
+        new ApiError(
+          request.status,
+          body.code ?? "UNKNOWN",
+          body.message ?? body.detail,
+          body.traceId,
+        ),
+      );
+    };
+    request.onerror = () =>
+      reject(new ApiError(0, "NETWORK_ERROR", "网络请求失败"));
+    request.send(form);
   });
 }
 

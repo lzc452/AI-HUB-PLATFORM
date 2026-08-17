@@ -1,7 +1,6 @@
 import { Card, message, Modal, Skeleton, Tabs } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { TabsProps } from 'antd';
 
 import { useAuth } from "../../modules/auth/useAuth";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
@@ -39,7 +38,6 @@ import { MarketplaceDetailHistory } from "./detail/MarketplaceDetailHistory";
 import { MarketplaceDetailReviews } from "./detail/MarketplaceDetailReviews";
 import { MarketplaceDetailRisk } from "./detail/MarketplaceDetailRisk";
 import {
-  MarketplaceDetailTabs,
   useDetailTabParam,
 } from "./detail/MarketplaceDetailTabs";
 

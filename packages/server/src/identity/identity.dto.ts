@@ -252,8 +252,12 @@ export class IdentityRoleSummaryDto {
 }
 
 export class CreateRoleRequestDto {
-  @ApiProperty({ type: String, example: "catalog_operator" })
-  roleCode!: string;
+  @ApiPropertyOptional({
+    type: String,
+    description: "角色编码；缺省时由后端自动生成",
+    example: "catalog_operator",
+  })
+  roleCode?: string;
 
   @ApiProperty({ type: String, example: "目录运营" })
   name!: string;
@@ -305,8 +309,11 @@ export class UpdateEmployeeRequestDto {
 
 /** 创建/更新部门请求。 */
 export class UpsertDepartmentRequestDto {
-  @ApiProperty({ type: String, description: "部门 ID" })
-  departmentId!: string;
+  @ApiPropertyOptional({
+    type: String,
+    description: "部门 ID；缺省时由后端自动生成",
+  })
+  departmentId?: string;
 
   @ApiProperty({ type: String, description: "部门名称" })
   name!: string;
@@ -317,6 +324,16 @@ export class UpsertDepartmentRequestDto {
     description: "父部门 ID",
   })
   parentDepartmentId?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "部门负责人工号",
+  })
+  managerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  status?: "active" | "disabled";
 }
 
 /** 更新部门请求。 */
@@ -330,6 +347,16 @@ export class UpdateDepartmentRequestDto {
     description: "父部门 ID",
   })
   parentDepartmentId?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    description: "部门负责人工号",
+  })
+  managerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  status?: "active" | "disabled";
 }
 
 /** 分配员工角色请求。 */
@@ -420,4 +447,161 @@ export class SyncRunItemDto {
 
   @ApiPropertyOptional({ type: String, format: "date-time", nullable: true })
   finishedAt?: string | null;
+}
+
+/** 创建本地员工请求。 */
+export class CreateEmployeeRequestDto {
+  @ApiProperty({ type: String, example: "E1001" })
+  employeeId!: string;
+
+  @ApiProperty({ type: String, example: "张三" })
+  displayName!: string;
+
+  @ApiProperty({ type: String, example: "demo-rnd" })
+  primaryDepartmentId!: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: "角色编码列表；缺省时默认 employee",
+  })
+  roleCodes?: string[];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "本地初始密码；新建本地用户时必填",
+  })
+  password?: string;
+
+  @ApiPropertyOptional({
+    enum: ["active", "disabled", "pending_binding"],
+  })
+  status?: "active" | "disabled" | "pending_binding";
+}
+
+/** 批量停用员工请求。 */
+export class BulkDisableEmployeesRequestDto {
+  @ApiProperty({ type: [String] })
+  employeeIds!: string[];
+}
+
+/** 管理员重置员工密码请求。 */
+export class ResetPasswordRequestDto {
+  @ApiProperty({ type: String, minLength: 8 })
+  newPassword!: string;
+}
+
+/** 员工 CSV 导入预览行。 */
+export class EmployeeImportRowDto {
+  @ApiProperty({ type: String })
+  employeeId!: string;
+
+  @ApiProperty({ type: String })
+  displayName!: string;
+
+  @ApiProperty({ type: String })
+  primaryDepartmentId!: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  roleCodes?: string[];
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  password?: string | null;
+
+  @ApiPropertyOptional({ type: String })
+  status?: "active" | "disabled" | "pending_binding";
+}
+
+/** 部门 CSV 导入预览行。 */
+export class DepartmentImportRowDto {
+  @ApiProperty({ type: String })
+  departmentId!: string;
+
+  @ApiProperty({ type: String })
+  name!: string;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  parentDepartmentId?: string | null;
+
+  @ApiPropertyOptional({ type: String, nullable: true })
+  managerEmployeeId?: string | null;
+
+  @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  status?: "active" | "disabled";
+}
+
+/** 员工/部门导入提交请求。 */
+export class EmployeeImportCommitRequestDto {
+  @ApiProperty({ type: [EmployeeImportRowDto] })
+  rows!: EmployeeImportRowDto[];
+}
+
+export class DepartmentImportCommitRequestDto {
+  @ApiProperty({ type: [DepartmentImportRowDto] })
+  rows!: DepartmentImportRowDto[];
+}
+
+/** 权限树节点。 */
+export class PermissionNodeDto {
+  @ApiProperty({ type: String })
+  key!: string;
+
+  @ApiProperty({ type: String })
+  title!: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  children?: string[];
+}
+
+/** 角色模板。 */
+export class RoleTemplateDto {
+  @ApiProperty({ type: String })
+  roleCode!: string;
+
+  @ApiProperty({ type: String })
+  name!: string;
+
+  @ApiProperty({ type: [String] })
+  permissions!: string[];
+}
+
+/** 角色详情。 */
+export class RoleDetailDto {
+  @ApiProperty({ type: String })
+  roleId!: string;
+
+  @ApiProperty({ type: String })
+  roleName!: string;
+
+  @ApiProperty({ enum: ["system", "custom"] })
+  roleType!: "system" | "custom";
+
+  @ApiProperty({ type: [String] })
+  permissions!: string[];
+
+  @ApiProperty({ type: Number })
+  memberCount!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  creator!: string | null;
+
+  @ApiProperty({ enum: ["active", "disabled"] })
+  status!: "active" | "disabled";
+
+  @ApiProperty({ type: String, format: "date-time" })
+  updatedAt!: string;
+}
+
+/** 复制角色请求。 */
+export class CopyRoleRequestDto {
+  @ApiProperty({ type: String })
+  roleCode!: string;
+
+  @ApiProperty({ type: String })
+  name!: string;
+}
+
+/** 批量停用角色请求。 */
+export class BulkDisableRolesRequestDto {
+  @ApiProperty({ type: [String] })
+  roleIds!: string[];
 }

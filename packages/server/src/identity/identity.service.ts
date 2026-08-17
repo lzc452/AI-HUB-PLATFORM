@@ -2,16 +2,23 @@ import type {
   ActorContext,
   AuthorizationDecision,
   AuthorizationRequest,
+  DepartmentSummary,
   EmployeeId,
   EncryptedLoginEnvelope,
 } from "@ai-hub/contracts";
-import { hasPermission } from "@ai-hub/contracts";
+import {
+  PERMISSIONS,
+  hasPermission,
+  permissionGroupLabel,
+} from "@ai-hub/contracts";
+import { SYSTEM_ROLE_DEFINITIONS } from "@ai-hub/database";
 import { PasswordService } from "./password.service.js";
 import type {
   CreateEmployeeInput,
   DingTalkDirectoryPort,
   DingTalkSyncMode,
   IdentityRepository,
+  IdentityRoleRecord,
   LoginResult,
   AudienceEvaluator,
 } from "./identity.types.js";
@@ -165,10 +172,14 @@ export class IdentityService {
       displayName?: string;
       status?: "active" | "disabled" | "pending_binding";
       primaryDepartmentId?: string;
+      roleCodes?: readonly string[];
     },
   ): Promise<void> {
     await this.repository.withTransaction(async (repository) => {
       await repository.updateEmployee(employeeId, input);
+      if (input.roleCodes !== undefined) {
+        await repository.setEmployeeRoles(employeeId, input.roleCodes);
+      }
       await repository.recordAudit({
         actorEmployeeId: actor.employeeId,
         eventType: "identity.employee.updated",
@@ -181,24 +192,32 @@ export class IdentityService {
   async createDepartment(
     actor: ActorContext,
     input: {
-      departmentId: string;
+      departmentId?: string;
       name: string;
       parentDepartmentId?: string | null;
       source: "local" | "dingtalk";
+      managerEmployeeId?: string | null;
+      status?: "active" | "disabled";
     },
   ): Promise<void> {
+    const departmentId = input.departmentId ?? generateDepartmentId();
+    if (input.parentDepartmentId === departmentId) {
+      throw new Error("DEPARTMENT_PARENT_CYCLE");
+    }
     await this.repository.withTransaction(async (repository) => {
       await repository.createDepartment({
-        departmentId: input.departmentId,
+        departmentId,
         name: input.name,
         parentDepartmentId: input.parentDepartmentId ?? null,
         source: input.source,
+        status: input.status ?? "active",
+        managerEmployeeId: input.managerEmployeeId ?? null,
       });
       await repository.recordAudit({
         actorEmployeeId: actor.employeeId,
         eventType: "identity.department.created",
         subjectEmployeeId: null,
-        details: { departmentId: input.departmentId },
+        details: { departmentId },
       });
     });
   }
@@ -206,8 +225,36 @@ export class IdentityService {
   async updateDepartment(
     actor: ActorContext,
     departmentId: string,
-    input: { name?: string; parentDepartmentId?: string | null },
+    input: {
+      name?: string;
+      parentDepartmentId?: string | null;
+      managerEmployeeId?: string | null;
+      status?: "active" | "disabled";
+    },
   ): Promise<void> {
+    if (
+      input.parentDepartmentId !== undefined &&
+      input.parentDepartmentId === departmentId
+    ) {
+      throw new Error("DEPARTMENT_PARENT_CYCLE");
+    }
+    if (input.parentDepartmentId !== undefined && input.parentDepartmentId !== null) {
+      const departments = await this.repository.listDepartments();
+      const children = new Set<string>();
+      const queue = [departmentId];
+      while (queue.length > 0) {
+        const current = queue.pop()!;
+        for (const department of departments) {
+          if (department.parentDepartmentId === current && !children.has(department.departmentId)) {
+            children.add(department.departmentId);
+            queue.push(department.departmentId);
+          }
+        }
+      }
+      if (children.has(input.parentDepartmentId)) {
+        throw new Error("DEPARTMENT_PARENT_CYCLE");
+      }
+    }
     await this.repository.withTransaction(async (repository) => {
       await repository.updateDepartment(departmentId, input);
       await repository.recordAudit({
@@ -287,8 +334,13 @@ export class IdentityService {
 
   async createRole(
     actor: ActorContext,
-    input: { roleCode: string; name: string; permissions: readonly string[] },
+    input: {
+      roleCode?: string;
+      name: string;
+      permissions: readonly string[];
+    },
   ): Promise<void> {
+    const roleCode = input.roleCode ?? generateRoleCode();
     if (this.repository.createRole === undefined) {
       throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
     }
@@ -298,13 +350,14 @@ export class IdentityService {
       }
       await repository.createRole({
         ...input,
+        roleCode,
         createdByEmployeeId: actor.employeeId,
       });
       await repository.recordAudit({
         actorEmployeeId: actor.employeeId,
         eventType: "identity.role.created",
         subjectEmployeeId: null,
-        details: { roleCode: input.roleCode },
+        details: { roleCode },
       });
     });
   }
@@ -379,6 +432,574 @@ export class IdentityService {
 
   async listSyncRunItems(syncRunId: string) {
     return this.repository.listSyncRunItems?.(syncRunId) ?? [];
+  }
+
+  async createEmployeeByAdmin(
+    actor: ActorContext,
+    input: {
+      employeeId: string;
+      displayName: string;
+      primaryDepartmentId: string;
+      roleCodes?: readonly string[];
+      password: string;
+      status?: "active" | "disabled" | "pending_binding";
+    },
+  ): Promise<void> {
+    const existing = await this.repository.findEmployee(input.employeeId);
+    if (existing !== null) throw new Error("EMPLOYEE_ALREADY_EXISTS");
+
+    const departments = await this.repository.listDepartments();
+    if (
+      !departments.some(
+        (department) => department.departmentId === input.primaryDepartmentId,
+      )
+    ) {
+      throw new Error("DEPARTMENT_NOT_FOUND");
+    }
+
+    const roleCodes = input.roleCodes?.length
+      ? [...new Set(input.roleCodes)]
+      : ["employee"];
+    const availableRoles = await this.repository.listRoles?.() ?? [];
+    for (const roleCode of roleCodes) {
+      if (!availableRoles.some((role) => role.roleCode === roleCode)) {
+        throw new Error("ROLE_NOT_FOUND");
+      }
+    }
+
+    const passwordHash = await this.passwords.hashPassword(input.password);
+    await this.repository.withTransaction(async (repository) => {
+      await repository.createEmployee({
+        employeeId: input.employeeId,
+        displayName: input.displayName,
+        primaryDepartmentId: input.primaryDepartmentId,
+        status: input.status ?? "active",
+        passwordHash,
+      });
+      for (const roleCode of roleCodes) {
+        await repository.assignRole(input.employeeId, roleCode);
+      }
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.employee.created",
+        subjectEmployeeId: input.employeeId,
+        details: { source: "local", roleCodes },
+      });
+    });
+  }
+
+  async archiveEmployee(actor: ActorContext, employeeId: EmployeeId): Promise<void> {
+    await this.repository.withTransaction(async (repository) => {
+      await repository.updateEmployee(employeeId, { status: "archived" });
+      await repository.revokeSessions(employeeId, "employee_archived");
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.employee.archived",
+        subjectEmployeeId: employeeId,
+        details: {},
+      });
+    });
+  }
+
+  async bulkDisableEmployees(
+    actor: ActorContext,
+    employeeIds: readonly EmployeeId[],
+  ): Promise<number> {
+    let disabled = 0;
+    await this.repository.withTransaction(async (repository) => {
+      for (const employeeId of new Set(employeeIds)) {
+        await repository.updateEmployee(employeeId, { status: "disabled" });
+        await repository.revokeSessions(employeeId, "employee_disabled");
+        await repository.recordAudit({
+          actorEmployeeId: actor.employeeId,
+          eventType: "identity.employee.disabled",
+          subjectEmployeeId: employeeId,
+          details: {},
+        });
+        disabled += 1;
+      }
+    });
+    return disabled;
+  }
+
+  async resetEmployeePassword(
+    actor: ActorContext,
+    employeeId: EmployeeId,
+    newPassword: string,
+  ): Promise<void> {
+    const passwordHash = await this.passwords.hashPassword(newPassword);
+    await this.repository.withTransaction(async (repository) => {
+      await repository.updateEmployeePassword(employeeId, passwordHash);
+      await repository.revokeSessions(employeeId, "password_reset");
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.employee.password_reset",
+        subjectEmployeeId: employeeId,
+        details: {},
+      });
+    });
+  }
+
+  async listDepartmentMembers(departmentId: string) {
+    const employees = await this.repository.listEmployees();
+    return employees.filter(
+      (employee) => employee.primaryDepartmentId === departmentId,
+    );
+  }
+
+  async getPermissionCatalog() {
+    return buildPermissionCatalog();
+  }
+
+  async listRoleTemplates() {
+    return SYSTEM_ROLE_DEFINITIONS.map((role) => ({
+      roleCode: role.roleCode,
+      name: role.name,
+      permissions: [...role.permissions],
+    }));
+  }
+
+  async getRoleDetail(roleCode: string) {
+    const role = await this.repository.findRole?.(roleCode);
+    if (role === undefined || role === null) throw new Error("ROLE_NOT_FOUND");
+    return role;
+  }
+
+  async deleteRoleIfUnused(actor: ActorContext, roleCode: string): Promise<void> {
+    const role = await this.repository.findRole?.(roleCode);
+    if (role === undefined || role === null) throw new Error("ROLE_NOT_FOUND");
+    if (role.isSystem) throw new Error("SYSTEM_ROLE_CANNOT_BE_DELETED");
+    const members = await this.repository.countRoleMembers?.(roleCode) ?? 0;
+    if (members > 0) throw new Error("ROLE_NOT_EMPTY");
+    if (this.repository.deleteRole === undefined) {
+      throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+    }
+    await this.repository.withTransaction(async (repository) => {
+      if (repository.deleteRole === undefined) {
+        throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
+      }
+      await repository.deleteRole(roleCode);
+      await repository.recordAudit({
+        actorEmployeeId: actor.employeeId,
+        eventType: "identity.role.deleted",
+        subjectEmployeeId: null,
+        details: { roleCode },
+      });
+    });
+  }
+
+  async copyRole(
+    actor: ActorContext,
+    sourceRoleCode: string,
+    input: { roleCode: string; name: string },
+  ): Promise<void> {
+    const source = await this.repository.findRole?.(sourceRoleCode);
+    if (source === undefined || source === null) throw new Error("ROLE_NOT_FOUND");
+    const existing = await this.repository.findRole?.(input.roleCode);
+    if (existing !== undefined && existing !== null) {
+      throw new Error("ROLE_ALREADY_EXISTS");
+    }
+    await this.createRole(actor, {
+      roleCode: input.roleCode,
+      name: input.name,
+      permissions: source.permissions,
+    });
+  }
+
+  async bulkDisableRoles(
+    actor: ActorContext,
+    roleCodes: readonly string[],
+  ): Promise<number> {
+    let disabled = 0;
+    for (const roleCode of new Set(roleCodes)) {
+      await this.updateRole(actor, roleCode, { status: "disabled" });
+      disabled += 1;
+    }
+    return disabled;
+  }
+
+  async runLocalSync(mode: DingTalkSyncMode, departmentId?: string) {
+    const syncRunId = await this.repository.createDingTalkSyncRun(mode);
+    try {
+      await this.repository.withTransaction(async (repository) => {
+        const departments = await repository.listDepartments();
+        const targets =
+          departmentId === undefined
+            ? departments
+            : departments.filter(
+                (department) => department.departmentId === departmentId,
+              );
+        if (departmentId !== undefined && targets.length === 0) {
+          throw new Error("DEPARTMENT_NOT_FOUND");
+        }
+
+        const now = new Date();
+        let processed = 0;
+        for (const department of targets) {
+          if (repository.markDepartmentSynced !== undefined) {
+            await repository.markDepartmentSynced(department.departmentId, now);
+          }
+          if (repository.createIdentitySyncRunItem !== undefined) {
+            await repository.createIdentitySyncRunItem({
+              syncRunId,
+              objectType: "department",
+              objectId: department.departmentId,
+              status: "completed",
+              processedCount: department.memberCount ?? 0,
+              successCount: department.memberCount ?? 0,
+              failureCount: 0,
+              startedAt: now,
+              finishedAt: now,
+            });
+          }
+          processed += 1;
+        }
+
+        if (repository.createIdentitySyncRunItem !== undefined) {
+          await repository.createIdentitySyncRunItem({
+            syncRunId,
+            objectType: "organization",
+            objectId: "root",
+            status: "completed",
+            processedCount: processed,
+            successCount: processed,
+            failureCount: 0,
+            startedAt: now,
+            finishedAt: now,
+          });
+        }
+      });
+
+      await this.repository.completeDingTalkSyncRun(syncRunId, "completed", {
+        mode,
+        departmentId: departmentId ?? null,
+      });
+      return { syncRunId };
+    } catch (error) {
+      if (this.repository.updateSyncRunStatus !== undefined) {
+        await this.repository.updateSyncRunStatus(syncRunId, "failed", {
+          error: error instanceof Error ? error.message : "LOCAL_SYNC_FAILED",
+        }).catch(() => undefined);
+      }
+      throw error;
+    }
+  }
+
+  async retryLocalSync(syncRunId: string) {
+    const run = await this.repository.findSyncRun?.(syncRunId);
+    if (run === undefined || run === null) throw new Error("SYNC_RUN_NOT_FOUND");
+    return this.runLocalSync(run.mode as DingTalkSyncMode);
+  }
+
+  async cancelSyncRun(syncRunId: string): Promise<void> {
+    const run = await this.repository.findSyncRun?.(syncRunId);
+    if (run === undefined || run === null) throw new Error("SYNC_RUN_NOT_FOUND");
+    if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+      throw new Error("SYNC_RUN_NOT_CANCELLABLE");
+    }
+    await this.repository.updateSyncRunStatus?.(syncRunId, "cancelled", {
+      cancelledAt: new Date().toISOString(),
+    });
+  }
+
+  async previewEmployeeImport(rows: readonly Record<string, string>[]) {
+    const departments = await this.repository.listDepartments();
+    const roles = await this.repository.listRoles?.() ?? [];
+    const departmentLookup = buildDepartmentLookup(departments);
+    const roleLookup = buildRoleLookup(roles);
+    const normalized: Array<{
+      employeeId: string;
+      displayName: string;
+      primaryDepartmentId: string;
+      roleCodes: string[];
+      password: string | null;
+      status: "active" | "disabled" | "pending_binding";
+    }> = [];
+    const errors: string[] = [];
+
+    for (const [index, row] of rows.entries()) {
+      const employeeId = row.employeeId?.trim();
+      const displayName = row.displayName?.trim();
+      const department = resolveDepartment(
+        row.primaryDepartmentId,
+        departmentLookup,
+      );
+      const status = normalizeEmployeeStatus(row.status);
+      const roleCodes = normalizeRoleCodes(row.roleCodes, roleLookup);
+      if (!employeeId || !displayName || !department || !status) {
+        errors.push(`第 ${index + 1} 行字段缺失或无法识别`);
+        continue;
+      }
+      normalized.push({
+        employeeId,
+        displayName,
+        primaryDepartmentId: department,
+        roleCodes,
+        password: row.password?.trim() || null,
+        status,
+      });
+    }
+
+    const preview = await Promise.all(
+      normalized.map(async (incoming) => {
+        const existing = await this.repository.findEmployee(incoming.employeeId);
+        const conflicts: Record<
+          string,
+          { current: string; incoming: string }
+        > = {};
+        if (existing !== null) {
+          compareIfDifferent(
+            conflicts,
+            "displayName",
+            existing.displayName,
+            incoming.displayName,
+          );
+          compareIfDifferent(
+            conflicts,
+            "primaryDepartmentId",
+            existing.primaryDepartmentId,
+            incoming.primaryDepartmentId,
+          );
+          const existingRoles = [...(await this.repository.listEmployeeRoles(incoming.employeeId))]
+            .map((role) => role.roleCode)
+            .sort();
+          compareIfDifferent(
+            conflicts,
+            "roleCodes",
+            existingRoles.join(","),
+            [...incoming.roleCodes].sort().join(","),
+          );
+          compareIfDifferent(
+            conflicts,
+            "status",
+            existing.status,
+            incoming.status,
+          );
+        }
+        return {
+          ...incoming,
+          passwordProvided: incoming.password !== null,
+          password: incoming.password,
+          exists: existing !== null,
+          conflicts,
+        };
+      }),
+    );
+
+    return {
+      rows: preview,
+      summary: {
+        total: preview.length,
+        create: preview.filter((row) => !row.exists).length,
+        update: preview.filter((row) => row.exists).length,
+        invalid: errors.length,
+      },
+      errors,
+    };
+  }
+
+  async applyEmployeeImport(
+    actor: ActorContext,
+    rows: readonly {
+      employeeId: string;
+      displayName: string;
+      primaryDepartmentId: string;
+      roleCodes?: readonly string[];
+      password?: string | null;
+      status?: "active" | "disabled" | "pending_binding";
+    }[],
+  ) {
+    let created = 0;
+    let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
+
+    for (const row of rows) {
+      try {
+        const existing = await this.repository.findEmployee(row.employeeId);
+        const roleCodes = row.roleCodes?.length
+          ? [...new Set(row.roleCodes)]
+          : ["employee"];
+        if (existing === null) {
+          if (!row.password) throw new Error("PASSWORD_REQUIRED");
+          const passwordHash = await this.passwords.hashPassword(row.password);
+          await this.repository.withTransaction(async (repository) => {
+            await repository.createEmployee({
+              employeeId: row.employeeId,
+              displayName: row.displayName,
+              primaryDepartmentId: row.primaryDepartmentId,
+              status: row.status ?? "active",
+              passwordHash,
+            });
+            for (const roleCode of roleCodes) {
+              await repository.assignRole(row.employeeId, roleCode);
+            }
+            await repository.recordAudit({
+              actorEmployeeId: actor.employeeId,
+              eventType: "identity.employee.imported",
+              subjectEmployeeId: row.employeeId,
+              details: { source: "csv" },
+            });
+          });
+          created += 1;
+        } else {
+          await this.repository.withTransaction(async (repository) => {
+            await repository.updateEmployee(row.employeeId, {
+              displayName: row.displayName,
+              primaryDepartmentId: row.primaryDepartmentId,
+              status: row.status ?? "active",
+            });
+            await repository.setEmployeeRoles(row.employeeId, roleCodes);
+            if (row.password) {
+              const passwordHash = await this.passwords.hashPassword(row.password);
+              await repository.updateEmployeePassword(row.employeeId, passwordHash);
+            }
+            await repository.recordAudit({
+              actorEmployeeId: actor.employeeId,
+              eventType: "identity.employee.imported",
+              subjectEmployeeId: row.employeeId,
+              details: { source: "csv", updated: true },
+            });
+          });
+          updated += 1;
+        }
+      } catch (error) {
+        failed += 1;
+        errors.push(
+          `${row.employeeId}: ${error instanceof Error ? error.message : "IMPORT_FAILED"}`,
+        );
+      }
+    }
+
+    return { created, updated, failed, errors };
+  }
+
+  async previewDepartmentImport(rows: readonly Record<string, string>[]) {
+    const departments = await this.repository.listDepartments();
+    const employees = await this.repository.listEmployees();
+    const employeeIds = new Set(employees.map((employee) => employee.employeeId));
+    const departmentLookup = buildDepartmentLookup(departments);
+    const preview = [];
+    const errors: string[] = [];
+
+    for (const [index, row] of rows.entries()) {
+      const departmentId = row.departmentId?.trim();
+      const name = row.name?.trim();
+      const parentDepartmentId = resolveDepartment(
+        row.parentDepartmentId,
+        departmentLookup,
+      );
+      const managerEmployeeId = row.managerEmployeeId?.trim() || null;
+      const status = row.status === "停用" ? "disabled" : "active";
+      if (!departmentId || !name) {
+        errors.push(`第 ${index + 1} 行缺少部门 ID 或名称`);
+        continue;
+      }
+      if (managerEmployeeId !== null && !employeeIds.has(managerEmployeeId)) {
+        errors.push(`第 ${index + 1} 行负责人工号不存在`);
+        continue;
+      }
+      const existing = departments.find(
+        (department) => department.departmentId === departmentId,
+      );
+      const conflicts: Record<
+        string,
+        { current: string; incoming: string }
+      > = {};
+      if (existing) {
+        compareIfDifferent(conflicts, "name", existing.name, name);
+        compareIfDifferent(
+          conflicts,
+          "parentDepartmentId",
+          existing.parentDepartmentId ?? "",
+          parentDepartmentId ?? "",
+        );
+        compareIfDifferent(
+          conflicts,
+          "managerEmployeeId",
+          existing.managerEmployeeId ?? "",
+          managerEmployeeId ?? "",
+        );
+        compareIfDifferent(
+          conflicts,
+          "status",
+          existing.status ?? "active",
+          status,
+        );
+      }
+      preview.push({
+        departmentId,
+        name,
+        parentDepartmentId,
+        managerEmployeeId,
+        status,
+        exists: existing !== undefined,
+        conflicts,
+      });
+    }
+
+    return {
+      rows: preview,
+      summary: {
+        total: preview.length,
+        create: preview.filter((row) => !row.exists).length,
+        update: preview.filter((row) => row.exists).length,
+        invalid: errors.length,
+      },
+      errors,
+    };
+  }
+
+  async applyDepartmentImport(
+    actor: ActorContext,
+    rows: readonly {
+      departmentId: string;
+      name: string;
+      parentDepartmentId?: string | null;
+      managerEmployeeId?: string | null;
+      status?: "active" | "disabled";
+    }[],
+  ) {
+    let created = 0;
+    let updated = 0;
+    let failed = 0;
+    const errors: string[] = [];
+    const existingDepartments = await this.repository.listDepartments();
+
+    for (const row of rows) {
+      try {
+        const exists = existingDepartments.some(
+          (department) => department.departmentId === row.departmentId,
+        );
+        await this.repository.withTransaction(async (repository) => {
+          await repository.createDepartment({
+            departmentId: row.departmentId,
+            name: row.name,
+            parentDepartmentId: row.parentDepartmentId ?? null,
+            source: "local",
+            status: row.status ?? "active",
+            managerEmployeeId: row.managerEmployeeId ?? null,
+          });
+          await repository.recordAudit({
+            actorEmployeeId: actor.employeeId,
+            eventType: exists
+              ? "identity.department.updated"
+              : "identity.department.created",
+            subjectEmployeeId: null,
+            details: { departmentId: row.departmentId, source: "csv" },
+          });
+        });
+        if (exists) updated += 1;
+        else created += 1;
+      } catch (error) {
+        failed += 1;
+        errors.push(
+          `${row.departmentId}: ${error instanceof Error ? error.message : "IMPORT_FAILED"}`,
+        );
+      }
+    }
+
+    return { created, updated, failed, errors };
   }
 
   /** 仅撤销当前调用者自己的会话，避免 logout 接口被用来注销他人会话。 */
@@ -707,4 +1328,142 @@ export class IdentityService {
   standardizeEmployeeNumber(raw: string): string {
     return raw.trim().toUpperCase();
   }
+}
+
+function buildPermissionCatalog() {
+  const groups = new Map<string, string[]>();
+  for (const permission of Object.values(PERMISSIONS)) {
+    const group = permission.split(".")[0]!;
+    const existing = groups.get(group) ?? [];
+    existing.push(permission);
+    groups.set(group, existing);
+  }
+  return [...groups.entries()].map(([group, children]) => ({
+    key: group,
+    title: permissionGroupLabel(group),
+    children: children.sort(),
+  }));
+}
+
+function generateDepartmentId(): string {
+  return `dept-${randomBytes(6).toString("hex")}`;
+}
+
+function generateRoleCode(): string {
+  return `role_${randomBytes(5).toString("hex")}`;
+}
+
+function buildDepartmentLookup(departments: readonly DepartmentSummary[]) {
+  const byId = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const department of departments) {
+    byId.set(department.departmentId, department.departmentId);
+    byName.set(department.name, department.departmentId);
+  }
+  return { byId, byName };
+}
+
+function buildRoleLookup(roles: readonly IdentityRoleRecord[]) {
+  const byCode = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const role of roles) {
+    byCode.set(role.roleCode, role.roleCode);
+    byName.set(role.name, role.roleCode);
+  }
+  return { byCode, byName };
+}
+
+function resolveDepartment(
+  value: string | undefined,
+  lookup: { byId: Map<string, string>; byName: Map<string, string> },
+): string | null {
+  const normalized = value?.trim() ?? "";
+  if (normalized.length === 0) return null;
+  return (
+    lookup.byId.get(normalized) ??
+    lookup.byName.get(normalized) ??
+    null
+  );
+}
+
+function normalizeEmployeeStatus(
+  value: string | undefined,
+): "active" | "disabled" | "pending_binding" | null {
+  if (value === undefined || value.trim() === "") return "active";
+  const normalized = value.trim();
+  if (normalized === "启用") return "active";
+  if (normalized === "停用") return "disabled";
+  if (normalized === "待绑定") return "pending_binding";
+  if (normalized === "active") return "active";
+  if (normalized === "disabled") return "disabled";
+  if (normalized === "pending_binding") return "pending_binding";
+  return null;
+}
+
+function normalizeRoleCodes(
+  value: string | undefined,
+  lookup: { byCode: Map<string, string>; byName: Map<string, string> },
+): string[] {
+  if (value === undefined || value.trim() === "") return ["employee"];
+  const parts = value
+    .split(/[,，、]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return [
+    ...new Set(
+      parts.map((part) => lookup.byCode.get(part) ?? lookup.byName.get(part) ?? part),
+    ),
+  ];
+}
+
+function compareIfDifferent(
+  target: Record<string, { current: string; incoming: string }>,
+  key: string,
+  current: string,
+  incoming: string,
+): void {
+  if (current !== incoming) {
+    target[key] = { current, incoming };
+  }
+}
+
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quoted) {
+      if (char === '"') {
+        if (text[index + 1] === '"') {
+          field += '"';
+          index += 1;
+        } else {
+          quoted = false;
+        }
+      } else {
+        field += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+    } else if (char === "\n") {
+      row.push(field);
+      field = "";
+      rows.push(row);
+      row = [];
+    } else if (char !== "\r") {
+      field += char;
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
 }

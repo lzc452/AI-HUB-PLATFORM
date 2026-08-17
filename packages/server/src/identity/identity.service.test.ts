@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DepartmentSummary, EmployeeId } from "@ai-hub/contracts";
-import { IdentityService } from "./identity.service.js";
+import { IdentityService, parseCsv } from "./identity.service.js";
 import { PasswordService } from "./password.service.js";
 import type {
   CreateEmployeeInput,
@@ -375,6 +375,35 @@ class MemoryIdentityRepository implements IdentityRepository {
 }
 
 describe("IdentityService", () => {
+  it("parses CSV values with embedded quotes and commas", () => {
+    expect(
+      parseCsv('a,b,"c,d","he said ""hi"""\ne,f,g,h'),
+    ).toEqual([
+      ["a", "b", "c,d", 'he said "hi"'],
+      ["e", "f", "g", "h"],
+    ]);
+  });
+
+  it("builds a grouped permission catalog from contracts", async () => {
+    const service = new IdentityService(new MemoryIdentityRepository());
+    const catalog = await service.getPermissionCatalog();
+    expect(catalog.length).toBeGreaterThan(0);
+    expect(catalog.every((group) => group.children.length > 0)).toBe(true);
+  });
+
+  it("runs a local sync and records a completed sync run", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createDepartment({
+      departmentId: "dept-a",
+      name: "研发部",
+      parentDepartmentId: null,
+      source: "local",
+    });
+    const service = new IdentityService(repository);
+    const result = await service.runLocalSync("manual");
+    expect(result.syncRunId).toBe("sync-1");
+  });
+
   it("logs in an active password employee and builds ActorContext", async () => {
     const repository = new MemoryIdentityRepository();
     await repository.createDepartment({

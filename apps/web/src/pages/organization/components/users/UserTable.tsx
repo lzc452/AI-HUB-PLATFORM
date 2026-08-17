@@ -1,17 +1,30 @@
 import { DownOutlined } from "@ant-design/icons";
 import { Avatar, Button, Dropdown, Table, Tag, Tooltip } from "antd";
 import type { EmployeeSummary } from "@ai-hub/contracts";
+import type { TableProps } from "antd";
 
 import { STATUS_META, type UserTableRow } from "../constants";
 
 interface UserTableProps {
   rows: UserTableRow[];
   onDetail: (row: UserTableRow) => void;
+  onDelete: (row: UserTableRow) => void;
+  onDisable: (row: UserTableRow) => void;
   onEdit: (row: UserTableRow) => void;
+  onResetPassword: (row: UserTableRow) => void;
+  rowSelection?: TableProps<UserTableRow>["rowSelection"];
 }
 
 /** 用户表格：列定义 + 渲染。数据源完全来自入参 rows，自身不派生、不变更。 */
-export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
+export function UserTable({
+  onDelete,
+  onDetail,
+  onDisable,
+  onEdit,
+  onResetPassword,
+  rows,
+  rowSelection,
+}: UserTableProps) {
   const columns = [
     {
       dataIndex: "employeeId",
@@ -106,7 +119,11 @@ export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
           >
             编辑
           </Button>
-          <Button className="!px-0" type="link">
+          <Button
+            className="!px-0"
+            onClick={() => onResetPassword(row)}
+            type="link"
+          >
             重置密码
           </Button>
           <Dropdown
@@ -117,8 +134,8 @@ export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
                   label: "查看详情",
                   onClick: () => onDetail(row),
                 },
-                { key: "disable", label: "停用" },
-                { key: "delete", label: "删除" },
+                { key: "disable", label: "停用", onClick: () => onDisable(row) },
+                { key: "delete", label: "删除", onClick: () => onDelete(row) },
               ],
             }}
           >
@@ -145,7 +162,7 @@ export function UserTable({ onDetail, onEdit, rows }: UserTableProps) {
         showTotal: (total) => `共 ${total} 条`,
       }}
       rowKey="employeeId"
-      rowSelection={{ type: "checkbox" }}
+      rowSelection={rowSelection ?? { type: "checkbox" }}
       scroll={{ x: "max-content" }}
       size="small"
     />

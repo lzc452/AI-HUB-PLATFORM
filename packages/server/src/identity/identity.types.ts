@@ -147,6 +147,18 @@ export interface IdentityRepository {
       status?: "active" | "disabled";
     },
   ): Promise<void>;
+  findRole?(
+    roleCode: string,
+  ): Promise<IdentityRoleRecord | null>;
+  deleteRole?(roleCode: string): Promise<void>;
+  copyRole?(input: {
+    roleCode: string;
+    name: string;
+    permissions: readonly string[];
+    createdByEmployeeId: EmployeeId;
+    sourceRoleCode: string;
+  }): Promise<void>;
+  countRoleMembers?(roleCode: string): Promise<number>;
   getSyncConfig?(): Promise<IdentitySyncConfigRecord | null>;
   updateSyncConfig?(input: {
     enabled?: boolean;
@@ -183,7 +195,12 @@ export interface IdentityRepository {
   ): Promise<void>;
   updateDepartment(
     departmentId: string,
-    input: { name?: string; parentDepartmentId?: string | null },
+    input: {
+      name?: string;
+      parentDepartmentId?: string | null;
+      managerEmployeeId?: string | null;
+      status?: "active" | "disabled";
+    },
   ): Promise<void>;
   deleteDepartment(departmentId: string): Promise<number>;
   countDepartmentMembers(departmentId: string): Promise<number>;
@@ -201,6 +218,27 @@ export interface IdentityRepository {
       summary: unknown;
     }[]
   >;
+  createIdentitySyncRunItem?(input: {
+    syncRunId: string;
+    objectType: string;
+    objectId: string;
+    status: string;
+    processedCount: number;
+    successCount: number;
+    failureCount: number;
+    errorCode?: string | null;
+    startedAt?: Date | null;
+    finishedAt?: Date | null;
+  }): Promise<void>;
+  updateSyncRunStatus?(
+    syncRunId: string,
+    status: "started" | "completed" | "failed" | "cancelled",
+    summary?: unknown,
+  ): Promise<void>;
+  markDepartmentSynced?(
+    departmentId: string,
+    syncedAt: Date,
+  ): Promise<void>;
   findSession(sessionId: string): Promise<SessionRecord | null>;
   createPasswordResetChallenge(input: {
     employeeId: EmployeeId;
