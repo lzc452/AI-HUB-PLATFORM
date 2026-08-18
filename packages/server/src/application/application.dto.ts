@@ -156,6 +156,9 @@ export class RollbackRequestDto {
   applicationVersionId!: string;
 }
 
+/** 撤回待审核版本请求（当前无请求体，预留为扩展点）。 */
+export class ReviewWithdrawRequestDto {}
+
 /** 应用管理列表行。 */
 export class ApplicationAdminListRowDto {
   @ApiProperty({ type: String }) applicationId!: string;
@@ -272,6 +275,13 @@ export class ApplicationDto {
     nullable: true,
   })
   currentVersionId?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "已发布应用正在审核的待生效版本 ID",
+    nullable: true,
+  })
+  pendingVersionId?: string | null;
 }
 
 /** 移交责任人请求。 */

@@ -48,6 +48,7 @@ import {
   ReviewDto,
   ReviewQueueDto,
   ReviewRequestDto,
+  ReviewWithdrawRequestDto,
   RollbackRequestDto,
   SaveApplicationDraftRequestDto,
   TransferOwnerRequestDto,
@@ -238,6 +239,32 @@ export class ApplicationController {
   ) {
     return this.call(async () =>
       this.applications.submitForReview(
+        await this.requireActor(employeeId, sessionId, "update"),
+        versionId,
+      ),
+    );
+  }
+
+  @Post("versions/:applicationVersionId/review-withdraw")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "撤回待审核版本",
+    description:
+      "提交人在最终审核结论前撤回自己的待审核版本：审核队列置为 completed、pending_version_id 清空、应用保持 published。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiBody({ type: ReviewWithdrawRequestDto, required: false })
+  @ApiOkResponse({ description: "撤回后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async withdrawPendingReview(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Param("applicationVersionId") versionId: string,
+  ) {
+    return this.call(async () =>
+      this.applications.cancelPendingReview(
         await this.requireActor(employeeId, sessionId, "update"),
         versionId,
       ),

@@ -374,6 +374,11 @@ export class ApplicationService {
     if (application.status !== "draft" && application.status !== "published") {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
+    // 已发布应用只能有一个待审核版本；存在 pending 版本时拒绝再次提交，
+    // 避免多个版本同时在审核、pendingVersionId 相互覆盖。
+    if (application.pendingVersionId !== null) {
+      throw new Error("REVIEW_ALREADY_PENDING");
+    }
     return this.repository.withTransaction(async (repository) => {
       const isPublishedUpdate = application.status === "published";
       const updated = await repository.setApplicationStatus({
@@ -411,6 +416,39 @@ export class ApplicationService {
       await this.recordChange(
         repository,
         "application.review.sla.created",
+        application.applicationId,
+        applicationVersionId,
+        actor.employeeId,
+      );
+      return updated;
+    });
+  }
+
+  /** 待审核版本在最终结论前可以由提交人撤回（规格 §5.5）。 */
+  async cancelPendingReview(
+    actor: ActorContext,
+    applicationVersionId: string,
+  ): Promise<ApplicationRecord> {
+    await this.assertAuthorized(actor, allowedActions.update);
+    const version = await this.requireVersion(applicationVersionId);
+    if (version.createdByEmployeeId !== actor.employeeId) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    const application = await this.requireApplication(version.applicationId);
+    if (application.pendingVersionId !== applicationVersionId) {
+      throw new Error("REVIEW_NOT_PENDING");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      await repository.completeReviewQueue(applicationVersionId);
+      const updated = await repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: "published",
+        status: "published",
+        pendingVersionId: null,
+      });
+      await this.recordChange(
+        repository,
+        "application.review.withdrawn",
         application.applicationId,
         applicationVersionId,
         actor.employeeId,
@@ -544,9 +582,7 @@ export class ApplicationService {
           actor.employeeId,
         );
         // 关闭审核队列，避免其以 available/claimed 残留。
-        if (repository.completeReviewQueue !== undefined) {
-          await repository.completeReviewQueue(applicationVersionId);
-        }
+        await repository.completeReviewQueue(applicationVersionId);
         return updated;
       },
     );

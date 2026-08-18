@@ -286,11 +286,8 @@ describe("real application lifecycle API", () => {
       .set(reviewerHeaders)
       .send({ decision: "approve", comment: "second approved" })
       .expect(200);
-    await request(app.getHttpServer())
-      .post(`/internal/applications/${applicationId}/publish`)
-      .set(ownerHeaders)
-      .send({ applicationVersionId: secondVersionId })
-      .expect(200);
+    // 已发布应用更新审核通过即自动切换为当前版本（保持 published），
+    // 此处不再有单独的 publish 步骤——状态机修复后该调用会因状态非 approved 而返回 400。
     await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/rollback`)
       .set(ownerHeaders)
@@ -317,6 +314,130 @@ describe("real application lifecycle API", () => {
       .expect(200);
     await request(app.getHttpServer())
       .post(`/internal/applications/${applicationId}/archive`)
+      .set(ownerHeaders)
+      .expect(200);
+  });
+
+  it("enforces one pending version and allows submitter withdrawal", async () => {
+    const ownerHeaders = actorHeaders("E100");
+    const reviewerHeaders = actorHeaders("E200");
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/applications")
+      .set(ownerHeaders)
+      .send({
+        name: "Withdrawable",
+        summary: "Pending review withdrawal",
+        maintainerEmployeeId: "E200",
+        departmentId: "dept-platform",
+      })
+      .expect(201);
+    const applicationId = createResponse.body.applicationId as string;
+
+    const registerVersionArtifact = async (
+      version: string,
+      uploadId: string,
+      artifactKey: string,
+      signature: string,
+    ) => {
+      await registerArtifact(uploadId, artifactKey, signature);
+      await registerVerifiedArtifactRow(applicationId, artifactKey, signature);
+      const versionResponse = await request(app.getHttpServer())
+        .post(`/internal/applications/${applicationId}/versions`)
+        .set(ownerHeaders)
+        .send({
+          version,
+          changelog: `Release ${version}`,
+          artifactKey,
+          artifactSha256,
+          artifactSignature: signature,
+          scanStatus: "passed",
+        })
+        .expect(201);
+      return versionResponse.body.applicationVersionId as string;
+    };
+
+    const firstVersionId = await registerVersionArtifact(
+      "1.0.0",
+      "upload-withdraw-1",
+      "applications/withdraw-flow/artifact.zip",
+      "signature-withdraw-1",
+    );
+    for (const channel of ["web", "desktop", "mobile", "mini_program"]) {
+      await request(app.getHttpServer())
+        .put(`/internal/applications/${applicationId}/deliveries/${channel}`)
+        .set(ownerHeaders)
+        .send({
+          entryUrl: `https://${channel}.internal/apps/${applicationId}`,
+          enabled: true,
+        })
+        .expect(200);
+    }
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${firstVersionId}/submit-review`)
+      .set(ownerHeaders)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${firstVersionId}/claim-review`)
+      .set(reviewerHeaders)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${firstVersionId}/review`)
+      .set(reviewerHeaders)
+      .send({ decision: "approve", comment: "approved" })
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/publish`)
+      .set(ownerHeaders)
+      .send({ applicationVersionId: firstVersionId })
+      .expect(200);
+
+    const secondVersionId = await registerVersionArtifact(
+      "2.0.0",
+      "upload-withdraw-2",
+      "applications/withdraw-flow/artifact-v2.zip",
+      "signature-withdraw-2",
+    );
+    const thirdVersionId = await registerVersionArtifact(
+      "3.0.0",
+      "upload-withdraw-3",
+      "applications/withdraw-flow/artifact-v3.zip",
+      "signature-withdraw-3",
+    );
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${secondVersionId}/submit-review`)
+      .set(ownerHeaders)
+      .expect(200);
+    const rejected = await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${thirdVersionId}/submit-review`)
+      .set(ownerHeaders)
+      .expect(400);
+    expect(rejected.body).toMatchObject({
+      status: 400,
+      code: "REVIEW_ALREADY_PENDING",
+    });
+
+    await request(app.getHttpServer())
+      .post(
+        `/internal/applications/versions/${secondVersionId}/review-withdraw`,
+      )
+      .set(ownerHeaders)
+      .expect(200);
+    await expect(
+      request(app.getHttpServer())
+        .get(`/internal/applications/${applicationId}`)
+        .set(ownerHeaders),
+    ).resolves.toMatchObject({
+      body: { status: "published", pendingVersionId: null },
+    });
+    const withdrawnQueue = await request(app.getHttpServer())
+      .get(`/internal/applications/versions/${secondVersionId}/review-queue`)
+      .set(reviewerHeaders)
+      .expect(200);
+    expect(withdrawnQueue.body.status).toBe("completed");
+
+    // 撤回后同一版本可再次提交审核。
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${thirdVersionId}/submit-review`)
       .set(ownerHeaders)
       .expect(200);
   });

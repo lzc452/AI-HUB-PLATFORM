@@ -279,6 +279,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
     expectedStatus: ApplicationRecord["status"];
     status: ApplicationRecord["status"];
     currentVersionId?: string;
+    pendingVersionId?: string | null;
   }) {
     const current = this.applications.get(input.applicationId);
     if (current === undefined) throw new Error("APPLICATION_NOT_FOUND");
@@ -289,6 +290,10 @@ class MemoryApplicationRepository implements ApplicationRepository {
       ...current,
       status: input.status,
       currentVersionId: input.currentVersionId ?? current.currentVersionId,
+      pendingVersionId:
+        input.pendingVersionId === undefined
+          ? current.pendingVersionId
+          : input.pendingVersionId,
     };
     this.applications.set(input.applicationId, updated);
     return updated;
@@ -359,6 +364,15 @@ class MemoryApplicationRepository implements ApplicationRepository {
       claimedByEmployeeId: null,
       claimedAt: null,
     };
+    this.reviewQueue[this.reviewQueue.indexOf(queue)] = updated;
+    return updated;
+  }
+  async completeReviewQueue(applicationVersionId: string) {
+    const queue = this.reviewQueue.find(
+      (candidate) => candidate.applicationVersionId === applicationVersionId,
+    );
+    if (queue === undefined) throw new Error("REVIEW_QUEUE_NOT_FOUND");
+    const updated = { ...queue, status: "completed" as const };
     this.reviewQueue[this.reviewQueue.indexOf(queue)] = updated;
     return updated;
   }
@@ -568,6 +582,29 @@ async function prepareApprovedApplication(
   );
   await configureAllDeliveryChannels(service, application.applicationId);
   return { application, version };
+}
+
+async function preparePublishedApplication(
+  service: ApplicationService,
+): Promise<{
+  application: ApplicationRecord;
+  version: ApplicationVersionRecord;
+}> {
+  const { application, version } = await prepareApprovedApplication(service);
+  await service.publish(owner, version.applicationVersionId);
+  return { application, version };
+}
+
+async function createVersionFor(
+  service: ApplicationService,
+  repository: MemoryApplicationRepository,
+  applicationId: string,
+  version: string,
+  changelog = `Release ${version}`,
+): Promise<ApplicationVersionRecord> {
+  const input = { ...versionInput, version, changelog };
+  registerVerifiedUpload(repository, applicationId, input);
+  return service.createVersion(owner, applicationId, input);
 }
 
 describe("ApplicationService", () => {
@@ -944,6 +981,56 @@ describe("ApplicationService", () => {
       service.listVersions(application.applicationId),
     ).resolves.toHaveLength(2);
     expect(repository.events).toContain("application.rolled_back");
+  });
+
+  it("rejects a second concurrent review submission while one is pending", async () => {
+    const { service, repository } = makeService();
+    const { application } = await preparePublishedApplication(service);
+    const second = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "2.0.0",
+    );
+    await service.submitForReview(owner, second.applicationVersionId);
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({
+      status: "published",
+      pendingVersionId: second.applicationVersionId,
+    });
+    const third = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "3.0.0",
+    );
+    await expect(
+      service.submitForReview(owner, third.applicationVersionId),
+    ).rejects.toThrow("REVIEW_ALREADY_PENDING");
+  });
+
+  it("cancels a pending review and restores the previous state", async () => {
+    const { service, repository } = makeService();
+    const { application } = await preparePublishedApplication(service);
+    const second = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "2.0.0",
+    );
+    await service.submitForReview(owner, second.applicationVersionId);
+
+    const result = await service.cancelPendingReview(
+      owner,
+      second.applicationVersionId,
+    );
+
+    expect(result.status).toBe("published");
+    expect(result.pendingVersionId).toBeNull();
+    const queue = await service.getReviewQueue(second.applicationVersionId);
+    expect(queue.status).toBe("completed");
+    expect(repository.events).toContain("application.review.withdrawn");
   });
 
   it("aggregates the application workspace for the four detail routes", async () => {
