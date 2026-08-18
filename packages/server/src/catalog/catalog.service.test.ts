@@ -62,11 +62,36 @@ const entries: CatalogEntry[] = [
     deprecatedReason: null,
     replacementApplicationId: null,
   },
+  {
+    applicationId: "app-miniprogram",
+    name: "报销助手",
+    summary: "小程序报销",
+    departmentId: "dept-platform",
+    categoryId: "cat-productivity",
+    tagIds: [],
+    trustLabels: ["verified"],
+    currentVersionId: "version-miniprogram",
+    publishedAt: new Date("2026-07-01T00:00:00.000Z"),
+    deliveryChannels: ["mini_program"],
+    likeCount: 3,
+    ratingAverage: 4,
+    myRating: null,
+    likedByMe: false,
+    healthStatus: "healthy",
+    deprecatedReason: null,
+    replacementApplicationId: null,
+  },
 ];
 
 class MemoryCatalogRepository implements CatalogRepository {
   recordedActions: string[] = [];
-  constructor(private readonly visibleEntries = entries) {}
+  constructor(
+    private readonly visibleEntries = entries,
+    private readonly qrAsset: {
+      storageKey: string;
+      mimeType: string;
+    } | null = null,
+  ) {}
 
   async listVisible(
     input: CatalogSearchInput,
@@ -107,11 +132,29 @@ class MemoryCatalogRepository implements CatalogRepository {
     this.recordedActions.push(input.actionType);
   }
 
-  async findDelivery(): Promise<{ entryUrl: string; enabled: boolean } | null> {
-    return { entryUrl: "https://app.company.com", enabled: true };
+  async findDelivery(): Promise<{
+    deliveryId: string;
+    entryUrl: string;
+    enabled: boolean;
+  } | null> {
+    return {
+      deliveryId: "delivery-1",
+      entryUrl: "https://app.company.com",
+      enabled: true,
+    };
   }
 
   async findDeliveryAssetStorageKey(): Promise<string | null> {
+    return null;
+  }
+
+  async findQrAssetForDelivery() {
+    return this.qrAsset;
+  }
+
+  async findApplicationIdForDelivery(deliveryId: string) {
+    // delivery-1 模拟 app-platform 的交付；其余视为不存在。
+    if (deliveryId === "delivery-1") return "app-platform";
     return null;
   }
 
@@ -143,8 +186,11 @@ describe("CatalogService", () => {
     await expect(
       service.list({ actor: employee, sort: "popular", page: 1, pageSize: 20 }),
     ).resolves.toMatchObject({
-      items: [{ applicationId: "app-platform" }],
-      total: 1,
+      items: [
+        { applicationId: "app-platform" },
+        { applicationId: "app-miniprogram" },
+      ],
+      total: 2,
     });
   });
 
@@ -229,5 +275,78 @@ describe("CatalogService", () => {
         actionType: "web_redirect",
       }),
     ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
+  });
+
+  it("resolveDelivery 小程序渠道返回二维码资产地址（qr assetUrl）", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, {
+        storageKey: "qr/reimburse.png",
+        mimeType: "image/png",
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-miniprogram", "mini_program"),
+    ).resolves.toEqual({
+      kind: "qr",
+      assetUrl: "/internal/catalog/deliveries/delivery-1/qr",
+    });
+  });
+
+  it("resolveDelivery 小程序无二维码资产时回退 entryUrl 文本 payload", async () => {
+    const service = new CatalogService(new MemoryCatalogRepository(entries));
+
+    await expect(
+      service.resolveDelivery(employee, "app-miniprogram", "mini_program"),
+    ).resolves.toEqual({
+      kind: "qr",
+      payload: "https://app.company.com",
+    });
+  });
+
+  it("getQrAsset 返回二维码资产存储信息（含应用可见性校验）", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, {
+        storageKey: "qr/reimburse.png",
+        mimeType: "image/png",
+      }),
+    );
+
+    await expect(service.getQrAsset(employee, "delivery-1")).resolves.toEqual({
+      storageKey: "qr/reimburse.png",
+      mimeType: "image/png",
+    });
+  });
+
+  it("getQrAsset 拒绝受众外的员工访问", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, {
+        storageKey: "qr/reimburse.png",
+        mimeType: "image/png",
+      }),
+    );
+
+    await expect(
+      service.getQrAsset(outsideEmployee, "delivery-1"),
+    ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
+  });
+
+  it("getQrAsset 交付不存在或资产被删时抛 CATALOG_DELIVERY_ASSET_NOT_FOUND", async () => {
+    const withAsset = new CatalogService(
+      new MemoryCatalogRepository(entries, {
+        storageKey: "qr/reimburse.png",
+        mimeType: "image/png",
+      }),
+    );
+    const withoutAsset = new CatalogService(
+      new MemoryCatalogRepository(entries),
+    );
+
+    await expect(
+      withAsset.getQrAsset(employee, "delivery-unknown"),
+    ).rejects.toThrow("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    await expect(
+      withoutAsset.getQrAsset(employee, "delivery-1"),
+    ).rejects.toThrow("CATALOG_DELIVERY_ASSET_NOT_FOUND");
   });
 });

@@ -415,16 +415,62 @@ export class KyselyCatalogRepository implements CatalogRepository {
   async findDelivery(
     applicationId: string,
     channel: DeliveryChannel,
-  ): Promise<{ entryUrl: string; enabled: boolean } | null> {
+  ): Promise<{
+    deliveryId: string;
+    entryUrl: string;
+    enabled: boolean;
+  } | null> {
     const row = await this.db
       .selectFrom("application_deliveries")
-      .select(["entry_url", "enabled"])
+      .select(["delivery_id", "entry_url", "enabled"])
       .where("application_id", "=", applicationId)
       .where("channel", "=", channel)
       .executeTakeFirst();
     return row === undefined
       ? null
-      : { entryUrl: row.entry_url, enabled: row.enabled };
+      : {
+          deliveryId: row.delivery_id,
+          entryUrl: row.entry_url,
+          enabled: row.enabled,
+        };
+  }
+
+  async findQrAssetForDelivery(
+    deliveryId: string,
+  ): Promise<{ storageKey: string; mimeType: string } | null> {
+    const row = await this.db
+      .selectFrom("delivery_targets as target")
+      .innerJoin(
+        "application_assets as asset",
+        "asset.asset_id",
+        "target.qr_code_asset_id",
+      )
+      .innerJoin(
+        "application_deliveries as delivery",
+        "delivery.delivery_id",
+        "target.delivery_id",
+      )
+      .select(["asset.storage_key", "asset.mime_type"])
+      .where("target.delivery_id", "=", deliveryId)
+      .where("target.kind", "=", "miniprogram")
+      .where("target.enabled", "=", true)
+      .where("delivery.enabled", "=", true)
+      .where("asset.scan_status", "=", "passed")
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : { storageKey: row.storage_key, mimeType: row.mime_type };
+  }
+
+  async findApplicationIdForDelivery(
+    deliveryId: string,
+  ): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("application_deliveries")
+      .select("application_id")
+      .where("delivery_id", "=", deliveryId)
+      .executeTakeFirst();
+    return row?.application_id ?? null;
   }
 
   async findDeliveryAssetStorageKey(

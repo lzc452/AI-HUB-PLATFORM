@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { Modal } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogEntry } from "@ai-hub/contracts";
@@ -11,8 +12,10 @@ const {
   catalogEntryState,
   commentMutateAsync,
   commentsState,
+  downloadDeliveryAsset,
   feedbackMutate,
   recommendedState,
+  resolveDelivery,
 } = vi.hoisted(() => {
   const catalogEntryState = {
     data: undefined as CatalogEntry | undefined,
@@ -104,8 +107,10 @@ const {
     catalogEntryState,
     commentMutateAsync,
     commentsState,
+    downloadDeliveryAsset: vi.fn(),
     feedbackMutate,
     recommendedState,
+    resolveDelivery: vi.fn(),
   };
 });
 
@@ -127,6 +132,11 @@ vi.mock("../../modules/auth/useIdentity", () => ({
     isPending: false,
   }),
   useEmployees: () => ({ data: [], isPending: false }),
+}));
+
+vi.mock("../../modules/marketplace/marketplace.client", () => ({
+  downloadDeliveryAsset,
+  resolveDelivery,
 }));
 
 vi.mock("../../modules/interaction/useInteraction", () => ({
@@ -202,8 +212,38 @@ describe("MarketplaceDetailPage", () => {
     catalogEntryState.error = undefined;
     catalogEntryState.isError = false;
     catalogEntryState.isPending = false;
+    resolveDelivery.mockReset();
+    downloadDeliveryAsset.mockReset();
+    // Modal.info 等静态方法挂载在独立 React root，cleanup 不会卸载，需显式销毁。
+    Modal.destroyAll();
     globalThis.window.history.pushState({}, "", "/marketplace/app-ocr");
   });
+
+  /** 打开"立即使用"下拉并点击"小程序"，触发交付解析后返回 Modal 内容。 */
+  async function resolveMiniProgram(
+    result: Awaited<ReturnType<typeof resolveDelivery>>,
+  ) {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      deliveryChannels: ["web", "mini_program"],
+    };
+    resolveDelivery.mockResolvedValue(result);
+    render(<App />);
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    // 相关推荐卡片也有"立即使用"按钮，这里精确匹配头部下拉触发器。
+    fireEvent.click(
+      screen.getByRole("button", { name: "立即使用（Web应用）" }),
+    );
+    // 菜单项 <li role="menuitem"> 内还包了一层承载 onClick 的 <span role="menuitem">，
+    // 点击内层 span 才会触发 onResolve。
+    const menuItems = await screen.findAllByRole("menuitem", {
+      name: "小程序",
+    });
+    const clickableItem = menuItems.find(
+      (element) => element.tagName === "SPAN",
+    );
+    fireEvent.click(clickableItem!);
+  }
 
   it("renders the application header and description sections", async () => {
     render(<App />);
@@ -432,5 +472,54 @@ describe("MarketplaceDetailPage", () => {
       status: "resolved",
       resolution: "已排期处理",
     });
+  });
+
+  it("小程序交付解析返回 assetUrl 时弹窗渲染二维码图片", async () => {
+    await resolveMiniProgram({
+      kind: "qr",
+      assetUrl: "/internal/catalog/deliveries/delivery-1/qr",
+    });
+
+    expect(
+      await screen.findByText("请使用企业微信 / 对应 App 扫码"),
+    ).toBeInTheDocument();
+    const image = screen.getByAltText("小程序二维码");
+    expect(image).toHaveAttribute(
+      "src",
+      "/internal/catalog/deliveries/delivery-1/qr",
+    );
+    // 不再把 URL 当纯文本展示。
+    expect(
+      screen.queryByText("/internal/catalog/deliveries/delivery-1/qr"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("小程序无二维码资产时显示提示文本而非原始 URL", async () => {
+    await resolveMiniProgram({
+      kind: "qr",
+      payload: "https://wx.miniapp.example/baoxiao",
+    });
+
+    expect(
+      await screen.findByText("该小程序暂无二维码，请联系发布者"),
+    ).toBeInTheDocument();
+    expect(screen.queryByAltText("小程序二维码")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("https://wx.miniapp.example/baoxiao"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("二维码图片加载失败时显示回退提示", async () => {
+    await resolveMiniProgram({
+      kind: "qr",
+      assetUrl: "/internal/catalog/deliveries/delivery-1/qr",
+    });
+
+    fireEvent.error(await screen.findByAltText("小程序二维码"));
+
+    expect(
+      await screen.findByText("二维码图片加载失败，请稍后重试"),
+    ).toBeInTheDocument();
+    expect(screen.queryByAltText("小程序二维码")).not.toBeInTheDocument();
   });
 });

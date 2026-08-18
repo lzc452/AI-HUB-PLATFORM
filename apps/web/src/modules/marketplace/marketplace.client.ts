@@ -81,10 +81,11 @@ export function saveRiskDescription(
 
 export type DeliveryChannel = "web" | "desktop" | "mobile" | "mini_program";
 
+/** qr：有二维码资产时携带 assetUrl（渲染 <img>）；无资产时后端回退 payload（entryUrl 文本）。 */
 export type DeliveryResolveResult =
   | { kind: "web_redirect"; url: string }
   | { kind: "download"; url: string; fileName: string | null }
-  | { kind: "qr"; payload: string }
+  | { kind: "qr"; assetUrl?: string; payload?: string }
   | { kind: "unavailable"; reason: string };
 
 export function resolveDelivery(

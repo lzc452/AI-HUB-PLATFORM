@@ -97,11 +97,30 @@ class ApiCatalogRepository implements CatalogRepository {
     return [];
   }
 
-  async findDelivery(): Promise<{ entryUrl: string; enabled: boolean } | null> {
-    return { entryUrl: "https://app.company.com", enabled: true };
+  async findDelivery(): Promise<{
+    deliveryId: string;
+    entryUrl: string;
+    enabled: boolean;
+  } | null> {
+    return {
+      deliveryId: "delivery-1",
+      entryUrl: "https://app.company.com",
+      enabled: true,
+    };
   }
 
   async findDeliveryAssetStorageKey(): Promise<string | null> {
+    return null;
+  }
+
+  async findQrAssetForDelivery(): Promise<{
+    storageKey: string;
+    mimeType: string;
+  } | null> {
+    return null;
+  }
+
+  async findApplicationIdForDelivery(): Promise<string | null> {
     return null;
   }
 

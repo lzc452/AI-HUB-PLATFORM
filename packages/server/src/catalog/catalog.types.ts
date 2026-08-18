@@ -88,9 +88,7 @@ export interface CatalogRepository {
     applicationId: string,
   ): Promise<CatalogEntry | null>;
   /** 应用归属信息（与发布状态无关），用于 owner/maintainer 管理自身应用的可见性判定。 */
-  findApplicationOwner(
-    applicationId: string,
-  ): Promise<{
+  findApplicationOwner(applicationId: string): Promise<{
     ownerEmployeeId: string;
     maintainerEmployeeId: string | null;
   } | null>;
@@ -106,11 +104,17 @@ export interface CatalogRepository {
   findDelivery(
     applicationId: string,
     channel: DeliveryChannel,
-  ): Promise<{ entryUrl: string; enabled: boolean } | null>;
+  ): Promise<{ deliveryId: string; entryUrl: string; enabled: boolean } | null>;
   findDeliveryAssetStorageKey(
     applicationId: string,
     channel: DeliveryChannel,
   ): Promise<string | null>;
+  /** delivery_targets.qr_code_asset_id → application_assets 记录（含存储键与 mime）。 */
+  findQrAssetForDelivery(
+    deliveryId: string,
+  ): Promise<{ storageKey: string; mimeType: string } | null>;
+  /** 交付记录归属的应用（用于二维码端点先做应用可见性校验）。 */
+  findApplicationIdForDelivery(deliveryId: string): Promise<string | null>;
   getRiskDescription(applicationId: string): Promise<string | null>;
   upsertRiskDescription(
     applicationId: string,
@@ -118,9 +122,11 @@ export interface CatalogRepository {
   ): Promise<void>;
 }
 
-/** 交付解析结果：不同渠道返回不同的可执行目标。 */
+/** 交付解析结果：不同渠道返回不同的可执行目标。
+ * qr：有二维码资产时返回 assetUrl（前端渲染 <img>）；无资产时回退
+ * payload（entryUrl 文本，保持兼容）。 */
 export type DeliveryResolveResult =
   | { kind: "web_redirect"; url: string }
   | { kind: "download"; url: string; fileName: string | null }
-  | { kind: "qr"; payload: string }
+  | { kind: "qr"; assetUrl?: string; payload?: string }
   | { kind: "unavailable"; reason: string };

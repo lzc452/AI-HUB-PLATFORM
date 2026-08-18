@@ -115,7 +115,9 @@ export class CatalogController {
       page: this.parsePositive(query.page, 1),
       pageSize: this.parsePositive(query.pageSize, 20),
       ...(query.query === undefined ? {} : { query: query.query }),
-      ...(query.categoryId === undefined ? {} : { categoryId: query.categoryId }),
+      ...(query.categoryId === undefined
+        ? {}
+        : { categoryId: query.categoryId }),
       ...(query.applicationType === undefined
         ? {}
         : { applicationType: query.applicationType }),
@@ -228,6 +230,41 @@ export class CatalogController {
         applicationId,
         channel,
       ),
+    );
+  }
+
+  @Get("deliveries/:deliveryId/qr")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({
+    summary: "小程序二维码图片（流式）",
+    description:
+      "按交付 ID 返回二维码图片流（交付目标配置的 qr_code_asset_id 资产）；未配置或被删时 404。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "deliveryId", description: "交付 ID" })
+  @ApiOkResponse({ description: "二维码图片流（image/png）" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getDeliveryQrAsset(
+    @Param("deliveryId") deliveryId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId);
+    const asset = await this.call(() =>
+      this.catalog.getQrAsset(actor, deliveryId),
+    );
+    if (this.storage === undefined) {
+      throw new NotFoundException("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    const stream = await this.storage.openReadStream(asset.storageKey);
+    if (stream === null) {
+      throw new NotFoundException("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    return new StreamableFile(
+      stream instanceof Readable
+        ? stream
+        : Readable.from(stream as AsyncIterable<Uint8Array>),
+      { type: asset.mimeType || "image/png" },
     );
   }
 
@@ -377,6 +414,9 @@ export class CatalogController {
       const code =
         error instanceof Error ? error.message : "CATALOG_REQUEST_FAILED";
       if (code === "CATALOG_APPLICATION_NOT_FOUND") {
+        throw new NotFoundException(code);
+      }
+      if (code === "CATALOG_DELIVERY_ASSET_NOT_FOUND") {
         throw new NotFoundException(code);
       }
       if (code === "NOT_AUTHORIZED") throw new ForbiddenException(code);

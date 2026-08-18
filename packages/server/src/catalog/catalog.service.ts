@@ -137,6 +137,16 @@ export class CatalogService {
       return { kind: "web_redirect", url: delivery.entryUrl };
     }
     if (channel === "mini_program") {
+      const qrAsset = await this.repository.findQrAssetForDelivery(
+        delivery.deliveryId,
+      );
+      if (qrAsset !== null) {
+        return {
+          kind: "qr",
+          assetUrl: `/internal/catalog/deliveries/${encodeURIComponent(delivery.deliveryId)}/qr`,
+        };
+      }
+      // 无二维码资产时回退 entryUrl 文本（保持既有兼容行为）。
       return { kind: "qr", payload: delivery.entryUrl };
     }
     const storageKey = await this.repository.findDeliveryAssetStorageKey(
@@ -173,6 +183,24 @@ export class CatalogService {
       throw new Error("CATALOG_DELIVERY_ASSET_NOT_FOUND");
     }
     return storageKey;
+  }
+
+  /** 按交付 ID 返回二维码资产的存储信息（含应用可见性校验）。 */
+  async getQrAsset(
+    actor: ActorContext,
+    deliveryId: string,
+  ): Promise<{ storageKey: string; mimeType: string }> {
+    const applicationId =
+      await this.repository.findApplicationIdForDelivery(deliveryId);
+    if (applicationId === null) {
+      throw new Error("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    await this.getDetail(actor, applicationId);
+    const asset = await this.repository.findQrAssetForDelivery(deliveryId);
+    if (asset === null) {
+      throw new Error("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+    }
+    return asset;
   }
 
   async getRiskDescription(

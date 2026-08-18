@@ -2,6 +2,36 @@ import { Card, message, Modal, Skeleton, Tabs } from "antd";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
+/** 小程序二维码弹窗内容：有资产地址渲染 <img>，否则（无资产或加载失败）显示文本提示。 */
+function MiniProgramQrContent({ assetUrl }: { assetUrl?: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const fallbackText =
+    assetUrl === undefined
+      ? "该小程序暂无二维码，请联系发布者"
+      : "二维码图片加载失败，请稍后重试";
+  if (imageFailed || assetUrl === undefined) {
+    return (
+      <div className="py-2 text-center">
+        <div>请使用企业微信 / 对应 App 扫码</div>
+        <div className="mt-2 break-all text-xs text-[#595959]">
+          {fallbackText}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="py-2 text-center">
+      <div>请使用企业微信 / 对应 App 扫码</div>
+      <img
+        alt="小程序二维码"
+        className="mx-auto mt-3 h-48 w-48 object-contain"
+        onError={() => setImageFailed(true)}
+        src={assetUrl}
+      />
+    </div>
+  );
+}
+
 import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
@@ -136,12 +166,11 @@ export default function MarketplaceDetailPage() {
       } else if (result.kind === "qr") {
         Modal.info({
           content: (
-            <div className="py-2 text-center">
-              <div>请使用企业微信 / 对应 App 扫码</div>
-              <div className="mt-2 break-all text-xs text-[#595959]">
-                {result.payload}
-              </div>
-            </div>
+            <MiniProgramQrContent
+              {...(result.assetUrl !== undefined
+                ? { assetUrl: result.assetUrl }
+                : {})}
+            />
           ),
           title: "扫码使用",
         });
