@@ -43,6 +43,19 @@ const STATUS_DETAILS: Readonly<
 
 const SAFE_DOMAIN_CODE = /^[A-Z][A-Z0-9_]{2,63}$/u;
 
+// 对 HttpException.detail 做 HTML 实体转义后再回显（中危-5 防御）。
+// 响应体为 application/problem+json，浏览器不会直接执行；但若某前端/客户端
+// 误把 message 当作 HTML 渲染，转义可确保任何 <script>/事件处理器均被中和。
+// 同时避免把内部路径、用户可控片段原样外泄为可执行载荷。
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function httpExceptionCode(exception: HttpException, fallback: string): string {
   const response = exception.getResponse();
   if (typeof response === "string" && SAFE_DOMAIN_CODE.test(response)) {
@@ -118,12 +131,13 @@ export function toProblemDetails(
       code: "HTTP_ERROR",
     };
     const detail = httpExceptionDetail(exception);
+    const safeDetail = detail !== undefined ? escapeHtml(detail) : undefined;
     return {
       type: "about:blank",
       title: details.title,
       status,
       code: httpExceptionCode(exception, details.code),
-      message: detail ?? details.title,
+      message: safeDetail ?? details.title,
       traceId,
     };
   }

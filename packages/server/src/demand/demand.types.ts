@@ -291,7 +291,12 @@ export interface DemandRepository {
     eventType: string;
     details?: unknown;
   }): Promise<void>;
-  emitOutbox(input: { demandId: string; eventType: string }): Promise<void>;
+  emitOutbox(input: {
+    demandId: string;
+    eventType: string;
+    /** 稳定业务幂等键；传入后同一业务事件重试将去重（低危-6/7）。缺失时回退随机键。 */
+    idempotencyKey?: string;
+  }): Promise<void>;
 }
 
 export interface DemandCollaboratorRecord {

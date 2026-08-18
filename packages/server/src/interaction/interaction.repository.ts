@@ -294,6 +294,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
   async emitOutbox(input: {
     applicationId: string;
     eventType: string;
+    idempotencyKey?: string;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -302,7 +303,9 @@ export class KyselyInteractionRepository implements InteractionRepository {
         aggregate_type: "application",
         aggregate_id: input.applicationId,
         payload: { applicationId: input.applicationId },
-        idempotency_key: `${input.eventType}:${input.applicationId}:${randomUUID()}`,
+        idempotency_key:
+          input.idempotencyKey ??
+          `${input.eventType}:${input.applicationId}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
         available_at: new Date(),
@@ -311,6 +314,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
         last_error: null,
         completed_at: null,
       })
+      .onConflict((oc) => oc.column("idempotency_key").doNothing())
       .execute();
   }
 

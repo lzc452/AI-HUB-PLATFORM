@@ -49,6 +49,7 @@ export class FeedbackService {
       await repository.emitOutbox({
         applicationId: input.applicationId,
         eventType: "feedback.created",
+        idempotencyKey: `feedback-created:${record.feedbackId}`,
       });
       await this.analyticsEvents?.record(actor, {
         eventName: "feedback_submitted",
@@ -138,6 +139,7 @@ export class FeedbackService {
       await repository.emitOutbox({
         applicationId: input.applicationId,
         eventType: "feedback.status.updated",
+        idempotencyKey: `feedback-status-updated:${input.feedbackId}:${input.status}`,
       });
       if (terminal) {
         await this.analyticsEvents?.record(actor, {

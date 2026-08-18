@@ -1173,6 +1173,7 @@ export class KyselyDemandRepository implements DemandRepository {
   async emitOutbox(input: {
     demandId: string;
     eventType: string;
+    idempotencyKey?: string;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -1181,7 +1182,9 @@ export class KyselyDemandRepository implements DemandRepository {
         aggregate_type: "ai_demand",
         aggregate_id: input.demandId,
         payload: { demandId: input.demandId },
-        idempotency_key: `${input.eventType}:${input.demandId}:${randomUUID()}`,
+        idempotency_key:
+          input.idempotencyKey ??
+          `${input.eventType}:${input.demandId}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
         available_at: new Date(),
@@ -1190,6 +1193,7 @@ export class KyselyDemandRepository implements DemandRepository {
         last_error: null,
         completed_at: null,
       })
+      .onConflict((oc) => oc.column("idempotency_key").doNothing())
       .execute();
   }
 
