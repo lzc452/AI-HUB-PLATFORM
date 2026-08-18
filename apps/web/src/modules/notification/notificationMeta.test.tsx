@@ -4,7 +4,7 @@ import type { NotificationRecord } from "./notification.client";
 import { resolveNotificationMeta } from "./notificationMeta";
 
 /**
- * 20 个权威通知类型 → 期望前端分类。
+ * 21 个权威通知类型 → 期望前端分类。
  * 用于验证「前端完整展示」：每个后端可产生的通知类型都必须落到专属分类，
  * 不得落入兜底分支「系统通知」。
  */
@@ -14,12 +14,12 @@ const CASES: ReadonlyArray<{
   expectedCategory: string;
 }> = [
   {
-    eventType: "application.review_requested",
+    eventType: "application.review.requested",
     message: "应用「智能排班助手」已提交评审，请尽快审核。",
     expectedCategory: "审核相关",
   },
   {
-    eventType: "application.review_decided",
+    eventType: "application.review.decided",
     message: "您提交的应用「智能排班助手」评审已通过。",
     expectedCategory: "审核相关",
   },
@@ -66,6 +66,11 @@ const CASES: ReadonlyArray<{
   {
     eventType: "demand.merged",
     message: "需求「智能会议纪要生成」已合并至主需求。",
+    expectedCategory: "创新需求",
+  },
+  {
+    eventType: "demand.reviewed",
+    message: "需求「智能会议纪要生成」的审核结论：reject。",
     expectedCategory: "创新需求",
   },
   {
@@ -129,8 +134,8 @@ function recordOf(eventType: string, message: string): NotificationRecord {
 }
 
 describe("resolveNotificationMeta — 前端展示完整性", () => {
-  it("覆盖 20 个权威通知类型", () => {
-    expect(CASES).toHaveLength(20);
+  it("覆盖 21 个权威通知类型", () => {
+    expect(CASES).toHaveLength(21);
   });
 
   for (const { eventType, message, expectedCategory } of CASES) {

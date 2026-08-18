@@ -85,6 +85,7 @@ function applicationReviewRoute(aggregateId: string): string {
 /** 创新需求子类型 → 动词（用于动态标题）。 */
 const DEMAND_VERB: Readonly<Record<string, string>> = Object.freeze({
   "demand.submitted": "已提交",
+  "demand.reviewed": "已审核",
   "demand.claimed": "已被认领",
   "demand.collaborator_assigned": "已分配协作者",
   "demand.progress_updated": "进度已更新",
@@ -133,19 +134,19 @@ export function resolveNotificationMeta(
 
   // ── 审核相关：应用评审/发布/撤回等生命周期 ────────────────────────────────
   if (
-    eventType.includes("review_requested") ||
-    eventType.includes("review_decided") ||
-    eventType.includes("review_approved") ||
+    eventType.includes("review.requested") ||
+    eventType.includes("review.decided") ||
+    eventType.includes("review.approved") ||
     eventType.includes("application.published") ||
     eventType.includes("withdrawn")
   ) {
     const appName = extractQuoted(message, "您的应用");
     let title: string;
     let lead: string;
-    if (eventType.includes("review_requested")) {
+    if (eventType.includes("review.requested")) {
       title = `应用「${appName}」待您审核`;
       lead = `应用「${appName}」已提交评审，等待您完成审核。`;
-    } else if (eventType.includes("review_decided")) {
+    } else if (eventType.includes("review.decided")) {
       title = `应用「${appName}」评审结论已出`;
       lead = `您提交的应用「${appName}」评审已结束，请查看结论。`;
     } else if (eventType.includes("withdrawn")) {
@@ -188,7 +189,6 @@ export function resolveNotificationMeta(
 
   // ── 评论互动：评论/回复/评分 ───────────────────────────────────────────────
   if (
-    eventType.includes("reviewed") ||
     eventType.includes("comment") ||
     eventType.includes("reply") ||
     eventType.includes("rating")
