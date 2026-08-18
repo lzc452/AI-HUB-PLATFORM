@@ -1,5 +1,21 @@
-import type { ApplicationStatus, DeliveryChannel } from "@ai-hub/contracts";
-import { Alert, Button, Empty, Input, Spin, Switch, Tag } from "antd";
+import type {
+  ApplicationStatus,
+  DeliveryChannel,
+  DeliveryTarget,
+} from "@ai-hub/contracts";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Empty,
+  Input,
+  message,
+  Select,
+  Spin,
+  Switch,
+  Tag,
+  Upload,
+} from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -14,12 +30,15 @@ import {
   useConfigureDelivery,
   useSubmitApplicationReview,
 } from "../../modules/application/useApplication";
+import { uploadAsset } from "../../modules/publishing/publishing.client";
 import { MessageError } from "../../shared/ui/message";
 
 interface DeliveryDraft {
   entryUrl: string;
   minClientVersion: string;
   enabled: boolean;
+  /** 交付目标（OS/平台/小程序渠道）；保存时随配置一并提交。 */
+  targets: DeliveryTarget[];
 }
 
 type DeliveryDrafts = Record<DeliveryChannel, DeliveryDraft>;
@@ -37,10 +56,20 @@ const channels: ReadonlyArray<{
 
 function emptyDeliveryDrafts(): DeliveryDrafts {
   return {
-    web: { enabled: false, entryUrl: "", minClientVersion: "" },
-    desktop: { enabled: false, entryUrl: "", minClientVersion: "" },
-    mobile: { enabled: false, entryUrl: "", minClientVersion: "" },
-    mini_program: { enabled: false, entryUrl: "", minClientVersion: "" },
+    web: { enabled: false, entryUrl: "", minClientVersion: "", targets: [] },
+    desktop: {
+      enabled: false,
+      entryUrl: "",
+      minClientVersion: "",
+      targets: [],
+    },
+    mobile: { enabled: false, entryUrl: "", minClientVersion: "", targets: [] },
+    mini_program: {
+      enabled: false,
+      entryUrl: "",
+      minClientVersion: "",
+      targets: [],
+    },
   };
 }
 
@@ -49,6 +78,7 @@ function toDeliveryDraft(delivery: DeliveryRecord): DeliveryDraft {
     enabled: delivery.enabled,
     entryUrl: delivery.entryUrl,
     minClientVersion: delivery.minClientVersion ?? "",
+    targets: delivery.targets ?? [],
   };
 }
 
@@ -117,6 +147,10 @@ export default function ApplicationDeliveryPage() {
           enabled: activeDraft.enabled,
           entryUrl: activeDraft.entryUrl.trim(),
           minClientVersion: activeDraft.minClientVersion.trim() || null,
+          // 未配置目标时不携带该字段（web 渠道不支持 targets）。
+          ...(activeDraft.targets.length > 0
+            ? { targets: activeDraft.targets }
+            : {}),
         },
       });
       setDrafts((current) => ({
@@ -174,6 +208,7 @@ export default function ApplicationDeliveryPage() {
           </section>
 
           <DeliveryEditor
+            applicationId={applicationId ?? ""}
             assets={assets.query.data ?? []}
             channel={activeChannel}
             draft={activeDraft}
@@ -255,7 +290,7 @@ export default function ApplicationDeliveryPage() {
               <strong className="font-medium text-[#374151]">2 GB</strong>
             </div>
             <div className="text-[12px] leading-5 text-[#8a94a6]">
-              桌面端和移动端的资产绑定写接口尚未提供；当前入口地址作为下载或跳转兜底。
+              桌面端/移动端已支持目标系统与平台元数据；安装包资产绑定写接口尚未提供，入口地址作为下载或跳转兜底。
             </div>
           </SideCard>
         </aside>
@@ -301,11 +336,13 @@ function getReviewReadiness(
 }
 
 function DeliveryEditor({
+  applicationId,
   assets,
   channel,
   draft,
   onChange,
 }: {
+  applicationId: string;
   assets: AssetRecord[];
   channel: DeliveryChannel;
   draft: DeliveryDraft;
@@ -319,6 +356,10 @@ function DeliveryEditor({
       : needsClientVersion
         ? "下载或启动地址"
         : "企业内网地址";
+
+  const commitTargets = (targets: DeliveryTarget[]) => {
+    onChange({ targets });
+  };
 
   return (
     <section className="app-admin-card overflow-hidden">
@@ -363,6 +404,13 @@ function DeliveryEditor({
           </Field>
         ) : null}
       </div>
+      <DeliveryTargetsEditor
+        applicationId={applicationId}
+        assets={assets}
+        channel={channel}
+        onChange={commitTargets}
+        targets={draft.targets}
+      />
       {needsClientVersion ? (
         <div className="border-t border-[#edf0f5] px-5 py-4">
           <div className="mb-2 text-[13px] font-medium text-[#374151]">
@@ -383,6 +431,200 @@ function DeliveryEditor({
         </div>
       ) : null}
     </section>
+  );
+}
+
+const MINI_PROGRAM_PLATFORMS: ReadonlyArray<{
+  value: "wechat" | "dingtalk" | "alipay";
+  label: string;
+}> = [
+  { value: "wechat", label: "微信" },
+  { value: "dingtalk", label: "钉钉" },
+  { value: "alipay", label: "支付宝" },
+];
+
+/** 交付目标编辑（desktop/mobile 的 OS/平台多选；mini_program 的平台 + 二维码上传）。 */
+function DeliveryTargetsEditor({
+  applicationId,
+  assets,
+  channel,
+  targets,
+  onChange,
+}: {
+  applicationId: string;
+  assets: AssetRecord[];
+  channel: DeliveryChannel;
+  targets: DeliveryTarget[];
+  onChange: (targets: DeliveryTarget[]) => void;
+}) {
+  if (channel === "desktop" || channel === "mobile") {
+    const isDesktop = channel === "desktop";
+    const options = isDesktop
+      ? [
+          { value: "windows", label: "Windows" },
+          { value: "macos", label: "macOS" },
+        ]
+      : [
+          { value: "android", label: "Android" },
+          { value: "ios", label: "iOS" },
+        ];
+    const selected = targets.flatMap((target) => {
+      if (isDesktop) {
+        return target.kind === "desktop" ? [target.os] : [];
+      }
+      return target.kind === "mobile" ? [target.platform] : [];
+    });
+    return (
+      <div className="border-t border-[#edf0f5] px-5 py-4">
+        <div className="mb-2 text-[13px] font-medium text-[#374151]">
+          目标{isDesktop ? "系统" : "平台"}（保存时随配置一并提交）
+        </div>
+        <Select
+          aria-label={isDesktop ? "目标系统" : "目标平台"}
+          mode="multiple"
+          placeholder={
+            isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
+          }
+          options={options}
+          value={selected}
+          onChange={(values: string[]) =>
+            onChange(
+              values.map((value) =>
+                isDesktop
+                  ? {
+                      kind: "desktop",
+                      os: value as "windows" | "macos",
+                      arch: null,
+                    }
+                  : {
+                      kind: "mobile",
+                      platform: value as "android" | "ios",
+                      arch: null,
+                    },
+              ),
+            )
+          }
+          style={{ width: 320 }}
+        />
+      </div>
+    );
+  }
+  if (channel !== "mini_program") {
+    return null;
+  }
+
+  type MiniProgramTarget = Extract<DeliveryTarget, { kind: "miniprogram" }>;
+  const patch = (
+    platform: "wechat" | "dingtalk" | "alipay",
+    update: Partial<MiniProgramTarget>,
+  ) => {
+    onChange(
+      targets.map((target) =>
+        target.kind === "miniprogram" && target.platform === platform
+          ? { ...target, ...update }
+          : target,
+      ),
+    );
+  };
+
+  return (
+    <div className="border-t border-[#edf0f5] px-5 py-4">
+      <div className="mb-2 text-[13px] font-medium text-[#374151]">
+        小程序平台与二维码（保存时校验二维码内容格式）
+      </div>
+      <div className="flex flex-col gap-3">
+        {MINI_PROGRAM_PLATFORMS.map(({ value, label }) => {
+          const target = targets.find(
+            (item): item is DeliveryTarget & { kind: "miniprogram" } =>
+              item.kind === "miniprogram" && item.platform === value,
+          );
+          return (
+            <div
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-[#edf0f5] px-3 py-2"
+              key={value}
+            >
+              <Checkbox
+                aria-label={`${label}平台`}
+                checked={target !== undefined}
+                onChange={(event) => {
+                  if (event.target.checked) {
+                    onChange([
+                      ...targets,
+                      {
+                        kind: "miniprogram",
+                        platform: value,
+                        appId: "",
+                        qrCodeAssetId: "",
+                        versionNote: null,
+                        enabled: true,
+                      },
+                    ]);
+                  } else {
+                    onChange(
+                      targets.filter(
+                        (item) =>
+                          !(
+                            item.kind === "miniprogram" &&
+                            item.platform === value
+                          ),
+                      ),
+                    );
+                  }
+                }}
+              >
+                {label}
+              </Checkbox>
+              {target !== undefined ? (
+                <>
+                  <Input
+                    aria-label={`${label} AppId`}
+                    placeholder="AppId（留空则使用二维码内容）"
+                    value={target.appId}
+                    onChange={(event) =>
+                      patch(value, { appId: event.target.value })
+                    }
+                    style={{ width: 200 }}
+                  />
+                  <Upload
+                    maxCount={1}
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                      void uploadAsset(applicationId, "qr", file as File)
+                        .then((asset) =>
+                          patch(value, { qrCodeAssetId: asset.assetId }),
+                        )
+                        .catch((error: unknown) => {
+                          message.error(
+                            `二维码上传失败：${
+                              error instanceof Error
+                                ? error.message
+                                : "上传服务或存储配置异常"
+                            }`,
+                          );
+                        });
+                      return false;
+                    }}
+                  >
+                    <Button size="small">
+                      {target.qrCodeAssetId ? "重新上传二维码" : "上传二维码"}
+                    </Button>
+                  </Upload>
+                  {target.qrCodeAssetId ? (
+                    <Tag color="success">二维码已上传</Tag>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      {assets.length === 0 ? (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="暂无已上传资产；二维码需先在小程序平台选择后上传"
+        />
+      ) : null}
+    </div>
   );
 }
 

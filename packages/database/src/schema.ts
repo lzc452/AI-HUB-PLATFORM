@@ -258,6 +258,20 @@ export interface ApplicationArtifactUploadsTable {
   created_at: ColumnType<Date, Date | undefined, never>;
 }
 
+export interface DeliveryTargetsTable {
+  delivery_target_id: Generated<string>;
+  delivery_id: string;
+  kind: "desktop" | "mobile" | "miniprogram";
+  os: "windows" | "macos" | null;
+  platform: "android" | "ios" | "wechat" | "dingtalk" | "alipay" | null;
+  arch: string | null;
+  app_id: string | null;
+  qr_code_asset_id: string | null;
+  version_note: string | null;
+  enabled: boolean;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface ApplicationDeliveryAssetsTable {
   delivery_id: string;
   platform: "web" | "desktop" | "mobile" | "mini_program";
@@ -739,6 +753,7 @@ export interface DatabaseSchema {
   application_assets: ApplicationAssetsTable;
   application_artifact_uploads: ApplicationArtifactUploadsTable;
   application_delivery_assets: ApplicationDeliveryAssetsTable;
+  delivery_targets: DeliveryTargetsTable;
   application_version_snapshots: ApplicationVersionSnapshotsTable;
   application_validation_checks: ApplicationValidationChecksTable;
   application_reviews: ApplicationReviewsTable;

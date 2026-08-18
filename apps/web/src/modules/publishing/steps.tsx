@@ -3,6 +3,7 @@ import { Controller, useFormContext, useWatch } from "react-hook-form";
 import type { FieldValues } from "react-hook-form";
 import {
   Button,
+  Checkbox,
   Descriptions,
   Form,
   Input,
@@ -43,6 +44,47 @@ const APPLICATION_TYPE_LABELS: Record<string, string> = {
   mini_program: "小程序",
 };
 
+const CHANNEL_BY_TYPE: Record<
+  string,
+  "web" | "desktop" | "mobile" | "mini_program"
+> = {
+  web_app: "web",
+  desktop_app: "desktop",
+  mobile_app: "mobile",
+  mini_program: "mini_program",
+};
+
+const MINI_PROGRAM_PLATFORMS: ReadonlyArray<{
+  value: "wechat" | "dingtalk" | "alipay";
+  label: string;
+}> = [
+  { value: "wechat", label: "微信" },
+  { value: "dingtalk", label: "钉钉" },
+  { value: "alipay", label: "支付宝" },
+];
+
+/** 表单内的交付目标形状（与后端 DeliveryTarget 对齐，宽松便于分步编辑）。 */
+type TargetLike = {
+  kind: "desktop" | "mobile" | "miniprogram";
+  os?: "windows" | "macos";
+  platform?: "android" | "ios" | "wechat" | "dingtalk" | "alipay";
+  arch?: string | null;
+  appId?: string;
+  qrCodeAssetId?: string;
+  versionNote?: string | null;
+  enabled?: boolean;
+};
+
+const DESKTOP_OS_OPTIONS = [
+  { value: "windows", label: "Windows" },
+  { value: "macos", label: "macOS" },
+];
+
+const MOBILE_PLATFORM_OPTIONS = [
+  { value: "android", label: "Android" },
+  { value: "ios", label: "iOS" },
+];
+
 // ---------------------------------------------------------------------------
 // 数据源（由页面层注入）
 // ---------------------------------------------------------------------------
@@ -71,8 +113,7 @@ const DISCLAIMER_TEMPLATE =
 // ---------------------------------------------------------------------------
 
 function IconField({ applicationId }: { applicationId: string }) {
-  const { control, watch, setValue, trigger } =
-    useFormContext<FieldValues>();
+  const { control, watch, setValue, trigger } = useFormContext<FieldValues>();
   const mode = watch("icon.mode");
   const name = watch("name");
   const bg = watch("icon.backgroundColor");
@@ -139,7 +180,7 @@ function IconField({ applicationId }: { applicationId: string }) {
                 </span>
               </div>
             ) : (
-          <Controller
+              <Controller
                 control={control}
                 name="icon.assetId"
                 render={({ field: assetField }) => (
@@ -156,26 +197,28 @@ function IconField({ applicationId }: { applicationId: string }) {
                         shouldDirty: true,
                         shouldValidate: true,
                       });
-                      void uploadAsset(applicationId, "icon", file as File).then(
-                        (asset) => {
+                      void uploadAsset(applicationId, "icon", file as File)
+                        .then((asset) => {
                           setValue("icon.assetId", asset.assetId, {
                             shouldDirty: true,
                             shouldValidate: true,
                           });
                           void trigger(["icon.mode", "icon.assetId"]);
-                        },
-                      ).catch((error: unknown) => {
-                        setValue("icon.assetId", "", {
-                          shouldDirty: true,
-                          shouldValidate: true,
+                        })
+                        .catch((error: unknown) => {
+                          setValue("icon.assetId", "", {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                          void trigger(["icon.mode", "icon.assetId"]);
+                          message.error(
+                            `图标上传失败：${
+                              error instanceof Error
+                                ? error.message
+                                : "上传服务或存储配置异常"
+                            }`,
+                          );
                         });
-                        void trigger(["icon.mode", "icon.assetId"]);
-                        message.error(
-                          `图标上传失败：${
-                            error instanceof Error ? error.message : "上传服务或存储配置异常"
-                          }`,
-                        );
-                      });
                       return false;
                     }}
                   >
@@ -294,20 +337,24 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
             { uid, assetId: uid, url, name: file.name },
           ].slice(0, 6);
           commit(optimistic);
-          void uploadAsset(applicationId, "screenshot", file).then((asset) => {
-            commit(
-              filesRef.current.map((p) =>
-                p.uid === uid ? { ...p, assetId: asset.assetId } : p,
-              ),
-            );
-          }).catch((error: unknown) => {
-            commit(filesRef.current.filter((p) => p.uid !== uid));
-            message.error(
-              `截图上传失败：${
-                error instanceof Error ? error.message : "上传服务或存储配置异常"
-              }`,
-            );
-          });
+          void uploadAsset(applicationId, "screenshot", file)
+            .then((asset) => {
+              commit(
+                filesRef.current.map((p) =>
+                  p.uid === uid ? { ...p, assetId: asset.assetId } : p,
+                ),
+              );
+            })
+            .catch((error: unknown) => {
+              commit(filesRef.current.filter((p) => p.uid !== uid));
+              message.error(
+                `截图上传失败：${
+                  error instanceof Error
+                    ? error.message
+                    : "上传服务或存储配置异常"
+                }`,
+              );
+            });
         };
         const handleRemove = (uid: string) => {
           const target = filesRef.current.find((f) => f.uid === uid);
@@ -385,8 +432,11 @@ function DepartmentSelect({ options }: { options: PublishingOptions }) {
   const audienceType = watch("audience.0.audienceType");
   if (audienceType !== "department" && audienceType !== "employee") return null;
   const name =
-    audienceType === "department" ? "audience.0.departmentId" : "audience.0.employeeId";
-  const opts = audienceType === "department" ? options.departments : options.employees;
+    audienceType === "department"
+      ? "audience.0.departmentId"
+      : "audience.0.employeeId";
+  const opts =
+    audienceType === "department" ? options.departments : options.employees;
   return (
     <Controller
       control={control}
@@ -397,7 +447,9 @@ function DepartmentSelect({ options }: { options: PublishingOptions }) {
             {...field}
             mode="multiple"
             status={fieldState.error ? "error" : ""}
-            placeholder={audienceType === "department" ? "选择部门" : "选择员工"}
+            placeholder={
+              audienceType === "department" ? "选择部门" : "选择员工"
+            }
             options={opts as { value: string; label: string }[]}
             style={{ ...CONTROL_STYLE, marginTop: 12 }}
           />
@@ -416,6 +468,225 @@ function DepartmentSelect({ options }: { options: PublishingOptions }) {
 // 各步骤组件
 // ---------------------------------------------------------------------------
 
+/**
+ * 交付目标（基本字段）：按应用类型收集 OS / 平台 / 小程序渠道元数据。
+ * - desktop_app：目标 OS 多选（windows/macos）
+ * - mobile_app：目标平台多选（android/ios）
+ * - mini_program：平台多选（微信/钉钉/支付宝）+ 每平台二维码上传（kind=qr）
+ * - web_app：无目标
+ * 写入表单 `deliveries[0].targets`（deliveries 数组由向导自动派生，非空时
+ * 保留表单值提交，见页面层 withDeliveries）。
+ */
+function DeliveryTargetsField({
+  applicationId,
+  applicationType,
+}: {
+  applicationId: string;
+  applicationType: string;
+}) {
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const targets = useWatch({ control, name: "deliveries.0.targets" }) as
+    | TargetLike[]
+    | undefined;
+
+  const commitTargets = (nextTargets: TargetLike[]) => {
+    const channel = CHANNEL_BY_TYPE[applicationType] ?? "web";
+    setValue(
+      "deliveries",
+      [
+        {
+          channel,
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+          targets: nextTargets,
+        },
+      ],
+      { shouldDirty: true, shouldValidate: true },
+    );
+    void trigger("deliveries");
+  };
+
+  const current = Array.isArray(targets) ? targets : [];
+  const hasTarget = (platform: string) =>
+    current.some((target) => target.platform === platform);
+
+  const patchMiniProgramTarget = (
+    platform: "wechat" | "dingtalk" | "alipay",
+    patch: Partial<TargetLike>,
+  ) => {
+    const next = current.map((target) =>
+      target.platform === platform ? { ...target, ...patch } : target,
+    );
+    commitTargets(next);
+  };
+
+  if (applicationType === "desktop_app" || applicationType === "mobile_app") {
+    const isDesktop = applicationType === "desktop_app";
+    const options = isDesktop ? DESKTOP_OS_OPTIONS : MOBILE_PLATFORM_OPTIONS;
+    const selected = current.flatMap((target) => {
+      const value = isDesktop ? target.os : target.platform;
+      return value === undefined ? [] : [value];
+    });
+    return (
+      <Form.Item
+        label={isDesktop ? "目标系统（桌面端）" : "目标平台（移动端）"}
+        help="可选；发布门禁不强制桌面/移动目标，仅作为下载安装元数据"
+      >
+        <Select
+          mode="multiple"
+          placeholder={
+            isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
+          }
+          options={options}
+          value={selected}
+          onChange={(values: string[]) =>
+            commitTargets(
+              values.map((value) =>
+                isDesktop
+                  ? {
+                      kind: "desktop" as const,
+                      os: value as "windows" | "macos",
+                      arch: null,
+                    }
+                  : {
+                      kind: "mobile" as const,
+                      platform: value as "android" | "ios",
+                      arch: null,
+                    },
+              ),
+            )
+          }
+          style={CONTROL_STYLE}
+        />
+      </Form.Item>
+    );
+  }
+
+  if (applicationType !== "mini_program") {
+    return null;
+  }
+
+  return (
+    <Form.Item
+      label="小程序平台与二维码"
+      required
+      help="发布时小程序渠道必须至少有一个已启用平台且二维码内容通过校验（微信 wxa:// 或 https、钉钉 dingtalk:// 或 https、支付宝 alipays:// 或 https）"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {MINI_PROGRAM_PLATFORMS.map(({ value, label }) => {
+          const enabled = hasTarget(value);
+          const target = current.find((item) => item.platform === value);
+          return (
+            <div
+              key={value}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+                border: "1px solid #f0f0f0",
+                borderRadius: 8,
+                padding: "8px 12px",
+              }}
+            >
+              <Checkbox
+                checked={enabled}
+                onChange={(event) => {
+                  if (event.target.checked) {
+                    commitTargets([
+                      ...current,
+                      {
+                        kind: "miniprogram",
+                        platform: value,
+                        appId: "",
+                        qrCodeAssetId: "",
+                        versionNote: null,
+                        enabled: true,
+                      },
+                    ]);
+                  } else {
+                    commitTargets(
+                      current.filter((item) => item.platform !== value),
+                    );
+                  }
+                }}
+              >
+                {label}
+              </Checkbox>
+              {enabled ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Input
+                    aria-label={`${label} AppId`}
+                    placeholder="AppId（留空则使用二维码内容）"
+                    value={target?.appId ?? ""}
+                    onChange={(event) =>
+                      patchMiniProgramTarget(value, {
+                        appId: event.target.value,
+                      })
+                    }
+                    style={{ width: 220 }}
+                  />
+                  <Upload
+                    maxCount={1}
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                      void uploadAsset(applicationId, "qr", file as File)
+                        .then((asset) => {
+                          patchMiniProgramTarget(value, {
+                            qrCodeAssetId: asset.assetId,
+                          });
+                          message.success(`${label}二维码已上传`);
+                        })
+                        .catch((error: unknown) => {
+                          message.error(
+                            `二维码上传失败：${
+                              error instanceof Error
+                                ? error.message
+                                : "上传服务或存储配置异常"
+                            }`,
+                          );
+                        });
+                      return false;
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />} size="small">
+                      {target?.qrCodeAssetId ? "重新上传二维码" : "上传二维码"}
+                    </Button>
+                  </Upload>
+                  {target?.qrCodeAssetId ? (
+                    <Text type="success" style={{ fontSize: 12 }}>
+                      二维码已上传
+                    </Text>
+                  ) : null}
+                  <Input
+                    aria-label={`${label} 版本说明`}
+                    placeholder="版本说明（可选）"
+                    value={target?.versionNote ?? ""}
+                    onChange={(event) =>
+                      patchMiniProgramTarget(value, {
+                        versionNote: event.target.value || null,
+                      })
+                    }
+                    style={{ width: 220 }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </Form.Item>
+  );
+}
+
 function BasicInfoStep({
   options,
   applicationId,
@@ -423,7 +694,8 @@ function BasicInfoStep({
   options: PublishingOptions;
   applicationId: string;
 }) {
-  const { control } = useFormContext<FieldValues>();
+  const { control, watch } = useFormContext<FieldValues>();
+  const applicationType = watch("applicationType");
   return (
     <Form layout="vertical">
       <Controller
@@ -436,7 +708,12 @@ function BasicInfoStep({
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <Input {...field} placeholder="如：智能考勤助手" maxLength={160} style={CONTROL_STYLE} />
+            <Input
+              {...field}
+              placeholder="如：智能考勤助手"
+              maxLength={160}
+              style={CONTROL_STYLE}
+            />
           </Form.Item>
         )}
       />
@@ -453,7 +730,9 @@ function BasicInfoStep({
             <Select
               {...field}
               placeholder="选择部门"
-              options={options.departments as { value: string; label: string }[]}
+              options={
+                options.departments as { value: string; label: string }[]
+              }
               style={CONTROL_STYLE}
             />
           </Form.Item>
@@ -523,9 +802,19 @@ function BasicInfoStep({
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <Radio.Group {...field} optionType="button" options={APPLICATION_TYPE_OPTIONS} />
+            <Radio.Group
+              {...field}
+              optionType="button"
+              options={APPLICATION_TYPE_OPTIONS}
+            />
           </Form.Item>
         )}
+      />
+      <DeliveryTargetsField
+        applicationId={applicationId}
+        applicationType={
+          typeof applicationType === "string" ? applicationType : ""
+        }
       />
       <Controller
         control={control}
@@ -676,8 +965,14 @@ function RiskStep() {
   );
   return (
     <Form layout="vertical">
-      {yesNo("1. 是否处理员工个人信息或企业敏感数据？", "risk.handlesSensitiveData")}
-      {yesNo("2. 数据是否发送至企业外部或第三方模型供应商？", "risk.sendsDataExternally")}
+      {yesNo(
+        "1. 是否处理员工个人信息或企业敏感数据？",
+        "risk.handlesSensitiveData",
+      )}
+      {yesNo(
+        "2. 数据是否发送至企业外部或第三方模型供应商？",
+        "risk.sendsDataExternally",
+      )}
       {yesNo("3. 是否保存输入、文件及对话？", "risk.retainsConversations")}
       <Controller
         control={control}
@@ -756,7 +1051,10 @@ function RiskStep() {
   );
 }
 
-function labelOf(options: { value: string; label: string }[], value: string | null) {
+function labelOf(
+  options: { value: string; label: string }[],
+  value: string | null,
+) {
   return options.find((o) => o.value === value)?.label ?? value ?? "—";
 }
 
@@ -764,7 +1062,9 @@ function labelOf(options: { value: string; label: string }[], value: string | nu
 function PreviewStep({ options }: { options: PublishingOptions }) {
   const { watch } = useFormContext<FieldValues>();
   const draft = watch();
-  const audience = Array.isArray(draft.audience) ? draft.audience[0] : undefined;
+  const audience = Array.isArray(draft.audience)
+    ? draft.audience[0]
+    : undefined;
   const audienceText =
     audience?.audienceType === "department"
       ? "指定部门"
@@ -775,27 +1075,41 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
 
   return (
     <Descriptions column={1} bordered size="small">
-      <Descriptions.Item label="应用名称">{draft.name || "—"}</Descriptions.Item>
+      <Descriptions.Item label="应用名称">
+        {draft.name || "—"}
+      </Descriptions.Item>
       <Descriptions.Item label="归属部门">
-        {labelOf(options.departments as { value: string; label: string }[], draft.departmentId)}
+        {labelOf(
+          options.departments as { value: string; label: string }[],
+          draft.departmentId,
+        )}
       </Descriptions.Item>
       <Descriptions.Item label="维护人">
         {(draft.maintainerEmployeeIds ?? [])
           .map((id: string) =>
-            labelOf(options.employees as { value: string; label: string }[], id),
+            labelOf(
+              options.employees as { value: string; label: string }[],
+              id,
+            ),
           )
           .join("、") || "—"}
       </Descriptions.Item>
       <Descriptions.Item label="分类">
-        {labelOf(options.categories as { value: string; label: string }[], draft.categoryId)}
+        {labelOf(
+          options.categories as { value: string; label: string }[],
+          draft.categoryId,
+        )}
       </Descriptions.Item>
       <Descriptions.Item label="标签">
         {(draft.tagIds ?? [])
-          .map((id: string) => labelOf(options.tags as { value: string; label: string }[], id))
+          .map((id: string) =>
+            labelOf(options.tags as { value: string; label: string }[], id),
+          )
           .join("、") || "—"}
       </Descriptions.Item>
       <Descriptions.Item label="交付配置">
-        {APPLICATION_TYPE_LABELS[draft.applicationType] ?? draft.applicationType}
+        {APPLICATION_TYPE_LABELS[draft.applicationType] ??
+          draft.applicationType}
       </Descriptions.Item>
       <Descriptions.Item label="受众">{audienceText}</Descriptions.Item>
       <Descriptions.Item label="应用图标">
@@ -804,8 +1118,12 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
       <Descriptions.Item label="应用截图">
         {(draft.screenshotAssetIds ?? []).length} 张
       </Descriptions.Item>
-      <Descriptions.Item label="版本号">{draft.version || "—"}</Descriptions.Item>
-      <Descriptions.Item label="变更说明">{draft.changelog || "—"}</Descriptions.Item>
+      <Descriptions.Item label="版本号">
+        {draft.version || "—"}
+      </Descriptions.Item>
+      <Descriptions.Item label="变更说明">
+        {draft.changelog || "—"}
+      </Descriptions.Item>
       <Descriptions.Item label="简介">
         <RichTextView html={draft.summaryHtml ?? ""} />
       </Descriptions.Item>
@@ -854,6 +1172,7 @@ export function createWizardSteps(
         "icon.mode",
         "icon.assetId",
         "screenshotAssetIds",
+        "deliveries",
         "version",
         "changelog",
       ],

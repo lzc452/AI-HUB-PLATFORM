@@ -4,6 +4,7 @@ import {
   type ActorContext,
   type ApplicationDraft,
   type ApplicationDraftRecord,
+  type DeliveryTarget,
 } from "@ai-hub/contracts";
 import type {
   ApplicationAuthorizationPort,
@@ -16,6 +17,7 @@ import type {
   ApplicationAdminListInput,
   ApplicationAdminListResult,
   ArtifactUploadRecord,
+  AssetRecord,
   DeliveryChannel,
   DeliveryRecord,
   ReviewDecision,
@@ -34,6 +36,7 @@ import {
   type ResolveHost,
   type WebTargetPolicy,
 } from "../system/security/web-url-policy.js";
+import { validateMiniProgramQr } from "./qr-code-validator.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -58,6 +61,8 @@ export interface CreateDeliveryInput {
   entryUrl: string;
   minClientVersion?: string;
   enabled: boolean;
+  /** 交付目标元数据（desktop/mobile 的 OS/平台、mini_program 的平台与二维码）。 */
+  targets?: readonly DeliveryTarget[];
 }
 
 /** 提交完整性校验问题。 */
@@ -112,6 +117,14 @@ export class ApplicationService {
     private readonly webTargetPolicy: WebTargetPolicy = DENY_ALL_WEB_TARGETS,
     /** DNS 解析端口（测试注入桩以保持确定性）。 */
     private readonly resolveWebTargetHost: ResolveHost = lookup,
+    /**
+     * 对象存储（读取小程序二维码资产 buffer 用）。未装配时小程序目标无法保存
+     * （fail-closed，与 Web URL 白名单策略一致）。
+     */
+    private readonly objectStorage?: Pick<
+      import("./storage.port.js").ObjectStoragePort,
+      "get"
+    >,
   ) {}
 
   async createApplication(
@@ -777,15 +790,38 @@ export class ApplicationService {
       requiredChannelsByType[applicationType] !== undefined
         ? requiredChannelsByType[applicationType]
         : requiredDeliveryChannels;
-    if (
-      requiredChannels.some(
-        (channel) =>
-          !deliveries.some(
-            (delivery) => delivery.channel === channel && delivery.enabled,
-          ),
-      )
-    ) {
-      throw new Error("DELIVERY_CHANNELS_INCOMPLETE");
+    // 目标完整性门禁仅在应用类型已知时生效（类型未知回退到历史渠道检查）：
+    // 类型已知时按类型要求的渠道校验，mini_program 渠道除启用外还必须有
+    // ≥1 个 miniprogram 目标且二维码资产存在（规格 P1-11，二维码内容在
+    // configureDelivery 保存时已校验）。
+    const typeKnown = applicationType !== null;
+    for (const channel of requiredChannels) {
+      const delivery = deliveries.find(
+        (item) => item.channel === channel && item.enabled,
+      );
+      if (delivery === undefined) {
+        throw new Error("DELIVERY_CHANNELS_INCOMPLETE");
+      }
+      if (channel === "mini_program" && typeKnown) {
+        const targets = await repository.listDeliveryTargets(
+          delivery.deliveryId,
+        );
+        const miniprogramTargets = targets.filter(
+          (target) => target.kind === "miniprogram" && target.enabled,
+        );
+        if (miniprogramTargets.length === 0) {
+          throw new Error("DELIVERY_TARGETS_INCOMPLETE");
+        }
+        for (const target of miniprogramTargets) {
+          if (target.qrCodeAssetId === null) {
+            throw new Error("DELIVERY_TARGETS_INCOMPLETE");
+          }
+          const asset = await repository.findAsset(target.qrCodeAssetId);
+          if (asset === null) {
+            throw new Error("DELIVERY_TARGETS_INCOMPLETE");
+          }
+        }
+      }
     }
   }
 
@@ -974,6 +1010,18 @@ export class ApplicationService {
         this.resolveWebTargetHost,
       );
     }
+    const targets = input.targets ?? [];
+    if (input.channel === "web" && targets.length > 0) {
+      throw new Error("DELIVERY_TARGETS_NOT_ALLOWED");
+    }
+    // 交付目标保存前校验：desktop/mobile 的 OS/平台枚举；mini_program 的平台
+    // 枚举 + 二维码资产存在性 + 二维码内容格式（读取资产 buffer 后校验）。
+    // 校验在事务外执行（对象存储读取不可回滚），不通过的 target 根本不落库。
+    const validatedTargets = await this.validateDeliveryTargets(
+      applicationId,
+      input.channel,
+      targets,
+    );
     return this.repository.withTransaction(async (repository) => {
       const delivery = await repository.createDelivery({
         applicationId,
@@ -982,6 +1030,10 @@ export class ApplicationService {
         minClientVersion: input.minClientVersion ?? null,
         enabled: input.enabled,
       });
+      await repository.saveDeliveryTargets(
+        delivery.deliveryId,
+        validatedTargets,
+      );
       await this.recordChange(
         repository,
         "application.delivery.configured",
@@ -991,6 +1043,80 @@ export class ApplicationService {
       );
       return delivery;
     });
+  }
+
+  /**
+   * 校验交付目标集合（结构与渠道匹配 + 二维码内容）。返回规范化后的目标：
+   * 小程序目标的 appId 为空时以二维码解析出的目标标识回填。
+   */
+  private async validateDeliveryTargets(
+    applicationId: string,
+    channel: DeliveryChannel,
+    targets: readonly DeliveryTarget[],
+  ): Promise<readonly DeliveryTarget[]> {
+    const validated: DeliveryTarget[] = [];
+    for (const target of targets) {
+      if (channel === "desktop") {
+        if (
+          target.kind !== "desktop" ||
+          (target.os !== "windows" && target.os !== "macos")
+        ) {
+          throw new Error("DELIVERY_TARGET_INVALID");
+        }
+        validated.push(target);
+      } else if (channel === "mobile") {
+        if (
+          target.kind !== "mobile" ||
+          (target.platform !== "android" && target.platform !== "ios")
+        ) {
+          throw new Error("DELIVERY_TARGET_INVALID");
+        }
+        validated.push(target);
+      } else {
+        // channel === "mini_program"（web 已在调用处拒绝 targets）
+        if (
+          target.kind !== "miniprogram" ||
+          !["wechat", "dingtalk", "alipay"].includes(target.platform)
+        ) {
+          throw new Error("DELIVERY_TARGET_INVALID");
+        }
+        if (
+          typeof target.qrCodeAssetId !== "string" ||
+          target.qrCodeAssetId.length === 0
+        ) {
+          throw new Error("DELIVERY_TARGET_QR_REQUIRED");
+        }
+        const asset = await this.repository.findAsset(target.qrCodeAssetId);
+        if (asset === null || asset.applicationId !== applicationId) {
+          throw new Error("DELIVERY_TARGET_ASSET_NOT_FOUND");
+        }
+        const qrContent = await this.validateMiniProgramQrAsset(
+          asset,
+          target.platform,
+        );
+        validated.push(
+          target.appId.trim().length > 0
+            ? target
+            : { ...target, appId: qrContent },
+        );
+      }
+    }
+    return validated;
+  }
+
+  /** 读取二维码资产 buffer 并校验内容格式，返回解析出的目标标识。 */
+  private async validateMiniProgramQrAsset(
+    asset: AssetRecord,
+    platform: "wechat" | "dingtalk" | "alipay",
+  ): Promise<string> {
+    if (this.objectStorage === undefined) {
+      throw new Error("QR_VALIDATION_UNAVAILABLE");
+    }
+    const content = await this.objectStorage.get(asset.storageKey);
+    if (content === null) {
+      throw new Error("QR_VALIDATION_UNAVAILABLE");
+    }
+    return validateMiniProgramQr(Buffer.from(content), platform);
   }
 
   async getApplication(

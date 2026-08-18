@@ -2,6 +2,7 @@ import type {
   ApplicationAdminKpis,
   ApplicationStatus,
   DeliveryChannel,
+  DeliveryTarget,
 } from "@ai-hub/contracts";
 
 import { apiFetch, apiFetchBlob, apiUpload } from "../../shared/api/client";
@@ -37,6 +38,7 @@ export interface DeliveryRecord {
   entryUrl: string;
   minClientVersion: string | null;
   enabled: boolean;
+  targets?: DeliveryTarget[];
 }
 
 export interface ReviewRecord {
@@ -304,6 +306,8 @@ export interface ConfigureDeliveryInput {
   entryUrl: string;
   minClientVersion?: string | null;
   enabled: boolean;
+  /** 交付目标（desktop/mobile/mini_program 渠道；web 渠道不支持）。 */
+  targets?: DeliveryTarget[];
 }
 
 export function configureDelivery(

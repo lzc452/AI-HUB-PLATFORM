@@ -50,6 +50,7 @@ function createApplicationServiceProvider(
   database: Kysely<DatabaseSchema>,
   artifactVerifier: ArtifactVerificationPort,
   webTargetPolicy: WebTargetPolicy,
+  objectStorage?: ReadableObjectStoragePort,
 ) {
   const analyticsEvents = new AnalyticsEventService(
     new KyselyAnalyticsEventRepository(database),
@@ -69,6 +70,8 @@ function createApplicationServiceProvider(
         analyticsEvents,
         notifications,
         webTargetPolicy,
+        undefined,
+        objectStorage,
       ),
     inject: [
       KyselyApplicationRepository,
@@ -80,14 +83,10 @@ function createApplicationServiceProvider(
 
 function createUploadProviders(
   artifactVerifier: ArtifactVerificationPort,
-  storageDirectory: string | undefined,
+  storage: ReadableObjectStoragePort | undefined,
   maxSizeBytes: number,
-  configuredStorage?: ReadableObjectStoragePort,
 ): Provider[] {
-  if (storageDirectory === undefined && configuredStorage === undefined)
-    return [];
-  const storage =
-    configuredStorage ?? new DiskObjectStorage(storageDirectory as string);
+  if (storage === undefined) return [];
   const pipeline =
     artifactVerifier instanceof ArtifactPipeline
       ? artifactVerifier
@@ -105,10 +104,9 @@ function createUploadProviders(
 }
 
 function createUploadControllers(
-  storageDirectory: string | undefined,
-  configuredStorage?: ReadableObjectStoragePort,
+  storage: ReadableObjectStoragePort | undefined,
 ): (typeof ArtifactUploadController | typeof UnifiedUploadController)[] {
-  return storageDirectory === undefined && configuredStorage === undefined
+  return storage === undefined
     ? []
     : [ArtifactUploadController, UnifiedUploadController];
 }
@@ -150,28 +148,32 @@ export class ApplicationModule {
      */
     webTargetPolicy: WebTargetPolicy = DENY_ALL_WEB_TARGETS,
   ): DynamicModule {
+    // 存储实例只创建一次：上传链路（统一上传）与小程序二维码校验（读取资产
+    // buffer）共用；未装配存储时两者均不可用（fail-closed）。
+    const storage =
+      storageDirectory === undefined && artifactStorage === undefined
+        ? undefined
+        : (artifactStorage ??
+          new DiskObjectStorage(storageDirectory as string));
     return {
       module: ApplicationModule,
       imports: [
         IdentityModule.register(database),
         NotificationModule.register(database),
       ],
-      controllers: [
-        ApplicationController,
-        ...createUploadControllers(storageDirectory, artifactStorage),
-      ],
+      controllers: [ApplicationController, ...createUploadControllers(storage)],
       providers: [
         createRepositoryProvider(database),
         createApplicationServiceProvider(
           database,
           artifactVerifier,
           webTargetPolicy,
+          storage,
         ),
         ...createUploadProviders(
           artifactVerifier,
-          storageDirectory,
+          storage,
           artifactMaxSizeBytes,
-          artifactStorage,
         ),
       ],
       exports: [APPLICATION_SERVICE],
@@ -184,21 +186,18 @@ export class ApplicationModule {
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
     storageDirectory?: string,
   ): DynamicModule {
+    const storage =
+      storageDirectory === undefined
+        ? undefined
+        : new DiskObjectStorage(storageDirectory);
     return {
       module: ApplicationModule,
-      controllers: [
-        ApplicationController,
-        ...createUploadControllers(storageDirectory),
-      ],
+      controllers: [ApplicationController, ...createUploadControllers(storage)],
       providers: [
         { provide: APPLICATION_SERVICE, useValue: application },
         { provide: IdentityService, useValue: identity },
         { provide: "ARTIFACT_VERIFIER", useValue: artifactVerifier },
-        ...createUploadProviders(
-          artifactVerifier,
-          storageDirectory,
-          64 * 1024 * 1024,
-        ),
+        ...createUploadProviders(artifactVerifier, storage, 64 * 1024 * 1024),
       ],
       exports: [APPLICATION_SERVICE],
     };

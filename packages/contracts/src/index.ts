@@ -53,6 +53,7 @@ export type {
   FaqEntry,
   AudienceRule,
   DeliveryDraftItem,
+  DeliveryTarget,
   ApplicationDraft,
   ApplicationDraftRecord,
 } from "./application.js";

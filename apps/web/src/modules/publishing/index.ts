@@ -16,6 +16,7 @@ export {
   faqEntrySchema,
   audienceRuleSchema,
   deliveryDraftItemSchema,
+  deliveryTargetSchema,
   defaultDeliveriesForType,
 } from "./schema";
 export type { ApplicationDraftFormValues } from "./schema";

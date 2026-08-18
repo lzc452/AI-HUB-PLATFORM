@@ -5,6 +5,7 @@ import type {
   AudienceRule,
   AuthorizationDecision,
   AuthorizationRequest,
+  DeliveryTarget,
   UploadKind,
 } from "@ai-hub/contracts";
 
@@ -122,6 +123,23 @@ export interface DeliveryRecord {
   entryUrl: string;
   minClientVersion: string | null;
   enabled: boolean;
+  /** 交付目标（OS/平台/小程序渠道）；列表读取时一并返回。 */
+  targets?: readonly DeliveryTargetRecord[];
+}
+
+/** delivery_targets 行。 */
+export interface DeliveryTargetRecord {
+  deliveryTargetId: string;
+  deliveryId: string;
+  kind: "desktop" | "mobile" | "miniprogram";
+  os: "windows" | "macos" | null;
+  platform: "android" | "ios" | "wechat" | "dingtalk" | "alipay" | null;
+  arch: string | null;
+  appId: string | null;
+  qrCodeAssetId: string | null;
+  versionNote: string | null;
+  enabled: boolean;
+  createdAt: Date;
 }
 
 export interface ReviewRecord {
@@ -358,6 +376,14 @@ export interface ApplicationRepository {
     input: Omit<DeliveryRecord, "deliveryId">,
   ): Promise<DeliveryRecord>;
   listDeliveries(applicationId: string): Promise<readonly DeliveryRecord[]>;
+  /** 替换式保存交付目标（先删后插，幂等）。 */
+  saveDeliveryTargets(
+    deliveryId: string,
+    targets: readonly DeliveryTarget[],
+  ): Promise<void>;
+  listDeliveryTargets(
+    deliveryId: string,
+  ): Promise<readonly DeliveryTargetRecord[]>;
   createReview(
     input: Omit<ReviewRecord, "reviewId" | "createdAt">,
   ): Promise<ReviewRecord>;

@@ -1,8 +1,10 @@
+import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import type {
   ActorContext,
   AuthorizationDecision,
   BehaviorEventInput,
+  DeliveryTarget,
 } from "@ai-hub/contracts";
 import { ApplicationService } from "./application.service.js";
 import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
@@ -74,6 +76,19 @@ class MemoryApplicationRepository implements ApplicationRepository {
     sortOrder?: number;
     version?: string | null;
   }> = [];
+  deliveryTargets: Array<{
+    deliveryTargetId: string;
+    deliveryId: string;
+    kind: "desktop" | "mobile" | "miniprogram";
+    os: "windows" | "macos" | null;
+    platform: "android" | "ios" | "wechat" | "dingtalk" | "alipay" | null;
+    arch: string | null;
+    appId: string | null;
+    qrCodeAssetId: string | null;
+    versionNote: string | null;
+    enabled: boolean;
+    createdAt: Date;
+  }> = [];
   failOutbox = false;
   nextId = 1;
   private transactionQueue: Promise<void> = Promise.resolve();
@@ -100,6 +115,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
       events: [...this.events],
       catalogRegistrations: [...this.catalogRegistrations],
       deliveryAssets: [...this.deliveryAssets],
+      deliveryTargets: [...this.deliveryTargets],
       nextId: this.nextId,
     };
     try {
@@ -358,7 +374,43 @@ class MemoryApplicationRepository implements ApplicationRepository {
     return delivery;
   }
   async listDeliveries(id: string) {
-    return this.deliveries.filter((delivery) => delivery.applicationId === id);
+    return this.deliveries
+      .filter((delivery) => delivery.applicationId === id)
+      .map((delivery) => ({
+        ...delivery,
+        targets: this.deliveryTargets.filter(
+          (target) => target.deliveryId === delivery.deliveryId,
+        ),
+      }));
+  }
+  async saveDeliveryTargets(
+    deliveryId: string,
+    targets: readonly DeliveryTarget[],
+  ) {
+    this.deliveryTargets = this.deliveryTargets.filter(
+      (target) => target.deliveryId !== deliveryId,
+    );
+    for (const target of targets) {
+      this.deliveryTargets.push({
+        deliveryTargetId: `target-${this.nextId++}`,
+        deliveryId,
+        kind: target.kind,
+        os: target.kind === "desktop" ? target.os : null,
+        platform: target.kind === "desktop" ? null : target.platform,
+        arch: target.kind === "miniprogram" ? null : (target.arch ?? null),
+        appId: target.kind === "miniprogram" ? target.appId : null,
+        qrCodeAssetId:
+          target.kind === "miniprogram" ? target.qrCodeAssetId : null,
+        versionNote: target.kind === "miniprogram" ? target.versionNote : null,
+        enabled: target.kind === "miniprogram" ? target.enabled : true,
+        createdAt: new Date(),
+      });
+    }
+  }
+  async listDeliveryTargets(deliveryId: string) {
+    return this.deliveryTargets.filter(
+      (target) => target.deliveryId === deliveryId,
+    );
   }
   async createReview(input: Omit<ReviewRecord, "reviewId" | "createdAt">) {
     const review = {
@@ -523,6 +575,10 @@ function makeService(
   options: {
     webTargetPolicy?: WebTargetPolicy;
     resolveWebTargetHost?: ResolveHost;
+    /** 二维码资产读取桩；未提供时 QR 校验 fail-closed（QR_VALIDATION_UNAVAILABLE）。 */
+    objectStorage?: {
+      get(key: string): Promise<Uint8Array | null>;
+    };
   } = {},
 ) {
   const repository = new MemoryApplicationRepository();
@@ -588,6 +644,7 @@ function makeService(
       options.webTargetPolicy ?? PERMISSIVE_WEB_TARGET_POLICY,
       options.resolveWebTargetHost ??
         (async () => [{ address: "10.0.0.1", family: 4 }]),
+      options.objectStorage,
     ),
     analyticsEvents,
     notificationCalls,
@@ -1421,6 +1478,276 @@ describe("ApplicationService", () => {
     );
     expect(web.entryUrl).toBe("");
     expect(repository.deliveries).toHaveLength(2);
+  });
+
+  it("saves desktop OS metadata targets and rejects mismatched target kinds", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "桌面应用",
+      summary: "OS 元数据",
+    });
+
+    const delivery = await service.configureDelivery(
+      owner,
+      application.applicationId,
+      {
+        channel: "desktop",
+        entryUrl: "https://cdn.example.com/download.exe",
+        enabled: true,
+        targets: [{ kind: "desktop", os: "windows", arch: "x64" }],
+      },
+    );
+    const saved = await repository.listDeliveryTargets(delivery.deliveryId);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      kind: "desktop",
+      os: "windows",
+      arch: "x64",
+      enabled: true,
+    });
+
+    // 渠道与目标类型不匹配 → 拒绝落库。
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "desktop",
+        entryUrl: "https://cdn.example.com/download.dmg",
+        enabled: true,
+        targets: [{ kind: "mobile", platform: "android", arch: null }],
+      }),
+    ).rejects.toThrow("DELIVERY_TARGET_INVALID");
+  });
+
+  it("rejects targets on the web channel", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Web 应用",
+      summary: "web 渠道不支持 targets",
+    });
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "web",
+        entryUrl: "",
+        enabled: true,
+        targets: [{ kind: "desktop", os: "windows", arch: null }],
+      }),
+    ).rejects.toThrow("DELIVERY_TARGETS_NOT_ALLOWED");
+  });
+
+  it("validates mini program qr content on save and backfills appId", async () => {
+    const qrPng = await readFile(
+      new URL("./fixtures/miniapp-qr-wechat.png", import.meta.url),
+    );
+    const { service, repository } = makeService({
+      objectStorage: {
+        get: async (key: string) =>
+          key === "qr/wechat.png" ? new Uint8Array(qrPng) : null,
+      },
+    });
+    const application = await service.createApplication(owner, {
+      name: "小程序应用",
+      summary: "二维码校验",
+    });
+    const asset = await repository.createAsset({
+      applicationId: application.applicationId,
+      applicationVersionId: null,
+      assetType: "qr",
+      name: "wechat-qr.png",
+      storageKey: "qr/wechat.png",
+      mimeType: "image/png",
+      sizeBytes: qrPng.length,
+      sortOrder: 0,
+      sha256: null,
+      scanStatus: "passed",
+      uploadedByEmployeeId: owner.employeeId,
+    });
+
+    const delivery = await service.configureDelivery(
+      owner,
+      application.applicationId,
+      {
+        channel: "mini_program",
+        entryUrl: "",
+        enabled: true,
+        targets: [
+          {
+            kind: "miniprogram",
+            platform: "wechat",
+            appId: "",
+            qrCodeAssetId: asset.assetId,
+            versionNote: null,
+            enabled: true,
+          },
+        ],
+      },
+    );
+    const saved = await repository.listDeliveryTargets(delivery.deliveryId);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toMatchObject({
+      kind: "miniprogram",
+      platform: "wechat",
+      qrCodeAssetId: asset.assetId,
+      enabled: true,
+    });
+    // appId 为空时回填二维码解析出的目标标识。
+    expect(saved[0]?.appId).toBe("wxa://gh_abcdef1234567890");
+  });
+
+  it("rejects mini program qr content that is not a valid target", async () => {
+    const badPng = await readFile(
+      new URL("./fixtures/not-a-miniapp-qr.png", import.meta.url),
+    );
+    const { service, repository } = makeService({
+      objectStorage: { get: async () => new Uint8Array(badPng) },
+    });
+    const application = await service.createApplication(owner, {
+      name: "小程序应用",
+      summary: "二维码内容校验",
+    });
+    const asset = await repository.createAsset({
+      applicationId: application.applicationId,
+      applicationVersionId: null,
+      assetType: "qr",
+      name: "bad-qr.png",
+      storageKey: "qr/bad.png",
+      mimeType: "image/png",
+      sizeBytes: badPng.length,
+      sortOrder: 0,
+      sha256: null,
+      scanStatus: "passed",
+      uploadedByEmployeeId: owner.employeeId,
+    });
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "mini_program",
+        entryUrl: "",
+        enabled: true,
+        targets: [
+          {
+            kind: "miniprogram",
+            platform: "wechat",
+            appId: "wx-app-id",
+            qrCodeAssetId: asset.assetId,
+            versionNote: null,
+            enabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("QR_TARGET_FORMAT_INVALID");
+  });
+
+  it("rejects mini program targets referencing missing or foreign assets", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "小程序应用",
+      summary: "资产存在性",
+    });
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "mini_program",
+        entryUrl: "",
+        enabled: true,
+        targets: [
+          {
+            kind: "miniprogram",
+            platform: "wechat",
+            appId: "wx-app-id",
+            qrCodeAssetId: "missing-asset",
+            versionNote: null,
+            enabled: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow("DELIVERY_TARGET_ASSET_NOT_FOUND");
+  });
+
+  it("rejects auto-publish when the mini_program channel has no targets", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "小程序应用",
+      summary: "目标完整性门禁",
+    });
+    repository.catalogTypes.set(application.applicationId, "mini_program");
+    const version = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "1.0.0",
+    );
+    // 小程序渠道启用但未配置任何目标 → approve 必须被拒绝。
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "mini_program",
+      entryUrl: "",
+      enabled: true,
+    });
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await expect(
+      service.review(reviewer, version.applicationVersionId, "approve", "ok"),
+    ).rejects.toThrow("DELIVERY_TARGETS_INCOMPLETE");
+    expect(repository.events).not.toContain("application.published");
+  });
+
+  it("auto-publishes a mini_program application with a qr target configured", async () => {
+    const qrPng = await readFile(
+      new URL("./fixtures/miniapp-qr-wechat.png", import.meta.url),
+    );
+    const { service, repository } = makeService({
+      objectStorage: {
+        get: async (key: string) =>
+          key === "qr/wechat.png" ? new Uint8Array(qrPng) : null,
+      },
+    });
+    const application = await service.createApplication(owner, {
+      name: "小程序应用",
+      summary: "完整发布闭环",
+    });
+    repository.catalogTypes.set(application.applicationId, "mini_program");
+    const asset = await repository.createAsset({
+      applicationId: application.applicationId,
+      applicationVersionId: null,
+      assetType: "qr",
+      name: "wechat-qr.png",
+      storageKey: "qr/wechat.png",
+      mimeType: "image/png",
+      sizeBytes: qrPng.length,
+      sortOrder: 0,
+      sha256: null,
+      scanStatus: "passed",
+      uploadedByEmployeeId: owner.employeeId,
+    });
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "mini_program",
+      entryUrl: "",
+      enabled: true,
+      targets: [
+        {
+          kind: "miniprogram",
+          platform: "wechat",
+          appId: "wx-app-id",
+          qrCodeAssetId: asset.assetId,
+          versionNote: "v1.0.0",
+          enabled: true,
+        },
+      ],
+    });
+    const version = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "1.0.0",
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const result = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(result.status).toBe("published");
+    expect(repository.events).toContain("application.published");
   });
 
   it("allows only one concurrent publication through expected-state CAS", async () => {

@@ -8,6 +8,7 @@ import type {
   ArtifactUploadRecord,
   AssetRecord,
   DeliveryRecord,
+  DeliveryTargetRecord,
   ReviewQueueRecord,
   ReviewRecord,
   ApplicationAdminListInput,
@@ -20,6 +21,7 @@ import type {
   ApplicationDraft,
   AudienceRule,
   ApplicationAdminKpis,
+  DeliveryTarget,
 } from "@ai-hub/contracts";
 import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
 
@@ -1081,7 +1083,69 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .orderBy("channel")
       .execute();
-    return rows.map((row) => this.mapDelivery(row));
+    const deliveries = rows.map((row) => this.mapDelivery(row));
+    if (deliveries.length === 0) return deliveries;
+    const targetRows = await this.db
+      .selectFrom("delivery_targets")
+      .selectAll()
+      .where(
+        "delivery_id",
+        "in",
+        deliveries.map((delivery) => delivery.deliveryId),
+      )
+      .execute();
+    const targetsByDelivery = new Map<string, DeliveryTargetRecord[]>();
+    for (const row of targetRows) {
+      const targets = targetsByDelivery.get(row.delivery_id) ?? [];
+      targets.push(this.mapDeliveryTarget(row));
+      targetsByDelivery.set(row.delivery_id, targets);
+    }
+    return deliveries.map((delivery) => ({
+      ...delivery,
+      targets: targetsByDelivery.get(delivery.deliveryId) ?? [],
+    }));
+  }
+
+  async saveDeliveryTargets(
+    deliveryId: string,
+    targets: readonly DeliveryTarget[],
+  ): Promise<void> {
+    await this.db
+      .deleteFrom("delivery_targets")
+      .where("delivery_id", "=", deliveryId)
+      .execute();
+    if (targets.length === 0) return;
+    await this.db
+      .insertInto("delivery_targets")
+      .values(
+        targets.map((target) => ({
+          delivery_target_id: randomUUID(),
+          delivery_id: deliveryId,
+          kind: target.kind,
+          os: target.kind === "desktop" ? target.os : null,
+          platform: target.kind === "desktop" ? null : target.platform,
+          arch: target.kind === "miniprogram" ? null : (target.arch ?? null),
+          app_id: target.kind === "miniprogram" ? target.appId : null,
+          qr_code_asset_id:
+            target.kind === "miniprogram" ? target.qrCodeAssetId : null,
+          version_note:
+            target.kind === "miniprogram" ? target.versionNote : null,
+          enabled: target.kind === "miniprogram" ? target.enabled : true,
+        })),
+      )
+      .execute();
+  }
+
+  async listDeliveryTargets(
+    deliveryId: string,
+  ): Promise<readonly DeliveryTargetRecord[]> {
+    const rows = await this.db
+      .selectFrom("delivery_targets")
+      .selectAll()
+      .where("delivery_id", "=", deliveryId)
+      .orderBy("created_at")
+      .execute();
+    return rows.map((row) => this.mapDeliveryTarget(row));
   }
 
   async createReview(
@@ -1495,6 +1559,24 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       minClientVersion: row.min_client_version,
       enabled: row.enabled,
     } satisfies DeliveryRecord;
+  }
+
+  private mapDeliveryTarget(
+    row: Selectable<DatabaseSchema["delivery_targets"]>,
+  ): DeliveryTargetRecord {
+    return {
+      deliveryTargetId: row.delivery_target_id,
+      deliveryId: row.delivery_id,
+      kind: row.kind,
+      os: row.os,
+      platform: row.platform,
+      arch: row.arch,
+      appId: row.app_id,
+      qrCodeAssetId: row.qr_code_asset_id,
+      versionNote: row.version_note,
+      enabled: row.enabled,
+      createdAt: row.created_at,
+    };
   }
 
   private mapReview(row: Selectable<DatabaseSchema["application_reviews"]>) {

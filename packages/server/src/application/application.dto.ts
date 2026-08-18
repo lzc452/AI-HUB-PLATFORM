@@ -1,3 +1,4 @@
+import type { DeliveryTarget } from "@ai-hub/contracts";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsArray,
@@ -110,6 +111,77 @@ export class SubmitReviewRequestDto {
   acceptUnsigned?: boolean;
 }
 
+/** 交付目标（desktop/mobile/mini_program 渠道的 OS/平台与小程序二维码）。 */
+export class DeliveryTargetDto {
+  @ApiProperty({
+    type: String,
+    description: "目标类型",
+    enum: ["desktop", "mobile", "miniprogram"],
+  })
+  @IsIn(["desktop", "mobile", "miniprogram"])
+  kind!: "desktop" | "mobile" | "miniprogram";
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "桌面端目标 OS",
+    enum: ["windows", "macos"],
+  })
+  @IsOptional()
+  @IsIn(["windows", "macos"])
+  os?: "windows" | "macos";
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "移动端/小程序平台",
+    enum: ["android", "ios", "wechat", "dingtalk", "alipay"],
+  })
+  @IsOptional()
+  @IsIn(["android", "ios", "wechat", "dingtalk", "alipay"])
+  platform?: "android" | "ios" | "wechat" | "dingtalk" | "alipay";
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "架构（如 x64 / arm64）",
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  arch?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "小程序 appId（为空时以二维码解析出的目标标识回填）",
+  })
+  @IsOptional()
+  @IsString()
+  appId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "小程序二维码资产 ID（unified-upload 完成态资产）",
+  })
+  @IsOptional()
+  @IsString()
+  qrCodeAssetId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "版本说明",
+    nullable: true,
+  })
+  @IsOptional()
+  @IsString()
+  versionNote?: string | null;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: "小程序目标是否启用",
+  })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+}
+
 /** 配置交付渠道请求。 */
 export class ConfigureDeliveryRequestDto {
   @ApiProperty({
@@ -132,6 +204,17 @@ export class ConfigureDeliveryRequestDto {
   @ApiProperty({ type: Boolean, description: "是否启用", example: true })
   @IsBoolean()
   enabled!: boolean;
+
+  @ApiPropertyOptional({
+    type: DeliveryTargetDto,
+    isArray: true,
+    description: "交付目标（web 渠道不支持）",
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DeliveryTargetDto)
+  targets?: DeliveryTarget[];
 }
 
 /** 提交评审结论请求。 */
@@ -430,6 +513,13 @@ export class DeliveryDto {
 
   @ApiProperty({ type: Boolean, description: "是否启用", example: true })
   enabled!: boolean;
+
+  @ApiPropertyOptional({
+    type: DeliveryTargetDto,
+    isArray: true,
+    description: "交付目标（desktop/mobile/mini_program 渠道）",
+  })
+  targets?: DeliveryTargetDto[];
 }
 
 /** 评审记录。 */

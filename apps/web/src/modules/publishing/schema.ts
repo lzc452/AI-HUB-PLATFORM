@@ -73,12 +73,35 @@ export const audienceRuleSchema = z
     }
   });
 
+/** 交付目标（与 @ai-hub/contracts DeliveryTarget 同源；提交期由后端 fail-closed 校验）。 */
+export const deliveryTargetSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("desktop"),
+    os: z.enum(["windows", "macos"]),
+    arch: z.string().nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("mobile"),
+    platform: z.enum(["android", "ios"]),
+    arch: z.string().nullable().optional(),
+  }),
+  z.object({
+    kind: z.literal("miniprogram"),
+    platform: z.enum(["wechat", "dingtalk", "alipay"]),
+    appId: z.string(),
+    qrCodeAssetId: z.string(),
+    versionNote: z.string().nullable().optional(),
+    enabled: z.boolean().optional(),
+  }),
+]);
+
 export const deliveryDraftItemSchema = z.object({
   channel: z.enum(["web", "desktop", "mobile", "mini_program"]),
   entryUrl: z.string().nullable().optional(),
   minClientVersion: z.string().nullable().optional(),
   enabled: z.boolean().optional(),
   assetIds: z.array(z.string()).optional(),
+  targets: z.array(deliveryTargetSchema).optional(),
 });
 
 /**
@@ -91,7 +114,12 @@ const applicationDraftShape = z.object({
   departmentId: z.string().min(1, "请选择归属部门"),
   maintainerEmployeeIds: z.array(z.string()).min(1, "至少指定一名维护人"),
   categoryId: z.string().min(1, "请选择分类"),
-  applicationType: z.enum(["web_app", "desktop_app", "mobile_app", "mini_program"]),
+  applicationType: z.enum([
+    "web_app",
+    "desktop_app",
+    "mobile_app",
+    "mini_program",
+  ]),
   tagIds: z.array(z.string()),
   icon: applicationIconSchema,
   screenshotAssetIds: z
@@ -174,7 +202,8 @@ const refineManualExamples = (
   ctx: z.RefinementCtx,
 ) => {
   const hasManual =
-    (typeof draft.manualHtml === "string" && draft.manualHtml.trim().length > 0) ||
+    (typeof draft.manualHtml === "string" &&
+      draft.manualHtml.trim().length > 0) ||
     (typeof draft.manualAssetId === "string" && draft.manualAssetId.length > 0);
   if (!hasManual) {
     ctx.addIssue({
@@ -184,8 +213,10 @@ const refineManualExamples = (
     });
   }
   const hasExamples =
-    (typeof draft.examplesHtml === "string" && draft.examplesHtml.trim().length > 0) ||
-    (typeof draft.examplesAssetId === "string" && draft.examplesAssetId.length > 0);
+    (typeof draft.examplesHtml === "string" &&
+      draft.examplesHtml.trim().length > 0) ||
+    (typeof draft.examplesAssetId === "string" &&
+      draft.examplesAssetId.length > 0);
   if (!hasExamples) {
     ctx.addIssue({
       code: "custom",
@@ -196,12 +227,12 @@ const refineManualExamples = (
 };
 
 /** 表单层 schema（deliveries 可选，由向导自动派生）。供前端分步校验使用。 */
-export const applicationDraftFormSchema = applicationDraftShape.superRefine(
-  refineManualExamples,
-);
+export const applicationDraftFormSchema =
+  applicationDraftShape.superRefine(refineManualExamples);
 
-
-export type ApplicationDraftFormValues = z.infer<typeof applicationDraftFormSchema>;
+export type ApplicationDraftFormValues = z.infer<
+  typeof applicationDraftFormSchema
+>;
 
 /** 新建草稿的默认值。 */
 export const applicationDraftDefaults: ApplicationDraftFormValues = {
@@ -243,9 +274,7 @@ export const applicationDraftDefaults: ApplicationDraftFormValues = {
 };
 
 /** 根据应用类型派生交付配置（向导内不手工配渠道，发布时用独立交付页配置）。 */
-export function defaultDeliveriesForType(
-  applicationType: string,
-): Array<{
+export function defaultDeliveriesForType(applicationType: string): Array<{
   channel: "web" | "desktop" | "mobile" | "mini_program";
   entryUrl: string | null;
   minClientVersion: string | null;

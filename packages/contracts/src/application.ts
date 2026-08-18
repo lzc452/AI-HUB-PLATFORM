@@ -105,12 +105,26 @@ export interface AudienceRule {
   includeChildren: boolean;
 }
 
+/** 交付目标元数据（OS/平台/小程序渠道）。 */
+export type DeliveryTarget =
+  | { kind: "desktop"; os: "windows" | "macos"; arch: string | null }
+  | { kind: "mobile"; platform: "android" | "ios"; arch: string | null }
+  | {
+      kind: "miniprogram";
+      platform: "wechat" | "dingtalk" | "alipay";
+      appId: string;
+      qrCodeAssetId: string;
+      versionNote: string | null;
+      enabled: boolean;
+    };
+
 export interface DeliveryDraftItem {
   channel: DeliveryChannel;
   entryUrl: string | null;
   minClientVersion: string | null;
   enabled: boolean;
   assetIds: string[];
+  targets?: DeliveryTarget[];
 }
 
 /** 创建应用的草稿内容（不含责任人，责任人默认当前用户）。 */
