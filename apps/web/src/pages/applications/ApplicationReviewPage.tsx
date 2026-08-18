@@ -1,5 +1,6 @@
 import {
   CheckCircleFilled,
+  CloseCircleFilled,
   DownloadOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
@@ -39,6 +40,7 @@ import {
   useReleaseReview,
   useReviewApplicationVersion,
   useReviewQueue,
+  useValidationChecks,
 } from "../../modules/application/useApplication";
 import { useAuth } from "../../modules/auth/useAuth";
 import { MessageError, showWarningMessage } from "../../shared/ui/message";
@@ -48,7 +50,7 @@ const { TextArea } = Input;
 
 type Check = {
   name: string;
-  status: "passed" | "safe" | "warning" | "info";
+  status: "passed" | "safe" | "warning" | "info" | "failed";
   description?: string;
 };
 type ViewModel = {
@@ -67,6 +69,9 @@ export default function ApplicationReviewPage() {
   const reviewsQuery = useApplicationReviews(applicationId);
   const version = versionsQuery.data?.[0];
   const reviewQueueQuery = useReviewQueue(version?.applicationVersionId);
+  const validationChecksQuery = useValidationChecks(
+    version?.applicationVersionId,
+  );
   const claim = useClaimReview();
   const release = useReleaseReview();
   const reviewAction = useReviewApplicationVersion();
@@ -75,19 +80,35 @@ export default function ApplicationReviewPage() {
       app: applicationQuery.data,
       version,
       reviews: reviewsQuery.data ?? [],
-      checks: deriveChecks(version),
+      checks: (validationChecksQuery.data ?? []).map((check) => ({
+        name: check.label,
+        status: check.status,
+        ...(check.detail ? { description: check.detail } : {}),
+      })),
       reviewQueue: reviewQueueQuery.data ?? null,
     }),
-    [applicationQuery.data, reviewQueueQuery.data, reviewsQuery.data, version],
+    [
+      applicationQuery.data,
+      reviewQueueQuery.data,
+      reviewsQuery.data,
+      validationChecksQuery.data,
+      version,
+    ],
   );
   const pending =
     applicationQuery.isPending ||
     versionsQuery.isPending ||
     reviewsQuery.isPending;
   const error =
-    applicationQuery.error ?? versionsQuery.error ?? reviewsQuery.error;
+    applicationQuery.error ??
+    versionsQuery.error ??
+    reviewsQuery.error ??
+    validationChecksQuery.error;
   const hasError =
-    applicationQuery.isError || versionsQuery.isError || reviewsQuery.isError;
+    applicationQuery.isError ||
+    versionsQuery.isError ||
+    reviewsQuery.isError ||
+    validationChecksQuery.isError;
 
   const versionId = version?.applicationVersionId;
 
@@ -122,37 +143,17 @@ export default function ApplicationReviewPage() {
             />
           </aside>
           <main className="space-y-3">
-            <PreviewCard app={data.app} version={data.version} />
+            <PreviewCard
+              app={data.app}
+              checks={data.checks}
+              version={data.version}
+            />
             <ReviewHistoryCard reviews={data.reviews} />
           </main>
         </div>
       ) : null}
     </ApplicationAdminPage>
   );
-}
-
-/** 由版本扫描状态派生的校验项（后端真实校验报告后续并入 review-queue 响应）。 */
-function deriveChecks(version: ApplicationVersionRecord | undefined): Check[] {
-  if (version === undefined) {
-    return [];
-  }
-  const base: Check[] = [
-    {
-      name: "制品完整性（SHA-256）",
-      status: version.artifactSha256 ? "passed" : "warning",
-      ...(version.artifactSha256 ? {} : { description: "后端尚未返回摘要" }),
-    },
-    {
-      name: "恶意代码扫描",
-      status: version.scanStatus === "passed" ? "passed" : "warning",
-    },
-    {
-      name: "交付渠道完整性",
-      status: "info",
-      description: "需在交付配置中确认四渠道",
-    },
-  ];
-  return base;
 }
 
 function SpinPlaceholder() {
@@ -246,25 +247,31 @@ function TaskInfoCard({
   );
 }
 
+const iconMap = {
+  failed: <CloseCircleFilled />,
+  info: <InfoCircleOutlined />,
+  passed: <CheckCircleFilled />,
+  safe: <SafetyCertificateFilled />,
+  warning: <WarningFilled />,
+};
+
+const colorMap = {
+  failed: "#f5222d",
+  info: "#1677ff",
+  passed: "#20b26b",
+  safe: "#20b26b",
+  warning: "#f59e0b",
+};
+
+const labelMap = {
+  failed: "失败",
+  info: "已生成",
+  passed: "通过",
+  safe: "安全",
+  warning: "警告",
+};
+
 function ValidationCard({ checks }: { checks: Check[] }) {
-  const iconMap = {
-    info: <InfoCircleOutlined />,
-    passed: <CheckCircleFilled />,
-    safe: <SafetyCertificateFilled />,
-    warning: <WarningFilled />,
-  };
-  const colorMap = {
-    info: "#1677ff",
-    passed: "#20b26b",
-    safe: "#20b26b",
-    warning: "#f59e0b",
-  };
-  const labelMap = {
-    info: "已生成",
-    passed: "通过",
-    safe: "安全",
-    warning: "警告",
-  };
   return (
     <Card
       className="app-admin-card"
@@ -375,9 +382,11 @@ function ReviewActionCard({
 
 function PreviewCard({
   app,
+  checks,
   version,
 }: {
   app: ApplicationRecord | undefined;
+  checks: Check[];
   version: ApplicationVersionRecord | undefined;
 }) {
   return (
@@ -399,7 +408,7 @@ function PreviewCard({
           {
             key: "validation",
             label: "自动校验报告",
-            children: <ValidationSummary checks={deriveChecks(version)} />,
+            children: <ValidationSummary checks={checks} />,
           },
           {
             key: "risk",
@@ -534,21 +543,35 @@ function PreviewOverview({
 }
 
 function ValidationSummary({ checks }: { checks: Check[] }) {
+  const timelineColor = {
+    failed: "red",
+    info: "blue",
+    passed: "green",
+    safe: "green",
+    warning: "orange",
+  };
   return (
     <div className="p-5">
-      <Timeline
-        items={checks.map((item) => ({
-          color: item.status === "warning" ? "orange" : "green",
-          children: (
-            <span className="text-[13px]">
-              {item.name}
-              <Tag color={item.status === "warning" ? "warning" : "success"}>
-                {item.status === "warning" ? "warning" : "passed"}
-              </Tag>
-            </span>
-          ),
-        }))}
-      />
+      {checks.length === 0 ? (
+        <Empty description="该版本尚无自动校验记录" />
+      ) : (
+        <Timeline
+          items={checks.map((item) => ({
+            color: timelineColor[item.status],
+            children: (
+              <span className="text-[13px]">
+                {item.name}
+                <Tag color={colorMap[item.status]}>{labelMap[item.status]}</Tag>
+                {item.description ? (
+                  <div className="text-[11px] text-[#8a94a6]">
+                    {item.description}
+                  </div>
+                ) : null}
+              </span>
+            ),
+          }))}
+        />
+      )}
     </div>
   );
 }

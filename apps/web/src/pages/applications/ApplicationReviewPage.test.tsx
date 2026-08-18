@@ -77,6 +77,7 @@ const hoisted = vi.hoisted(() => {
       (): Query => ({ ...settled, data: [mockVersion] }),
     ),
     useReviewQueue: vi.fn((): Query => ({ ...settled, data: mockReviewQueue })),
+    useValidationChecks: vi.fn((): Query => ({ ...settled, data: [] })),
     useClaimReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
     useReleaseReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
     useReviewApplicationVersion: vi.fn(() => ({
@@ -105,6 +106,7 @@ vi.mock("../../modules/application/useApplication", () => ({
   useApplicationVersions: hoisted.useApplicationVersions,
   useApplicationReviews: hoisted.useApplicationReviews,
   useReviewQueue: hoisted.useReviewQueue,
+  useValidationChecks: hoisted.useValidationChecks,
   useClaimReview: hoisted.useClaimReview,
   useReleaseReview: hoisted.useReleaseReview,
   useReviewApplicationVersion: hoisted.useReviewApplicationVersion,
@@ -155,6 +157,10 @@ describe("ApplicationReviewPage", () => {
     hoisted.useReviewQueue.mockReturnValue({
       ...hoisted.settled,
       data: hoisted.mockReviewQueue,
+    });
+    hoisted.useValidationChecks.mockReturnValue({
+      ...hoisted.settled,
+      data: [],
     });
     hoisted.reviewMutate.mockClear();
     messageMocks.showSuccessMessage.mockClear();

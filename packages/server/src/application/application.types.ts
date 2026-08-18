@@ -25,6 +25,22 @@ export type ReviewDecision = "approve" | "reject" | "request_changes";
 export type ReviewQueueStatus = "available" | "claimed" | "completed";
 export type ReviewSlaStatus = "on_time" | "overdue";
 export type DeliveryChannel = "web" | "desktop" | "mobile" | "mini_program";
+export type ValidationCheckStatus =
+  | "passed"
+  | "safe"
+  | "warning"
+  | "info"
+  | "failed";
+
+export interface ValidationCheckRecord {
+  validationCheckId: string;
+  applicationVersionId: string;
+  checkCode: string;
+  label: string;
+  status: ValidationCheckStatus;
+  detail: string | null;
+  createdAt: Date;
+}
 
 export interface ApplicationRecord {
   applicationId: string;
@@ -295,6 +311,17 @@ export interface ApplicationRepository {
     limit: number;
   }): Promise<readonly ArtifactUploadRecord[]>;
   resetStaleArtifactVerification?(uploadId: string): Promise<boolean>;
+  /** 幂等 upsert 自动校验检查点（unique (application_version_id, check_code)）。 */
+  recordValidationCheck(input: {
+    applicationVersionId: string;
+    checkCode: string;
+    label: string;
+    status: ValidationCheckStatus;
+    detail: string | null;
+  }): Promise<void>;
+  listValidationChecks(
+    applicationVersionId: string,
+  ): Promise<readonly ValidationCheckRecord[]>;
   createAsset(
     input: Omit<AssetRecord, "assetId" | "createdAt">,
   ): Promise<AssetRecord>;

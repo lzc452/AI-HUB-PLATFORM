@@ -93,6 +93,23 @@ export interface CreatorApplicationList {
   total: number;
 }
 
+export type ValidationCheckStatus =
+  | "passed"
+  | "safe"
+  | "warning"
+  | "info"
+  | "failed";
+
+export interface ValidationCheckRecord {
+  validationCheckId: string;
+  applicationVersionId: string;
+  checkCode: string;
+  label: string;
+  status: ValidationCheckStatus;
+  detail: string | null;
+  createdAt: string;
+}
+
 export interface CreatorSummary {
   versionDiff: {
     fromVersion: string;
@@ -101,7 +118,12 @@ export interface CreatorSummary {
   };
   validationReport: {
     status: "passed" | "failed";
-    checks: { name: string; status: "passed" | "failed" }[];
+    checks: {
+      code: string;
+      label: string;
+      status: ValidationCheckStatus;
+      detail: string | null;
+    }[];
   };
   metrics: {
     redirectCount: number;
@@ -162,6 +184,14 @@ export function getPublishedVersion(
 ): Promise<ApplicationVersionRecord> {
   return apiFetch<ApplicationVersionRecord>(
     `${applicationsPath(applicationId)}/published-version`,
+  );
+}
+
+export function getValidationChecks(
+  applicationVersionId: string,
+): Promise<ValidationCheckRecord[]> {
+  return apiFetch<ValidationCheckRecord[]>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/validation-checks`,
   );
 }
 

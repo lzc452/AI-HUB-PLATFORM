@@ -53,6 +53,7 @@ import {
   SaveApplicationDraftRequestDto,
   TransferOwnerRequestDto,
   TransferReviewRequestDto,
+  ValidationCheckDto,
   WithdrawRequestDto,
 } from "./application.dto.js";
 import type { ApplicationDraft } from "@ai-hub/contracts";
@@ -363,6 +364,28 @@ export class ApplicationController {
         versionId,
         body.claimedByEmployeeId,
       ),
+    );
+  }
+
+  @Get("versions/:applicationVersionId/validation-checks")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
+  @ApiOperation({ summary: "版本自动校验报告" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiOkResponse({
+    description: "版本校验检查点列表（按记录时间升序）",
+    type: ValidationCheckDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async listValidationChecks(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Param("applicationVersionId") versionId: string,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() =>
+      this.applications.listValidationChecks(versionId, actor),
     );
   }
 

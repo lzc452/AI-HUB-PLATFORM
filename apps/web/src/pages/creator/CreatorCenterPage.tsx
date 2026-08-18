@@ -9,6 +9,7 @@ import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
 import { KpiCard } from "../../components/common/KpiCard";
+import type { ValidationCheckStatus } from "../../modules/application/application.client";
 import {
   useCreatorApplications,
   useCreatorSummary,
@@ -21,6 +22,22 @@ import { CreatorTrendChart } from "./CreatorTrendChart";
 import { CreatorWelcomeBanner } from "./CreatorWelcomeBanner";
 
 const { Paragraph, Title } = Typography;
+
+const validationCheckTagColor: Record<ValidationCheckStatus, string> = {
+  passed: "success",
+  safe: "success",
+  warning: "warning",
+  info: "default",
+  failed: "error",
+};
+
+const validationCheckLabel: Record<ValidationCheckStatus, string> = {
+  passed: "通过",
+  safe: "安全",
+  warning: "警告",
+  info: "提示",
+  failed: "失败",
+};
 
 export default function CreatorCenterPage() {
   const { applicationId } = useParams();
@@ -147,14 +164,33 @@ export default function CreatorCenterPage() {
                       ? "校验通过"
                       : "校验失败"}
                   </Tag>
-                  <ul className="m-0 mt-3 space-y-2 pl-5">
-                    {summary.data.validationReport.checks.map((check) => (
-                      <li key={check.name}>
-                        {check.name}：
-                        {check.status === "passed" ? "通过" : "失败"}
-                      </li>
-                    ))}
-                  </ul>
+                  {summary.data.validationReport.checks.length === 0 ? (
+                    <Paragraph className="!mt-3 !mb-0 text-[13px] text-[#8a94a6]">
+                      该版本尚无自动校验记录
+                    </Paragraph>
+                  ) : (
+                    <ul className="m-0 mt-3 space-y-2 pl-5">
+                      {summary.data.validationReport.checks.map((check) => (
+                        <li
+                          className="flex flex-wrap items-center gap-2 text-[13px]"
+                          key={check.code}
+                        >
+                          <span>{check.label}</span>
+                          <Tag
+                            className="!mr-0"
+                            color={validationCheckTagColor[check.status]}
+                          >
+                            {validationCheckLabel[check.status]}
+                          </Tag>
+                          {check.detail ? (
+                            <span className="w-full text-xs text-[#8a94a6]">
+                              {check.detail}
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
               </div>
             ) : null}

@@ -16,6 +16,7 @@ import type {
   DeliveryRecord,
   ReviewQueueRecord,
   ReviewRecord,
+  ValidationCheckRecord,
 } from "./application.types.js";
 
 const owner: ActorContext = {
@@ -56,6 +57,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
   reviewQueue: ReviewQueueRecord[] = [];
   uploads = new Map<string, ArtifactUploadRecord>();
   assets = new Map<string, AssetRecord>();
+  validationChecks: ValidationCheckRecord[] = [];
   audits: string[] = [];
   events: string[] = [];
   catalogRegistrations: string[] = [];
@@ -88,6 +90,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
       reviewQueue: [...this.reviewQueue],
       uploads: new Map(this.uploads),
       assets: new Map(this.assets),
+      validationChecks: [...this.validationChecks],
       audits: [...this.audits],
       events: [...this.events],
       catalogRegistrations: [...this.catalogRegistrations],
@@ -239,6 +242,33 @@ class MemoryApplicationRepository implements ApplicationRepository {
           upload.uploadStatus === "completed" &&
           upload.scanStatus === "passed",
       ) ?? null
+    );
+  }
+  async recordValidationCheck(input: {
+    applicationVersionId: string;
+    checkCode: string;
+    label: string;
+    status: "passed" | "safe" | "warning" | "info" | "failed";
+    detail: string | null;
+  }) {
+    const existing = this.validationChecks.find(
+      (check) =>
+        check.applicationVersionId === input.applicationVersionId &&
+        check.checkCode === input.checkCode,
+    );
+    if (existing === undefined) {
+      this.validationChecks.push({
+        validationCheckId: `check-${this.nextId++}`,
+        createdAt: new Date(),
+        ...input,
+      });
+    } else {
+      Object.assign(existing, input);
+    }
+  }
+  async listValidationChecks(applicationVersionId: string) {
+    return this.validationChecks.filter(
+      (check) => check.applicationVersionId === applicationVersionId,
     );
   }
   async updateArtifactUpload(
@@ -693,6 +723,62 @@ describe("ApplicationService", () => {
     await expect(
       service.createVersion(owner, application.applicationId, versionInput),
     ).rejects.toThrow("VERSION_ALREADY_EXISTS");
+  });
+
+  it("records auto-validation checks when creating a version from a verified artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+
+    const checks = repository.validationChecks.filter(
+      (check) => check.applicationVersionId === version.applicationVersionId,
+    );
+    expect(checks.map((check) => check.checkCode)).toEqual([
+      "artifact.digest",
+      "artifact.malware_scan",
+      "artifact.signature",
+    ]);
+    expect(checks.every((check) => check.status === "passed")).toBe(true);
+    expect(
+      checks.find((check) => check.checkCode === "artifact.digest")?.detail,
+    ).toBe(versionInput.artifactSha256);
+    await expect(
+      repository.listValidationChecks(version.applicationVersionId),
+    ).resolves.toHaveLength(3);
+  });
+
+  it("records a warning check when the artifact is unsigned", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const input = {
+      ...versionInput,
+      version: "1.1.0",
+      artifactSignature: "",
+    };
+    registerVerifiedUpload(repository, application.applicationId, input);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      input,
+    );
+
+    const signatureCheck = repository.validationChecks.find(
+      (check) =>
+        check.applicationVersionId === version.applicationVersionId &&
+        check.checkCode === "artifact.signature",
+    );
+    expect(signatureCheck?.status).toBe("warning");
+    expect(signatureCheck?.detail).toBe("未签名制品，需人工确认");
   });
 
   it("persists maintainer and department ownership fields", async () => {

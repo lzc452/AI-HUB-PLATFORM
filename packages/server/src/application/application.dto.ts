@@ -988,3 +988,30 @@ export class UnifiedUploadDto {
   })
   assetId!: string | null;
 }
+
+export class ValidationCheckDto {
+  @ApiProperty({ type: String, description: "校验记录 ID" })
+  validationCheckId!: string;
+
+  @ApiProperty({ type: String, description: "应用版本 ID" })
+  applicationVersionId!: string;
+
+  @ApiProperty({ type: String, description: "校验点代码" })
+  checkCode!: string;
+
+  @ApiProperty({ type: String, description: "校验点名称" })
+  label!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "校验状态",
+    enum: ["passed", "safe", "warning", "info", "failed"],
+  })
+  status!: "passed" | "safe" | "warning" | "info" | "failed";
+
+  @ApiProperty({ type: String, nullable: true, description: "校验详情" })
+  detail!: string | null;
+
+  @ApiProperty({ type: String, description: "记录时间（ISO）" })
+  createdAt!: string;
+}

@@ -13,6 +13,7 @@ import type {
   ApplicationAdminListInput,
   ApplicationAdminListResult,
   DeliveryChannel,
+  ValidationCheckRecord,
 } from "./application.types.js";
 import type {
   ActorContext,
@@ -888,6 +889,52 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("upload_status", "=", "verifying")
       .executeTakeFirst();
     return Number(result.numUpdatedRows) > 0;
+  }
+
+  async recordValidationCheck(input: {
+    applicationVersionId: string;
+    checkCode: string;
+    label: string;
+    status: "passed" | "safe" | "warning" | "info" | "failed";
+    detail: string | null;
+  }): Promise<void> {
+    await this.db
+      .insertInto("application_validation_checks")
+      .values({
+        application_version_id: input.applicationVersionId,
+        check_code: input.checkCode,
+        label: input.label,
+        status: input.status,
+        detail: input.detail,
+      })
+      .onConflict((oc) =>
+        oc.columns(["application_version_id", "check_code"]).doUpdateSet({
+          label: input.label,
+          status: input.status,
+          detail: input.detail,
+        }),
+      )
+      .execute();
+  }
+
+  async listValidationChecks(
+    applicationVersionId: string,
+  ): Promise<readonly ValidationCheckRecord[]> {
+    const rows = await this.db
+      .selectFrom("application_validation_checks")
+      .selectAll()
+      .where("application_version_id", "=", applicationVersionId)
+      .orderBy("created_at", "asc")
+      .execute();
+    return rows.map((row) => ({
+      validationCheckId: row.validation_check_id,
+      applicationVersionId: row.application_version_id,
+      checkCode: row.check_code,
+      label: row.label,
+      status: row.status,
+      detail: row.detail,
+      createdAt: row.created_at,
+    }));
   }
 
   async createAsset(

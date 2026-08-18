@@ -22,6 +22,7 @@ import {
   getCreatorSummary,
   getPublishedVersion,
   getReviewQueue,
+  getValidationChecks,
   listAssets,
   publishApplication,
   releaseReview,
@@ -153,10 +154,8 @@ export function useDeleteApplication() {
 export function useTransferApplicationOwner() {
   const invalidateCaches = useInvalidateApplicationCaches();
   return useMutation({
-    mutationFn: (input: {
-      applicationId: string;
-      ownerEmployeeId: string;
-    }) => transferApplicationOwner(input.applicationId, input.ownerEmployeeId),
+    mutationFn: (input: { applicationId: string; ownerEmployeeId: string }) =>
+      transferApplicationOwner(input.applicationId, input.ownerEmployeeId),
     onError: (error) => showErrorMessage(error, "责任人移交失败"),
     onSuccess: async () => {
       await invalidateCaches();
@@ -317,6 +316,14 @@ export function useReviewQueue(applicationVersionId: string | undefined) {
     enabled: Boolean(applicationVersionId),
     queryFn: () => getReviewQueue(applicationVersionId as string),
     queryKey: ["applications", "review-queue", applicationVersionId],
+  });
+}
+
+export function useValidationChecks(applicationVersionId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(applicationVersionId),
+    queryFn: () => getValidationChecks(applicationVersionId as string),
+    queryKey: ["applications", "validation-checks", applicationVersionId],
   });
 }
 

@@ -60,21 +60,32 @@ export class KyselyCreatorRepository implements CreatorRepository {
   }
 
   async getValidationReport(applicationId: string) {
-    const row = await this.db
+    const latest = await this.db
       .selectFrom("application_versions")
-      .select("scan_status")
+      .select("application_version_id")
       .where("application_id", "=", applicationId)
       .orderBy("created_at", "desc")
       .executeTakeFirst();
-    const passed = row?.scan_status === "passed";
+    if (latest === undefined) {
+      return { status: "failed" as const, checks: [] };
+    }
+    const rows = await this.db
+      .selectFrom("application_validation_checks")
+      .selectAll()
+      .where("application_version_id", "=", latest.application_version_id)
+      .orderBy("created_at", "asc")
+      .execute();
+    const checks = rows.map((row) => ({
+      code: row.check_code,
+      label: row.label,
+      status: row.status,
+      detail: row.detail,
+    }));
     return {
-      status: passed ? ("passed" as const) : ("failed" as const),
-      checks: [
-        {
-          name: "artifact_scan",
-          status: passed ? ("passed" as const) : ("failed" as const),
-        },
-      ],
+      status: checks.some((check) => check.status === "failed")
+        ? ("failed" as const)
+        : ("passed" as const),
+      checks,
     };
   }
 

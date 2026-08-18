@@ -53,7 +53,14 @@ class MemoryCreatorRepository implements CreatorRepository {
   async getValidationReport() {
     return {
       status: "passed" as const,
-      checks: [{ name: "artifact", status: "passed" as const }],
+      checks: [
+        {
+          code: "artifact.digest",
+          label: "SHA-256 摘要校验",
+          status: "passed" as const,
+          detail: null,
+        },
+      ],
     };
   }
   async getAggregateMetrics() {

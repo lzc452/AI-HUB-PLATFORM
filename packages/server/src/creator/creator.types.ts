@@ -36,7 +36,12 @@ export interface CreatorRepository {
   }>;
   getValidationReport(applicationId: string): Promise<{
     status: "passed" | "failed";
-    checks: readonly { name: string; status: "passed" | "failed" }[];
+    checks: readonly {
+      code: string;
+      label: string;
+      status: "passed" | "safe" | "warning" | "info" | "failed";
+      detail: string | null;
+    }[];
   }>;
   getAggregateMetrics(applicationId: string): Promise<{
     redirectCount: number;

@@ -14,11 +14,14 @@ import type {
   ApplicationWorkspace,
   ApplicationAdminListInput,
   ApplicationAdminListResult,
+  ArtifactUploadRecord,
   DeliveryChannel,
   DeliveryRecord,
   ReviewDecision,
   ReviewQueueRecord,
   ReviewQueueView,
+  ValidationCheckRecord,
+  ValidationCheckStatus,
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
@@ -355,6 +358,11 @@ export class ApplicationService {
         scanStatus: input.scanStatus,
         createdByEmployeeId: actor.employeeId,
       });
+      await this.recordArtifactValidationChecks(
+        repository,
+        version.applicationVersionId,
+        verifiedUpload,
+      );
       await this.recordChange(
         repository,
         "application.version.created",
@@ -364,6 +372,66 @@ export class ApplicationService {
       );
       return version;
     });
+  }
+
+  async listValidationChecks(
+    applicationVersionId: string,
+    actor?: ActorContext,
+  ): Promise<readonly ValidationCheckRecord[]> {
+    const version = await this.requireVersion(applicationVersionId);
+    if (actor !== undefined) {
+      const application = await this.requireApplication(version.applicationId);
+      this.assertApplicationReadable(actor, application);
+    }
+    return this.repository.listValidationChecks(applicationVersionId);
+  }
+
+  /**
+   * 制品校验发生在版本创建之前（上传→worker 校验→createVersion），因此校验检查点
+   * 在版本事务内由已验证的 upload 记录派生落库（唯一键幂等 upsert）。
+   */
+  private async recordArtifactValidationChecks(
+    repository: ApplicationRepository,
+    applicationVersionId: string,
+    upload: ArtifactUploadRecord,
+  ): Promise<void> {
+    const checks: {
+      checkCode: string;
+      label: string;
+      status: ValidationCheckStatus;
+      detail: string | null;
+    }[] = [
+      {
+        checkCode: "artifact.digest",
+        label: "SHA-256 摘要校验",
+        status: "passed",
+        detail: upload.sha256,
+      },
+      {
+        checkCode: "artifact.malware_scan",
+        label: "恶意软件扫描",
+        status: "passed",
+        detail: "ClamAV clean",
+      },
+      {
+        checkCode: "artifact.signature",
+        label: "数字签名校验",
+        status:
+          upload.signature !== null && upload.signature.length > 0
+            ? "passed"
+            : "warning",
+        detail:
+          upload.signature !== null && upload.signature.length > 0
+            ? "签名验证通过"
+            : "未签名制品，需人工确认",
+      },
+    ];
+    for (const check of checks) {
+      await repository.recordValidationCheck({
+        applicationVersionId,
+        ...check,
+      });
+    }
   }
 
   async submitForReview(

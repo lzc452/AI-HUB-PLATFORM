@@ -129,6 +129,7 @@ vi.mock("./modules/application/useApplication", () => {
     useApplicationReviews: () => ({ ...settled, data: [] }),
     useApplicationVersions: () => ({ ...settled, data: [publishedVersion] }),
     useReviewQueue: () => ({ ...settled, data: null }),
+    useValidationChecks: () => ({ ...settled, data: [] }),
     useClaimReview: () => ({ isPending: false, mutate: vi.fn() }),
     useReleaseReview: () => ({ isPending: false, mutate: vi.fn() }),
     useReviewApplicationVersion: () => ({
