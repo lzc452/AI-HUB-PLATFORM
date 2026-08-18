@@ -196,7 +196,7 @@ if (queued.status !== 200 || queued.body.uploadStatus !== "verifying") {
 }
 const completed = await poll(
   `/internal/applications/${applicationId}/artifact-uploads/${uploadId}`,
-  appAdmin,
+  session,
   (body) => body.uploadStatus === "completed" || body.uploadStatus === "failed",
 );
 if (

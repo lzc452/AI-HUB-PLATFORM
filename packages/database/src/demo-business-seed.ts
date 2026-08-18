@@ -164,8 +164,8 @@ export async function seedDemoBusinessData(
       .insertInto("applications")
       .values({
         application_id: IDS.appInReview,
-        owner_employee_id: "DEMO-SUPER-ADMIN",
-        maintainer_employee_id: "DEMO-SUPER-ADMIN",
+        owner_employee_id: "DEMO-EMPLOYEE",
+        maintainer_employee_id: "DEMO-EMPLOYEE",
         department_id: "demo-rnd",
         name: "需求智能匹配平台",
         summary: "基于语义分析的创新需求自动匹配应用",
@@ -241,7 +241,7 @@ export async function seedDemoBusinessData(
         artifact_sha256: "b".repeat(64),
         artifact_signature: "demo-signature-in-review",
         scan_status: "passed",
-        created_by_employee_id: "DEMO-SUPER-ADMIN",
+        created_by_employee_id: "DEMO-EMPLOYEE",
       },
       {
         application_version_id: IDS.versionArchived,
