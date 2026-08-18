@@ -27,6 +27,7 @@ import {
 } from "../constants";
 import { useRoleRows } from "../roles/hooks/useRoleRows";
 import { CsvImportModal } from "../shared/CsvImportModal";
+import { ASSIGNABLE_ROLE_CODES } from "../../../../modules/auth/roles";
 import { useUserTableRows } from "./hooks/useUserTableRows";
 import { PasswordResetModal } from "./PasswordResetModal";
 import { UserFilterBar } from "./UserFilterBar";
@@ -149,14 +150,32 @@ export function UserManagementTab({
     [departments.data],
   );
 
-  const roleOptions = useMemo(
-    () =>
-      (roleRows.data ?? []).map((role) => ({
+  /** 用户角色选项；disabled 仅用于编辑/查看时保留已分配但 V1 不可再分发的历史角色（只读，随保存原样回传）。 */
+  const roleOptions = useMemo(() => {
+    const assignable = (roleRows.data ?? [])
+      .filter((role) => ASSIGNABLE_ROLE_CODES.includes(role.roleId))
+      .map((role) => ({
         label: role.roleName,
         value: role.roleId,
-      })),
-    [roleRows.data],
-  );
+      }));
+    const rowRoleNames = formModal?.row?.roleNames ?? [];
+    if (rowRoleNames.length === 0) {
+      return assignable;
+    }
+    // 历史数据：已分配的非分发角色以禁用选项保留展示，避免编辑保存（后端整体替换角色集）时被移除。
+    const assignableNames = new Set(assignable.map((option) => option.label));
+    const codeByName = new Map(
+      (roleRows.data ?? []).map((role) => [role.roleName, role.roleId]),
+    );
+    const legacy = [...new Set(rowRoleNames)]
+      .filter((name) => !assignableNames.has(name))
+      .map((name) => ({
+        label: name,
+        value: codeByName.get(name) ?? name,
+        disabled: true,
+      }));
+    return [...legacy, ...assignable];
+  }, [roleRows.data, formModal?.row?.roleNames]);
 
   const filterRoleOptions = useMemo(
     () => [...new Set(rows.flatMap((row) => row.roleNames ?? []))].sort(),
@@ -300,10 +319,12 @@ export function UserManagementTab({
         onClose={() => setResetRow(null)}
         onSubmit={(newPassword) => {
           if (resetRow !== null) {
-            void resetPassword.mutateAsync({
-              employeeId: resetRow.employeeId,
-              newPassword,
-            }).then(() => setResetRow(null));
+            void resetPassword
+              .mutateAsync({
+                employeeId: resetRow.employeeId,
+                newPassword,
+              })
+              .then(() => setResetRow(null));
           }
         }}
         open={resetRow !== null}

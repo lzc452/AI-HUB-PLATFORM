@@ -8,7 +8,7 @@ interface UserFormModalProps {
   loading: boolean;
   mode: "create" | "edit" | "view";
   open: boolean;
-  roleOptions: { label: string; value: string }[];
+  roleOptions: { label: string; value: string; disabled?: boolean }[];
   row?: UserTableRow | null;
   onClose: () => void;
   onSubmit: (values: {
@@ -104,7 +104,10 @@ export function UserFormModal({
           name="employeeId"
           rules={[
             { required: true, message: "请输入工号" },
-            { pattern: /^[A-Za-z0-9_-]+$/, message: "仅支持字母、数字、下划线和连字符" },
+            {
+              pattern: /^[A-Za-z0-9_-]+$/,
+              message: "仅支持字母、数字、下划线和连字符",
+            },
           ]}
         >
           <Input disabled={!isCreate} />

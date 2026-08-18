@@ -40,6 +40,16 @@ export function canAccess(
   );
 }
 
+/**
+ * V1 可分发角色编码：仅普通员工（employee）与超级管理员（super_admin）。
+ * 其余预置角色（application_admin、demand_operator、organization_admin 等）
+ * 保留定义但不实施分发——组织管理 UI 的角色选择器只展示本列表内的角色。
+ */
+export const ASSIGNABLE_ROLE_CODES: readonly string[] = [
+  "employee",
+  "super_admin",
+];
+
 export const ROUTE_ACCESS = {
   analytics: {
     anyOf: [
