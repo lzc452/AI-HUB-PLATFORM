@@ -586,6 +586,8 @@ async function preparePublishedApplication(
     application.applicationId,
     versionInput,
   );
+  // 自动上架门禁要求类型对应渠道齐全（§5.4），先配置再进入审核。
+  await configureAllDeliveryChannels(service, application.applicationId);
   await service.submitForReview(owner, version.applicationVersionId);
   await service.claimReview(reviewer, version.applicationVersionId);
   // 首次发布审核通过即自动上架（自动 publish），无需手动 publish 步骤。
@@ -776,6 +778,8 @@ describe("ApplicationService", () => {
       application.applicationId,
       versionInput,
     );
+    // 自动上架要求类型对应渠道齐全（§5.4），先配置再提交审核。
+    await configureAllDeliveryChannels(service, application.applicationId);
     await service.submitForReview(owner, version.applicationVersionId);
     await service.claimReview(reviewer, version.applicationVersionId);
 
@@ -801,6 +805,35 @@ describe("ApplicationService", () => {
     ).resolves.toMatchObject({ status: "completed" });
   });
 
+  it("rejects auto-publish approval when delivery channels are incomplete", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    // 全程零交付配置 → approve 必须被拒绝（§5.4 类型对应渠道完整性），
+    // 应用保持非 published，事务整体回滚。
+    await expect(
+      service.review(reviewer, version.applicationVersionId, "approve", "ok"),
+    ).rejects.toThrow("DELIVERY_CHANNELS_INCOMPLETE");
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({
+      status: "in_review",
+      currentVersionId: null,
+    });
+    expect(repository.catalogRegistrations).toHaveLength(0);
+    expect(repository.events).not.toContain("application.published");
+  });
+
   it("moves a scanned version through review, auto-publication, withdrawal, and archive", async () => {
     const { service, repository, analyticsEvents } = makeService();
     const application = await service.createApplication(owner, {
@@ -812,6 +845,8 @@ describe("ApplicationService", () => {
       application.applicationId,
       versionInput,
     );
+    // 自动上架要求类型对应渠道齐全（§5.4），先配置再提交审核。
+    await configureAllDeliveryChannels(service, application.applicationId);
     await service.submitForReview(owner, version.applicationVersionId);
     await service.claimReview(reviewer, version.applicationVersionId);
     const reviewed = await service.review(
@@ -829,7 +864,6 @@ describe("ApplicationService", () => {
     expect(repository.catalogRegistrations).toEqual([
       application.applicationId,
     ]);
-    await configureAllDeliveryChannels(service, application.applicationId);
     await service.withdraw(owner, application.applicationId, "superseded");
     await service.archive(owner, application.applicationId);
     await expect(
@@ -841,16 +875,16 @@ describe("ApplicationService", () => {
     expect(repository.audits).toEqual([
       "application.created",
       "application.version.created",
+      "application.delivery.configured",
+      "application.delivery.configured",
+      "application.delivery.configured",
+      "application.delivery.configured",
       "application.submitted",
       "application.review.requested",
       "application.review.sla.created",
       "application.review.claimed",
       "application.reviewed",
       "application.published",
-      "application.delivery.configured",
-      "application.delivery.configured",
-      "application.delivery.configured",
-      "application.delivery.configured",
       "application.withdrawn",
       "application.archived",
     ]);
@@ -991,6 +1025,8 @@ describe("ApplicationService", () => {
       application.applicationId,
       versionInput,
     );
+    // 自动上架要求类型对应渠道齐全（§5.4），先配置再提交审核。
+    await configureAllDeliveryChannels(service, application.applicationId);
     await service.submitForReview(owner, first.applicationVersionId);
     await service.claimReview(reviewer, first.applicationVersionId);
     await service.review(
@@ -999,8 +1035,6 @@ describe("ApplicationService", () => {
       "approve",
       "Approved",
     );
-    // 首次发布审核通过即自动上架（无需手动 publish）。
-    await configureAllDeliveryChannels(service, application.applicationId);
     const second = await service.createVersion(
       owner,
       application.applicationId,
@@ -1236,6 +1270,12 @@ describe("ApplicationService", () => {
     await service.submitDraft(owner, application.applicationId);
 
     const version = [...repository.versions.values()][0]!;
+    // 草稿流程的 applicationType 为 web_app（§5.4），只需 web 渠道即可通过自动上架门禁。
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
     await service.claimReview(reviewer, version.applicationVersionId);
     const published = await service.review(
       reviewer,
@@ -1243,11 +1283,6 @@ describe("ApplicationService", () => {
       "approve",
       "ok",
     );
-    await service.configureDelivery(owner, application.applicationId, {
-      channel: "web",
-      entryUrl: "https://apps.example.com",
-      enabled: true,
-    });
 
     // 审核通过即自动上架：无需手动 publish。
     expect(published.status).toBe("published");

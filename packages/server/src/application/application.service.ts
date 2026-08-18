@@ -579,8 +579,12 @@ export class ApplicationService {
           actor.employeeId,
         );
         // 首次发布审核通过：自动上架——目录注册与发布事件在审核事务内完成，
-        // 不再需要责任人手动调用 publish（等同原 publish 的效果）。
+        // 不再需要责任人手动调用 publish（等同原 publish 的效果，含渠道完整性门禁）。
         if (approved && sourceStatus === "draft") {
+          await this.assertDeliveryChannelsComplete(
+            repository,
+            application.applicationId,
+          );
           await repository.registerToCatalog({
             applicationId: application.applicationId,
             name: application.name,
@@ -610,23 +614,13 @@ export class ApplicationService {
     return updated;
   }
 
-  async publish(
-    actor: ActorContext,
-    applicationVersionId: string,
-  ): Promise<ApplicationRecord> {
-    await this.assertAuthorized(actor, allowedActions.publish);
-    const version = await this.requireVersion(applicationVersionId);
-    const application = await this.requireApplication(version.applicationId);
-    if (application.ownerEmployeeId !== actor.employeeId) {
-      throw new Error("APPLICATION_OWNER_REQUIRED");
-    }
-    this.requireStatus(application, "approved");
-    const deliveries = await this.repository.listDeliveries(
-      application.applicationId,
-    );
-    const applicationType = await this.repository.getApplicationType(
-      application.applicationId,
-    );
+  /** §5.4 发布前置校验：应用必须包含类型对应的已启用交付渠道（publish 与自动上架共用）。 */
+  private async assertDeliveryChannelsComplete(
+    repository: ApplicationRepository,
+    applicationId: string,
+  ): Promise<void> {
+    const deliveries = await repository.listDeliveries(applicationId);
+    const applicationType = await repository.getApplicationType(applicationId);
     const requiredChannels =
       applicationType !== null &&
       requiredChannelsByType[applicationType] !== undefined
@@ -642,6 +636,23 @@ export class ApplicationService {
     ) {
       throw new Error("DELIVERY_CHANNELS_INCOMPLETE");
     }
+  }
+
+  async publish(
+    actor: ActorContext,
+    applicationVersionId: string,
+  ): Promise<ApplicationRecord> {
+    await this.assertAuthorized(actor, allowedActions.publish);
+    const version = await this.requireVersion(applicationVersionId);
+    const application = await this.requireApplication(version.applicationId);
+    if (application.ownerEmployeeId !== actor.employeeId) {
+      throw new Error("APPLICATION_OWNER_REQUIRED");
+    }
+    this.requireStatus(application, "approved");
+    await this.assertDeliveryChannelsComplete(
+      this.repository,
+      application.applicationId,
+    );
     return this.repository.withTransaction(async (repository) => {
       const updated = await repository.setApplicationStatus({
         applicationId: application.applicationId,
