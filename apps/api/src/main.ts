@@ -21,6 +21,7 @@ import {
   PinoNestLogger,
   KyselyReplayNonceRepository,
   createProductionSecurityMiddleware,
+  createRateLimitMiddleware,
   ArtifactPipeline,
   DiskObjectStorage,
   GarageObjectStorage,
@@ -112,6 +113,31 @@ async function bootstrap() {
   );
 
   app.use(createHttpLogger(logger));
+  app.use(
+    createRateLimitMiddleware({
+      limits: [
+        // 登录端点：固定频率限制（规格 §5.1 要求的最低限度）
+        {
+          matcher: (p) => p === "/internal/identity/login/password",
+          windowMs: 60_000,
+          max: 5,
+          keySource: "ip",
+        },
+        {
+          matcher: (p) => p === "/internal/identity/login/challenge",
+          windowMs: 60_000,
+          max: 10,
+          keySource: "ip",
+        },
+        {
+          matcher: (p) => p === "/internal/identity/login/challenge",
+          windowMs: 60_000,
+          max: 20,
+          keySource: "ip+account",
+        },
+      ],
+    }),
+  );
   app.use(
     createProductionSecurityMiddleware({
       enabled: config.nodeEnv === "production",

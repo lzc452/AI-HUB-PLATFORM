@@ -1,5 +1,9 @@
 import { Test } from "@nestjs/testing";
-import { IdentityService, type IdentityRepository } from "@ai-hub/server";
+import {
+  IdentityService,
+  createRateLimitMiddleware,
+  type IdentityRepository,
+} from "@ai-hub/server";
 import request from "supertest";
 
 import { ApiModule } from "../src/api.module.js";
@@ -238,6 +242,67 @@ describe("identity endpoints", () => {
       .expect(({ body }) => {
         expect(body).toMatchObject({
           code: "LOGIN_ENCRYPTION_INVALID_ENVELOPE",
+        });
+      });
+
+    await app.close();
+  });
+
+  it("rate-limits the password login endpoint by IP (6th attempt returns 429)", async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ApiModule.forTest({
+          databaseCheck: async () => true,
+          identity: new IdentityService(new ApiIdentityRepository()),
+        }),
+      ],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    // e2e 直接组装 Nest 应用（不走 main.ts bootstrap），因此在此注册与生产一致的限流规则。
+    // mock 仓库不影响限流：中间件按路径匹配，先于控制器执行。
+    app.use(
+      createRateLimitMiddleware({
+        limits: [
+          {
+            matcher: (p) => p === "/internal/identity/login/password",
+            windowMs: 60_000,
+            max: 5,
+            keySource: "ip",
+          },
+          {
+            matcher: (p) => p === "/internal/identity/login/challenge",
+            windowMs: 60_000,
+            max: 10,
+            keySource: "ip",
+          },
+          {
+            matcher: (p) => p === "/internal/identity/login/challenge",
+            windowMs: 60_000,
+            max: 20,
+            keySource: "ip+account",
+          },
+        ],
+      }),
+    );
+    await app.init();
+
+    // 前 5 次（错误信封）正常到达控制器并返回 400
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .post("/internal/identity/login/password")
+        .send({ employeeId: "E001", password: "禁止明文传输" })
+        .expect(400);
+    }
+
+    // 第 6 次：限流中间件拦截 → 429
+    await request(app.getHttpServer())
+      .post("/internal/identity/login/password")
+      .send({ employeeId: "E001", password: "禁止明文传输" })
+      .expect(429)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          status: 429,
+          code: "RATE_LIMITED",
         });
       });
 
