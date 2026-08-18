@@ -204,6 +204,15 @@ export class KyselyIdentityRepository implements IdentityRepository {
     }));
   }
 
+  async listEmployeeIdsWithRole(roleCode: string): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("employee_roles")
+      .select("employee_id")
+      .where("role_code", "=", roleCode)
+      .execute();
+    return rows.map((row) => row.employee_id);
+  }
+
   async listRoles(): Promise<readonly IdentityRoleRecord[]> {
     const rows = await this.db
       .selectFrom("roles")

@@ -132,6 +132,8 @@ export interface IdentityRepository {
   listDepartments(): Promise<readonly DepartmentSummary[]>;
   listEmployeeDepartmentIds(employeeId: EmployeeId): Promise<readonly string[]>;
   listEmployeeRoles(employeeId: EmployeeId): Promise<readonly RoleRecord[]>;
+  /** List employee IDs that currently hold the given role code. */
+  listEmployeeIdsWithRole(roleCode: string): Promise<string[]>;
   listRoles?(): Promise<readonly IdentityRoleRecord[]>;
   createRole?(input: {
     roleCode: string;

@@ -1277,6 +1277,10 @@ export class IdentityService {
     return this.repository.listEmployeeRoles(employeeId);
   }
 
+  listEmployeeIdsWithRole(roleCode: string) {
+    return this.repository.listEmployeeIdsWithRole(roleCode);
+  }
+
   listAuditEvents(input?: { eventType?: string; limit?: number }) {
     if (this.repository.listAuditEvents === undefined) {
       return Promise.resolve([]);

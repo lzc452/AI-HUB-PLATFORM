@@ -63,6 +63,9 @@ class ApiIdentityRepository implements IdentityRepository {
       },
     ];
   }
+  async listEmployeeIdsWithRole(roleCode: string) {
+    return roleCode === "organization_admin" ? ["E001"] : [];
+  }
   async listEmployeesPage() {
     return { items: await this.listEmployees(), total: 1 };
   }

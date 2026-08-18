@@ -2,7 +2,7 @@ import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import request from "supertest";
 import { sql } from "kysely";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ApplicationService,
   DemandService,
@@ -55,6 +55,9 @@ const identityRepository = {
           : "dept-rnd",
     ];
   },
+  async listEmployeeIdsWithRole(roleCode: string) {
+    return roleCode === "demand_operator" ? ["E900"] : [];
+  },
   async listEmployeeRoles(employeeId: string) {
     return [
       {
@@ -95,6 +98,7 @@ describe("real Phase 5 demand API", () => {
   let stop: (() => Promise<void>) | undefined;
   let db: ReturnType<typeof createDatabase>;
   let app: INestApplication;
+  const notificationsSpy = { queue: vi.fn().mockResolvedValue(undefined) };
 
   beforeAll(async () => {
     const container = await startPostgresTestContainer();
@@ -148,6 +152,9 @@ describe("real Phase 5 demand API", () => {
         authorize: (input) => identity.authorize(input),
       },
       application,
+      undefined,
+      identity,
+      notificationsSpy,
     );
     const moduleRef = await Test.createTestingModule({
       imports: [
@@ -198,6 +205,11 @@ describe("real Phase 5 demand API", () => {
       .post(`/internal/demands/${demandId}/submit-review`)
       .set(requester)
       .expect(201);
+    expect(notificationsSpy.queue).toHaveBeenCalledWith(
+      expect.objectContaining({ employeeId: "E100" }),
+      "demand.submitted",
+      { recipientEmployeeId: "E900", aggregateId: demandId },
+    );
     const published = await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/review`)
       .set(reviewer)

@@ -64,6 +64,14 @@ async function authorizeDingTalkResource(
           .where("owner_employee_id", "=", recipientEmployeeId)
           .executeTakeFirst()) !== undefined
       );
+    case "demand_operator":
+      return (
+        (await database
+          .selectFrom("ai_demands")
+          .select("demand_id")
+          .where("demand_id", "=", aggregateId)
+          .executeTakeFirst()) !== undefined
+      );
     case "demand_collaborator":
       return (
         (await database
@@ -131,6 +139,7 @@ export class NotificationModule {
                   application_reviewer: ["application_reviewer"],
                   application_owner: ["application_owner"],
                   demand_owner: ["demand_owner", "demand_operator"],
+                  demand_operator: ["demand_operator", "super_admin"],
                   demand_submitter: ["employee", "demand_operator"],
                   demand_collaborator: [
                     "demand_collaborator",

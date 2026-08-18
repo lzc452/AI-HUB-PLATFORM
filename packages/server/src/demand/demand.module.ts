@@ -13,6 +13,9 @@ import { DemandService } from "./demand.service.js";
 import { DEMAND_SERVICE, DEMAND_STORAGE } from "./demand.tokens.js";
 import { AnalyticsEventService } from "../analytics/analytics.service.js";
 import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
+import { NotificationModule } from "../notification/notification.module.js";
+import { DINGTALK_NOTIFICATION_MATRIX_SERVICE } from "../notification/notification.tokens.js";
+import type { DingTalkNotificationMatrixService } from "../notification/dingtalk-matrix.service.js";
 
 @Module({})
 export class DemandModule {
@@ -25,6 +28,7 @@ export class DemandModule {
       imports: [
         IdentityModule.register(database),
         ApplicationModule.registerService(database),
+        NotificationModule.register(database),
       ],
       controllers: [DemandController],
       providers: [
@@ -33,6 +37,7 @@ export class DemandModule {
           useFactory: (
             identity: IdentityService,
             applications: ApplicationService,
+            notifications: DingTalkNotificationMatrixService,
           ) =>
             new DemandService(
               new KyselyDemandRepository(database),
@@ -41,8 +46,14 @@ export class DemandModule {
               new AnalyticsEventService(
                 new KyselyAnalyticsEventRepository(database),
               ),
+              identity,
+              notifications,
             ),
-          inject: [IdentityService, APPLICATION_SERVICE],
+          inject: [
+            IdentityService,
+            APPLICATION_SERVICE,
+            DINGTALK_NOTIFICATION_MATRIX_SERVICE,
+          ],
         },
         ...(storageDirectory === undefined
           ? []

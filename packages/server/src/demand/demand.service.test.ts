@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   ActorContext,
   AuthorizationDecision,
@@ -1264,5 +1264,89 @@ describe("DemandService merge and application links", () => {
       applicationId: "application-from-demand",
       isPrimary: true,
     });
+  });
+});
+
+describe("DemandService demand.submitted notification", () => {
+  function submitHarness() {
+    const demand = baseDemand("demand-submit-notification");
+    demand.status = "draft";
+    const audits: string[] = [];
+    const events: string[] = [];
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository),
+      findById: async () => demand,
+      transitionStatus: async (
+        _id: string,
+        status: DemandEntry["status"],
+        _expectedVersion: number,
+        reviewReason?: string | null,
+      ) => {
+        demand.status = status;
+        demand.reviewReason = reviewReason ?? null;
+        demand.version += 1;
+        return demand;
+      },
+      recordAudit: async ({ eventType }: { eventType: string }) => {
+        audits.push(eventType);
+      },
+      emitOutbox: async ({ eventType }: { eventType: string }) => {
+        events.push(eventType);
+      },
+    } as unknown as DemandRepository;
+    return { repository, demand, audits, events };
+  }
+
+  it("queues demand.submitted to the first demand_operator on submit", async () => {
+    const { repository, demand } = submitHarness();
+    const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      undefined,
+      undefined,
+      {
+        listEmployeeIdsWithRole: async (roleCode: string) =>
+          roleCode === "demand_operator" ? ["operator-1", "operator-2"] : [],
+      },
+      notifications,
+    );
+
+    await service.submitForReview(requester, demand.demandId);
+
+    expect(demand.status).toBe("pending_review");
+    expect(notifications.queue).toHaveBeenCalledWith(
+      requester,
+      "demand.submitted",
+      { recipientEmployeeId: "operator-1", aggregateId: demand.demandId },
+    );
+  });
+
+  it("skips the notification when no demand_operator exists", async () => {
+    const { repository, demand } = submitHarness();
+    const notifications = { queue: vi.fn() };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      undefined,
+      undefined,
+      { listEmployeeIdsWithRole: async () => [] },
+      notifications,
+    );
+
+    await service.submitForReview(requester, demand.demandId);
+    expect(demand.status).toBe("pending_review");
+    expect(notifications.queue).not.toHaveBeenCalled();
+  });
+
+  it("submits without a notification when the ports are absent", async () => {
+    const { repository, demand } = submitHarness();
+    const service = new DemandService(repository, { authorize: allowAll });
+
+    await expect(
+      service.submitForReview(requester, demand.demandId),
+    ).resolves.toMatchObject({ status: "pending_review" });
   });
 });

@@ -13,20 +13,48 @@ const actor: ActorContext = {
   sessionId: "session-1",
 };
 
+const EMITTED_EVENTS = [
+  "application.review.requested",
+  "application.review.decided",
+  "application.published",
+  "application.withdrawn",
+  "artifact.verification.failed",
+  "demand.submitted",
+  "demand.reviewed",
+  "demand.claimed",
+  "demand.collaborator_assigned",
+  "demand.progress_updated",
+  "demand.pilot_started",
+  "demand.closed",
+  "demand.merged",
+  "analytics.export.completed",
+  "analytics.export.failed",
+  "analytics.assistant.failed",
+];
+
 describe("DingTalk notification matrix", () => {
+  it("matrix keys match emitted outbox event names", () => {
+    for (const event of EMITTED_EVENTS) {
+      expect(DINGTALK_NOTIFICATION_MATRIX).toHaveProperty(event);
+    }
+  });
+
   it("defines every fixed Phase 3-6 work notification scenario", () => {
     expect(Object.keys(DINGTALK_NOTIFICATION_MATRIX)).toEqual([
-      "application.review_requested",
-      "application.review_decided",
+      "application.review.requested",
+      "application.review.decided",
+      "application.review.claim_expired",
       "application.published",
       "application.withdrawn",
       "demand.submitted",
+      "demand.reviewed",
       "demand.claimed",
       "demand.collaborator_assigned",
       "demand.progress_updated",
       "demand.pilot_started",
       "demand.closed",
       "demand.merged",
+      "artifact.verification.failed",
       "analytics.export.completed",
       "analytics.export.failed",
       "analytics.assistant.failed",
@@ -66,7 +94,7 @@ describe("DingTalk notification matrix", () => {
       Object.keys(DINGTALK_NOTIFICATION_MATRIX).length,
     );
     expect(createForEvent).toHaveBeenNthCalledWith(
-      12,
+      15,
       actor,
       expect.objectContaining({
         recipientEmployeeId: "employee-2",

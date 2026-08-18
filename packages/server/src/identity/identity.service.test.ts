@@ -99,6 +99,14 @@ class MemoryIdentityRepository implements IdentityRepository {
     return this.roles.get(employeeId) ?? [];
   }
 
+  async listEmployeeIdsWithRole(roleCode: string): Promise<string[]> {
+    return [...this.roles.entries()]
+      .filter(([, roleRecords]) =>
+        roleRecords.some((record) => record.roleCode === roleCode),
+      )
+      .map(([employeeId]) => employeeId);
+  }
+
   async listEmployeesPage(input?: {
     keyword?: string;
     page?: number;
@@ -849,5 +857,30 @@ describe("IdentityService", () => {
     ).rejects.toThrow("DINGTALK_UNAVAILABLE");
 
     expect(repository.audits).toContain("identity.dingtalk.sync.failed");
+  });
+
+  it("lists employee IDs that hold a given role code", async () => {
+    const repository = new MemoryIdentityRepository();
+    const service = new IdentityService(repository, new PasswordService());
+    await service.createLocalEmployee({
+      employeeId: "E101",
+      displayName: "Requester",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+    });
+    await service.createLocalEmployee({
+      employeeId: "E102",
+      displayName: "Operator",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+    });
+    await repository.assignRole("E102", "demand_operator");
+
+    expect(await service.listEmployeeIdsWithRole("demand_operator")).toEqual([
+      "E102",
+    ]);
+    expect(await service.listEmployeeIdsWithRole("application_admin")).toEqual(
+      [],
+    );
   });
 });

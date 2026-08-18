@@ -15,9 +15,11 @@ import type {
   DemandAttachmentRecord,
   DemandDraftInput,
   DemandEntry,
+  DemandIdentityPort,
   DemandListResult,
   DemandApplicationLinkRecord,
   DemandApplicationBridge,
+  DemandNotificationPort,
   DemandPilotRecord,
   DemandProgressRecord,
   DemandReportRecord,
@@ -47,6 +49,8 @@ export class DemandService {
     private readonly authorization: DemandAuthorizationPort,
     private readonly applicationBridge?: DemandApplicationBridge,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+    private readonly identityPort?: DemandIdentityPort,
+    private readonly notifications?: DemandNotificationPort,
   ) {}
 
   async createDraft(
@@ -115,21 +119,35 @@ export class DemandService {
     if (!reviewableStatuses.has(current.status)) {
       throw new Error("DEMAND_SUBMIT_INVALID_STATE");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const submitted = await repository.transitionStatus(
-        demandId,
-        "pending_review",
-        current.version,
-        null,
-      );
-      await this.recordMutation(
-        repository,
-        submitted,
-        actor,
-        "demand.submitted",
-      );
-      return submitted;
-    });
+    const submitted = await this.repository.withTransaction(
+      async (repository) => {
+        const submitted = await repository.transitionStatus(
+          demandId,
+          "pending_review",
+          current.version,
+          null,
+        );
+        await this.recordMutation(
+          repository,
+          submitted,
+          actor,
+          "demand.submitted",
+        );
+        return submitted;
+      },
+    );
+    if (this.notifications !== undefined) {
+      const reviewers =
+        (await this.identityPort?.listEmployeeIdsWithRole("demand_operator")) ??
+        [];
+      if (reviewers.length > 0) {
+        await this.notifications.queue(actor, "demand.submitted", {
+          recipientEmployeeId: reviewers[0]!,
+          aggregateId: demandId,
+        });
+      }
+    }
+    return submitted;
   }
 
   async review(

@@ -66,6 +66,24 @@ export interface DemandApplicationBridge {
   ): Promise<{ applicationId: string }>;
 }
 
+/** 按角色查询员工 ID 列表（由 identity 模块实现）。 */
+export interface DemandIdentityPort {
+  listEmployeeIdsWithRole(roleCode: string): Promise<string[]>;
+}
+
+/** 钉钉通知矩阵队列端口（由 notification 模块的矩阵服务实现）。 */
+export interface DemandNotificationPort {
+  queue(
+    actor: ActorContext,
+    scenario: string,
+    input: {
+      recipientEmployeeId: string;
+      aggregateId: string;
+      variables?: Readonly<Record<string, string | number>>;
+    },
+  ): Promise<unknown>;
+}
+
 export interface DemandRepository {
   withTransaction<T>(
     operation: (repository: DemandRepository) => Promise<T>,

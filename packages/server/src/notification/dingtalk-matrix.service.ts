@@ -2,13 +2,17 @@ import type { ActorContext } from "@ai-hub/contracts";
 import type { NotificationService } from "./notification.service.js";
 
 export const DINGTALK_NOTIFICATION_MATRIX = {
-  "application.review_requested": {
+  "application.review.requested": {
     recipientRole: "application_reviewer",
-    messageTemplate: "应用 {aggregateId} 已提交评审。",
+    messageTemplate: "应用 {aggregateId} 已提交评审，待领取。",
   },
-  "application.review_decided": {
+  "application.review.decided": {
     recipientRole: "application_owner",
     messageTemplate: "应用 {aggregateId} 的评审结论：{decision}。",
+  },
+  "application.review.claim_expired": {
+    recipientRole: "application_reviewer",
+    messageTemplate: "评审任务 {aggregateId} 已超时释放。",
   },
   "application.published": {
     recipientRole: "application_owner",
@@ -19,8 +23,12 @@ export const DINGTALK_NOTIFICATION_MATRIX = {
     messageTemplate: "应用 {aggregateId} 已撤回。",
   },
   "demand.submitted": {
-    recipientRole: "demand_owner",
+    recipientRole: "demand_operator",
     messageTemplate: "需求 {aggregateId} 已提交。",
+  },
+  "demand.reviewed": {
+    recipientRole: "demand_submitter",
+    messageTemplate: "需求 {aggregateId} 的审核结论：{decision}。",
   },
   "demand.claimed": {
     recipientRole: "demand_submitter",
@@ -45,6 +53,10 @@ export const DINGTALK_NOTIFICATION_MATRIX = {
   "demand.merged": {
     recipientRole: "demand_submitter",
     messageTemplate: "需求 {aggregateId} 已合并。",
+  },
+  "artifact.verification.failed": {
+    recipientRole: "artifact_uploader",
+    messageTemplate: "安装包 {aggregateId} 校验失败：{errorCode}。",
   },
   "analytics.export.completed": {
     recipientRole: "export_requester",
