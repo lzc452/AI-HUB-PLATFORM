@@ -1,23 +1,39 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  ValidateIf,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 /** 登录加密信封。 */
 export class EncryptedLoginEnvelopeDto {
   @ApiProperty({ type: String })
+  @IsString()
   encryptedPayload!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   wrappedKey!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   iv!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   aad!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   keyId!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   nonce!: string;
 }
 
@@ -28,12 +44,15 @@ export class LoginRequestDto {
     description: "员工工号",
     example: "DEMO-EMPLOYEE",
   })
+  @IsString()
   employeeId!: string;
 
   @ApiProperty({
     type: EncryptedLoginEnvelopeDto,
     description: "一次性登录加密信封",
   })
+  @ValidateNested()
+  @Type(() => EncryptedLoginEnvelopeDto)
   envelope!: EncryptedLoginEnvelopeDto;
 
   @ApiPropertyOptional({
@@ -41,6 +60,8 @@ export class LoginRequestDto {
     description: "设备标识",
     example: "browser",
   })
+  @IsOptional()
+  @IsString()
   deviceLabel?: string;
 }
 
@@ -51,6 +72,8 @@ export class LogoutRequestDto {
     description: "会话 ID",
     example: "00000000-0000-0000-0000-000000000000",
   })
+  @IsOptional()
+  @IsString()
   sessionId?: string;
 }
 
@@ -61,6 +84,8 @@ export class RevokeSessionsRequestDto {
     description: "撤销原因",
     example: "admin_action",
   })
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 
@@ -264,23 +289,35 @@ export class CreateRoleRequestDto {
     description: "角色编码；缺省时由后端自动生成",
     example: "catalog_operator",
   })
+  @IsOptional()
+  @IsString()
   roleCode?: string;
 
   @ApiProperty({ type: String, example: "目录运营" })
+  @IsString()
   name!: string;
 
   @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
   permissions!: string[];
 }
 
 export class UpdateRoleRequestDto {
   @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
   name?: string;
 
   @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   permissions?: string[];
 
   @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  @IsOptional()
+  @IsIn(["active", "disabled"])
   status?: "active" | "disabled";
 }
 
@@ -302,15 +339,21 @@ export class EmployeePageResultDto {
 /** 更新员工请求。 */
 export class UpdateEmployeeRequestDto {
   @ApiPropertyOptional({ type: String, description: "显示名" })
+  @IsOptional()
+  @IsString()
   displayName?: string;
 
   @ApiPropertyOptional({
     description: "状态",
     enum: ["active", "disabled", "pending_binding"],
   })
+  @IsOptional()
+  @IsIn(["active", "disabled", "pending_binding"])
   status?: "active" | "disabled" | "pending_binding";
 
   @ApiPropertyOptional({ type: String, description: "主部门 ID" })
+  @IsOptional()
+  @IsString()
   primaryDepartmentId?: string;
 }
 
@@ -320,9 +363,12 @@ export class UpsertDepartmentRequestDto {
     type: String,
     description: "部门 ID；缺省时由后端自动生成",
   })
+  @IsOptional()
+  @IsString()
   departmentId?: string;
 
   @ApiProperty({ type: String, description: "部门名称" })
+  @IsString()
   name!: string;
 
   @ApiPropertyOptional({
@@ -330,6 +376,9 @@ export class UpsertDepartmentRequestDto {
     nullable: true,
     description: "父部门 ID",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   parentDepartmentId?: string | null;
 
   @ApiPropertyOptional({
@@ -337,15 +386,22 @@ export class UpsertDepartmentRequestDto {
     nullable: true,
     description: "部门负责人工号",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   managerEmployeeId?: string | null;
 
   @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  @IsOptional()
+  @IsIn(["active", "disabled"])
   status?: "active" | "disabled";
 }
 
 /** 更新部门请求。 */
 export class UpdateDepartmentRequestDto {
   @ApiPropertyOptional({ type: String, description: "部门名称" })
+  @IsOptional()
+  @IsString()
   name?: string;
 
   @ApiPropertyOptional({
@@ -353,6 +409,9 @@ export class UpdateDepartmentRequestDto {
     nullable: true,
     description: "父部门 ID",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   parentDepartmentId?: string | null;
 
   @ApiPropertyOptional({
@@ -360,15 +419,22 @@ export class UpdateDepartmentRequestDto {
     nullable: true,
     description: "部门负责人工号",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   managerEmployeeId?: string | null;
 
   @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  @IsOptional()
+  @IsIn(["active", "disabled"])
   status?: "active" | "disabled";
 }
 
 /** 分配员工角色请求。 */
 export class AssignRolesRequestDto {
   @ApiProperty({ type: [String], description: "角色编码列表" })
+  @IsArray()
+  @IsString({ each: true })
   roleCodes!: string[];
 }
 
@@ -412,12 +478,20 @@ export class SyncConfigDto {
 
 export class UpdateSyncConfigRequestDto {
   @ApiPropertyOptional({ type: Boolean })
+  @IsOptional()
+  @IsBoolean()
   enabled?: boolean;
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   schedule?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   externalOrgId?: string | null;
 }
 
@@ -459,91 +533,131 @@ export class SyncRunItemDto {
 /** 创建本地员工请求。 */
 export class CreateEmployeeRequestDto {
   @ApiProperty({ type: String, example: "E1001" })
+  @IsString()
   employeeId!: string;
 
   @ApiProperty({ type: String, example: "张三" })
+  @IsString()
   displayName!: string;
 
   @ApiProperty({ type: String, example: "demo-rnd" })
+  @IsString()
   primaryDepartmentId!: string;
 
   @ApiPropertyOptional({
     type: [String],
     description: "角色编码列表；缺省时默认 employee",
   })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   roleCodes?: string[];
 
   @ApiPropertyOptional({
     type: String,
     description: "本地初始密码；新建本地用户时必填",
   })
+  @IsOptional()
+  @IsString()
   password?: string;
 
   @ApiPropertyOptional({
     enum: ["active", "disabled", "pending_binding"],
   })
+  @IsOptional()
+  @IsIn(["active", "disabled", "pending_binding"])
   status?: "active" | "disabled" | "pending_binding";
 }
 
 /** 批量停用员工请求。 */
 export class BulkDisableEmployeesRequestDto {
   @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
   employeeIds!: string[];
 }
 
 /** 管理员重置员工密码请求。 */
 export class ResetPasswordRequestDto {
   @ApiProperty({ type: String, minLength: 8 })
+  @IsString()
   newPassword!: string;
 }
 
 /** 员工 CSV 导入预览行。 */
 export class EmployeeImportRowDto {
   @ApiProperty({ type: String })
+  @IsString()
   employeeId!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   displayName!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   primaryDepartmentId!: string;
 
   @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   roleCodes?: string[];
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   password?: string | null;
 
   @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsIn(["active", "disabled", "pending_binding"])
   status?: "active" | "disabled" | "pending_binding";
 }
 
 /** 部门 CSV 导入预览行。 */
 export class DepartmentImportRowDto {
   @ApiProperty({ type: String })
+  @IsString()
   departmentId!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   name!: string;
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   parentDepartmentId?: string | null;
 
   @ApiPropertyOptional({ type: String, nullable: true })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   managerEmployeeId?: string | null;
 
   @ApiPropertyOptional({ enum: ["active", "disabled"] })
+  @IsOptional()
+  @IsIn(["active", "disabled"])
   status?: "active" | "disabled";
 }
 
 /** 员工/部门导入提交请求。 */
 export class EmployeeImportCommitRequestDto {
   @ApiProperty({ type: [EmployeeImportRowDto] })
+  @IsArray()
+  @ValidateNested()
+  @Type(() => EmployeeImportRowDto)
   rows!: EmployeeImportRowDto[];
 }
 
 export class DepartmentImportCommitRequestDto {
   @ApiProperty({ type: [DepartmentImportRowDto] })
+  @IsArray()
+  @ValidateNested()
+  @Type(() => DepartmentImportRowDto)
   rows!: DepartmentImportRowDto[];
 }
 
@@ -601,14 +715,18 @@ export class RoleDetailDto {
 /** 复制角色请求。 */
 export class CopyRoleRequestDto {
   @ApiProperty({ type: String })
+  @IsString()
   roleCode!: string;
 
   @ApiProperty({ type: String })
+  @IsString()
   name!: string;
 }
 
 /** 批量停用角色请求。 */
 export class BulkDisableRolesRequestDto {
   @ApiProperty({ type: [String] })
+  @IsArray()
+  @IsString({ each: true })
   roleIds!: string[];
 }

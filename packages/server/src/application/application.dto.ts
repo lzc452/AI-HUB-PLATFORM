@@ -1,4 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  ValidateIf,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from "class-validator";
+import { Type } from "class-transformer";
 
 /** 创建应用请求。 */
 export class CreateApplicationRequestDto {
@@ -7,6 +19,7 @@ export class CreateApplicationRequestDto {
     description: "应用名称",
     example: "智能考勤助手",
   })
+  @IsString()
   name!: string;
 
   @ApiProperty({
@@ -14,6 +27,7 @@ export class CreateApplicationRequestDto {
     description: "应用简介",
     example: "面向研发团队的智能考勤与排班应用",
   })
+  @IsString()
   summary!: string;
 
   @ApiPropertyOptional({
@@ -21,6 +35,8 @@ export class CreateApplicationRequestDto {
     description: "维护人员工工号，缺省为当前调用者",
     example: "DEMO-APP-ADMIN",
   })
+  @IsOptional()
+  @IsString()
   maintainerEmployeeId?: string;
 
   @ApiPropertyOptional({
@@ -28,15 +44,19 @@ export class CreateApplicationRequestDto {
     description: "所属部门 ID",
     example: "demo-rnd",
   })
+  @IsOptional()
+  @IsString()
   departmentId?: string;
 }
 
 /** 创建应用版本请求。 */
 export class CreateVersionRequestDto {
   @ApiProperty({ type: String, description: "版本号", example: "1.0.0" })
+  @IsString()
   version!: string;
 
   @ApiProperty({ type: String, description: "变更说明", example: "首次发布" })
+  @IsString()
   changelog!: string;
 
   @ApiProperty({
@@ -44,6 +64,7 @@ export class CreateVersionRequestDto {
     description: "制品对象存储键",
     example: "apps/app-1/1.0.0.zip",
   })
+  @IsString()
   artifactKey!: string;
 
   @ApiProperty({
@@ -51,6 +72,7 @@ export class CreateVersionRequestDto {
     description: "制品 SHA-256",
     example: "a".repeat(64),
   })
+  @IsString()
   artifactSha256!: string;
 
   @ApiProperty({
@@ -58,9 +80,11 @@ export class CreateVersionRequestDto {
     description: "制品签名",
     example: "signature-base64",
   })
+  @IsString()
   artifactSignature!: string;
 
   @ApiProperty({ type: String, description: "扫描状态", enum: ["passed"] })
+  @IsIn(["passed"])
   scanStatus!: "passed";
 }
 
@@ -71,6 +95,7 @@ export class ConfigureDeliveryRequestDto {
     description: "入口地址",
     example: "https://apps.example.com/attendance",
   })
+  @IsString()
   entryUrl!: string;
 
   @ApiPropertyOptional({
@@ -78,9 +103,12 @@ export class ConfigureDeliveryRequestDto {
     description: "最低客户端版本",
     example: "1.0.0",
   })
+  @IsOptional()
+  @IsString()
   minClientVersion?: string;
 
   @ApiProperty({ type: Boolean, description: "是否启用", example: true })
+  @IsBoolean()
   enabled!: boolean;
 }
 
@@ -91,6 +119,7 @@ export class ReviewRequestDto {
     description: "评审结论",
     enum: ["approve", "reject", "request_changes"],
   })
+  @IsIn(["approve", "reject", "request_changes"])
   decision!: "approve" | "reject" | "request_changes";
 
   @ApiProperty({
@@ -98,12 +127,14 @@ export class ReviewRequestDto {
     description: "评审意见",
     example: "版本通过，可以发布。",
   })
+  @IsString()
   comment!: string;
 }
 
 /** 发布应用请求。 */
 export class PublishRequestDto {
   @ApiProperty({ type: String, description: "待发布的应用版本 ID" })
+  @IsString()
   applicationVersionId!: string;
 }
 
@@ -114,12 +145,14 @@ export class WithdrawRequestDto {
     description: "撤回原因",
     example: "版本存在兼容性问题",
   })
+  @IsString()
   reason!: string;
 }
 
 /** 回滚应用请求。 */
 export class RollbackRequestDto {
   @ApiProperty({ type: String, description: "回滚目标版本 ID" })
+  @IsString()
   applicationVersionId!: string;
 }
 
@@ -463,6 +496,7 @@ export class ArtifactUploadInitRequestDto {
     description: "文件名",
     example: "smart-attendance-1.0.0.zip",
   })
+  @IsString()
   fileName!: string;
 
   @ApiProperty({
@@ -470,9 +504,11 @@ export class ArtifactUploadInitRequestDto {
     description: "MIME 类型",
     example: "application/zip",
   })
+  @IsString()
   mimeType!: string;
 
   @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  @IsNumber()
   sizeBytes!: number;
 }
 
@@ -534,6 +570,7 @@ export class CompleteArtifactUploadRequestDto {
     description: "制品签名（V1 可为空字符串，走 Noop 校验）",
     example: "",
   })
+  @IsString()
   signature!: string;
 }
 
@@ -570,24 +607,34 @@ export class AssetDto {
 /** 创建资产请求。 */
 export class CreateAssetRequestDto {
   @ApiProperty({ type: String, description: "资产类型" })
+  @IsIn(["icon", "screenshot", "cover", "attachment", "qr"])
   assetType!: "icon" | "screenshot" | "cover" | "attachment" | "qr";
 
   @ApiProperty({ type: String, description: "资产名称" })
+  @IsString()
   name!: string;
 
   @ApiProperty({ type: String, description: "存储键（已上传至存储的对象键）" })
+  @IsString()
   storageKey!: string;
 
   @ApiProperty({ type: String, description: "MIME 类型" })
+  @IsString()
   mimeType!: string;
 
   @ApiProperty({ type: Number, description: "大小（字节）" })
+  @IsNumber()
   sizeBytes!: number;
 
   @ApiProperty({ type: String, nullable: true, description: "SHA-256" })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   sha256?: string | null;
 
   @ApiPropertyOptional({ type: Number, description: "排序" })
+  @IsOptional()
+  @IsNumber()
   sortOrder?: number;
 }
 
@@ -597,18 +644,23 @@ export class LinkDeliveryAssetRequestDto {
     type: String,
     description: "资产 ID（须属于该应用）",
   })
+  @IsString()
   assetId!: string;
 
   @ApiPropertyOptional({
     type: Number,
     description: "排序（值越小越靠前）",
   })
+  @IsOptional()
+  @IsNumber()
   sortOrder?: number;
 
   @ApiPropertyOptional({
     type: String,
     description: "关联版本号（如 1.0.0），缺省关联到最新发布版本",
   })
+  @IsOptional()
+  @IsString()
   version?: string;
 }
 
@@ -624,15 +676,18 @@ export class AiRiskDeclarationDto {
     type: Boolean,
     description: "是否处理员工个人信息/企业敏感数据",
   })
+  @IsBoolean()
   handlesSensitiveData!: boolean;
 
   @ApiProperty({
     type: Boolean,
     description: "是否发送至企业外部/第三方模型供应商",
   })
+  @IsBoolean()
   sendsDataExternally!: boolean;
 
   @ApiProperty({ type: Boolean, description: "是否保存输入/文件/对话" })
+  @IsBoolean()
   retainsConversations!: boolean;
 
   @ApiPropertyOptional({
@@ -640,6 +695,9 @@ export class AiRiskDeclarationDto {
     nullable: true,
     description: "保留周期",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   retentionPeriod?: string | null;
 
   @ApiProperty({
@@ -647,6 +705,8 @@ export class AiRiskDeclarationDto {
     description: "模型 / AI 提供方",
     example: ["deepseek"],
   })
+  @IsArray()
+  @IsString({ each: true })
   modelProviders!: string[];
 
   @ApiPropertyOptional({
@@ -654,15 +714,20 @@ export class AiRiskDeclarationDto {
     nullable: true,
     description: "提供方补充说明",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   providerNote?: string | null;
 
   @ApiProperty({
     type: Boolean,
     description: "是否影响人事/财务/法务等高风险决策",
   })
+  @IsBoolean()
   affectsHighRiskDecisions!: boolean;
 
   @ApiProperty({ type: String, description: "用户输入限制与免责声明" })
+  @IsString()
   inputRestrictionDisclaimer!: string;
 }
 
@@ -673,15 +738,20 @@ export class SaveApplicationDraftRequestDto {
     description: "应用名称",
     example: "智能考勤助手",
   })
+  @IsString()
   name!: string;
 
   @ApiProperty({ type: String, description: "归属部门 ID" })
+  @IsString()
   departmentId!: string;
 
   @ApiProperty({ type: [String], description: "维护人工号列表" })
+  @IsArray()
+  @IsString({ each: true })
   maintainerEmployeeIds!: string[];
 
   @ApiProperty({ type: String, description: "分类 ID" })
+  @IsString()
   categoryId!: string;
 
   @ApiProperty({
@@ -689,9 +759,12 @@ export class SaveApplicationDraftRequestDto {
     description: "应用类型",
     enum: ["web_app", "desktop_app", "mobile_app", "mini_program"],
   })
+  @IsIn(["web_app", "desktop_app", "mobile_app", "mini_program"])
   applicationType!: string;
 
   @ApiProperty({ type: [String], description: "标签 ID 列表" })
+  @IsArray()
+  @IsString({ each: true })
   tagIds!: string[];
 
   @ApiProperty({
@@ -699,12 +772,16 @@ export class SaveApplicationDraftRequestDto {
     description:
       "应用图标（mode: auto|upload；auto 需 backgroundColor+text，upload 需 assetId）",
   })
+  @IsObject()
   icon!: object;
 
   @ApiProperty({ type: [String], description: "截图资产 ID（1–6）" })
+  @IsArray()
+  @IsString({ each: true })
   screenshotAssetIds!: string[];
 
   @ApiProperty({ type: String, description: "简介富文本（已受限白名单）" })
+  @IsString()
   summaryHtml!: string;
 
   @ApiPropertyOptional({
@@ -712,6 +789,9 @@ export class SaveApplicationDraftRequestDto {
     nullable: true,
     description: "操作手册富文本",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   manualHtml?: string | null;
 
   @ApiPropertyOptional({
@@ -719,6 +799,9 @@ export class SaveApplicationDraftRequestDto {
     nullable: true,
     description: "操作手册附件资产 ID",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   manualAssetId?: string | null;
 
   @ApiPropertyOptional({
@@ -726,6 +809,9 @@ export class SaveApplicationDraftRequestDto {
     nullable: true,
     description: "使用示例富文本",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   examplesHtml?: string | null;
 
   @ApiPropertyOptional({
@@ -733,24 +819,34 @@ export class SaveApplicationDraftRequestDto {
     nullable: true,
     description: "使用示例附件资产 ID",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   examplesAssetId?: string | null;
 
   @ApiProperty({ type: "array", description: "常见问题列表（选填）" })
+  @IsArray()
   faq!: object[];
 
   @ApiProperty({ type: "array", description: "受众规则列表" })
+  @IsArray()
   audience!: object[];
 
   @ApiProperty({ type: () => AiRiskDeclarationDto, description: "AI 风险声明" })
+  @ValidateNested()
+  @Type(() => AiRiskDeclarationDto)
   risk!: AiRiskDeclarationDto;
 
   @ApiProperty({ type: "array", description: "交付配置列表" })
+  @IsArray()
   deliveries!: object[];
 
   @ApiProperty({ type: String, description: "版本号", example: "1.0.0" })
+  @IsString()
   version!: string;
 
   @ApiProperty({ type: String, description: "变更说明", example: "首次发布" })
+  @IsString()
   changelog!: string;
 }
 
@@ -782,15 +878,19 @@ export class UnifiedUploadInitRequestDto {
     description: "上传类型",
     enum: ["icon", "screenshot", "cover", "attachment", "qr", "artifact"],
   })
+  @IsIn(["icon", "screenshot", "cover", "attachment", "qr", "artifact"])
   kind!: string;
 
   @ApiProperty({ type: String, description: "文件名", example: "icon.png" })
+  @IsString()
   fileName!: string;
 
   @ApiProperty({ type: String, description: "MIME 类型", example: "image/png" })
+  @IsString()
   mimeType!: string;
 
   @ApiProperty({ type: Number, description: "文件大小（字节）" })
+  @IsNumber()
   sizeBytes!: number;
 }
 

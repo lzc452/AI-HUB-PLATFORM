@@ -45,10 +45,12 @@ export class PermissionGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AuthorizedRequest>();
-    const employeeId = this.readHeader(request, "x-employee-id");
-    const sessionId = this.readHeader(request, "x-session-id");
+    const cookies = this.readCookies(request.headers?.cookie);
+    // 优先使用 HttpOnly 会话 Cookie（防 XSS 窃取）；保留请求头作为非浏览器/测试客户端的兼容通道。
+    const employeeId = cookies["aihub_eid"] ?? this.readHeader(request, "x-employee-id");
+    const sessionId = cookies["aihub_sid"] ?? this.readHeader(request, "x-session-id");
     if (employeeId === undefined || sessionId === undefined) {
-      throw new UnauthorizedException("IDENTITY_HEADERS_REQUIRED");
+      throw new UnauthorizedException("IDENTITY_CREDENTIALS_REQUIRED");
     }
     if (this.identity === undefined) {
       throw new UnauthorizedException("IDENTITY_SERVICE_UNAVAILABLE");
@@ -87,5 +89,27 @@ export class PermissionGuard implements CanActivate {
       return value[0];
     }
     return value;
+  }
+
+  /** 从 Cookie 头解析键值（与 express 的 req.cookies 等价，避免引入 cookie-parser 依赖）。 */
+  private readCookies(
+    header: string | string[] | undefined,
+  ): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (typeof header !== "string") {
+      return result;
+    }
+    for (const part of header.split(";")) {
+      const index = part.indexOf("=");
+      if (index === -1) {
+        continue;
+      }
+      const key = part.slice(0, index).trim();
+      const value = part.slice(index + 1).trim();
+      if (key.length > 0) {
+        result[key] = value;
+      }
+    }
+    return result;
   }
 }

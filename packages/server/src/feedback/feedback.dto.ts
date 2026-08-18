@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsIn, IsOptional, IsString } from "class-validator";
 
 /** 创建应用反馈请求。 */
 export class CreateFeedbackRequestDto {
@@ -7,6 +8,7 @@ export class CreateFeedbackRequestDto {
     description: "反馈类型",
     enum: ["bug", "suggestion", "content_issue"],
   })
+  @IsIn(["bug", "suggestion", "content_issue"])
   type!: "bug" | "suggestion" | "content_issue";
 
   @ApiProperty({
@@ -14,6 +16,7 @@ export class CreateFeedbackRequestDto {
     description: "反馈内容",
     example: "登录页在移动端宽度下按钮溢出",
   })
+  @IsString()
   body!: string;
 }
 
@@ -24,12 +27,15 @@ export class UpdateFeedbackRequestDto {
     description: "处理状态",
     enum: ["open", "in_progress", "resolved", "closed"],
   })
+  @IsIn(["open", "in_progress", "resolved", "closed"])
   status!: "open" | "in_progress" | "resolved" | "closed";
 
   @ApiPropertyOptional({
     type: String,
     description: "处理说明（结单时建议填写）",
   })
+  @IsOptional()
+  @IsString()
   resolution?: string;
 }
 

@@ -110,6 +110,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
       summary: input.summary,
       status: "draft",
       currentVersionId: null,
+      pendingVersionId: null,
     };
     this.applications.set(application.applicationId, application);
     registerVerifiedUpload(this, application.applicationId);
@@ -870,7 +871,14 @@ describe("ApplicationService", () => {
       "approve",
       "Approved",
     );
-    await service.publish(owner, second.applicationVersionId);
+    // 已发布应用提交更新审核通过后即自动生效为当前版本（保持 published、目录持续可见），
+    // 不再需要单独的 publish 步骤——这是「发布态应用更新审核」状态机修复的核心行为。
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({
+      status: "published",
+      currentVersionId: second.applicationVersionId,
+    });
     await service.rollback(
       owner,
       application.applicationId,

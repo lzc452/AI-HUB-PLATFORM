@@ -26,7 +26,7 @@ class XMLHttpRequestStub {
 
 describe("API 安全请求头", () => {
   beforeEach(() => {
-    setSession({ employeeId: "E-SECURE", sessionId: "session-secure" });
+    setSession({ employeeId: "E-SECURE" });
     document.cookie = "csrf_token=csrf-value; Path=/";
   });
 
@@ -35,8 +35,8 @@ describe("API 安全请求头", () => {
       async (_input: RequestInfo | URL, init?: RequestInit) => {
         const headers = new Headers(init?.headers);
         expect(init?.credentials).toBe("same-origin");
-        expect(headers.get("x-employee-id")).toBe("E-SECURE");
-        expect(headers.get("x-session-id")).toBe("session-secure");
+        expect(headers.get("x-employee-id")).toBeNull();
+        expect(headers.get("x-session-id")).toBeNull();
         expect(headers.get("x-csrf-token")).toBe("csrf-value");
         expect(headers.get("x-request-nonce")).toMatch(
           /^[A-Za-z0-9._~-]{16,128}$/u,

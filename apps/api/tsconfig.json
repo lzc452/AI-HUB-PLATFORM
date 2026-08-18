@@ -9,5 +9,9 @@
     "emitDecoratorMetadata": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../../packages/server/src/sanitize-html.d.ts"
+  ]
 }

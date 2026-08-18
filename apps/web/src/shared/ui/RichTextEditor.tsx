@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button, Space, Tooltip } from "antd";
+import { sanitizeRichText } from "./sanitize";
 import {
   BoldOutlined,
   ItalicOutlined,
@@ -33,7 +34,8 @@ export function RichTextEditor({
   useEffect(() => {
     const element = editorRef.current;
     if (element !== null && value !== lastEmittedRef.current) {
-      element.innerHTML = value;
+      // 加载已保存内容时先清洗，避免存储型 XSS 借 contentEditable 注入。
+      element.innerHTML = sanitizeRichText(value);
       lastEmittedRef.current = value;
     }
   }, [value]);
@@ -45,7 +47,9 @@ export function RichTextEditor({
   };
 
   const emit = () => {
-    const html = editorRef.current?.innerHTML ?? "";
+    const raw = editorRef.current?.innerHTML ?? "";
+    // 提交前再清洗一次，确保送往上层的 HTML 已是白名单内的安全内容。
+    const html = sanitizeRichText(raw);
     lastEmittedRef.current = html;
     onChange(html);
   };

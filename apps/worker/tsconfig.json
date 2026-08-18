@@ -9,5 +9,5 @@
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "../../packages/server/src/sanitize-html.d.ts"]
 }

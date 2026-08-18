@@ -106,7 +106,6 @@ describe("前端权限与会话恢复", () => {
   it("在已有会话时先恢复 actor，再渲染按权限过滤的菜单", async () => {
     setSession({
       employeeId: employeeActor.employeeId,
-      sessionId: employeeActor.sessionId,
     });
     const fetchMock = vi.fn(async () => Response.json(employeeActor));
     vi.stubGlobal("fetch", fetchMock);
@@ -143,7 +142,6 @@ describe("前端权限与会话恢复", () => {
   it("actor 恢复失败返回 401 时清除会话并保持未认证状态", async () => {
     setSession({
       employeeId: employeeActor.employeeId,
-      sessionId: employeeActor.sessionId,
     });
     vi.stubGlobal(
       "fetch",
@@ -172,7 +170,6 @@ describe("前端权限与会话恢复", () => {
   it("网络错误期间不放开任何菜单", async () => {
     setSession({
       employeeId: employeeActor.employeeId,
-      sessionId: employeeActor.sessionId,
     });
     vi.stubGlobal(
       "fetch",
@@ -209,7 +206,6 @@ describe("前端权限与会话恢复", () => {
     let activeActor = superAdminActor;
     setSession({
       employeeId: superAdminActor.employeeId,
-      sessionId: superAdminActor.sessionId,
     });
     vi.stubGlobal(
       "fetch",
@@ -255,7 +251,6 @@ describe("前端权限与会话恢复", () => {
     await act(async () => {
       setSession({
         employeeId: employeeActor.employeeId,
-        sessionId: employeeActor.sessionId,
       });
     });
     await waitFor(() => {

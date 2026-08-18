@@ -19,7 +19,6 @@ export function useDashboard(
       "dashboard",
       dashboardKey,
       session?.employeeId ?? null,
-      session?.sessionId ?? null,
       range?.from ?? null,
       range?.to ?? null,
     ],

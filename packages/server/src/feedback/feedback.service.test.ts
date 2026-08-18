@@ -41,6 +41,18 @@ function catalogEntry(applicationId = "app-1"): CatalogEntry {
 
 const visibleCatalog: CatalogVisibilityPort = {
   requireVisible: async (_actor, applicationId) => catalogEntry(applicationId),
+  requireVisibleOrManageable: async () => {},
+};
+
+// 非发布态、但由 owner 拥有的应用：requireVisible 抛错，requireVisibleOrManageable 仅对 owner 放行
+const ownedHiddenCatalog: CatalogVisibilityPort = {
+  requireVisible: async () => {
+    throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+  },
+  requireVisibleOrManageable: async (actor) => {
+    if (actor.employeeId === owner.employeeId) return;
+    throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+  },
 };
 
 class MemoryFeedbackRepository implements FeedbackRepository {
@@ -185,6 +197,9 @@ describe("FeedbackService", () => {
       requireVisible: async () => {
         throw new Error("CATALOG_APPLICATION_NOT_FOUND");
       },
+      requireVisibleOrManageable: async () => {
+        throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+      },
     };
     const service = new FeedbackService(repository, hiddenCatalog);
 
@@ -283,5 +298,56 @@ describe("FeedbackService", () => {
     await expect(
       service.listApplicationFeedback(owner, "app-1"),
     ).resolves.toHaveLength(1);
+  });
+
+  it("allows the owner to read all feedback on an owned non-published application", async () => {
+    const repository = new MemoryFeedbackRepository();
+    await repository.createFeedback({
+      applicationId: "app-1",
+      applicationVersionId: "",
+      creatorEmployeeId: "E200",
+      type: "bug",
+      body: "草稿态反馈",
+      status: "open",
+      assigneeEmployeeId: null,
+      resolution: null,
+    });
+    const service = new FeedbackService(repository, ownedHiddenCatalog);
+
+    await expect(
+      service.listApplicationFeedback(owner, "app-1"),
+    ).resolves.toHaveLength(1);
+  });
+
+  it("still blocks a non-owner from reading feedback of a non-published application", async () => {
+    const repository = new MemoryFeedbackRepository();
+    const service = new FeedbackService(repository, ownedHiddenCatalog);
+
+    await expect(
+      service.listApplicationFeedback(employee, "app-1"),
+    ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
+  });
+
+  it("allows the owner to resolve feedback on an owned non-published application", async () => {
+    const repository = new MemoryFeedbackRepository();
+    const created = await repository.createFeedback({
+      applicationId: "app-1",
+      applicationVersionId: "",
+      creatorEmployeeId: "E200",
+      type: "bug",
+      body: "草稿态反馈",
+      status: "open",
+      assigneeEmployeeId: null,
+      resolution: null,
+    });
+    const service = new FeedbackService(repository, ownedHiddenCatalog);
+
+    const resolved = await service.updateFeedbackStatus(owner, {
+      applicationId: "app-1",
+      feedbackId: created.feedbackId,
+      status: "resolved",
+      resolution: "已处理",
+    });
+    expect(resolved.status).toBe("resolved");
   });
 });

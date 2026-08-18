@@ -18,7 +18,6 @@ const mockActor = {
   permissions: ["*"],
   departmentIds: [],
   primaryDepartmentId: "preview",
-  sessionId: "preview-session",
 } as unknown as ActorContext;
 
 const mockAuth: AuthContextValue = {
@@ -31,7 +30,7 @@ const mockAuth: AuthContextValue = {
   isLoading: false,
   login: async () => false,
   logout: async () => {},
-  session: { employeeId: "preview-admin", sessionId: "preview-session" },
+  session: { employeeId: "preview-admin" },
   startDingTalkLogin: async () => {},
   completeDingTalkLogin: async () => false,
 };

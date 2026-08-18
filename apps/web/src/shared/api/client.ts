@@ -1,4 +1,4 @@
-import { getSession, setSession } from "../../modules/auth/session.store";
+import { setSession } from "../../modules/auth/session.store";
 import type { ApiErrorResponse } from "@ai-hub/contracts";
 
 const BASE = ""; // 同源，无需前缀
@@ -47,11 +47,8 @@ function createApiHeaders(
   if (contentType !== null && !("content-type" in result)) {
     result["Content-Type"] = contentType;
   }
-  const session = getSession();
-  if (session) {
-    result["x-employee-id"] = session.employeeId;
-    result["x-session-id"] = session.sessionId;
-  }
+  // 身份令牌改由后端 HttpOnly Cookie 携带（同源自动发送），前端不再注入
+  // x-employee-id / x-session-id 请求头，避免 XSS 通过 JS 窃取会话。
   if (MUTATING_METHODS.has(method.toUpperCase())) {
     const csrfToken = readCookie("csrf_token");
     if (csrfToken !== undefined) result["x-csrf-token"] = csrfToken;

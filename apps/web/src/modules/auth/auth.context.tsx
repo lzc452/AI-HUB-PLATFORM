@@ -32,20 +32,15 @@ import {
 import { showSuccessMessage } from "../../shared/ui/message";
 import { ApiError } from "../../shared/api/client";
 
-function sessionKey(session: Pick<AuthSession, "employeeId" | "sessionId">) {
-  return `${session.employeeId}:${session.sessionId}`;
+function sessionKey(session: AuthSession | null) {
+  return session ? session.employeeId : null;
 }
 
 function actorMatchesSession(
   actor: ActorContext | null,
   session: AuthSession | null,
 ): boolean {
-  return Boolean(
-    actor &&
-      session &&
-      actor.employeeId === session.employeeId &&
-      actor.sessionId === session.sessionId,
-  );
+  return Boolean(actor && session && actor.employeeId === session.employeeId);
 }
 
 function errorMessage(cause: unknown): string {
@@ -189,7 +184,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         const nextSession = {
           employeeId: response.actor.employeeId,
-          sessionId: response.actor.sessionId,
         };
         hydratedSessionKeyRef.current = sessionKey(nextSession);
         setActor(response.actor);
@@ -232,7 +226,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (requestVersion !== requestVersionRef.current) return false;
       const nextSession = {
         employeeId: response.actor.employeeId,
-        sessionId: response.actor.sessionId,
       };
       hydratedSessionKeyRef.current = sessionKey(nextSession);
       setActor(response.actor);
@@ -252,11 +245,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(async () => {
     const requestVersion = ++requestVersionRef.current;
-    const current = getSession();
     try {
-      if (current) {
-        await logoutSession(current.sessionId);
-      }
+      await logoutSession();
     } catch {
       // 本地会话仍然必须清除，避免退出后继续使用旧身份。
     } finally {

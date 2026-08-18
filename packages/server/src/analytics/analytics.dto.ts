@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsIn, IsObject, IsString } from "class-validator";
 
 const DASHBOARD_KEYS = [
   "platform",
@@ -15,6 +16,7 @@ const DASHBOARD_KEYS = [
 /** 分析导出请求。 */
 export class AnalyticsExportRequestDto {
   @ApiProperty({ type: String, description: "看板目标", enum: DASHBOARD_KEYS })
+  @IsIn(DASHBOARD_KEYS)
   target!: (typeof DASHBOARD_KEYS)[number];
 
   @ApiProperty({
@@ -22,6 +24,7 @@ export class AnalyticsExportRequestDto {
     description: "起始日期（YYYY-MM-DD）",
     example: "2026-07-01",
   })
+  @IsString()
   from!: string;
 
   @ApiProperty({
@@ -29,6 +32,7 @@ export class AnalyticsExportRequestDto {
     description: "结束日期（YYYY-MM-DD）",
     example: "2026-07-31",
   })
+  @IsString()
   to!: string;
 }
 
@@ -39,6 +43,7 @@ export class AnalyticsAssistantRequestDto {
     description: "问题",
     example: "本周平台应用浏览量是多少？",
   })
+  @IsString()
   question!: string;
 
   @ApiProperty({
@@ -46,6 +51,7 @@ export class AnalyticsAssistantRequestDto {
     type: Object,
     additionalProperties: true,
   })
+  @IsObject()
   context!: Readonly<Record<string, unknown>>;
 }
 

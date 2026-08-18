@@ -42,7 +42,7 @@ describe("uploadArtifactContent", () => {
   let request: XMLHttpRequestStub;
 
   beforeEach(() => {
-    setSession({ employeeId: "E-UPLOAD", sessionId: "session-upload" });
+    setSession({ employeeId: "E-UPLOAD" });
     request = new XMLHttpRequestStub();
     vi.stubGlobal(
       "XMLHttpRequest",
@@ -54,8 +54,9 @@ describe("uploadArtifactContent", () => {
     const file = new File([new Uint8Array([1, 2, 3])], "release.zip");
     const result = await uploadArtifactContent("app-1", "upload-1", file);
 
-    expect(request.headers.get("x-employee-id")).toBe("E-UPLOAD");
-    expect(request.headers.get("x-session-id")).toBe("session-upload");
+    expect(request.headers.get("x-employee-id")).toBeNull();
+    expect(request.headers.get("x-session-id")).toBeNull();
+    expect(request.headers.get("x-request-nonce")).not.toBeNull();
     expect(request.sentContent).toBe(file);
     expect(result.uploadId).toBe("upload-1");
   });

@@ -153,7 +153,7 @@ export class InteractionService {
     },
   ) {
     await this.assertAllowed(actor, "interact");
-    await this.visibility.requireVisible(actor, input.applicationId);
+    await this.visibility.requireVisibleOrManageable(actor, input.applicationId);
     const application = await this.requireApplication(input.applicationId);
     if (
       application.ownerEmployeeId !== actor.employeeId &&
@@ -292,7 +292,7 @@ export class InteractionService {
     pageSize: number,
   ) {
     await this.assertAllowed(actor, "interact");
-    await this.visibility.requireVisible(actor, applicationId);
+    await this.visibility.requireVisibleOrManageable(actor, applicationId);
     await this.requireApplication(applicationId);
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       throw new Error("INTERACTION_PAGINATION_INVALID");

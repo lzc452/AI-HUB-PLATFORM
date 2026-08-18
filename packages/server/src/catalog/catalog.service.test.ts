@@ -126,6 +126,10 @@ class MemoryCatalogRepository implements CatalogRepository {
   async listTags() {
     return [];
   }
+
+  async findApplicationOwner() {
+    return null;
+  }
 }
 
 describe("CatalogService", () => {

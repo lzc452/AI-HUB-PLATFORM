@@ -7,7 +7,7 @@ import { setSession } from "../../modules/auth/session.store";
 describe("数据看板页面", () => {
   beforeEach(() => {
     globalThis.window.history.pushState({}, "", "/analytics");
-    setSession({ employeeId: "E0001", sessionId: "test-session" });
+    setSession({ employeeId: "E0001" });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL) => {
@@ -19,7 +19,6 @@ describe("数据看板页面", () => {
             permissions: ["*"],
             primaryDepartmentId: "dept-1",
             roleCodes: ["employee", "super_admin"],
-            sessionId: "test-session",
           });
         }
         if (path.includes("/internal/notifications")) {

@@ -1,6 +1,5 @@
 export interface AuthSession {
   employeeId: string;
-  sessionId: string;
 }
 
 const STORAGE_KEY = "ai-hub.session";
@@ -9,6 +8,9 @@ type SessionListener = (session: AuthSession | null) => void;
 
 const listeners = new Set<SessionListener>();
 
+// 安全说明：会话令牌（sessionId）仅存于后端下发的 HttpOnly Cookie 中，绝不在前端
+// 可读取的 localStorage 中持久化，避免 XSS 通过 JS 窃取会话。此处仅保留非敏感的
+// employeeId，用于刷新页面时提供「可能已登录」的加载态提示（最终以服务端 /actor 为准）。
 function loadSession(): AuthSession | null {
   try {
     const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
@@ -19,10 +21,9 @@ function loadSession(): AuthSession | null {
     if (
       typeof parsed === "object" &&
       parsed !== null &&
-      typeof (parsed as AuthSession).employeeId === "string" &&
-      typeof (parsed as AuthSession).sessionId === "string"
+      typeof (parsed as AuthSession).employeeId === "string"
     ) {
-      return parsed as AuthSession;
+      return { employeeId: (parsed as AuthSession).employeeId };
     }
     return null;
   } catch {

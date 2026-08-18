@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsString } from "class-validator";
 
 /** 重试通知投递请求。 */
 export class RetryNotificationRequestDto {
@@ -7,6 +8,7 @@ export class RetryNotificationRequestDto {
     description: "通知幂等键",
     example: "application.published:app-1:DEMO-EMPLOYEE",
   })
+  @IsString()
   idempotencyKey!: string;
 }
 

@@ -216,6 +216,18 @@ const visibleCatalog: CatalogVisibilityPort = {
     };
     return entry;
   },
+  requireVisibleOrManageable: async () => {},
+};
+
+// 非发布态、但由 owner 拥有的应用：requireVisible 抛错，requireVisibleOrManageable 仅对 owner 放行
+const ownedHiddenCatalog: CatalogVisibilityPort = {
+  requireVisible: async () => {
+    throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+  },
+  requireVisibleOrManageable: async (actor) => {
+    if (actor.employeeId === owner.employeeId) return;
+    throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+  },
 };
 
 describe("InteractionService", () => {
@@ -346,6 +358,9 @@ describe("InteractionService", () => {
       requireVisible: async () => {
         throw new Error("CATALOG_APPLICATION_NOT_FOUND");
       },
+      requireVisibleOrManageable: async () => {
+        throw new Error("CATALOG_APPLICATION_NOT_FOUND");
+      },
     };
     const service = new InteractionService(
       repository,
@@ -357,5 +372,67 @@ describe("InteractionService", () => {
       "CATALOG_APPLICATION_NOT_FOUND",
     );
     expect(repository.liked.size).toBe(0);
+  });
+
+  it("allows the owner to read comments of an owned non-published application", async () => {
+    const repository = new MemoryInteractionRepository();
+    await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E200",
+      body: "草稿态根评论",
+      displayAnonymously: false,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      ownedHiddenCatalog,
+    );
+
+    await expect(
+      service.listComments(owner, "app-1", 1, 20),
+    ).resolves.toMatchObject({ total: 1 });
+  });
+
+  it("does not expose comments of a non-published application to regular employees", async () => {
+    const repository = new MemoryInteractionRepository();
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      ownedHiddenCatalog,
+    );
+
+    await expect(
+      service.listComments(employee, "app-1", 1, 20),
+    ).rejects.toThrow("CATALOG_APPLICATION_NOT_FOUND");
+  });
+
+  it("allows the owner to reply to comments on an owned non-published application", async () => {
+    const repository = new MemoryInteractionRepository();
+    const root = await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E200",
+      body: "草稿态根评论",
+      displayAnonymously: false,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      ownedHiddenCatalog,
+    );
+
+    const official = await service.replyComment(owner, {
+      applicationId: "app-1",
+      parentCommentId: root.commentId,
+      body: "official",
+    });
+    expect(official.commentKind).toBe("official");
   });
 });

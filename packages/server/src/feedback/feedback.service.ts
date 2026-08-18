@@ -73,12 +73,12 @@ export class FeedbackService {
     );
   }
 
-  /** 所有者/维护者查看该应用收到的全部反馈。 */
+  /** 所有者/维护者查看该应用收到的全部反馈（含非发布态自有应用）。 */
   async listApplicationFeedback(
     actor: ActorContext,
     applicationId: string,
   ): Promise<readonly FeedbackRecord[]> {
-    await this.visibility.requireVisible(actor, applicationId);
+    await this.visibility.requireVisibleOrManageable(actor, applicationId);
     const application = await this.repository.findApplication(applicationId);
     if (application === null) throw new Error("APPLICATION_NOT_FOUND");
     if (
@@ -99,7 +99,7 @@ export class FeedbackService {
       resolution?: string;
     },
   ): Promise<FeedbackRecord> {
-    await this.visibility.requireVisible(actor, input.applicationId);
+    await this.visibility.requireVisibleOrManageable(actor, input.applicationId);
     const terminal = input.status === "resolved" || input.status === "closed";
     const resolution = input.resolution?.trim() ?? "";
     if (terminal && resolution.length === 0) {

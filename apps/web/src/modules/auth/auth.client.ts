@@ -65,10 +65,9 @@ export function completeDingTalkSso(): Promise<LoginResponse> {
   });
 }
 
-export function logoutSession(sessionId: string): Promise<void> {
+export function logoutSession(): Promise<void> {
   return apiFetch<void>("/internal/identity/logout", {
     method: "POST",
-    body: JSON.stringify({ sessionId }),
   });
 }
 

@@ -751,16 +751,20 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     expectedStatus: ApplicationRecord["status"];
     status: ApplicationRecord["status"];
     currentVersionId?: string;
+    pendingVersionId?: string | null;
   }): Promise<ApplicationRecord> {
     const row = await this.db
       .updateTable("applications")
       .set({
-        status: input.status,
-        ...(input.currentVersionId === undefined
-          ? {}
-          : { current_version_id: input.currentVersionId }),
-        updated_at: new Date(),
-      })
+      status: input.status,
+      ...(input.currentVersionId === undefined
+        ? {}
+        : { current_version_id: input.currentVersionId }),
+      ...(input.pendingVersionId === undefined
+        ? {}
+        : { pending_version_id: input.pendingVersionId }),
+      updated_at: new Date(),
+    })
       .where("application_id", "=", input.applicationId)
       .where("status", "=", input.expectedStatus)
       .returningAll()
@@ -842,11 +846,12 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .values({
         application_id: input.applicationId,
         application_version_id: input.applicationVersionId,
-        status: input.status,
-        claimed_by_employee_id: input.claimedByEmployeeId,
-        claimed_at: input.claimedAt,
-        sla_due_at: input.slaDueAt,
-      })
+      status: input.status,
+      claimed_by_employee_id: input.claimedByEmployeeId,
+      claimed_at: input.claimedAt,
+      sla_due_at: input.slaDueAt,
+      source_status: input.sourceStatus,
+    })
       .returningAll()
       .executeTakeFirstOrThrow();
     return this.mapReviewQueue(row);
@@ -894,6 +899,18 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       })
       .where("application_version_id", "=", applicationVersionId)
       .where("claimed_by_employee_id", "=", employeeId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapReviewQueue(row);
+  }
+
+  async completeReviewQueue(
+    applicationVersionId: string,
+  ): Promise<ReviewQueueRecord> {
+    const row = await this.db
+      .updateTable("application_review_queue")
+      .set({ status: "completed" })
+      .where("application_version_id", "=", applicationVersionId)
       .returningAll()
       .executeTakeFirstOrThrow();
     return this.mapReviewQueue(row);
@@ -1050,6 +1067,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       summary: row.summary,
       status: row.status,
       currentVersionId: row.current_version_id,
+      pendingVersionId: row.pending_version_id,
     } satisfies ApplicationRecord;
   }
 
@@ -1102,6 +1120,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       applicationId: row.application_id,
       applicationVersionId: row.application_version_id,
       status: row.status,
+      sourceStatus: row.source_status,
       claimedByEmployeeId: row.claimed_by_employee_id,
       claimedAt: row.claimed_at,
       slaDueAt: row.sla_due_at,

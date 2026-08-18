@@ -29,6 +29,7 @@ const application: ApplicationRecord = {
   summary: "Artifact test",
   status: "draft",
   currentVersionId: null,
+  pendingVersionId: null,
 };
 
 class TestStorage implements ReadableObjectStoragePort {

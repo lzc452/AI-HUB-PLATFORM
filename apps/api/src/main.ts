@@ -9,6 +9,7 @@ const processWithEnvLoader = process as typeof process & {
 if (existsSync(envPath)) processWithEnvLoader.loadEnvFile?.(envPath);
 
 import { NestFactory } from "@nestjs/core";
+import { ValidationPipe } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { parseRuntimeConfig } from "@ai-hub/config";
 import { createDatabase } from "@ai-hub/database";
@@ -96,6 +97,18 @@ async function bootstrap() {
       artifactStorage,
     ),
     { logger: new PinoNestLogger(logger) },
+  );
+
+  // 安全地基：全局校验管道。whitelist 剔除请求体中任何未声明校验装饰器的字段，
+  // 阻断 mass-assignment 与多余字段注入；transform 按 DTO 装饰器做类型转换。
+  // 注意：所有请求 DTO 必须带 class-validator 装饰器，否则合法字段会被一并剔除。
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: false,
+      transformOptions: { enableImplicitConversion: false },
+    }),
   );
 
   app.use(createHttpLogger(logger));

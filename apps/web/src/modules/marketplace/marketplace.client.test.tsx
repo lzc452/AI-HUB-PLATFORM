@@ -5,15 +5,15 @@ import { downloadDeliveryAsset } from "./marketplace.client";
 
 describe("downloadDeliveryAsset", () => {
   beforeEach(() => {
-    setSession({ employeeId: "E-DOWNLOAD", sessionId: "session-download" });
+    setSession({ employeeId: "E-DOWNLOAD" });
   });
 
   it("使用当前登录会话下载交付制品", async () => {
     const request = vi.fn(
       async (_input: RequestInfo | URL, init?: RequestInit) => {
         const headers = new Headers(init?.headers);
-        expect(headers.get("x-employee-id")).toBe("E-DOWNLOAD");
-        expect(headers.get("x-session-id")).toBe("session-download");
+        expect(headers.get("x-employee-id")).toBeNull();
+        expect(headers.get("x-session-id")).toBeNull();
         return new Response("artifact-content", {
           headers: {
             "content-disposition": 'attachment; filename="desktop.zip"',

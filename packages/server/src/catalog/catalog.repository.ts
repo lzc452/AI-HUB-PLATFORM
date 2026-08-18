@@ -200,6 +200,27 @@ export class KyselyCatalogRepository implements CatalogRepository {
     return result.items[0] ?? null;
   }
 
+  async findApplicationOwner(
+    applicationId: string,
+  ): Promise<{
+    ownerEmployeeId: string;
+    maintainerEmployeeId: string | null;
+  } | null> {
+    const row = await this.db
+      .selectFrom("applications")
+      .select([
+        "owner_employee_id as ownerEmployeeId",
+        "maintainer_employee_id as maintainerEmployeeId",
+      ])
+      .where("application_id", "=", applicationId)
+      .executeTakeFirst();
+    if (row === undefined) return null;
+    return {
+      ownerEmployeeId: row.ownerEmployeeId,
+      maintainerEmployeeId: row.maintainerEmployeeId ?? null,
+    };
+  }
+
   private async mapEntries(
     rows: readonly CatalogRow[],
     actor: ActorContext,

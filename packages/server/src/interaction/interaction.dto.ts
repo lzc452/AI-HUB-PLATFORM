@@ -1,8 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsBoolean,
+  IsIn,
+  ValidateIf,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+  Max,
+} from "class-validator";
 
 /** 应用评分请求。 */
 export class RatingRequestDto {
   @ApiProperty({ type: Number, description: "评分（1-5 星）", example: 5 })
+  @IsNumber()
+  @Min(1)
+  @Max(5)
   stars!: number;
 
   @ApiPropertyOptional({
@@ -10,6 +23,8 @@ export class RatingRequestDto {
     description: "评分内容",
     example: "体验很好",
   })
+  @IsOptional()
+  @IsString()
   body?: string;
 
   @ApiPropertyOptional({
@@ -17,6 +32,8 @@ export class RatingRequestDto {
     description: "是否匿名展示",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   displayAnonymously?: boolean;
 }
 
@@ -27,6 +44,8 @@ export class CommentRequestDto {
     description: "父评论 ID，根评论为 null",
     nullable: true,
   })
+  @IsString()
+  @ValidateIf((_o, v) => v !== null)
   parentCommentId!: string | null;
 
   @ApiProperty({
@@ -34,6 +53,7 @@ export class CommentRequestDto {
     description: "评论内容",
     example: "请问支持批量导入吗？",
   })
+  @IsString()
   body!: string;
 }
 
@@ -44,6 +64,7 @@ export class ReportRequestDto {
     description: "举报原因",
     example: "包含不当内容",
   })
+  @IsString()
   reason!: string;
 }
 
@@ -54,6 +75,7 @@ export class ResolveReportRequestDto {
     description: "处理结果",
     enum: ["dismissed", "hidden", "restored"],
   })
+  @IsIn(["dismissed", "hidden", "restored"])
   status!: "dismissed" | "hidden" | "restored";
 }
 

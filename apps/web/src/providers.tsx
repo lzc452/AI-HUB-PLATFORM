@@ -12,8 +12,8 @@ import { queryClient } from "./query-client";
 
 export { queryClient } from "./query-client";
 
-function sessionKey(session: { employeeId: string; sessionId: string } | null) {
-  return session ? `${session.employeeId}:${session.sessionId}` : null;
+function sessionKey(session: { employeeId: string } | null) {
+  return session ? session.employeeId : null;
 }
 
 export function clearSessionScopedState(client: QueryClient): void {

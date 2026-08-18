@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsIn, IsOptional, IsString } from "class-validator";
 
 /** 记录目录行为请求。 */
 export class CatalogActionRequestDto {
@@ -7,6 +8,7 @@ export class CatalogActionRequestDto {
     description: "行为类型",
     enum: ["web_redirect", "package_download", "qr_display"],
   })
+  @IsIn(["web_redirect", "package_download", "qr_display"])
   actionType!: "web_redirect" | "package_download" | "qr_display";
 
   @ApiPropertyOptional({
@@ -14,6 +16,8 @@ export class CatalogActionRequestDto {
     description: "渠道标识",
     example: "web",
   })
+  @IsOptional()
+  @IsString()
   channel?: string;
 }
 
@@ -175,6 +179,7 @@ export class RiskDescriptionDto {
 /** 保存风险说明请求。 */
 export class SaveRiskDescriptionRequestDto {
   @ApiProperty({ type: String, description: "风险说明内容" })
+  @IsString()
   riskDescription!: string;
 }
 

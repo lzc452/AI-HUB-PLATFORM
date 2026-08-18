@@ -6,9 +6,105 @@
  * 能力，可在本 seam 后接入 `sanitize-html` / DOMPurify 白名单清洗。
  */
 
-/** 富文本中禁止出现的危险标签（含 SVG 与外部资源标签）。 */
+import sanitizeHtml, { type AllowedAttributes } from "sanitize-html";
+
+/** 富文本白名单允许的标签。 */
+const RICH_TEXT_ALLOWED_TAGS = [
+  "p",
+  "br",
+  "strong",
+  "b",
+  "em",
+  "i",
+  "u",
+  "s",
+  "ul",
+  "ol",
+  "li",
+  "a",
+  "h1",
+  "h2",
+  "h3",
+  "blockquote",
+  "code",
+  "pre",
+  "span",
+  "img",
+] as const;
+
+/** 仅放行白名单内属性；其余属性（如 style、class、on* 等）一律丢弃。 */
+const RICH_TEXT_ALLOWED_ATTRIBUTES: AllowedAttributes = {
+  a: ["href", "title", "rel", "target"],
+  img: ["src", "alt", "width", "height"],
+};
+
+/** 仅允许的安全 URL 协议。 */
+const RICH_TEXT_ALLOWED_SCHEMES = ["http", "https", "mailto"];
+
+/** 判定给定 URL 是否为安全协议（http/https/mailto），拒绝 javascript:/data:/vbscript: 等。 */
+function isSafeUrl(value: string | undefined): boolean {
+  if (value === undefined) return true;
+  const trimmed = value.trim().toLowerCase();
+  if (
+    trimmed.startsWith("javascript:") ||
+    trimmed.startsWith("data:") ||
+    trimmed.startsWith("vbscript:")
+  ) {
+    return false;
+  }
+  return RICH_TEXT_ALLOWED_SCHEMES.some((scheme) =>
+    trimmed.startsWith(`${scheme}:`),
+  );
+}
+
+/**
+ * 使用 `sanitize-html` 对受限富文本做白名单清洗（fail-closed）。
+ *
+ * - 仅保留 `RICH_TEXT_ALLOWED_TAGS` 中的标签。
+ * - 仅保留白名单内属性；`on*` 事件处理器、`style` 等全部丢弃。
+ * - `<a href>` 仅允许 http/https/mailto（并强制 `rel="noopener noreferrer nofollow"`）。
+ * - `<img src>` 仅允许 http/https。
+ * - 若库内部抛错，则向上抛出错误（绝不返回未清洗原文）。
+ */
+export function sanitizeRichText(html: string): string {
+  if (typeof html !== "string") {
+    throw new Error("RICH_TEXT_REQUIRED");
+  }
+  try {
+    return sanitizeHtml(html, {
+      allowedTags: [...RICH_TEXT_ALLOWED_TAGS],
+      allowedAttributes: RICH_TEXT_ALLOWED_ATTRIBUTES,
+      allowedSchemes: RICH_TEXT_ALLOWED_SCHEMES,
+      allowedSchemesAppliedToAttributes: ["href", "src"],
+      allowProtocolRelative: false,
+      transformTags: {
+        a: (tagName, attribs) => ({
+          tagName,
+          attribs: {
+            ...attribs,
+            rel: "noopener noreferrer nofollow",
+            href: isSafeUrl(attribs.href) ? (attribs.href ?? "") : "",
+          },
+        }),
+        img: (tagName, attribs) => ({
+          tagName,
+          attribs: {
+            ...attribs,
+            src: isSafeUrl(attribs.src) ? (attribs.src ?? "") : "",
+          },
+        }),
+      },
+    });
+  } catch {
+    throw new Error("RICH_TEXT_SANITIZE_FAILED");
+  }
+}
+
+/** 富文本中禁止出现的危险标签（含 SVG 与外部资源标签）。
+ * 注意：img 已交由 sanitizeRichText 的白名单管控（仅允许 http/https 的 src），
+ * 因此此处不再将 img 视为禁用，避免与白名单清洗后的输出冲突。 */
 const FORBIDDEN_TAG_PATTERN =
-  /<\s*(script|iframe|object|embed|style|link|meta|form|img|svg|video|audio|canvas|input|button|textarea|select|foreignObject|use)\b/i;
+  /<\s*(script|iframe|object|embed|style|link|meta|form|svg|video|audio|canvas|input|button|textarea|select|foreignObject|use)\b/i;
 
 /** 事件处理器（onclick 等）。 */
 const EVENT_HANDLER_PATTERN = /\son\w+\s*=/i;

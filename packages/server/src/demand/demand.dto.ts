@@ -1,4 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import {
+  IsArray,
+  IsBoolean,
+  IsIn,
+  ValidateIf,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from "class-validator";
 
 const DEMAND_STATUS = [
   "draft",
@@ -39,6 +48,7 @@ export class DemandDraftRequestDto {
     description: "需求标题",
     example: "统一研发效能数据看板",
   })
+  @IsString()
   title!: string;
 
   @ApiProperty({
@@ -46,6 +56,7 @@ export class DemandDraftRequestDto {
     description: "问题陈述",
     example: "当前研发数据分散在多个系统，缺少统一视图。",
   })
+  @IsString()
   problemStatement!: string;
 
   @ApiProperty({
@@ -53,6 +64,7 @@ export class DemandDraftRequestDto {
     description: "业务场景与当前流程",
     example: "研发团队每周人工汇总多个系统的效能数据，形成周报。",
   })
+  @IsString()
   businessScenario!: string;
 
   @ApiProperty({
@@ -60,6 +72,7 @@ export class DemandDraftRequestDto {
     description: "影响对象、发生频率与耗时",
     example: "研发经理，每周一次，每次约 3 小时。",
   })
+  @IsString()
   impact!: string;
 
   @ApiProperty({
@@ -67,6 +80,7 @@ export class DemandDraftRequestDto {
     description: "期望结果",
     example: "一个可配置的研发效能看板",
   })
+  @IsString()
   desiredOutcome!: string;
 
   @ApiProperty({
@@ -74,6 +88,7 @@ export class DemandDraftRequestDto {
     description: "当前替代方案",
     example: "手工拼装 Excel，或用多个工具分别查看。",
   })
+  @IsString()
   currentWorkaround!: string;
 
   @ApiProperty({
@@ -81,6 +96,7 @@ export class DemandDraftRequestDto {
     description: "数据类型与敏感程度",
     example: "研发过程数据，涉及少量员工绩效，中等敏感。",
   })
+  @IsString()
   dataSensitivity!: string;
 
   @ApiPropertyOptional({
@@ -88,6 +104,8 @@ export class DemandDraftRequestDto {
     description: "AI 方案设想",
     example: "用大模型自动汇总并生成自然语言周报。",
   })
+  @IsOptional()
+  @IsString()
   aiSolutionIdea?: string;
 
   @ApiPropertyOptional({
@@ -95,9 +113,13 @@ export class DemandDraftRequestDto {
     description: "附件 ID 列表",
     example: ["attachment-1"],
   })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   attachmentIds?: string[];
 
   @ApiProperty({ type: String, description: "受众类型", enum: AUDIENCE_TYPE })
+  @IsIn(AUDIENCE_TYPE)
   audienceType!: (typeof AUDIENCE_TYPE)[number];
 
   @ApiPropertyOptional({
@@ -105,6 +127,8 @@ export class DemandDraftRequestDto {
     description: "受众部门 ID",
     example: "demo-rnd",
   })
+  @IsOptional()
+  @IsString()
   departmentId?: string;
 
   @ApiPropertyOptional({
@@ -112,6 +136,8 @@ export class DemandDraftRequestDto {
     description: "受众员工工号",
     example: "DEMO-EMPLOYEE",
   })
+  @IsOptional()
+  @IsString()
   employeeId?: string;
 
   @ApiPropertyOptional({
@@ -119,6 +145,8 @@ export class DemandDraftRequestDto {
     description: "是否包含子部门",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   includeChildren?: boolean;
 
   @ApiPropertyOptional({
@@ -126,6 +154,8 @@ export class DemandDraftRequestDto {
     description: "是否匿名展示",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   displayAnonymously?: boolean;
 }
 
@@ -136,6 +166,7 @@ export class SaveDemandDraftRequestDto extends DemandDraftRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -146,6 +177,7 @@ export class DemandReviewRequestDto {
     description: "评审结论",
     enum: ["publish", "reject"],
   })
+  @IsIn(["publish", "reject"])
   decision!: "publish" | "reject";
 
   @ApiPropertyOptional({
@@ -153,6 +185,8 @@ export class DemandReviewRequestDto {
     description: "评审原因",
     example: "内容完整，准予发布。",
   })
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 
@@ -163,6 +197,7 @@ export class DemandClaimRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -173,6 +208,7 @@ export class DemandCollaboratorRequestDto {
     description: "员工工号",
     example: "DEMO-EMPLOYEE",
   })
+  @IsString()
   employeeId!: string;
 
   @ApiProperty({
@@ -180,6 +216,7 @@ export class DemandCollaboratorRequestDto {
     description: "协作角色",
     enum: COLLABORATOR_ROLE,
   })
+  @IsIn(COLLABORATOR_ROLE)
   role!: (typeof COLLABORATOR_ROLE)[number];
 
   @ApiProperty({
@@ -187,6 +224,7 @@ export class DemandCollaboratorRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -197,6 +235,7 @@ export class DemandCollaboratorRoleUpdateRequestDto {
     description: "协作角色",
     enum: COLLABORATOR_ROLE,
   })
+  @IsIn(COLLABORATOR_ROLE)
   role!: (typeof COLLABORATOR_ROLE)[number];
 
   @ApiProperty({
@@ -204,6 +243,7 @@ export class DemandCollaboratorRoleUpdateRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -214,21 +254,27 @@ export class DemandPriorityRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 
   @ApiProperty({ type: Number, description: "业务价值（1-5）", example: 5 })
+  @IsNumber()
   businessValue!: number;
 
   @ApiProperty({ type: Number, description: "影响人数（1-5）", example: 4 })
+  @IsNumber()
   impactedHeadcount!: number;
 
   @ApiProperty({ type: Number, description: "使用频率（1-5）", example: 3 })
+  @IsNumber()
   usageFrequency!: number;
 
   @ApiProperty({ type: Number, description: "战略匹配度（1-5）", example: 4 })
+  @IsNumber()
   strategicFit!: number;
 
   @ApiProperty({ type: Number, description: "技术可行性（1-5）", example: 4 })
+  @IsNumber()
   technicalFeasibility!: number;
 
   @ApiProperty({
@@ -236,6 +282,7 @@ export class DemandPriorityRequestDto {
     description: "数据与合规风险（1-5，反向）",
     example: 2,
   })
+  @IsNumber()
   dataComplianceRisk!: number;
 
   @ApiProperty({
@@ -243,6 +290,7 @@ export class DemandPriorityRequestDto {
     description: "预计实施成本（1-5，反向）",
     example: 3,
   })
+  @IsNumber()
   implementationCost!: number;
 }
 
@@ -253,6 +301,7 @@ export class DemandPriorityConfirmRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 
   @ApiProperty({
@@ -260,6 +309,7 @@ export class DemandPriorityConfirmRequestDto {
     description: "确认后的优先级",
     enum: PRIORITY_LEVEL,
   })
+  @IsIn(PRIORITY_LEVEL)
   confirmedPriority!: (typeof PRIORITY_LEVEL)[number];
 
   @ApiPropertyOptional({
@@ -267,6 +317,8 @@ export class DemandPriorityConfirmRequestDto {
     description: "调整原因",
     example: "与年度战略高度一致，上调为高优先级。",
   })
+  @IsOptional()
+  @IsString()
   adjustmentReason?: string;
 }
 
@@ -277,9 +329,11 @@ export class DemandStatusRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 
   @ApiProperty({ type: String, description: "下一状态", enum: DEMAND_STATUS })
+  @IsIn(DEMAND_STATUS)
   nextStatus!: (typeof DEMAND_STATUS)[number];
 
   @ApiPropertyOptional({
@@ -287,6 +341,8 @@ export class DemandStatusRequestDto {
     description: "变更原因",
     example: "已完成认领",
   })
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 
@@ -297,6 +353,7 @@ export class DemandProgressRequestDto {
     description: "进度标题",
     example: "完成需求评审",
   })
+  @IsString()
   title!: string;
 
   @ApiProperty({
@@ -304,12 +361,15 @@ export class DemandProgressRequestDto {
     description: "进度详情",
     example: "已通过内部评审，准备发布。",
   })
+  @IsString()
   body!: string;
 }
 
 /** 创建试点请求。 */
 export class DemandPilotRequestDto {
   @ApiPropertyOptional({ type: String, description: "试点应用 ID" })
+  @IsOptional()
+  @IsString()
   applicationId?: string;
 
   @ApiProperty({
@@ -317,6 +377,7 @@ export class DemandPilotRequestDto {
     description: "试点名称",
     example: "研发中心试点",
   })
+  @IsString()
   name!: string;
 
   @ApiProperty({
@@ -324,6 +385,7 @@ export class DemandPilotRequestDto {
     type: String,
     format: "date-time",
   })
+  @IsString()
   startsAt!: string;
 
   @ApiPropertyOptional({
@@ -331,6 +393,8 @@ export class DemandPilotRequestDto {
     type: String,
     format: "date-time",
   })
+  @IsOptional()
+  @IsString()
   endsAt?: string;
 }
 
@@ -342,6 +406,9 @@ export class DemandPilotUpdateRequestDto {
     format: "date-time",
     nullable: true,
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   endsAt?: string | null;
 
   @ApiPropertyOptional({
@@ -350,27 +417,36 @@ export class DemandPilotUpdateRequestDto {
     nullable: true,
     example: "试点效果良好",
   })
+  @IsOptional()
+  @ValidateIf((_o, v) => v !== null)
+  @IsString()
   outcome?: string | null;
 
   @ApiPropertyOptional({ description: "试点状态", enum: PILOT_STATUS })
+  @IsOptional()
+  @IsIn(PILOT_STATUS)
   status?: (typeof PILOT_STATUS)[number];
 }
 
 /** 合并需求请求。 */
 export class DemandMergeRequestDto {
   @ApiProperty({ type: String, description: "目标需求 ID（合并方向）" })
+  @IsString()
   targetDemandId!: string;
 
   @ApiProperty({ type: Number, description: "源需求期望版本号", example: 1 })
+  @IsNumber()
   sourceExpectedVersion!: number;
 
   @ApiProperty({ type: Number, description: "目标需求期望版本号", example: 1 })
+  @IsNumber()
   targetExpectedVersion!: number;
 }
 
 /** 关联应用到需求请求。 */
 export class DemandLinkApplicationRequestDto {
   @ApiProperty({ type: String, description: "应用 ID" })
+  @IsString()
   applicationId!: string;
 
   @ApiProperty({
@@ -378,6 +454,7 @@ export class DemandLinkApplicationRequestDto {
     description: "关联角色",
     enum: APPLICATION_ROLE,
   })
+  @IsIn(APPLICATION_ROLE)
   role!: (typeof APPLICATION_ROLE)[number];
 
   @ApiPropertyOptional({
@@ -385,6 +462,8 @@ export class DemandLinkApplicationRequestDto {
     description: "是否主解决方案",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   isPrimary?: boolean;
 
   @ApiProperty({
@@ -392,6 +471,7 @@ export class DemandLinkApplicationRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -402,6 +482,7 @@ export class DemandCreateApplicationRequestDto {
     description: "应用名称",
     example: "研发效能看板",
   })
+  @IsString()
   name!: string;
 
   @ApiProperty({
@@ -409,6 +490,7 @@ export class DemandCreateApplicationRequestDto {
     description: "应用简介",
     example: "面向研发团队的效能数据看板",
   })
+  @IsString()
   summary!: string;
 
   @ApiPropertyOptional({
@@ -416,6 +498,8 @@ export class DemandCreateApplicationRequestDto {
     description: "维护人员工工号",
     example: "DEMO-APP-ADMIN",
   })
+  @IsOptional()
+  @IsString()
   maintainerEmployeeId?: string;
 
   @ApiPropertyOptional({
@@ -423,6 +507,8 @@ export class DemandCreateApplicationRequestDto {
     description: "所属部门 ID",
     example: "demo-rnd",
   })
+  @IsOptional()
+  @IsString()
   departmentId?: string;
 
   @ApiProperty({
@@ -430,6 +516,7 @@ export class DemandCreateApplicationRequestDto {
     description: "关联角色",
     enum: APPLICATION_ROLE,
   })
+  @IsIn(APPLICATION_ROLE)
   role!: (typeof APPLICATION_ROLE)[number];
 
   @ApiPropertyOptional({
@@ -437,6 +524,8 @@ export class DemandCreateApplicationRequestDto {
     description: "是否主解决方案",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   isPrimary?: boolean;
 
   @ApiProperty({
@@ -444,6 +533,7 @@ export class DemandCreateApplicationRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -454,6 +544,8 @@ export class DemandCommentRequestDto {
     description: "父评论 ID，根评论为 null",
     nullable: true,
   })
+  @IsString()
+  @ValidateIf((_o, v) => v !== null)
   parentCommentId!: string | null;
 
   @ApiProperty({
@@ -461,6 +553,7 @@ export class DemandCommentRequestDto {
     description: "评论内容",
     example: "这个需求很重要，建议优先排期。",
   })
+  @IsString()
   body!: string;
 
   @ApiPropertyOptional({
@@ -468,6 +561,8 @@ export class DemandCommentRequestDto {
     description: "是否匿名展示",
     example: false,
   })
+  @IsOptional()
+  @IsBoolean()
   displayAnonymously?: boolean;
 }
 
@@ -478,6 +573,8 @@ export class DemandReportRequestDto {
     description: "被举报评论 ID，举报需求本身为 null",
     nullable: true,
   })
+  @IsString()
+  @ValidateIf((_o, v) => v !== null)
   commentId!: string | null;
 
   @ApiProperty({
@@ -485,12 +582,14 @@ export class DemandReportRequestDto {
     description: "举报原因",
     example: "内容涉嫌违规",
   })
+  @IsString()
   reason!: string;
 }
 
 /** 处理需求举报请求。 */
 export class DemandReportResolveRequestDto {
   @ApiProperty({ type: String, description: "处理结果", enum: REPORT_STATUS })
+  @IsIn(REPORT_STATUS)
   status!: (typeof REPORT_STATUS)[number];
 }
 
@@ -1080,6 +1179,7 @@ export class DemandClaimProposalRequestDto {
     description: "拟定负责人员工工号",
     example: "DEMO-INNOVATION",
   })
+  @IsString()
   ownerEmployeeId!: string;
 
   @ApiProperty({
@@ -1087,6 +1187,8 @@ export class DemandClaimProposalRequestDto {
     description: "拟定协作者员工工号列表",
     example: ["DEMO-EMPLOYEE"],
   })
+  @IsArray()
+  @IsString({ each: true })
   collaboratorEmployeeIds!: string[];
 
   @ApiProperty({
@@ -1094,6 +1196,7 @@ export class DemandClaimProposalRequestDto {
     description: "初步思路",
     example: "先基于现有数据中台做原型，验证自动汇总可行性。",
   })
+  @IsString()
   approach!: string;
 
   @ApiProperty({
@@ -1101,6 +1204,7 @@ export class DemandClaimProposalRequestDto {
     description: "预计验证时间",
     example: "4 周",
   })
+  @IsString()
   estimatedValidationDuration!: string;
 
   @ApiProperty({
@@ -1108,6 +1212,7 @@ export class DemandClaimProposalRequestDto {
     description: "资源需求",
     example: "2 名后端 + 1 名前端，0.5 个数据接口资源。",
   })
+  @IsString()
   resourceNeeds!: string;
 
   @ApiPropertyOptional({
@@ -1115,6 +1220,8 @@ export class DemandClaimProposalRequestDto {
     description: "提交人偏好说明",
     example: "希望优先验证自动汇总这一最小闭环。",
   })
+  @IsOptional()
+  @IsString()
   preference?: string;
 }
 
@@ -1188,6 +1295,7 @@ export class DemandClaimConfirmRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 }
 
@@ -1198,6 +1306,7 @@ export class DemandReleaseRequestDto {
     description: "期望版本号（乐观锁）",
     example: 1,
   })
+  @IsNumber()
   expectedVersion!: number;
 
   @ApiPropertyOptional({
@@ -1205,6 +1314,8 @@ export class DemandReleaseRequestDto {
     description: "解除原因",
     example: "长期无进展，重新开放认领。",
   })
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 

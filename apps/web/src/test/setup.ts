@@ -33,7 +33,7 @@ Object.defineProperty(globalThis.window, "matchMedia", {
 });
 
 beforeEach(() => {
-  setSession({ employeeId: "E0001", sessionId: "test-session" });
+  setSession({ employeeId: "E0001" });
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -45,7 +45,6 @@ beforeEach(() => {
           permissions: ["*"],
           departmentIds: ["dept-1"],
           primaryDepartmentId: "dept-1",
-          sessionId: "test-session",
         });
       }
       if (path.includes("/internal/notifications")) {

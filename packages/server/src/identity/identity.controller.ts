@@ -768,12 +768,14 @@ export class IdentityController {
   @ApiResponse({ status: 204, description: "注销成功" })
   @ApiProblemResponses([400, 401, 403])
   async logout(
+    @Res({ passthrough: true }) res: Response,
     @CurrentActor() actor: ActorContext,
     @Body() body?: LogoutRequestDto,
   ): Promise<void> {
     if (body?.sessionId !== undefined && body.sessionId !== actor.sessionId) {
       throw new BadRequestException("SESSION_ID_MISMATCH");
     }
+    this.clearSessionCookies(res);
     await this.identity.logout(actor);
   }
 
@@ -790,13 +792,20 @@ export class IdentityController {
     type: LoginResponseDto,
   })
   @ApiProblemResponses([400, 401, 409])
-  loginWithPassword(@Body() body: LoginRequestDto) {
+  loginWithPassword(
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: LoginRequestDto,
+  ) {
     if (body.envelope === undefined || typeof body.envelope !== "object") {
       throw new BadRequestException("LOGIN_ENCRYPTION_INVALID_ENVELOPE");
     }
 
     return this.identity
       .loginWithEncryptedPassword(body.envelope as EncryptedLoginEnvelope)
+      .then((result) => {
+        this.setSessionCookies(res, result.session, result.actor.employeeId);
+        return result;
+      })
       .catch((error: unknown) => {
         const msg = error instanceof Error ? error.message : "LOGIN_FAILED";
         if (msg === "INVALID_CREDENTIALS") {
@@ -924,10 +933,10 @@ export class IdentityController {
 
     try {
       const result = await this.dingtalkSso.completeSso(handoffToken);
-      res.setHeader(
-        "Set-Cookie",
+      res.setHeader("Set-Cookie", [
         "dingtalk_handoff=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
-      );
+        ...this.sessionCookieHeaders(result.session, result.actor.employeeId),
+      ]);
       return result;
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -940,6 +949,43 @@ export class IdentityController {
       }
       throw error;
     }
+  }
+
+  private sessionCookieHeaders(
+    session: { sessionId: string; expiresAt: string | Date },
+    employeeId: string,
+  ): string[] {
+    const expires =
+      session.expiresAt instanceof Date
+        ? session.expiresAt
+        : new Date(session.expiresAt);
+    const maxAge = Math.max(
+      0,
+      Math.floor((expires.getTime() - Date.now()) / 1000),
+    );
+    // HttpOnly 防止 XSS 读取；SameSite=Lax 缓解 CSRF。未在本地 http 下加 Secure，
+    // 以便开发环境可用；生产走 https 时建议通过配置补 Secure。
+    const flags = "Path=/; HttpOnly; SameSite=Lax";
+    return [
+      `aihub_sid=${session.sessionId}; ${flags}; Max-Age=${maxAge}`,
+      `aihub_eid=${employeeId}; ${flags}; Max-Age=${maxAge}`,
+    ];
+  }
+
+  private setSessionCookies(
+    res: Response,
+    session: { sessionId: string; expiresAt: string | Date },
+    employeeId: string,
+  ): void {
+    res.setHeader("Set-Cookie", this.sessionCookieHeaders(session, employeeId));
+  }
+
+  private clearSessionCookies(res: Response): void {
+    const flags = "Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+    res.setHeader("Set-Cookie", [
+      `aihub_sid=; ${flags}`,
+      `aihub_eid=; ${flags}`,
+    ]);
   }
 
   private toSyncConfig(config: {

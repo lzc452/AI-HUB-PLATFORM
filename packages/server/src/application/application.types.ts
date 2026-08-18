@@ -22,7 +22,7 @@ export type ArtifactUploadStatus =
   | "completed"
   | "failed";
 export type ReviewDecision = "approve" | "reject" | "request_changes";
-export type ReviewQueueStatus = "available" | "claimed";
+export type ReviewQueueStatus = "available" | "claimed" | "completed";
 export type ReviewSlaStatus = "on_time" | "overdue";
 export type DeliveryChannel = "web" | "desktop" | "mobile" | "mini_program";
 
@@ -35,6 +35,8 @@ export interface ApplicationRecord {
   summary: string;
   status: ApplicationStatus;
   currentVersionId: string | null;
+  /** 已发布应用提交更新审核时，处于审核中的待生效版本；审核结束置空。 */
+  pendingVersionId: string | null;
 }
 
 export interface ApplicationVersionRecord {
@@ -118,6 +120,8 @@ export interface ReviewQueueRecord {
   applicationId: string;
   applicationVersionId: string;
   status: ReviewQueueStatus;
+  /** 进入审核前的应用状态（'draft' | 'published'），用于驳回回滚。 */
+  sourceStatus: string | null;
   claimedByEmployeeId: string | null;
   claimedAt: Date | null;
   slaDueAt: Date;
@@ -287,6 +291,7 @@ export interface ApplicationRepository {
     expectedStatus: ApplicationStatus;
     status: ApplicationStatus;
     currentVersionId?: string;
+    pendingVersionId?: string | null;
   }): Promise<ApplicationRecord>;
   createDelivery(
     input: Omit<DeliveryRecord, "deliveryId">,
@@ -309,6 +314,10 @@ export interface ApplicationRepository {
   releaseReviewQueue(
     applicationVersionId: string,
     employeeId: string,
+  ): Promise<ReviewQueueRecord>;
+  /** 审核结束（通过或驳回）后将队列置为终态 'completed'，避免其继续残留。 */
+  completeReviewQueue?(
+    applicationVersionId: string,
   ): Promise<ReviewQueueRecord>;
   recordAudit(input: {
     applicationId: string;

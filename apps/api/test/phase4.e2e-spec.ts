@@ -110,6 +110,13 @@ class ApiCatalogRepository implements CatalogRepository {
   async upsertRiskDescription(): Promise<void> {
     // 测试替身不持久化目录风险说明。
   }
+
+  async findApplicationOwner(): Promise<{
+    ownerEmployeeId: string;
+    maintainerEmployeeId: string | null;
+  } | null> {
+    return { ownerEmployeeId: "E100", maintainerEmployeeId: null };
+  }
 }
 
 describe("Phase 4 catalog API", () => {

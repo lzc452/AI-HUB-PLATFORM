@@ -12,7 +12,6 @@ export function usePlatformOverview(range?: AnalyticsDateRange) {
       "analytics",
       "platform-overview",
       session?.employeeId ?? null,
-      session?.sessionId ?? null,
       range?.from ?? null,
       range?.to ?? null,
     ],

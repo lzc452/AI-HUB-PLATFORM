@@ -172,6 +172,7 @@ export interface ApplicationsTable {
     | "withdrawn"
     | "archived";
   current_version_id: string | null;
+  pending_version_id: string | null;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
@@ -297,7 +298,8 @@ export interface ApplicationReviewQueueTable {
   review_queue_id: Generated<string>;
   application_id: string;
   application_version_id: string;
-  status: "available" | "claimed";
+  status: "available" | "claimed" | "completed";
+  source_status: string | null;
   claimed_by_employee_id: string | null;
   claimed_at: Date | null;
   sla_due_at: Date;

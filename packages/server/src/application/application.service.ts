@@ -9,6 +9,7 @@ import type {
   ApplicationAuthorizationPort,
   ApplicationRepository,
   ApplicationRecord,
+  ApplicationStatus,
   ApplicationVersionRecord,
   ApplicationWorkspace,
   ApplicationAdminListInput,
@@ -21,7 +22,7 @@ import type {
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
-import { assertSafeRichText } from "./content-security.js";
+import { assertSafeRichText, sanitizeRichText } from "./content-security.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -140,10 +141,20 @@ export class ApplicationService {
     ) {
       throw new Error("APPLICATION_NOT_EDITABLE");
     }
-    assertSafeRichText(draft.summaryHtml);
-    if (draft.manualHtml !== null) assertSafeRichText(draft.manualHtml);
-    if (draft.examplesHtml !== null) assertSafeRichText(draft.examplesHtml);
-    await this.repository.upsertDraft(applicationId, draft);
+    const sanitizedDraft: ApplicationDraft = {
+      ...draft,
+      summaryHtml: sanitizeRichText(draft.summaryHtml),
+      manualHtml: draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
+      examplesHtml:
+        draft.examplesHtml === null ? null : sanitizeRichText(draft.examplesHtml),
+    };
+    // 次级防御：白名单清洗后再用既有黑名单校验一遍（fail-closed）。
+    assertSafeRichText(sanitizedDraft.summaryHtml);
+    if (sanitizedDraft.manualHtml !== null)
+      assertSafeRichText(sanitizedDraft.manualHtml);
+    if (sanitizedDraft.examplesHtml !== null)
+      assertSafeRichText(sanitizedDraft.examplesHtml);
+    await this.repository.upsertDraft(applicationId, sanitizedDraft);
     return {
       applicationId,
       status: application.status,
@@ -193,7 +204,22 @@ export class ApplicationService {
     if (result === null) throw new Error("DRAFT_NOT_FOUND");
     const draft = result.draft;
 
-    const issues = validateDraftCompleteness(draft);
+    // 提交审核前对富文本做白名单清洗（XSS 防护），并作为版本快照持久化。
+    const sanitizedDraft: ApplicationDraft = {
+      ...draft,
+      summaryHtml: sanitizeRichText(draft.summaryHtml),
+      manualHtml: draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
+      examplesHtml:
+        draft.examplesHtml === null ? null : sanitizeRichText(draft.examplesHtml),
+    };
+    // 次级防御：白名单清洗后再用既有黑名单校验一遍（fail-closed）。
+    assertSafeRichText(sanitizedDraft.summaryHtml);
+    if (sanitizedDraft.manualHtml !== null)
+      assertSafeRichText(sanitizedDraft.manualHtml);
+    if (sanitizedDraft.examplesHtml !== null)
+      assertSafeRichText(sanitizedDraft.examplesHtml);
+
+    const issues = validateDraftCompleteness(sanitizedDraft);
     if (issues.length > 0) throw new DraftValidationError(issues);
 
     const existingVersions = await this.repository.listVersions(applicationId);
@@ -228,13 +254,17 @@ export class ApplicationService {
       });
       await repository.snapshotVersionContent(
         version.applicationVersionId,
-        draft,
+        sanitizedDraft,
       );
 
+      const isPublishedUpdate = application.status === "published";
       const updated = await repository.setApplicationStatus({
         applicationId,
         expectedStatus: application.status,
-        status: "in_review",
+        // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
+        // draft 提交审核才进入 in_review。
+        status: isPublishedUpdate ? "published" : "in_review",
+        pendingVersionId: isPublishedUpdate ? version.applicationVersionId : null,
       });
       await repository.createReviewQueue({
         applicationId,
@@ -243,6 +273,8 @@ export class ApplicationService {
         claimedByEmployeeId: null,
         claimedAt: null,
         slaDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        // 记录审核前的应用状态，驳回时据其正确回滚。
+        sourceStatus: application.status,
       });
       await this.recordChange(
         repository,
@@ -342,10 +374,14 @@ export class ApplicationService {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
     return this.repository.withTransaction(async (repository) => {
+      const isPublishedUpdate = application.status === "published";
       const updated = await repository.setApplicationStatus({
         applicationId: application.applicationId,
         expectedStatus: application.status,
-        status: "in_review",
+        // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
+        // draft 提交审核才进入 in_review。
+        status: isPublishedUpdate ? "published" : "in_review",
+        pendingVersionId: isPublishedUpdate ? applicationVersionId : null,
       });
       await repository.createReviewQueue({
         applicationId: application.applicationId,
@@ -354,6 +390,8 @@ export class ApplicationService {
         claimedByEmployeeId: null,
         claimedAt: null,
         slaDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        // 记录审核前的应用状态，驳回时据其正确回滚。
+        sourceStatus: application.status,
       });
       await this.recordChange(
         repository,
@@ -452,12 +490,30 @@ export class ApplicationService {
     if (application.ownerEmployeeId === actor.employeeId) {
       throw new Error("SELF_REVIEW_FORBIDDEN");
     }
-    this.requireStatus(application, "in_review");
+    // 已发布应用提交更新审核时，应用状态仍为 published（保持目录可见），
+    // 因此审核入口允许 in_review 或 published；其余状态不合法。
+    if (
+      application.status !== "in_review" &&
+      application.status !== "published"
+    ) {
+      throw new Error("INVALID_APPLICATION_TRANSITION");
+    }
     const queue = await this.requireReviewQueue(applicationVersionId);
     if (queue.claimedByEmployeeId !== actor.employeeId) {
       throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
     }
-    const nextStatus = decision === "approve" ? "approved" : "draft";
+    if (queue.status !== "claimed") {
+      throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
+    }
+    // 依据审核前的应用状态决定终态：驳回回滚到原状态；通过时
+    // draft→approved（仍由 publish 切换为 published），published→保持 published 并切换当前版本。
+    const approved = decision === "approve";
+    const sourceStatus = (queue.sourceStatus ?? "draft") as ApplicationStatus;
+    const nextStatus: ApplicationStatus = approved
+      ? sourceStatus === "published"
+        ? "published"
+        : "approved"
+      : sourceStatus;
     const updated = await this.repository.withTransaction(
       async (repository) => {
         await repository.createReview({
@@ -470,8 +526,14 @@ export class ApplicationService {
         });
         const updated = await repository.setApplicationStatus({
           applicationId: application.applicationId,
-          expectedStatus: "in_review",
+          expectedStatus: application.status,
           status: nextStatus,
+          // 审核结束，清除待生效版本标记。
+          pendingVersionId: null,
+          // 发布应用更新通过：切换当前版本为新审核版本。
+          ...(approved && sourceStatus === "published"
+            ? { currentVersionId: applicationVersionId }
+            : {}),
         });
         await this.recordChange(
           repository,
@@ -480,6 +542,10 @@ export class ApplicationService {
           applicationVersionId,
           actor.employeeId,
         );
+        // 关闭审核队列，避免其以 available/claimed 残留。
+        if (repository.completeReviewQueue !== undefined) {
+          await repository.completeReviewQueue(applicationVersionId);
+        }
         return updated;
       },
     );
