@@ -539,6 +539,24 @@ function makeService() {
     recipientEmployeeId: string;
     aggregateId: string;
   }> = [];
+  const notifications = {
+    queue: async (
+      _actor: ActorContext,
+      scenario: string,
+      input: {
+        recipientEmployeeId: string;
+        aggregateId: string;
+        variables?: Readonly<Record<string, string | number>>;
+      },
+    ) => {
+      notificationCalls.push({
+        scenario,
+        recipientEmployeeId: input.recipientEmployeeId,
+        aggregateId: input.aggregateId,
+      });
+      return { notificationId: `notification-${notificationCalls.length}` };
+    },
+  };
   return {
     repository,
     service: new ApplicationService(
@@ -554,27 +572,11 @@ function makeService() {
           return { inserted: true };
         },
       },
-      {
-        queue: async (
-          _actor: ActorContext,
-          scenario: string,
-          input: {
-            recipientEmployeeId: string;
-            aggregateId: string;
-            variables?: Readonly<Record<string, string | number>>;
-          },
-        ) => {
-          notificationCalls.push({
-            scenario,
-            recipientEmployeeId: input.recipientEmployeeId,
-            aggregateId: input.aggregateId,
-          });
-          return { notificationId: `notification-${notificationCalls.length}` };
-        },
-      },
+      notifications,
     ),
     analyticsEvents,
     notificationCalls,
+    notifications,
   };
 }
 
@@ -1190,6 +1192,45 @@ describe("ApplicationService", () => {
         aggregateId: application.applicationId,
       },
     ]);
+  });
+
+  it("keeps the withdraw-request audit when the notification queue fails", async () => {
+    const { service, repository, notifications } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: "E400",
+    } as never);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "Approved",
+    );
+    // 通知端口失败（如生产 notification.create 权限缺失）不得回滚业务：
+    // 审计在事务内已提交，规格 §5.8「外部通知失败不回滚业务操作」。
+    notifications.queue = async () => {
+      throw new Error("NOT_AUTHORIZED");
+    };
+
+    await expect(
+      service.requestWithdraw(
+        { ...outsider, employeeId: "E400" },
+        application.applicationId,
+        "应用已停止维护",
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(repository.audits).toContain("application.withdraw.requested");
+    expect(repository.events).toContain("application.withdraw.requested");
   });
 
   it("rejects withdraw requests from non-maintainers, non-published apps, or without a reason", async () => {

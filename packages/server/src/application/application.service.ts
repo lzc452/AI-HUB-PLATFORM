@@ -849,7 +849,9 @@ export class ApplicationService {
     if (reason.trim().length === 0) {
       throw new Error("WITHDRAW_REASON_REQUIRED");
     }
-    return this.repository.withTransaction(async (repository) => {
+    // 业务事务只写审计；站内通知在事务外发送（与 demand 模块一致），
+    // 且通知失败不得回滚业务操作（规格 §5.8）——收件人取自事务前已读的应用记录。
+    await this.repository.withTransaction(async (repository) => {
       await this.recordChange(
         repository,
         "application.withdraw.requested",
@@ -858,7 +860,9 @@ export class ApplicationService {
         actor.employeeId,
         { reason, by: actor.employeeId },
       );
-      if (this.notifications !== undefined) {
+    });
+    if (this.notifications !== undefined) {
+      try {
         await this.notifications.queue(
           actor,
           "application.withdraw.requested",
@@ -868,8 +872,11 @@ export class ApplicationService {
             variables: { reason },
           },
         );
+      } catch {
+        // 规格 §5.8：外部通知失败不回滚业务操作——审计已提交，申请本身成立；
+        // 钉钉通知为尽力投递（outbox at-least-once），失败由后续投递兜底。
       }
-    });
+    }
   }
 
   async rollback(
