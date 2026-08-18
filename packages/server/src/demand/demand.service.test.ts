@@ -1350,3 +1350,65 @@ describe("DemandService demand.submitted notification", () => {
     ).resolves.toMatchObject({ status: "pending_review" });
   });
 });
+
+describe("DemandService demand.reviewed notification", () => {
+  function reviewHarness() {
+    const demand = baseDemand("demand-review-notification");
+    demand.status = "pending_review";
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository),
+      findById: async () => demand,
+      transitionStatus: async (
+        _id: string,
+        status: DemandEntry["status"],
+        _expectedVersion: number,
+        reviewReason?: string | null,
+      ) => {
+        demand.status = status;
+        demand.reviewReason = reviewReason ?? null;
+        demand.version += 1;
+        return demand;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    return { repository, demand };
+  }
+
+  it("notifies the submitter when a demand review is decided", async () => {
+    const { repository, demand } = reviewHarness();
+    const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      undefined,
+      undefined,
+      undefined,
+      notifications,
+    );
+
+    await service.review(reviewer, demand.demandId, "reject", "重复需求");
+
+    expect(demand.status).toBe("rejected");
+    expect(notifications.queue).toHaveBeenCalledWith(
+      reviewer,
+      "demand.reviewed",
+      {
+        recipientEmployeeId: demand.requesterEmployeeId,
+        aggregateId: demand.demandId,
+        variables: { decision: "reject" },
+      },
+    );
+  });
+
+  it("skips the notification when the ports are absent", async () => {
+    const { repository, demand } = reviewHarness();
+    const service = new DemandService(repository, { authorize: allowAll });
+
+    await expect(
+      service.review(reviewer, demand.demandId, "publish"),
+    ).resolves.toMatchObject({ status: "pending_claim" });
+  });
+});

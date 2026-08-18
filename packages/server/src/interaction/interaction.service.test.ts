@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 import { InteractionService } from "./interaction.service.js";
 import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy.js";
@@ -400,6 +400,60 @@ describe("InteractionService", () => {
     expect(repository.audits).toContain(
       "interaction.anonymous_identity.viewed",
     );
+  });
+
+  it("notifies the reporter when a report is resolved", async () => {
+    const repository = new MemoryInteractionRepository();
+    const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+      undefined,
+      notifications,
+    );
+    const comment = await service.createComment(owner, {
+      applicationId: "app-1",
+      body: "content",
+    });
+    const report = await service.report(employee, {
+      applicationId: "app-1",
+      commentId: comment.commentId,
+      reason: "policy",
+    });
+
+    await service.resolveReport(admin, report.reportId, "hidden");
+
+    expect(notifications.queue).toHaveBeenCalledWith(
+      admin,
+      "interaction.report.resolved",
+      {
+        recipientEmployeeId: employee.employeeId,
+        aggregateId: "app-1",
+      },
+    );
+  });
+
+  it("resolves reports without a notification when the port is absent", async () => {
+    const repository = new MemoryInteractionRepository();
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
+    const comment = await service.createComment(owner, {
+      applicationId: "app-1",
+      body: "content",
+    });
+    const report = await service.report(employee, {
+      applicationId: "app-1",
+      commentId: comment.commentId,
+      reason: "policy",
+    });
+
+    await expect(
+      service.resolveReport(admin, report.reportId, "dismissed"),
+    ).resolves.toMatchObject({ status: "dismissed" });
   });
 
   it("rejects direct-ID interaction when the application is outside the actor audience", async () => {

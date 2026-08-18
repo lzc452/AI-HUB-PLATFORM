@@ -169,25 +169,40 @@ export class DemandService {
     }
     const nextStatus: DemandStatus =
       decision === "publish" ? "pending_claim" : "rejected";
-    return this.repository.withTransaction(async (repository) => {
-      const reviewed = await repository.transitionStatus(
-        demandId,
-        nextStatus,
-        current.version,
-        decision === "reject" ? reason!.trim() : null,
-      );
-      await this.recordMutation(
-        repository,
-        reviewed,
-        actor,
-        "demand.reviewed",
-        {
-          decision,
-          reason: decision === "reject" ? reason!.trim() : null,
-        },
-      );
-      return reviewed;
-    });
+    const reviewed = await this.repository.withTransaction(
+      async (repository) => {
+        const reviewed = await repository.transitionStatus(
+          demandId,
+          nextStatus,
+          current.version,
+          decision === "reject" ? reason!.trim() : null,
+        );
+        await this.recordMutation(
+          repository,
+          reviewed,
+          actor,
+          "demand.reviewed",
+          {
+            decision,
+            reason: decision === "reject" ? reason!.trim() : null,
+          },
+        );
+        return reviewed;
+      },
+    );
+    // 事务外通知提交人（与 submitForReview 一致），失败不回滚审核结论。
+    // requesterEmployeeId 仅在匿名投影中为 null，审核读取的是全量记录。
+    if (
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      await this.notifications.queue(actor, "demand.reviewed", {
+        recipientEmployeeId: current.requesterEmployeeId,
+        aggregateId: demandId,
+        variables: { decision },
+      });
+    }
+    return reviewed;
   }
 
   async claim(

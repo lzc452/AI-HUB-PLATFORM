@@ -11,6 +11,9 @@ import { CatalogVisibilityPolicy } from "../catalog/catalog-visibility.policy.js
 import { KyselyCatalogRepository } from "../catalog/catalog.repository.js";
 import { AnalyticsEventService } from "../analytics/analytics.service.js";
 import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
+import { NotificationModule } from "../notification/notification.module.js";
+import { DINGTALK_NOTIFICATION_MATRIX_SERVICE } from "../notification/notification.tokens.js";
+import type { DingTalkNotificationMatrixService } from "../notification/dingtalk-matrix.service.js";
 
 @Module({})
 export class InteractionModule {
@@ -20,12 +23,18 @@ export class InteractionModule {
     );
     return {
       module: InteractionModule,
-      imports: [IdentityModule.register(database)],
+      imports: [
+        IdentityModule.register(database),
+        NotificationModule.register(database),
+      ],
       controllers: [InteractionController],
       providers: [
         {
           provide: INTERACTION_SERVICE,
-          useFactory: (identity: IdentityService) =>
+          useFactory: (
+            identity: IdentityService,
+            notifications: DingTalkNotificationMatrixService,
+          ) =>
             new InteractionService(
               new KyselyInteractionRepository(database),
               identity,
@@ -33,8 +42,9 @@ export class InteractionModule {
                 new KyselyCatalogRepository(database),
               ),
               analyticsEvents,
+              notifications,
             ),
-          inject: [IdentityService],
+          inject: [IdentityService, DINGTALK_NOTIFICATION_MATRIX_SERVICE],
         },
       ],
       exports: [INTERACTION_SERVICE],

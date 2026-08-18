@@ -83,6 +83,10 @@ export const DINGTALK_NOTIFICATION_MATRIX = {
     recipientRole: "assistant_requester",
     messageTemplate: "外部助手请求 {aggregateId} 当前不可用。",
   },
+  "interaction.report.resolved": {
+    recipientRole: "report_author",
+    messageTemplate: "你对应用 {aggregateId} 的举报已处理。",
+  },
 } as const;
 
 export type DingTalkNotificationScenario =

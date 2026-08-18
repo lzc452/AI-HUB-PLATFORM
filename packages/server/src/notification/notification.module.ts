@@ -96,6 +96,24 @@ async function authorizeDingTalkResource(
         recipientEmployeeId === actor.employeeId &&
         aggregateId === actor.sessionId
       );
+    case "report_author":
+      return (
+        (await database
+          .selectFrom("application_reports")
+          .select("report_id")
+          .where("application_id", "=", aggregateId)
+          .where("reporter_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
+    case "artifact_uploader":
+      return (
+        (await database
+          .selectFrom("application_artifact_uploads")
+          .select("upload_id")
+          .where("application_id", "=", aggregateId)
+          .where("uploaded_by_employee_id", "=", recipientEmployeeId)
+          .executeTakeFirst()) !== undefined
+      );
     default:
       return false;
   }
@@ -155,6 +173,8 @@ export class NotificationModule {
                     "analytics_operator",
                     "super_admin",
                   ],
+                  report_author: ["employee", "super_admin"],
+                  artifact_uploader: ["employee", "super_admin"],
                 };
                 const hasRole = records.some((record) =>
                   (aliases[role] ?? [role]).includes(record.roleCode),

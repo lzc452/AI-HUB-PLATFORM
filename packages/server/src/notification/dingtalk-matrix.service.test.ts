@@ -33,6 +33,7 @@ const EMITTED_EVENTS = [
   "analytics.export.completed",
   "analytics.export.failed",
   "analytics.assistant.failed",
+  "interaction.report.resolved",
 ];
 
 describe("DingTalk notification matrix", () => {
@@ -64,6 +65,7 @@ describe("DingTalk notification matrix", () => {
       "analytics.export.completed",
       "analytics.export.failed",
       "analytics.assistant.failed",
+      "interaction.report.resolved",
     ]);
     for (const entry of Object.values(DINGTALK_NOTIFICATION_MATRIX)) {
       expect(entry.recipientRole.length).toBeGreaterThan(0);

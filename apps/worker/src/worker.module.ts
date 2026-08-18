@@ -27,6 +27,50 @@ const unavailableDingTalk = {
   },
 };
 
+/** 后台进程 actor：站内通知的授权固定放行（与 SLA 提醒一致）。 */
+const systemActor = {
+  employeeId: "system-artifact-verification",
+  roleCodes: ["super_admin"],
+  departmentIds: [],
+  primaryDepartmentId: "",
+  sessionId: "artifact-verification",
+};
+
+/**
+ * artifact.verification.failed outbox 事件 → 站内通知上传者
+ * （矩阵场景 artifact.verification.failed，recipientRole: artifact_uploader）。
+ * 消息与矩阵模板一致；幂等键 `${eventType}:${aggregateId}:${recipient}` 保证
+ * 同一应用多次校验失败只入站一条通知。上传记录不存在（已被清理）时静默跳过。
+ */
+export function createArtifactVerificationFailedNotificationHandler(
+  notifications: NotificationService,
+  repository: KyselyApplicationRepository,
+): OutboxHandler {
+  return async (event) => {
+    const payload = event.payload as {
+      applicationId?: string;
+      details?: { uploadId?: string; errorCode?: string };
+    };
+    const uploadId = payload?.details?.uploadId;
+    if (typeof uploadId !== "string") return;
+    const upload = await repository.findArtifactUpload(uploadId);
+    if (upload === null) return;
+    const errorCode =
+      payload.details?.errorCode ?? "ARTIFACT_VERIFICATION_FAILED";
+    await notifications.createForEvent(systemActor, {
+      recipientEmployeeId: upload.uploadedByEmployeeId,
+      eventType: "artifact.verification.failed",
+      aggregateId: upload.applicationId,
+      message: `安装包 ${upload.applicationId} 校验失败：${errorCode}。`,
+      metadata: {
+        notificationScenario: "artifact.verification.failed",
+        recipientRole: "artifact_uploader",
+        actorEmployeeId: systemActor.employeeId,
+      },
+    });
+  };
+}
+
 export const outboxHandlers: OutboxHandlerMap = {
   "system.probe.requested": systemProbeRequestedHandler,
 };
@@ -35,6 +79,7 @@ export function createOutboxHandlers(
   database: ReturnType<typeof createDatabase>,
   artifactVerificationHandler?: OutboxHandler,
   auditExportHandler?: OutboxHandler,
+  artifactVerificationFailedNotificationHandler?: OutboxHandler,
 ): OutboxHandlerMap {
   return {
     ...outboxHandlers,
@@ -43,7 +88,12 @@ export function createOutboxHandlers(
       : {
           "artifact.verification.requested": artifactVerificationHandler,
           "artifact.verification.completed": systemProbeRequestedHandler,
-          "artifact.verification.failed": systemProbeRequestedHandler,
+        }),
+    ...(artifactVerificationFailedNotificationHandler === undefined
+      ? {}
+      : {
+          "artifact.verification.failed":
+            artifactVerificationFailedNotificationHandler,
         }),
     ...(auditExportHandler === undefined
       ? {}
@@ -114,12 +164,30 @@ export class WorkerModule {
             const outboxStore = new OutboxStore(database, {
               leaseDurationMs: outboxLeaseDurationMs,
             });
+            const applicationRepository = new KyselyApplicationRepository(
+              database,
+            );
+            const notifications = new NotificationService(
+              new KyselyNotificationRepository(database),
+              // worker 是系统进程：后台提醒不需要按员工授权。
+              {
+                authorize: async () => ({
+                  allowed: true,
+                  reasonCode: "SYSTEM_ACTOR",
+                }),
+              },
+              unavailableDingTalk,
+            );
             const outboxWorker = new OutboxWorker(
               outboxStore,
               createOutboxHandlers(
                 database,
                 artifactVerificationHandler,
                 auditExportHandler,
+                createArtifactVerificationFailedNotificationHandler(
+                  notifications,
+                  applicationRepository,
+                ),
               ),
               undefined,
               metrics,
@@ -133,19 +201,9 @@ export class WorkerModule {
                   new KyselyAnalyticsEventRepository(database),
                 ),
               ),
-              new KyselyApplicationRepository(database),
+              applicationRepository,
               new KyselyIdentityRepository(database),
-              new NotificationService(
-                new KyselyNotificationRepository(database),
-                // worker 是系统进程：后台提醒不需要按员工授权。
-                {
-                  authorize: async () => ({
-                    allowed: true,
-                    reasonCode: "SYSTEM_ACTOR",
-                  }),
-                },
-                unavailableDingTalk,
-              ),
+              notifications,
             );
           },
         },

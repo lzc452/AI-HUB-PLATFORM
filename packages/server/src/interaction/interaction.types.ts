@@ -52,6 +52,19 @@ export interface InteractionAuthorizationPort {
   }): Promise<AuthorizationDecision>;
 }
 
+/** 举报处理后的站内通知端口（由通知矩阵服务实现，可选装配）。 */
+export interface InteractionNotificationPort {
+  queue(
+    actor: ActorContext,
+    scenario: string,
+    input: {
+      recipientEmployeeId: string;
+      aggregateId: string;
+      variables?: Readonly<Record<string, string | number>>;
+    },
+  ): Promise<unknown>;
+}
+
 export interface InteractionRepository {
   withTransaction<T>(
     operation: (repository: InteractionRepository) => Promise<T>,

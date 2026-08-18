@@ -1,6 +1,7 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type {
   InteractionAuthorizationPort,
+  InteractionNotificationPort,
   InteractionRepository,
   ReportRecord,
 } from "./interaction.types.js";
@@ -13,6 +14,7 @@ export class InteractionService {
     private readonly authorization: InteractionAuthorizationPort,
     private readonly visibility: CatalogVisibilityPort,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+    private readonly notifications?: InteractionNotificationPort,
   ) {}
 
   async toggleLike(actor: ActorContext, applicationId: string) {
@@ -154,7 +156,10 @@ export class InteractionService {
     },
   ) {
     await this.assertAllowed(actor, "interact");
-    await this.visibility.requireVisibleOrManageable(actor, input.applicationId);
+    await this.visibility.requireVisibleOrManageable(
+      actor,
+      input.applicationId,
+    );
     const application = await this.requireApplication(input.applicationId);
     if (
       application.ownerEmployeeId !== actor.employeeId &&
@@ -238,18 +243,26 @@ export class InteractionService {
     const existing = await this.repository.findReport(reportId);
     if (existing === null) throw new Error("REPORT_NOT_FOUND");
     await this.visibility.requireVisible(actor, existing.applicationId);
-    return this.repository.withTransaction(async (repository) => {
-      const report = await repository.resolveReport(
+    const report = await this.repository.withTransaction(async (repository) => {
+      const resolved = await repository.resolveReport(
         reportId,
         status,
         actor.employeeId,
       );
       await repository.emitOutbox?.({
-        applicationId: report.applicationId,
+        applicationId: resolved.applicationId,
         eventType: "interaction.report.resolved",
       });
-      return report;
+      return resolved;
     });
+    // 事务外通知举报人（规格 §5.8 通知提交人；失败不回滚处理结论）。
+    if (this.notifications !== undefined) {
+      await this.notifications.queue(actor, "interaction.report.resolved", {
+        recipientEmployeeId: existing.reporterEmployeeId,
+        aggregateId: existing.applicationId,
+      });
+    }
+    return report;
   }
 
   async lookupAnonymousAuthor(actor: ActorContext, commentId: string) {
