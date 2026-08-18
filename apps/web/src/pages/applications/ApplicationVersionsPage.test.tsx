@@ -58,6 +58,7 @@ const hoisted = vi.hoisted(() => {
   const versions: ApplicationVersionRecord[] = [versionNew, versionOld];
   const workspace: ApplicationWorkspace = {
     application,
+    applicationType: "web_app",
     assets: [],
     deliveries: [],
     departmentName: "研发部",

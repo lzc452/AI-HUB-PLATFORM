@@ -188,6 +188,8 @@ export type ReviewQueueView = ReviewQueueRecord & {
 
 export interface ApplicationWorkspace {
   application: ApplicationRecord;
+  /** 应用类型（application_catalog_metadata.application_type；存量应用可能缺失）。 */
+  applicationType: string | null;
   ownerName: string;
   maintainerName: string;
   departmentName: string;

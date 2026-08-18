@@ -125,6 +125,8 @@ export default function ApplicationDeliveryPage() {
     workspace?.application.status === "published" &&
       latestVersion?.applicationVersionId ===
         workspace.application.currentVersionId,
+    workspace?.applicationType ?? null,
+    latestVersion?.artifactKey ?? null,
   );
   const enabledCount = useMemo(
     () => Object.values(drafts).filter((draft) => draft.enabled).length,
@@ -326,6 +328,8 @@ function getReviewReadiness(
   scanStatus: "pending" | "passed" | "failed" | undefined,
   hasVersion: boolean,
   isCurrentPublishedVersion: boolean,
+  applicationType: string | null,
+  artifactKey: string | null,
 ): { ready: boolean; message: string } {
   if (!hasVersion) return { ready: false, message: "请先创建版本" };
   if (isCurrentPublishedVersion) {
@@ -333,6 +337,19 @@ function getReviewReadiness(
   }
   if (scanStatus !== "passed") {
     return { ready: false, message: "最新版本制品校验未通过" };
+  }
+  // 桌面端/移动端应用必须有安装包制品（P1-7）：最新版本无制品时禁用提交，
+  // 引导先到版本管理页上传安装包并创建绑定制品的版本；类型未知（存量应用
+  // 无 catalog metadata）时放行，与后端 submitForReview 的豁免一致。
+  if (
+    (applicationType === "desktop_app" || applicationType === "mobile_app") &&
+    artifactKey === null
+  ) {
+    return {
+      ready: false,
+      message:
+        "请先上传安装包：桌面端/移动端应用需绑定安装包制品后才能提交审核",
+    };
   }
   if (status === "in_review") {
     return { ready: false, message: "最新版本正在审核中" };

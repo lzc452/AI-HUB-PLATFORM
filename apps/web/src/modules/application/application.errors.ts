@@ -4,6 +4,8 @@ const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   APPLICATION_NOT_EDITABLE: "当前应用状态不允许编辑",
   APPLICATION_OWNER_REQUIRED: "仅应用负责人可以执行此操作",
   ARTIFACT_NOT_VERIFIED: "版本制品尚未通过安全校验",
+  ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE:
+    "桌面端/移动端应用需先上传安装包（绑定制品）后才能提交审核",
   DELIVERY_CHANNELS_INCOMPLETE: "发布前必须启用全部四个交付渠道",
   DRAFT_VALIDATION_FAILED: "草稿未通过提交校验",
   INVALID_APPLICATION_TRANSITION: "当前应用状态不允许执行此操作",

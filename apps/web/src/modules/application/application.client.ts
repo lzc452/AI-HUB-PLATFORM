@@ -23,7 +23,8 @@ export interface ApplicationVersionRecord {
   applicationId: string;
   version: string;
   changelog: string;
-  artifactKey: string;
+  /** 无安装包版本（向导 submitDraft 创建）为 null。 */
+  artifactKey: string | null;
   artifactSha256: string;
   artifactSignature: string | null;
   /** 制品是否已签名（源自后端关联 upload 记录；无制品或未知时为 null）。 */
@@ -68,6 +69,8 @@ export interface ReviewQueueRecord {
 
 export interface ApplicationWorkspace {
   application: ApplicationRecord;
+  /** 应用类型（catalog metadata；存量应用可能缺失）。 */
+  applicationType: string | null;
   ownerName: string;
   maintainerName: string;
   departmentName: string;

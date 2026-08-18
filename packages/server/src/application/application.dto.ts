@@ -701,6 +701,13 @@ export class ApplicationWorkspaceDto {
   @ApiProperty({ type: ApplicationDto })
   application!: ApplicationDto;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: "应用类型（application_catalog_metadata；存量应用可能缺失）",
+  })
+  applicationType!: string | null;
+
   @ApiProperty({ type: String, description: "责任人姓名" })
   ownerName!: string;
 

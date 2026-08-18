@@ -78,6 +78,7 @@ const hoisted = vi.hoisted(() => {
   ];
   const workspace: ApplicationWorkspace = {
     application,
+    applicationType: "web_app",
     assets: [],
     deliveries,
     departmentName: "研发部",
@@ -337,6 +338,86 @@ describe("ApplicationDeliveryPage", () => {
     );
 
     expect(hoisted.submitReview).not.toHaveBeenCalled();
+  });
+
+  it("桌面端应用最新版本无制品时禁止提交并提示先上传安装包", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        applicationType: "desktop_app",
+        versions: [
+          { ...hoisted.latestVersion, artifactKey: null, signed: null },
+        ],
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "提交审核" }),
+    ).toBeDisabled();
+    expect(screen.getByText(/请先上传安装包/)).toBeInTheDocument();
+  });
+
+  it("移动端应用最新版本无制品时禁止提交并提示先上传安装包", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        applicationType: "mobile_app",
+        versions: [
+          { ...hoisted.latestVersion, artifactKey: null, signed: null },
+        ],
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "提交审核" }),
+    ).toBeDisabled();
+    expect(screen.getByText(/请先上传安装包/)).toBeInTheDocument();
+  });
+
+  it("Web 应用最新版本无制品时仍允许提交（web 不需要安装包）", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        applicationType: "web_app",
+        versions: [
+          { ...hoisted.latestVersion, artifactKey: null, signed: null },
+        ],
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "提交审核" }),
+    ).toBeEnabled();
+    expect(screen.queryByText(/请先上传安装包/)).not.toBeInTheDocument();
+  });
+
+  it("桌面端应用已绑定制品时允许提交审核", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        applicationType: "desktop_app",
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("button", { name: "提交审核" }),
+    ).toBeEnabled();
   });
 
   it("最新版本未通过扫描时禁止提交审核", async () => {

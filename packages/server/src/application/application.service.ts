@@ -483,6 +483,20 @@ export class ApplicationService {
     if (version.scanStatus !== "passed") {
       throw new Error("ARTIFACT_NOT_VERIFIED");
     }
+    // 桌面端/移动端应用必须有安装包制品才能进入审核（P1-7）：submitDraft
+    // 创建的无制品版本（artifactKey=null）不得直接提交审核，避免审核通过后
+    // 发布没有任何安装包的版本。类型未知（catalog metadata 缺失的存量应用）
+    // 时豁免——与 assertDeliveryChannelsComplete 的 typeKnown 豁免一致，
+    // 无法判断类型时保持历史行为放行。
+    const applicationType = await this.repository.getApplicationType(
+      version.applicationId,
+    );
+    if (
+      (applicationType === "desktop_app" || applicationType === "mobile_app") &&
+      version.artifactKey === null
+    ) {
+      throw new Error("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+    }
     // 规格 §5.5：带制品的版本在提交审核时再次校验未签名确认（提交点二次门禁）。
     if (version.artifactKey !== null && version.artifactSha256 !== null) {
       const upload = await this.repository.findVerifiedArtifact({
@@ -1244,12 +1258,14 @@ export class ApplicationService {
     actor?: ActorContext,
   ): Promise<ApplicationWorkspace> {
     const application = await this.getApplication(applicationId, actor);
-    const [versions, deliveries, reviews, assets] = await Promise.all([
-      this.repository.listVersions(applicationId),
-      this.repository.listDeliveries(applicationId),
-      this.repository.listReviews(applicationId),
-      this.repository.listAssets(applicationId),
-    ]);
+    const [versions, deliveries, reviews, assets, applicationType] =
+      await Promise.all([
+        this.repository.listVersions(applicationId),
+        this.repository.listDeliveries(applicationId),
+        this.repository.listReviews(applicationId),
+        this.repository.listAssets(applicationId),
+        this.repository.getApplicationType(applicationId),
+      ]);
     const latestVersion = versions[0];
     const reviewQueue = latestVersion
       ? await this.repository.findReviewQueueByVersion(
@@ -1259,6 +1275,7 @@ export class ApplicationService {
     const meta = await this.repository.findApplicationMeta(applicationId);
     return {
       application,
+      applicationType,
       ownerName: meta?.ownerName ?? "",
       maintainerName: meta?.maintainerName ?? "",
       departmentName: meta?.departmentName ?? "",

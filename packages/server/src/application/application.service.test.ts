@@ -2800,6 +2800,109 @@ describe("ApplicationService", () => {
     expect(repository.events).toContain("application.review.requested");
   });
 
+  it("rejects review submission for desktop versions without an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "desktop_app",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+
+    // P1-7：桌面端/移动端应用无安装包（artifactKey=null）不得进入审核，
+    // 门禁在状态检查之前拦截（submitDraft 已把应用置为 in_review 也应报此错）。
+    await expect(
+      service.submitForReview(owner, version!.applicationVersionId),
+    ).rejects.toThrow("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+  });
+
+  it("rejects review submission for mobile versions without an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "mobile_app",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+
+    await expect(
+      service.submitForReview(owner, version!.applicationVersionId),
+    ).rejects.toThrow("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+  });
+
+  it("allows review submission for web apps without an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, completeDraft());
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+    expect(version?.artifactKey).toBeNull();
+    // 无制品版本在审核被拒/撤回后回到 draft，此时 web_app 仍允许提交审核
+    // （web 应用不需要安装包制品）。
+    repository.applications.set(application.applicationId, {
+      ...application,
+      status: "draft",
+    });
+
+    await expect(
+      service.submitForReview(owner, version!.applicationVersionId),
+    ).resolves.toMatchObject({ status: "in_review" });
+  });
+
+  it("allows review submission when the application type is unknown", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "desktop_app",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    // 模拟存量应用缺失 catalog metadata：getApplicationType 返回 null → 豁免
+    // 制品门禁（与 assertDeliveryChannelsComplete 的 typeKnown 豁免一致）。
+    repository.catalogTypes.delete(application.applicationId);
+    repository.applications.set(application.applicationId, {
+      ...application,
+      status: "draft",
+    });
+    const [version] = [...repository.versions.values()];
+
+    await expect(
+      service.submitForReview(owner, version!.applicationVersionId),
+    ).resolves.toMatchObject({ status: "in_review" });
+  });
+
+  it("allows review submission for desktop versions with an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    repository.catalogTypes.set(application.applicationId, "desktop_app");
+
+    await expect(
+      service.submitForReview(owner, version.applicationVersionId),
+    ).resolves.toMatchObject({ status: "in_review" });
+  });
+
   it("submits a draft with multiple audience rules (all + departments + employees)", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
