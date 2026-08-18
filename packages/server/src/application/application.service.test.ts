@@ -1169,6 +1169,85 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("REVIEW_QUEUE_NOT_CLAIMED");
   });
 
+  it("rejects transferring a review task to the owner or single maintainer", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: reviewer.employeeId,
+    } as never);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    // 先由非自审人 E300 认领，再由超管转交。
+    await service.claimReview(outsider, version.applicationVersionId);
+
+    await expect(
+      service.transferReviewTask(
+        superAdmin,
+        version.applicationVersionId,
+        owner.employeeId,
+      ),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+    await expect(
+      service.transferReviewTask(
+        superAdmin,
+        version.applicationVersionId,
+        reviewer.employeeId,
+      ),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+  });
+
+  it("rejects transferring a review task to a draft maintainer", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: [reviewer.employeeId],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+    await service.claimReview(outsider, version!.applicationVersionId);
+
+    await expect(
+      service.transferReviewTask(
+        superAdmin,
+        version!.applicationVersionId,
+        reviewer.employeeId,
+      ),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+  });
+
+  it("rejects review decisions by a maintainer who somehow holds the claim", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: [reviewer.employeeId],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+    // 直接操作队列模拟维护人已持有认领（绕过认领入口守卫的历史数据/并发窗口），
+    // review() 必须在出结论时仍然拒绝维护人自审。
+    await repository.claimReviewQueue(
+      version!.applicationVersionId,
+      reviewer.employeeId,
+    );
+
+    await expect(
+      service.review(reviewer, version!.applicationVersionId, "approve", "ok"),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+  });
+
   it("allows owner to delete own draft application with audit", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {

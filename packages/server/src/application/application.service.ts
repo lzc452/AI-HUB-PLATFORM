@@ -474,20 +474,7 @@ export class ApplicationService {
     await this.assertAuthorized(actor, allowedActions.review);
     const version = await this.requireVersion(applicationVersionId);
     const application = await this.requireApplication(version.applicationId);
-    if (application.ownerEmployeeId === actor.employeeId) {
-      throw new Error("SELF_REVIEW_FORBIDDEN");
-    }
-    // 维护人同样不得自审（规格 §5.5）。维护人列表以提交时草稿为准
-    // （draft.maintainerEmployeeIds，与版本快照内容一致）；无草稿的历史
-    // 数据回退到 applications.maintainer_employee_id 单维护人字段。
-    const draft = await this.repository.findDraft(application.applicationId);
-    const maintainerIds = draft?.draft.maintainerEmployeeIds ?? [];
-    if (
-      application.maintainerEmployeeId === actor.employeeId ||
-      maintainerIds.includes(actor.employeeId)
-    ) {
-      throw new Error("SELF_REVIEW_FORBIDDEN");
-    }
+    await this.assertNotSelfReview(actor, application);
     const queue = await this.requireReviewQueue(applicationVersionId);
     if (queue.status !== "available") {
       throw new Error("REVIEW_QUEUE_NOT_AVAILABLE");
@@ -551,6 +538,11 @@ export class ApplicationService {
     if (queue.status !== "claimed") {
       throw new Error("REVIEW_QUEUE_NOT_CLAIMED");
     }
+    // 转交目标不得是负责人或维护人：禁自审不可经转交绕过（规格 §5.5）。
+    const application = await this.requireApplication(queue.applicationId);
+    if (await this.isSelfReviewer(newClaimantEmployeeId, application)) {
+      throw new Error("SELF_REVIEW_FORBIDDEN");
+    }
     return this.repository.withTransaction(async (repository) => {
       const updated = await repository.transferReviewQueue(
         applicationVersionId,
@@ -576,9 +568,9 @@ export class ApplicationService {
     await this.assertAuthorized(actor, allowedActions.review);
     const version = await this.requireVersion(applicationVersionId);
     const application = await this.requireApplication(version.applicationId);
-    if (application.ownerEmployeeId === actor.employeeId) {
-      throw new Error("SELF_REVIEW_FORBIDDEN");
-    }
+    // 负责人与维护人（草稿维护人列表或单维护人字段）在任何路径下都不得
+    // 出结论，包括经超管转交后持有认领的情况（规格 §5.5 禁自审不可绕过）。
+    await this.assertNotSelfReview(actor, application);
     // 已发布应用提交更新审核时，应用状态仍为 published（保持目录可见），
     // 因此审核入口允许 in_review 或 published；其余状态不合法。
     if (
@@ -1092,6 +1084,32 @@ export class ApplicationService {
       resourceType: "application",
     });
     if (!decision.allowed) throw new Error("NOT_AUTHORIZED");
+  }
+
+  /** 判断员工是否为该应用的负责人或维护人（自审者）。维护人列表以提交时
+   *  草稿为准（draft.maintainerEmployeeIds，与版本快照内容一致）；无草稿的
+   *  历史数据回退到 applications.maintainer_employee_id 单维护人字段。 */
+  private async isSelfReviewer(
+    employeeId: string,
+    application: ApplicationRecord,
+  ): Promise<boolean> {
+    if (application.ownerEmployeeId === employeeId) return true;
+    const draft = await this.repository.findDraft(application.applicationId);
+    const maintainerIds = draft?.draft.maintainerEmployeeIds ?? [];
+    return (
+      application.maintainerEmployeeId === employeeId ||
+      maintainerIds.includes(employeeId)
+    );
+  }
+
+  /** 负责人与维护人不得自审（规格 §5.5）：认领与出结论路径共用。 */
+  private async assertNotSelfReview(
+    actor: ActorContext,
+    application: ApplicationRecord,
+  ): Promise<void> {
+    if (await this.isSelfReviewer(actor.employeeId, application)) {
+      throw new Error("SELF_REVIEW_FORBIDDEN");
+    }
   }
 
   private assertApplicationReadable(

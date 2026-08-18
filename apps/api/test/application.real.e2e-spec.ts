@@ -127,7 +127,8 @@ describe("real application lifecycle API", () => {
       insert into employees (employee_id, display_name, status, primary_department_id)
       values ('E100', 'Owner', 'active', 'dept-platform'),
              ('E200', 'Reviewer', 'active', 'dept-review'),
-             ('E300', 'Super Admin', 'active', 'dept-platform')
+             ('E300', 'Super Admin', 'active', 'dept-platform'),
+             ('E400', 'Other Reviewer', 'active', 'dept-review')
     `.execute(db);
     // publish 路径的 registerToCatalog 写入 catalog_metadata（category_id FK）
     await sql`
@@ -581,6 +582,21 @@ describe("real application lifecycle API", () => {
       .post(`/internal/applications/versions/${versionId}/claim-review`)
       .set(actorHeaders("E200"))
       .expect(403);
+    // 超管转交给维护人 E200 或负责人 E100 同样被拒绝（禁自审不可经转交绕过）。
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/claim-review`)
+      .set(actorHeaders("E300"))
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/transfer-review`)
+      .set(actorHeaders("E300"))
+      .send({ claimedByEmployeeId: "E200" })
+      .expect(403);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/transfer-review`)
+      .set(actorHeaders("E300"))
+      .send({ claimedByEmployeeId: "E100" })
+      .expect(403);
   });
 
   it("lets a super admin transfer a claimed review task", async () => {
@@ -626,16 +642,16 @@ describe("real application lifecycle API", () => {
     await request(app.getHttpServer())
       .post(`/internal/applications/versions/${versionId}/transfer-review`)
       .set(actorHeaders("E200"))
-      .send({ claimedByEmployeeId: "E100" })
+      .send({ claimedByEmployeeId: "E400" })
       .expect(403);
     const transferred = await request(app.getHttpServer())
       .post(`/internal/applications/versions/${versionId}/transfer-review`)
       .set(actorHeaders("E300"))
-      .send({ claimedByEmployeeId: "E100" })
+      .send({ claimedByEmployeeId: "E400" })
       .expect(200);
     expect(transferred.body).toMatchObject({
       status: "claimed",
-      claimedByEmployeeId: "E100",
+      claimedByEmployeeId: "E400",
     });
   });
 
