@@ -24,9 +24,16 @@ import type {
   ValidationCheckRecord,
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 import { assertSafeRichText, sanitizeRichText } from "./content-security.js";
 import { addBusinessDays } from "../system/outbox/sla-reminder.worker.js";
+import {
+  DENY_ALL_WEB_TARGETS,
+  validateWebTargetUrl,
+  type ResolveHost,
+  type WebTargetPolicy,
+} from "../system/security/web-url-policy.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -98,6 +105,13 @@ export class ApplicationService {
     _artifactVerifier: import("./storage.port.js").ArtifactVerificationPort,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
     private readonly notifications?: ApplicationNotificationPort,
+    /**
+     * 内网 Web 交付 URL 白名单（规格 §11.3）。默认拒绝一切 Web 目标
+     * （fail-closed）：装配点未显式提供策略时，web 渠道入口 URL 无法保存。
+     */
+    private readonly webTargetPolicy: WebTargetPolicy = DENY_ALL_WEB_TARGETS,
+    /** DNS 解析端口（测试注入桩以保持确定性）。 */
+    private readonly resolveWebTargetHost: ResolveHost = lookup,
   ) {}
 
   async createApplication(
@@ -946,6 +960,19 @@ export class ApplicationService {
     }
     if (application.status === "archived") {
       throw new Error("APPLICATION_NOT_EDITABLE");
+    }
+    // 内网 URL 白名单（规格 §11.3）：web 渠道的入口地址必须在保存前通过
+    // 静态校验（协议/端口/主机名/DNS 解析 CIDR），被拒绝的 URL 根本不落库；
+    // 发布/审核时无需重校（既有 entryUrl 视为已通过校验，恢复路径不重校）。
+    // 空 URL 视为尚未配置入口，跳过校验；desktop/mobile/mini_program 的
+    // 入口可能是外部下载地址，不套用内网 Web 白名单。重定向等运行时检查
+    // 由健康检查（T19，HEAD 跟随）承担。
+    if (input.channel === "web" && input.entryUrl !== "") {
+      await validateWebTargetUrl(
+        input.entryUrl,
+        this.webTargetPolicy,
+        this.resolveWebTargetHost,
+      );
     }
     return this.repository.withTransaction(async (repository) => {
       const delivery = await repository.createDelivery({

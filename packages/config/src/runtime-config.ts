@@ -6,6 +6,50 @@ const booleanFromEnv = z
   .default("false")
   .transform((value) => value === "true");
 
+/**
+ * 内网 Web 交付 URL 白名单（规格 §11.3）。结构必须与
+ * @ai-hub/server 的 `WebTargetPolicy` 保持兼容（apps/api 装配点
+ * 仅做结构化赋值，两包互不依赖）。
+ */
+export interface WebTargetAllowlist {
+  protocols: string[];
+  allowedHostnames: string[];
+  allowedPorts: number[];
+  allowedCidrs: string[];
+}
+
+/** 默认内网示例策略：仅示例主机名与内网网段放行（fail-closed）。
+ * 真实部署必须通过 WEB_TARGET_ALLOWLIST 显式配置实际的内网目标。 */
+const DEFAULT_WEB_TARGET_ALLOWLIST: WebTargetAllowlist = {
+  protocols: ["http", "https"],
+  allowedHostnames: ["apps.internal.example.com", ".corp.example.com"],
+  allowedPorts: [80, 443, 8080, 8443],
+  allowedCidrs: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+};
+
+const webTargetAllowlistSchema = z
+  .string()
+  .transform((value, ctx) => {
+    try {
+      return JSON.parse(value) as unknown;
+    } catch {
+      ctx.addIssue({
+        code: "custom",
+        message: "WEB_TARGET_ALLOWLIST must be valid JSON",
+      });
+      return undefined;
+    }
+  })
+  .pipe(
+    z.object({
+      protocols: z.array(z.string()).min(1),
+      allowedHostnames: z.array(z.string()),
+      allowedPorts: z.array(z.number().int().min(1).max(65535)),
+      allowedCidrs: z.array(z.string()),
+    }),
+  )
+  .default(DEFAULT_WEB_TARGET_ALLOWLIST);
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
@@ -48,6 +92,7 @@ const schema = z.object({
   DINGTALK_CLIENT_SECRET_FILE: z.string().optional(),
   DINGTALK_CORP_ID: z.string().optional(),
   DINGTALK_REDIRECT_URI: z.string().optional(),
+  WEB_TARGET_ALLOWLIST: webTargetAllowlistSchema,
 });
 
 export interface RuntimeConfig {
@@ -83,6 +128,7 @@ export interface RuntimeConfig {
   dingtalkClientSecret: string | undefined;
   dingtalkCorpId: string | undefined;
   dingtalkRedirectUri: string | undefined;
+  webTargetAllowlist: WebTargetAllowlist;
 }
 
 function readFileSecret(
@@ -212,5 +258,6 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     dingtalkClientSecret,
     dingtalkCorpId: value.DINGTALK_CORP_ID,
     dingtalkRedirectUri: value.DINGTALK_REDIRECT_URI,
+    webTargetAllowlist: value.WEB_TARGET_ALLOWLIST,
   };
 }

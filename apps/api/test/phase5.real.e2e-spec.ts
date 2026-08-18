@@ -9,6 +9,7 @@ import {
   IdentityService,
   KyselyApplicationRepository,
   KyselyDemandRepository,
+  PERMISSIVE_WEB_TARGET_POLICY,
   type IdentityRepository,
 } from "@ai-hub/server";
 import { createDatabase, runMigrations } from "@ai-hub/database";
@@ -145,6 +146,11 @@ describe("real Phase 5 demand API", () => {
       new KyselyApplicationRepository(db),
       { authorize: (input) => identity.authorize(input) },
       artifactVerification,
+      undefined,
+      undefined,
+      // 白名单由单测覆盖；此处用宽松策略 + 确定性解析桩避免真实 DNS。
+      PERMISSIVE_WEB_TARGET_POLICY,
+      async () => [{ address: "10.0.0.1", family: 4 }],
     );
     const service = new DemandService(
       new KyselyDemandRepository(db),
@@ -551,17 +557,15 @@ describe("real Phase 5 demand API", () => {
       .post(`/internal/applications/versions/${versionId}/claim-review`)
       .set(requester)
       .expect(200);
-    await request(app.getHttpServer())
+    const reviewed = await request(app.getHttpServer())
       .post(`/internal/applications/versions/${versionId}/review`)
       .set(requester)
       .send({ decision: "approve", comment: "Demand-backed review approved." })
       .expect(200);
-    const published = await request(app.getHttpServer())
-      .post(`/internal/applications/${applicationId}/publish`)
-      .set(operator)
-      .send({ applicationVersionId: versionId })
-      .expect(200);
-    expect(published.body.status).toBe("published");
+    // T6 起审核通过即自动上架：draft 审核通过后应用直接置 published（目录注册
+    // 与发布事件在审核事务内完成），手动 publish 仅兼容自动上架前的历史数据。
+    // 发布门禁（渠道完整性）在审核事务内执行，此处不再调用手动 publish。
+    expect(reviewed.body.status).toBe("published");
 
     await request(app.getHttpServer())
       .post(`/internal/demands/${demandId}/applications`)

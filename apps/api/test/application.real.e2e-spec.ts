@@ -9,6 +9,7 @@ import {
   IdentityService,
   KyselyApplicationRepository,
   MemoryObjectStorage,
+  PERMISSIVE_WEB_TARGET_POLICY,
   type IdentityRepository,
 } from "@ai-hub/server";
 import { startPostgresTestContainer } from "@ai-hub/testing";
@@ -160,6 +161,12 @@ describe("real application lifecycle API", () => {
       new KyselyApplicationRepository(db),
       { authorize: (request) => identity.authorize(request) },
       pipeline,
+      undefined,
+      undefined,
+      // e2e 覆盖业务生命周期而非 URL 白名单（白名单由单测覆盖），
+      // 使用宽松策略 + 确定性解析桩，避免依赖真实 DNS。
+      PERMISSIVE_WEB_TARGET_POLICY,
+      async () => [{ address: "10.0.0.1", family: 4 }],
     );
     const moduleRef = await Test.createTestingModule({
       imports: [

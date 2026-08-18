@@ -16,6 +16,10 @@ services:
       NODE_ENV: development
       # init:dev 包含 seed:demo-data，无此开关时 api 容器会以 DEMO_DATA_REFUSED 崩溃循环
       DEMO_DATA_ENABLED: ${DEMO_DATA_ENABLED:-true}
+      # 开发白名单：放行本机与内网 IP 字面量（CIDR 放行），主机名白名单留空
+      # （本地访问请用 IP 字面量，如 http://127.0.0.1:8080/...）。生产策略
+      # 见 compose.yaml 的 WEB_TARGET_ALLOWLIST，可用同名环境变量覆盖。
+      WEB_TARGET_ALLOWLIST: ${WEB_TARGET_ALLOWLIST:-{"protocols":["http","https"],"allowedHostnames":[],"allowedPorts":[80,443,8080,8443,5173,3000],"allowedCidrs":["127.0.0.0/8","10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]}}
     volumes:
       - ./apps/api/src:/workspace/apps/api/src
       - ./packages/config/src:/workspace/packages/config/src

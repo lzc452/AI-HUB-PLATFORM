@@ -25,6 +25,10 @@ import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repositor
 import { NotificationModule } from "../notification/notification.module.js";
 import { DINGTALK_NOTIFICATION_MATRIX_SERVICE } from "../notification/notification.tokens.js";
 import type { DingTalkNotificationMatrixService } from "../notification/dingtalk-matrix.service.js";
+import {
+  DENY_ALL_WEB_TARGETS,
+  type WebTargetPolicy,
+} from "../system/security/web-url-policy.js";
 
 const unavailableArtifactVerifier: ArtifactVerificationPort = {
   async verifyArtifact() {
@@ -45,6 +49,7 @@ function createRepositoryProvider(database: Kysely<DatabaseSchema>): Provider {
 function createApplicationServiceProvider(
   database: Kysely<DatabaseSchema>,
   artifactVerifier: ArtifactVerificationPort,
+  webTargetPolicy: WebTargetPolicy,
 ) {
   const analyticsEvents = new AnalyticsEventService(
     new KyselyAnalyticsEventRepository(database),
@@ -63,6 +68,7 @@ function createApplicationServiceProvider(
         artifactVerifier,
         analyticsEvents,
         notifications,
+        webTargetPolicy,
       ),
     inject: [
       KyselyApplicationRepository,
@@ -112,6 +118,7 @@ export class ApplicationModule {
   static registerService(
     database: Kysely<DatabaseSchema>,
     artifactVerifier: ArtifactVerificationPort = unavailableArtifactVerifier,
+    webTargetPolicy: WebTargetPolicy = DENY_ALL_WEB_TARGETS,
   ): DynamicModule {
     return {
       module: ApplicationModule,
@@ -121,7 +128,11 @@ export class ApplicationModule {
       ],
       providers: [
         createRepositoryProvider(database),
-        createApplicationServiceProvider(database, artifactVerifier),
+        createApplicationServiceProvider(
+          database,
+          artifactVerifier,
+          webTargetPolicy,
+        ),
       ],
       exports: [APPLICATION_SERVICE],
     };
@@ -133,6 +144,11 @@ export class ApplicationModule {
     storageDirectory?: string,
     artifactMaxSizeBytes: number = DEFAULT_ARTIFACT_MAX_SIZE_BYTES,
     artifactStorage?: ReadableObjectStoragePort,
+    /**
+     * 内网 Web URL 白名单（规格 §11.3）。未提供时默认拒绝一切 Web 目标
+     * （fail-closed），确保装配点不会静默绕过校验。
+     */
+    webTargetPolicy: WebTargetPolicy = DENY_ALL_WEB_TARGETS,
   ): DynamicModule {
     return {
       module: ApplicationModule,
@@ -146,7 +162,11 @@ export class ApplicationModule {
       ],
       providers: [
         createRepositoryProvider(database),
-        createApplicationServiceProvider(database, artifactVerifier),
+        createApplicationServiceProvider(
+          database,
+          artifactVerifier,
+          webTargetPolicy,
+        ),
         ...createUploadProviders(
           artifactVerifier,
           storageDirectory,

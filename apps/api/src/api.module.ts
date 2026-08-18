@@ -36,6 +36,7 @@ import {
   type ApplicationService,
   type ArtifactVerificationPort,
   type ReadableObjectStoragePort,
+  type WebTargetPolicy,
 } from "@ai-hub/server";
 
 export interface ApiModuleTestOptions {
@@ -108,6 +109,12 @@ export class ApiModule {
     storageDirectory?: string,
     artifactMaxSizeBytes?: number,
     artifactStorage?: ReadableObjectStoragePort,
+    /**
+     * 内网 Web 交付 URL 白名单（规格 §11.3）。来自
+     * config.webTargetAllowlist；缺省时由 ApplicationModule 按
+     * fail-closed 默认处理（拒绝一切 Web 目标）。
+     */
+    webTargetPolicy?: WebTargetPolicy,
   ): DynamicModule {
     const database =
       typeof databaseOrUrl === "string"
@@ -135,6 +142,7 @@ export class ApiModule {
           storageDirectory,
           artifactMaxSizeBytes,
           artifactStorage,
+          webTargetPolicy,
         ),
         CatalogModule.register(database, artifactStorage),
         InteractionModule.register(database),

@@ -6,6 +6,11 @@ import type {
 } from "@ai-hub/contracts";
 import { ApplicationService } from "./application.service.js";
 import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
+import {
+  PERMISSIVE_WEB_TARGET_POLICY,
+  type ResolveHost,
+  type WebTargetPolicy,
+} from "../system/security/web-url-policy.js";
 import type {
   ApplicationRecord,
   ApplicationRepository,
@@ -514,7 +519,12 @@ const versionInput = {
   scanStatus: "passed" as const,
 };
 
-function makeService() {
+function makeService(
+  options: {
+    webTargetPolicy?: WebTargetPolicy;
+    resolveWebTargetHost?: ResolveHost;
+  } = {},
+) {
   const repository = new MemoryApplicationRepository();
   const analyticsEvents: string[] = [];
   const artifactVerifier = {
@@ -573,6 +583,11 @@ function makeService() {
         },
       },
       notifications,
+      // 默认宽松策略 + 确定性解析桩，避免既有用例依赖真实 DNS；
+      // 白名单专项用例通过 makeService 传入严格策略覆盖。
+      options.webTargetPolicy ?? PERMISSIVE_WEB_TARGET_POLICY,
+      options.resolveWebTargetHost ??
+        (async () => [{ address: "10.0.0.1", family: 4 }]),
     ),
     analyticsEvents,
     notificationCalls,
@@ -1287,6 +1302,125 @@ describe("ApplicationService", () => {
     await expect(
       service.publish(owner, version.applicationVersionId),
     ).rejects.toThrow("DELIVERY_CHANNELS_INCOMPLETE");
+  });
+
+  it("rejects a web delivery whose entry URL is not allowlisted", async () => {
+    // 规格 §11.3：web 渠道入口必须命中内网白名单，被拒绝的 URL 不落库。
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service, repository } = makeService({
+      webTargetPolicy: strictPolicy,
+    });
+    const application = await service.createApplication(owner, {
+      name: "白名单应用",
+      summary: "校验入口 URL",
+    });
+
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "web",
+        entryUrl: "https://evil.example.net/dashboard",
+        enabled: true,
+      }),
+    ).rejects.toThrow("WEB_URL_HOST_NOT_ALLOWED");
+    expect(repository.deliveries).toHaveLength(0);
+  });
+
+  it("rejects a web delivery resolving outside the allowed CIDRs", async () => {
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service } = makeService({
+      webTargetPolicy: strictPolicy,
+      resolveWebTargetHost: async () => [{ address: "203.0.113.9", family: 4 }],
+    });
+    const application = await service.createApplication(owner, {
+      name: "白名单应用",
+      summary: "校验解析网段",
+    });
+
+    await expect(
+      service.configureDelivery(owner, application.applicationId, {
+        channel: "web",
+        entryUrl: "https://apps.internal.example.com/dashboard",
+        enabled: true,
+      }),
+    ).rejects.toThrow("WEB_URL_CIDR_NOT_ALLOWED");
+  });
+
+  it("accepts an allowlisted web delivery entry URL", async () => {
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service, repository } = makeService({
+      webTargetPolicy: strictPolicy,
+    });
+    const application = await service.createApplication(owner, {
+      name: "白名单应用",
+      summary: "放行内网入口",
+    });
+
+    const delivery = await service.configureDelivery(
+      owner,
+      application.applicationId,
+      {
+        channel: "web",
+        entryUrl: "https://apps.internal.example.com/ocr",
+        enabled: true,
+      },
+    );
+    expect(delivery.entryUrl).toBe("https://apps.internal.example.com/ocr");
+    expect(repository.deliveries).toHaveLength(1);
+  });
+
+  it("does not apply the web allowlist to non-web channels or empty URLs", async () => {
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service, repository } = makeService({
+      webTargetPolicy: strictPolicy,
+    });
+    const application = await service.createApplication(owner, {
+      name: "白名单应用",
+      summary: "非 web 渠道不套用白名单",
+    });
+
+    // desktop 的入口可以是外部下载地址，不套用内网 Web 白名单。
+    const desktop = await service.configureDelivery(
+      owner,
+      application.applicationId,
+      {
+        channel: "desktop",
+        entryUrl: "https://cdn.example.com/download.exe",
+        enabled: true,
+      },
+    );
+    expect(desktop.channel).toBe("desktop");
+    // 空 URL 视为尚未配置入口，跳过校验。
+    const web = await service.configureDelivery(
+      owner,
+      application.applicationId,
+      {
+        channel: "web",
+        entryUrl: "",
+        enabled: false,
+      },
+    );
+    expect(web.entryUrl).toBe("");
+    expect(repository.deliveries).toHaveLength(2);
   });
 
   it("allows only one concurrent publication through expected-state CAS", async () => {

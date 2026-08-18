@@ -96,6 +96,8 @@ async function bootstrap() {
         : undefined,
       config.artifactMaxSizeBytes,
       artifactStorage,
+      // 内网 Web 交付 URL 白名单（规格 §11.3），由 WEB_TARGET_ALLOWLIST 配置。
+      config.webTargetAllowlist,
     ),
     { logger: new PinoNestLogger(logger) },
   );

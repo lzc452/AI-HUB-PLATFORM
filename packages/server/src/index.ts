@@ -48,6 +48,13 @@ export {
   isPrivateAddress,
 } from "./system/security/ssrf-policy.js";
 export {
+  DENY_ALL_WEB_TARGETS,
+  PERMISSIVE_WEB_TARGET_POLICY,
+  validateWebTargetUrl,
+  type ResolveHost,
+  type WebTargetPolicy,
+} from "./system/security/web-url-policy.js";
+export {
   ReplayGuard,
   type ReplayNonceInput,
   type ReplayNonceRecord,

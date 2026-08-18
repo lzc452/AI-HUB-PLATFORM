@@ -6,6 +6,14 @@ const BASE_ENV = {
   COOKIE_SECRET: "12345678901234567890123456789012",
 } as const;
 
+/** 与 runtime-config.ts 中的默认内网示例策略保持一致。 */
+const DEFAULT_WEB_TARGET_ALLOWLIST = {
+  protocols: ["http", "https"],
+  allowedHostnames: ["apps.internal.example.com", ".corp.example.com"],
+  allowedPorts: [80, 443, 8080, 8443],
+  allowedCidrs: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+};
+
 describe("parseRuntimeConfig", () => {
   it("rejects a missing database URL", () => {
     expect(() =>
@@ -63,7 +71,60 @@ describe("parseRuntimeConfig", () => {
       dingtalkClientSecret: undefined,
       dingtalkCorpId: undefined,
       dingtalkRedirectUri: undefined,
+      webTargetAllowlist: DEFAULT_WEB_TARGET_ALLOWLIST,
     });
+  });
+
+  it("defaults the web target allowlist to the intranet example policy", () => {
+    expect(
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+      }).webTargetAllowlist,
+    ).toEqual(DEFAULT_WEB_TARGET_ALLOWLIST);
+  });
+
+  it("parses an explicit WEB_TARGET_ALLOWLIST from JSON", () => {
+    expect(
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+        WEB_TARGET_ALLOWLIST: JSON.stringify({
+          protocols: ["https"],
+          allowedHostnames: ["apps.office.corp"],
+          allowedPorts: [443],
+          allowedCidrs: ["10.1.0.0/16"],
+        }),
+      }).webTargetAllowlist,
+    ).toEqual({
+      protocols: ["https"],
+      allowedHostnames: ["apps.office.corp"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.1.0.0/16"],
+    });
+  });
+
+  it("rejects a malformed WEB_TARGET_ALLOWLIST JSON", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+        WEB_TARGET_ALLOWLIST: "{not json",
+      }),
+    ).toThrow(/WEB_TARGET_ALLOWLIST/u);
+  });
+
+  it("rejects a WEB_TARGET_ALLOWLIST with an invalid shape", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "development",
+        WEB_TARGET_ALLOWLIST: JSON.stringify({
+          protocols: ["https"],
+          allowedPorts: [443, 99999],
+        }),
+      }),
+    ).toThrow(/WEB_TARGET_ALLOWLIST/u);
   });
 
   it("defaults API docs to disabled", () => {
