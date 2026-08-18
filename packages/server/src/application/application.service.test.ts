@@ -3091,4 +3091,165 @@ describe("ApplicationService", () => {
     expect(published.status).toBe("published");
     expect(published.currentVersionId).toBe(version.applicationVersionId);
   });
+
+  it("rejects approving an artifact-less desktop update that would replace the published version", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const publishedVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    repository.catalogTypes.set(application.applicationId, "desktop_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "desktop",
+      entryUrl: "https://download.internal/app",
+      enabled: true,
+    });
+    await service.submitForReview(owner, publishedVersion.applicationVersionId);
+    await service.claimReview(reviewer, publishedVersion.applicationVersionId);
+    await service.review(
+      reviewer,
+      publishedVersion.applicationVersionId,
+      "approve",
+      "ok",
+    );
+
+    // 已发布桌面应用经向导提交无制品更新版本（published 保持、pending 新版本）；
+    // approve 走 currentVersionId 切换分支，制品门禁必须在版本激活前拦截。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      version: "2.0.0",
+      applicationType: "desktop_app",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [updateVersion] = [...repository.versions.values()].filter(
+      (candidate) =>
+        candidate.applicationVersionId !==
+        publishedVersion.applicationVersionId,
+    );
+    await service.claimReview(reviewer, updateVersion!.applicationVersionId);
+
+    await expect(
+      service.review(
+        reviewer,
+        updateVersion!.applicationVersionId,
+        "approve",
+        "ok",
+      ),
+    ).rejects.toThrow("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+    // 当前版本不被无制品版本替换。
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({
+      status: "published",
+      currentVersionId: publishedVersion.applicationVersionId,
+    });
+  });
+
+  it("switches the published version to a desktop update with an artifact on approval", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const publishedVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    repository.catalogTypes.set(application.applicationId, "desktop_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "desktop",
+      entryUrl: "https://download.internal/app",
+      enabled: true,
+    });
+    await service.submitForReview(owner, publishedVersion.applicationVersionId);
+    await service.claimReview(reviewer, publishedVersion.applicationVersionId);
+    await service.review(
+      reviewer,
+      publishedVersion.applicationVersionId,
+      "approve",
+      "ok",
+    );
+
+    const updateInput = {
+      ...versionInput,
+      version: "2.0.0",
+      changelog: "Release 2.0.0",
+    };
+    registerVerifiedUpload(repository, application.applicationId, updateInput);
+    const updateVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      updateInput,
+    );
+    await service.submitForReview(owner, updateVersion.applicationVersionId);
+    await service.claimReview(reviewer, updateVersion.applicationVersionId);
+
+    const updated = await service.review(
+      reviewer,
+      updateVersion.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(updated).toMatchObject({
+      status: "published",
+      currentVersionId: updateVersion.applicationVersionId,
+    });
+  });
+
+  it("allows approving an artifact-less web update that replaces the published version", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const publishedVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    repository.catalogTypes.set(application.applicationId, "web_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+    await service.submitForReview(owner, publishedVersion.applicationVersionId);
+    await service.claimReview(reviewer, publishedVersion.applicationVersionId);
+    await service.review(
+      reviewer,
+      publishedVersion.applicationVersionId,
+      "approve",
+      "ok",
+    );
+
+    // web 应用不需要安装包：无制品更新版本 approve 放行并替换当前版本。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      version: "2.0.0",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [updateVersion] = [...repository.versions.values()].filter(
+      (candidate) =>
+        candidate.applicationVersionId !==
+        publishedVersion.applicationVersionId,
+    );
+    await service.claimReview(reviewer, updateVersion!.applicationVersionId);
+
+    const updated = await service.review(
+      reviewer,
+      updateVersion!.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(updated).toMatchObject({
+      status: "published",
+      currentVersionId: updateVersion!.applicationVersionId,
+    });
+  });
 });
