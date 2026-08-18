@@ -246,11 +246,15 @@ describe("real application lifecycle API", () => {
       .set(reviewerHeaders)
       .send({ decision: "approve", comment: "approved" })
       .expect(200);
-    await request(app.getHttpServer())
-      .post(`/internal/applications/${applicationId}/publish`)
-      .set(ownerHeaders)
-      .send({ applicationVersionId: firstVersionId })
-      .expect(200);
+    // 首次发布审核通过即自动上架：应用直接 published，无需手动 publish
+    // （自动上架后 publish 端点会因状态非 approved 而返回 400）。
+    await expect(
+      request(app.getHttpServer())
+        .get(`/internal/applications/${applicationId}`)
+        .set(ownerHeaders),
+    ).resolves.toMatchObject({
+      body: { status: "published", currentVersionId: firstVersionId },
+    });
 
     const secondArtifactKey = "applications/phase-3/artifact-v2.zip";
     await registerArtifact("upload-2", secondArtifactKey, "signature-2");
@@ -385,11 +389,7 @@ describe("real application lifecycle API", () => {
       .set(reviewerHeaders)
       .send({ decision: "approve", comment: "approved" })
       .expect(200);
-    await request(app.getHttpServer())
-      .post(`/internal/applications/${applicationId}/publish`)
-      .set(ownerHeaders)
-      .send({ applicationVersionId: firstVersionId })
-      .expect(200);
+    // 首次发布审核通过即自动上架，无需手动 publish；应用保持 published 供后续提交更新审核。
 
     const secondVersionId = await registerVersionArtifact(
       "2.0.0",

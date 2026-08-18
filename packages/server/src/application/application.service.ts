@@ -547,14 +547,11 @@ export class ApplicationService {
       throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
     }
     // 依据审核前的应用状态决定终态：驳回回滚到原状态；通过时
-    // draft→approved（仍由 publish 切换为 published），published→保持 published 并切换当前版本。
+    // 首次发布（审核前为 draft）直接置 published 并自动注册目录（自动上架），
+    // 已发布应用的更新则保持 published 并切换当前版本。
     const approved = decision === "approve";
     const sourceStatus = (queue.sourceStatus ?? "draft") as ApplicationStatus;
-    const nextStatus: ApplicationStatus = approved
-      ? sourceStatus === "published"
-        ? "published"
-        : "approved"
-      : sourceStatus;
+    const nextStatus: ApplicationStatus = approved ? "published" : sourceStatus;
     const updated = await this.repository.withTransaction(
       async (repository) => {
         await repository.createReview({
@@ -571,10 +568,8 @@ export class ApplicationService {
           status: nextStatus,
           // 审核结束，清除待生效版本标记。
           pendingVersionId: null,
-          // 发布应用更新通过：切换当前版本为新审核版本。
-          ...(approved && sourceStatus === "published"
-            ? { currentVersionId: applicationVersionId }
-            : {}),
+          // 审核通过：切换当前版本为新审核版本（首次发布与发布态更新一致）。
+          ...(approved ? { currentVersionId: applicationVersionId } : {}),
         });
         await this.recordChange(
           repository,
@@ -583,6 +578,22 @@ export class ApplicationService {
           applicationVersionId,
           actor.employeeId,
         );
+        // 首次发布审核通过：自动上架——目录注册与发布事件在审核事务内完成，
+        // 不再需要责任人手动调用 publish（等同原 publish 的效果）。
+        if (approved && sourceStatus === "draft") {
+          await repository.registerToCatalog({
+            applicationId: application.applicationId,
+            name: application.name,
+            summary: application.summary,
+          });
+          await this.recordChange(
+            repository,
+            "application.published",
+            application.applicationId,
+            applicationVersionId,
+            actor.employeeId,
+          );
+        }
         // 关闭审核队列，避免其以 available/claimed 残留。
         await repository.completeReviewQueue(applicationVersionId);
         return updated;

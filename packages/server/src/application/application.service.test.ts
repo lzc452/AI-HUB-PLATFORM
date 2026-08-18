@@ -571,7 +571,7 @@ function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
     changelog: "首次发布",
   };
 }
-async function prepareApprovedApplication(
+async function preparePublishedApplication(
   service: ApplicationService,
 ): Promise<{
   application: ApplicationRecord;
@@ -588,24 +588,39 @@ async function prepareApprovedApplication(
   );
   await service.submitForReview(owner, version.applicationVersionId);
   await service.claimReview(reviewer, version.applicationVersionId);
+  // 首次发布审核通过即自动上架（自动 publish），无需手动 publish 步骤。
   await service.review(
     reviewer,
     version.applicationVersionId,
     "approve",
     "Approved",
   );
-  await configureAllDeliveryChannels(service, application.applicationId);
   return { application, version };
 }
 
-async function preparePublishedApplication(
+async function prepareLegacyApprovedApplication(
   service: ApplicationService,
+  repository: MemoryApplicationRepository,
 ): Promise<{
   application: ApplicationRecord;
   version: ApplicationVersionRecord;
 }> {
-  const { application, version } = await prepareApprovedApplication(service);
-  await service.publish(owner, version.applicationVersionId);
+  const application = await service.createApplication(owner, {
+    name: "Copilot",
+    summary: "Internal assistant",
+  });
+  const version = await service.createVersion(
+    owner,
+    application.applicationId,
+    versionInput,
+  );
+  await configureAllDeliveryChannels(service, application.applicationId);
+  // 模拟自动上架上线前的历史数据：审核通过后应用停在 approved，等待责任人手动 publish。
+  repository.applications.set(application.applicationId, {
+    ...application,
+    status: "approved",
+    currentVersionId: null,
+  });
   return { application, version };
 }
 
@@ -750,7 +765,43 @@ describe("ApplicationService", () => {
     ).resolves.toMatchObject({ slaStatus: "on_time" });
   });
 
-  it("moves a scanned version through review, approval, publication, withdrawal, and archive", async () => {
+  it("auto-publishes a first-time approved application", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    // draft 应用提交 → 管理员 approve → 应用 status 直接 published（不再等待手动 publish）
+    const result = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+
+    expect(result.status).toBe("published");
+    expect(result.currentVersionId).toBe(version.applicationVersionId);
+    // 自动上架：目录注册与发布事件在审核事务内完成（等同原 publish 的效果）。
+    expect(repository.catalogRegistrations).toEqual([
+      application.applicationId,
+    ]);
+    expect(repository.events).toContain("application.published");
+    expect(repository.events).toContain("application.reviewed");
+    // 审核队列仍被关闭，无残留。
+    await expect(
+      service.getReviewQueue(version.applicationVersionId),
+    ).resolves.toMatchObject({ status: "completed" });
+  });
+
+  it("moves a scanned version through review, auto-publication, withdrawal, and archive", async () => {
     const { service, repository, analyticsEvents } = makeService();
     const application = await service.createApplication(owner, {
       name: "Copilot",
@@ -763,15 +814,22 @@ describe("ApplicationService", () => {
     );
     await service.submitForReview(owner, version.applicationVersionId);
     await service.claimReview(reviewer, version.applicationVersionId);
-    await service.review(
+    const reviewed = await service.review(
       reviewer,
       version.applicationVersionId,
       "approve",
       "Looks good",
     );
     expect(analyticsEvents).toContain("review_decided");
+    // 首次发布审核通过即自动上架：无需手动 publish，应用直接 published。
+    expect(reviewed).toMatchObject({
+      status: "published",
+      currentVersionId: version.applicationVersionId,
+    });
+    expect(repository.catalogRegistrations).toEqual([
+      application.applicationId,
+    ]);
     await configureAllDeliveryChannels(service, application.applicationId);
-    await service.publish(owner, version.applicationVersionId);
     await service.withdraw(owner, application.applicationId, "superseded");
     await service.archive(owner, application.applicationId);
     await expect(
@@ -788,11 +846,11 @@ describe("ApplicationService", () => {
       "application.review.sla.created",
       "application.review.claimed",
       "application.reviewed",
-      "application.delivery.configured",
-      "application.delivery.configured",
-      "application.delivery.configured",
-      "application.delivery.configured",
       "application.published",
+      "application.delivery.configured",
+      "application.delivery.configured",
+      "application.delivery.configured",
+      "application.delivery.configured",
       "application.withdrawn",
       "application.archived",
     ]);
@@ -800,24 +858,13 @@ describe("ApplicationService", () => {
   });
 
   it("requires all four delivery channels before publication", async () => {
-    const { service } = makeService();
-    const application = await service.createApplication(owner, {
-      name: "Copilot",
-      summary: "Internal assistant",
-    });
-    const version = await service.createVersion(
-      owner,
-      application.applicationId,
-      versionInput,
+    const { service, repository } = makeService();
+    // 手动 publish 仅兼容自动上架上线前的历史数据（审核通过后停在 approved）。
+    const { version } = await prepareLegacyApprovedApplication(
+      service,
+      repository,
     );
-    await service.submitForReview(owner, version.applicationVersionId);
-    await service.claimReview(reviewer, version.applicationVersionId);
-    await service.review(
-      reviewer,
-      version.applicationVersionId,
-      "approve",
-      "Approved",
-    );
+    repository.deliveries.length = 0;
 
     await expect(
       service.publish(owner, version.applicationVersionId),
@@ -826,7 +873,10 @@ describe("ApplicationService", () => {
 
   it("allows only one concurrent publication through expected-state CAS", async () => {
     const { service, repository } = makeService();
-    const { application, version } = await prepareApprovedApplication(service);
+    const { application, version } = await prepareLegacyApprovedApplication(
+      service,
+      repository,
+    );
 
     const results = await Promise.allSettled([
       service.publish(owner, version.applicationVersionId),
@@ -853,7 +903,10 @@ describe("ApplicationService", () => {
 
   it("rolls back lifecycle state, catalog registration and audit when Outbox fails", async () => {
     const { service, repository } = makeService();
-    const { application, version } = await prepareApprovedApplication(service);
+    const { application, version } = await prepareLegacyApprovedApplication(
+      service,
+      repository,
+    );
     repository.failOutbox = true;
 
     await expect(
@@ -946,8 +999,8 @@ describe("ApplicationService", () => {
       "approve",
       "Approved",
     );
+    // 首次发布审核通过即自动上架（无需手动 publish）。
     await configureAllDeliveryChannels(service, application.applicationId);
-    await service.publish(owner, first.applicationVersionId);
     const second = await service.createVersion(
       owner,
       application.applicationId,
@@ -1173,7 +1226,7 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("DRAFT_VALIDATION_FAILED");
   });
 
-  it("publishes a draft-submitted web app with only its web channel", async () => {
+  it("auto-publishes a draft-submitted web app on approval", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
       name: "",
@@ -1184,7 +1237,7 @@ describe("ApplicationService", () => {
 
     const version = [...repository.versions.values()][0]!;
     await service.claimReview(reviewer, version.applicationVersionId);
-    await service.review(
+    const published = await service.review(
       reviewer,
       version.applicationVersionId,
       "approve",
@@ -1196,10 +1249,8 @@ describe("ApplicationService", () => {
       enabled: true,
     });
 
-    const published = await service.publish(
-      owner,
-      version.applicationVersionId,
-    );
+    // 审核通过即自动上架：无需手动 publish。
     expect(published.status).toBe("published");
+    expect(published.currentVersionId).toBe(version.applicationVersionId);
   });
 });
