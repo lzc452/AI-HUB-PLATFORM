@@ -30,4 +30,21 @@ describe("system role registry", () => {
       ),
     ).toBe(false);
   });
+
+  it("grants notification.create to every role that can trigger a notification queue", () => {
+    for (const roleCode of [
+      "employee",
+      "application_admin",
+      "demand_operator",
+      "demand_reviewer",
+      "risk_operator",
+      "analytics_operator",
+      "analytics_exporter",
+      "analytics_assistant_user",
+    ]) {
+      expect(SYSTEM_ROLE_PERMISSION_MAP.get(roleCode)).toContain(
+        PERMISSIONS.NOTIFICATION_CREATE,
+      );
+    }
+  });
 });

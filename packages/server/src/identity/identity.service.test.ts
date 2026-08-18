@@ -4,6 +4,7 @@ import type {
   EmployeeId,
   EncryptedLoginEnvelope,
 } from "@ai-hub/contracts";
+import { SYSTEM_ROLE_DEFINITIONS } from "@ai-hub/database";
 import { IdentityService, parseCsv } from "./identity.service.js";
 import { PasswordService } from "./password.service.js";
 import type {
@@ -431,9 +432,7 @@ function serviceWithLoginThrottle() {
 
 describe("IdentityService", () => {
   it("parses CSV values with embedded quotes and commas", () => {
-    expect(
-      parseCsv('a,b,"c,d","he said ""hi"""\ne,f,g,h'),
-    ).toEqual([
+    expect(parseCsv('a,b,"c,d","he said ""hi"""\ne,f,g,h')).toEqual([
       ["a", "b", "c,d", 'he said "hi"'],
       ["e", "f", "g", "h"],
     ]);
@@ -563,6 +562,39 @@ describe("IdentityService", () => {
         },
         action: "publish",
         resourceType: "catalog",
+      }),
+    ).resolves.toEqual({
+      allowed: true,
+      reasonCode: "ALLOW_ROLE_PERMISSION",
+    });
+  });
+
+  it("allows system-role employees to queue notifications (notification.create)", async () => {
+    // 生产装配：角色权限来自 roles 表（迁移 0044 将 employee 与
+    // SYSTEM_ROLE_DEFINITIONS 对齐），矩阵 queue → NotificationService.createForEvent
+    // → authorize({ action: "create", resourceType: "notification" })。
+    const employeePermissions = [
+      ...(SYSTEM_ROLE_DEFINITIONS.find((role) => role.roleCode === "employee")
+        ?.permissions ?? []),
+    ];
+    const repository = new MemoryIdentityRepository();
+    repository.roles.set("E020", [
+      { roleCode: "employee", permissions: employeePermissions },
+    ]);
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.authorize({
+        actor: {
+          employeeId: "E020",
+          roleCodes: ["employee"],
+          permissions: employeePermissions,
+          departmentIds: ["dept-a"],
+          primaryDepartmentId: "dept-a",
+          sessionId: "session-20",
+        },
+        action: "create",
+        resourceType: "notification",
       }),
     ).resolves.toEqual({
       allowed: true,

@@ -27,6 +27,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.CATALOG_READ,
         PERMISSIONS.IDENTITY_DEPARTMENT_READ,
         PERMISSIONS.NOTIFICATION_READ,
+        PERMISSIONS.NOTIFICATION_CREATE,
         PERMISSIONS.INTERACTION_INTERACT,
         PERMISSIONS.APPLICATION_CREATE,
         PERMISSIONS.APPLICATION_PUBLISH,
@@ -51,6 +52,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.APPLICATION_PUBLISH,
         PERMISSIONS.APPLICATION_MANAGE,
         PERMISSIONS.CREATOR_READ,
+        PERMISSIONS.NOTIFICATION_CREATE,
         PERMISSIONS.ANALYTICS_APPLICATION_READ,
         PERMISSIONS.ANALYTICS_REVIEW_READ,
       ],
@@ -76,6 +78,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.DEMAND_MODERATE,
         PERMISSIONS.DEMAND_ANONYMOUS_AUDIT,
         PERMISSIONS.ANALYTICS_INNOVATION_READ,
+        PERMISSIONS.NOTIFICATION_CREATE,
       ],
     },
     {
@@ -85,6 +88,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.DEMAND_REVIEW,
         PERMISSIONS.DEMAND_CLAIM,
         PERMISSIONS.ANALYTICS_REVIEW_READ,
+        PERMISSIONS.NOTIFICATION_CREATE,
       ],
     },
     {
@@ -114,6 +118,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
       permissions: [
         PERMISSIONS.ANALYTICS_RISK_READ,
         PERMISSIONS.INTERACTION_MODERATE,
+        PERMISSIONS.NOTIFICATION_CREATE,
       ],
     },
     {
@@ -125,12 +130,17 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.ANALYTICS_EXPORT_MANAGE,
         PERMISSIONS.ANALYTICS_ASSISTANT_USE,
         PERMISSIONS.ANALYTICS_SCOPE_ALL,
+        PERMISSIONS.NOTIFICATION_CREATE,
       ],
     },
     {
       roleCode: "analytics_exporter",
       name: "分析导出员",
-      permissions: [...analyticsReadPermissions, PERMISSIONS.ANALYTICS_EXPORT],
+      permissions: [
+        ...analyticsReadPermissions,
+        PERMISSIONS.ANALYTICS_EXPORT,
+        PERMISSIONS.NOTIFICATION_CREATE,
+      ],
     },
     {
       roleCode: "analytics_identity_export",
@@ -143,6 +153,7 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
       permissions: [
         ...analyticsReadPermissions,
         PERMISSIONS.ANALYTICS_ASSISTANT_USE,
+        PERMISSIONS.NOTIFICATION_CREATE,
       ],
     },
     ...(
