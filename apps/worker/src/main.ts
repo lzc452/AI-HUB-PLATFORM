@@ -123,6 +123,9 @@ async function bootstrap() {
     sessionId: "sla-reminder",
   };
   const slaReminderRunner = createSlaReminderRunner({
+    listReviewsDueWithin: runtime.reviewRepository.listReviewsDueWithin.bind(
+      runtime.reviewRepository,
+    ),
     listExpiredReviews: runtime.reviewRepository.listExpiredReviews.bind(
       runtime.reviewRepository,
     ),

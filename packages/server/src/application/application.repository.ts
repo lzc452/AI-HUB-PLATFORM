@@ -83,9 +83,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .execute();
     if (versionIds.length > 0) {
-      const versionIdList = versionIds.map(
-        (row) => row.application_version_id,
-      );
+      const versionIdList = versionIds.map((row) => row.application_version_id);
       await this.db
         .deleteFrom("application_version_snapshots")
         .where("application_version_id", "in", versionIdList)
@@ -222,9 +220,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
   }
 
   /** 查询应用详情展示所需的姓名与更新时间（负责人/维护人/部门名称）。 */
-  async findApplicationMeta(
-    applicationId: string,
-  ): Promise<{
+  async findApplicationMeta(applicationId: string): Promise<{
     ownerName: string;
     maintainerName: string;
     departmentName: string;
@@ -952,15 +948,15 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     const row = await this.db
       .updateTable("applications")
       .set({
-      status: input.status,
-      ...(input.currentVersionId === undefined
-        ? {}
-        : { current_version_id: input.currentVersionId }),
-      ...(input.pendingVersionId === undefined
-        ? {}
-        : { pending_version_id: input.pendingVersionId }),
-      updated_at: new Date(),
-    })
+        status: input.status,
+        ...(input.currentVersionId === undefined
+          ? {}
+          : { current_version_id: input.currentVersionId }),
+        ...(input.pendingVersionId === undefined
+          ? {}
+          : { pending_version_id: input.pendingVersionId }),
+        updated_at: new Date(),
+      })
       .where("application_id", "=", input.applicationId)
       .where("status", "=", input.expectedStatus)
       .returningAll()
@@ -1042,12 +1038,12 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .values({
         application_id: input.applicationId,
         application_version_id: input.applicationVersionId,
-      status: input.status,
-      claimed_by_employee_id: input.claimedByEmployeeId,
-      claimed_at: input.claimedAt,
-      sla_due_at: input.slaDueAt,
-      source_status: input.sourceStatus,
-    })
+        status: input.status,
+        claimed_by_employee_id: input.claimedByEmployeeId,
+        claimed_at: input.claimedAt,
+        sla_due_at: input.slaDueAt,
+        source_status: input.sourceStatus,
+      })
       .returningAll()
       .executeTakeFirstOrThrow();
     return this.mapReviewQueue(row);
@@ -1112,10 +1108,46 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return this.mapReviewQueue(row);
   }
 
-  /** SLA 提醒任务查询：已超时且仍未完成的审核队列。 */
-  async listExpiredReviews(
+  /** SLA 提醒任务查询：截止前 hours 小时内已领取（status='claimed'）的审核队列。 */
+  async listReviewsDueWithin(
     now: Date,
+    hours: number,
   ): Promise<
+    Array<{
+      applicationVersionId: string;
+      claimedByEmployeeId: string | null;
+      ownerEmployeeId: string;
+      name: string;
+    }>
+  > {
+    const horizon = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    const rows = await this.db
+      .selectFrom("application_review_queue as queue")
+      .innerJoin(
+        "applications as app",
+        "app.application_id",
+        "queue.application_id",
+      )
+      .select([
+        "queue.application_version_id as applicationVersionId",
+        "queue.claimed_by_employee_id as claimedByEmployeeId",
+        "app.owner_employee_id as ownerEmployeeId",
+        "app.name",
+      ])
+      .where("queue.status", "=", "claimed")
+      .where("queue.sla_due_at", ">=", now)
+      .where("queue.sla_due_at", "<", horizon)
+      .execute();
+    return rows.map((row) => ({
+      applicationVersionId: row.applicationVersionId,
+      claimedByEmployeeId: row.claimedByEmployeeId,
+      ownerEmployeeId: row.ownerEmployeeId,
+      name: row.name,
+    }));
+  }
+
+  /** SLA 提醒任务查询：已超时且仍未完成的审核队列。 */
+  async listExpiredReviews(now: Date): Promise<
     Array<{
       applicationVersionId: string;
       claimedByEmployeeId: string | null;

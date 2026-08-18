@@ -16,8 +16,7 @@ export const DINGTALK_NOTIFICATION_MATRIX = {
   },
   "application.review.sla.reminder": {
     recipientRole: "application_reviewer",
-    messageTemplate:
-      "评审任务 {aggregateId} 领取已超过 24 小时，请尽快给出结论。",
+    messageTemplate: "评审任务 {aggregateId} 将于 24 小时内到期，请及时处理。",
   },
   "application.review.sla.overdue": {
     recipientRole: "application_admin",

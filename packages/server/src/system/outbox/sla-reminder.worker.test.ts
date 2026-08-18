@@ -39,28 +39,46 @@ describe("addBusinessDays", () => {
 });
 
 describe("createSlaReminderRunner", () => {
-  const claimedExpiredReview = {
+  const claimedDueReview = {
     applicationVersionId: "version-1",
     claimedByEmployeeId: "reviewer-1",
     ownerEmployeeId: "owner-1",
     name: "示例应用",
   };
 
-  const availableExpiredReview = {
+  const availableDueReview = {
     applicationVersionId: "version-2",
     claimedByEmployeeId: null,
     ownerEmployeeId: "owner-2",
     name: "未领取应用",
   };
 
-  it("reminds the claimer of a claimed review past SLA (24h)", async () => {
+  const expiredReview = {
+    applicationVersionId: "version-3",
+    claimedByEmployeeId: "reviewer-3",
+    ownerEmployeeId: "owner-3",
+    name: "超时应用",
+  };
+
+  const runnerDeps = (
+    overrides: Partial<Parameters<typeof createSlaReminderRunner>[0]> = {},
+  ): Parameters<typeof createSlaReminderRunner>[0] => ({
+    listReviewsDueWithin: async () => [],
+    listExpiredReviews: async () => [],
+    listApplicationAdmins: async () => [],
+    createNotification: vi.fn().mockResolvedValue(undefined),
+    now: () => new Date("2026-08-18T10:00:00Z"),
+    ...overrides,
+  });
+
+  it("reminds only the claimer when the SLA deadline is within 24h and the review is claimed", async () => {
     const createNotification = vi.fn().mockResolvedValue(undefined);
-    const runner = createSlaReminderRunner({
-      listExpiredReviews: async () => [claimedExpiredReview],
-      listApplicationAdmins: async () => [],
-      createNotification,
-      now: () => new Date("2026-08-18T10:00:00Z"),
-    });
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listReviewsDueWithin: async () => [claimedDueReview],
+        createNotification,
+      }),
+    );
 
     await runner();
 
@@ -73,64 +91,75 @@ describe("createSlaReminderRunner", () => {
     });
   });
 
-  it("notifies every application admin and super admin of overdue reviews (48h)", async () => {
+  it("does not remind a claimer when an available review is near the deadline", async () => {
     const createNotification = vi.fn().mockResolvedValue(undefined);
-    const runner = createSlaReminderRunner({
-      listExpiredReviews: async () => [claimedExpiredReview],
-      listApplicationAdmins: async () => ["admin-1", "super-1"],
-      createNotification,
-      now: () => new Date("2026-08-18T10:00:00Z"),
-    });
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listReviewsDueWithin: async () => [availableDueReview],
+        createNotification,
+      }),
+    );
 
     await runner();
 
-    expect(createNotification).toHaveBeenCalledTimes(3);
+    expect(createNotification).not.toHaveBeenCalled();
+  });
+
+  it("notifies only application admins and super admins when the review is past SLA", async () => {
+    const createNotification = vi.fn().mockResolvedValue(undefined);
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listExpiredReviews: async () => [expiredReview],
+        listApplicationAdmins: async () => ["admin-1", "super-1"],
+        createNotification,
+      }),
+    );
+
+    await runner();
+
+    expect(createNotification).toHaveBeenCalledTimes(2);
     expect(createNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         recipientEmployeeId: "admin-1",
         eventType: "application.review.sla.overdue",
-        aggregateId: "version-1",
-        message: expect.stringContaining("示例应用"),
+        aggregateId: "version-3",
+        message: expect.stringContaining("超时应用"),
       }),
     );
     expect(createNotification).toHaveBeenCalledWith(
       expect.objectContaining({
         recipientEmployeeId: "super-1",
         eventType: "application.review.sla.overdue",
-        aggregateId: "version-1",
+        aggregateId: "version-3",
       }),
+    );
+    expect(createNotification).not.toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: "application.review.sla.reminder" }),
     );
   });
 
-  it("does not remind a claimer while the expired review is still available", async () => {
+  it("does not notify anyone while the SLA deadline is still more than 24h away", async () => {
     const createNotification = vi.fn().mockResolvedValue(undefined);
-    const runner = createSlaReminderRunner({
-      listExpiredReviews: async () => [availableExpiredReview],
-      listApplicationAdmins: async () => ["admin-1"],
-      createNotification,
-      now: () => new Date("2026-08-18T10:00:00Z"),
-    });
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listApplicationAdmins: async () => ["admin-1"],
+        createNotification,
+      }),
+    );
 
     await runner();
 
-    expect(createNotification).toHaveBeenCalledTimes(1);
-    expect(createNotification).toHaveBeenCalledWith(
-      expect.objectContaining({
-        recipientEmployeeId: "admin-1",
-        eventType: "application.review.sla.overdue",
-        aggregateId: "version-2",
-      }),
-    );
+    expect(createNotification).not.toHaveBeenCalled();
   });
 
-  it("skips reviews that are not yet past their SLA deadline", async () => {
+  it("does not notify anyone once the review is past SLA and concluded", async () => {
     const createNotification = vi.fn().mockResolvedValue(undefined);
-    const runner = createSlaReminderRunner({
-      listExpiredReviews: async () => [],
-      listApplicationAdmins: async () => ["admin-1"],
-      createNotification,
-      now: () => new Date("2026-08-18T10:00:00Z"),
-    });
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listApplicationAdmins: async () => ["admin-1"],
+        createNotification,
+      }),
+    );
 
     await runner();
 

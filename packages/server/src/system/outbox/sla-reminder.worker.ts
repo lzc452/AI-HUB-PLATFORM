@@ -1,8 +1,8 @@
 /**
- * 审核 SLA 提醒定时任务（规格 §5.5）。
+ * 审核 SLA 提醒定时任务（规格 §5.5，基准 = SLA 截止时刻 sla_due_at）。
  *
- * - 领取后超过 24h 未结论 → 提醒领取人（站内通知，事件 application.review.sla.reminder）。
- * - 领取后超过 48h 未结论（或领取超时释放后仍超 SLA）→ 通知全部应用管理员 + 超级管理员
+ * - SLA 截止前 24h 内且已领取 → 提醒领取人（站内通知，事件 application.review.sla.reminder）。
+ * - SLA 已超时且未结论（available/claimed）→ 通知全部应用管理员 + 超级管理员
  *   （站内通知，事件 application.review.sla.overdue）。
  *
  * 只发提醒，不自动审批。通知走 NotificationService.createForEvent —— 幂等键
@@ -28,6 +28,12 @@ export interface ExpiredReview {
 }
 
 export interface SlaReminderDeps {
+  /** SLA 截止前 hours 小时内已领取（status='claimed'）的审核。 */
+  listReviewsDueWithin: (
+    now: Date,
+    hours: number,
+  ) => Promise<readonly ExpiredReview[]>;
+  /** 已超时（sla_due_at < now）且未结论（status in available/claimed）的审核。 */
   listExpiredReviews: (now: Date) => Promise<readonly ExpiredReview[]>;
   listApplicationAdmins: () => Promise<string[]>;
   createNotification: (input: {
@@ -44,15 +50,18 @@ export function createSlaReminderRunner(deps: SlaReminderDeps) {
   const now = deps.now ?? (() => new Date());
   return async (): Promise<void> => {
     const current = now();
-    for (const review of await deps.listExpiredReviews(current)) {
+    for (const review of await deps.listReviewsDueWithin(current, 24)) {
+      // 查询已限定 claimed；防御性保留判空，available 无领取人则不提醒。
       if (review.claimedByEmployeeId !== null) {
         await deps.createNotification({
           recipientEmployeeId: review.claimedByEmployeeId,
           eventType: "application.review.sla.reminder",
           aggregateId: review.applicationVersionId,
-          message: `应用「${review.name}」审核领取已超过 24 小时，请尽快给出结论。`,
+          message: `应用「${review.name}」审核将于 24 小时内到期，请及时处理。`,
         });
       }
+    }
+    for (const review of await deps.listExpiredReviews(current)) {
       for (const admin of await deps.listApplicationAdmins()) {
         await deps.createNotification({
           recipientEmployeeId: admin,
