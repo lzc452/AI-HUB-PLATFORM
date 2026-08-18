@@ -23,6 +23,8 @@ import {
   getPublishedVersion,
   getReviewQueue,
   getValidationChecks,
+  getVersionDiff,
+  getVersionSnapshot,
   listAssets,
   publishApplication,
   releaseReview,
@@ -85,6 +87,50 @@ export function usePublishedVersion(
     enabled: Boolean(applicationId) && (options?.enabled ?? true),
     queryFn: () => getPublishedVersion(applicationId as string),
     queryKey: ["applications", "published-version", applicationId],
+  });
+}
+
+export function useVersionSnapshot(
+  applicationId: string | undefined,
+  versionId: string | undefined,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    enabled:
+      Boolean(applicationId) &&
+      Boolean(versionId) &&
+      (options?.enabled ?? true),
+    queryFn: () =>
+      getVersionSnapshot(applicationId as string, versionId as string),
+    queryKey: ["applications", "version-snapshot", applicationId, versionId],
+  });
+}
+
+export function useVersionDiff(
+  applicationId: string | undefined,
+  fromVersionId: string | undefined,
+  toVersionId: string | undefined,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    enabled:
+      Boolean(applicationId) &&
+      Boolean(fromVersionId) &&
+      Boolean(toVersionId) &&
+      (options?.enabled ?? true),
+    queryFn: () =>
+      getVersionDiff(
+        applicationId as string,
+        fromVersionId as string,
+        toVersionId as string,
+      ),
+    queryKey: [
+      "applications",
+      "version-diff",
+      applicationId,
+      fromVersionId,
+      toVersionId,
+    ],
   });
 }
 

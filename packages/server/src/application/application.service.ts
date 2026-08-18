@@ -24,6 +24,8 @@ import type {
   ReviewQueueRecord,
   ReviewQueueView,
   ValidationCheckRecord,
+  VersionDiffResult,
+  VersionSnapshotRecord,
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
@@ -1191,6 +1193,52 @@ export class ApplicationService {
     return this.repository.listVersions(applicationId);
   }
 
+  /** 读取版本快照：授权（APPLICATION_READ + 可读性）+ 版本属于该应用校验 +
+   *  无快照记录返回 VERSION_SNAPSHOT_NOT_FOUND（404）。 */
+  async getVersionSnapshot(
+    actor: ActorContext,
+    applicationId: string,
+    versionId: string,
+  ): Promise<VersionSnapshotRecord> {
+    const application = await this.requireApplication(applicationId);
+    this.assertApplicationReadable(actor, application);
+    const version = await this.requireVersion(versionId);
+    if (version.applicationId !== applicationId) {
+      throw new Error("APPLICATION_VERSION_NOT_FOUND");
+    }
+    const snapshot = await this.repository.findVersionSnapshot(versionId);
+    if (snapshot === null) throw new Error("VERSION_SNAPSHOT_NOT_FOUND");
+    return snapshot;
+  }
+
+  /** 两版本快照顶层字段级差异（from → to）。任一版本无快照记录返回
+   *  VERSION_SNAPSHOT_NOT_FOUND（404）。 */
+  async getVersionDiff(
+    actor: ActorContext,
+    applicationId: string,
+    fromVersionId: string,
+    toVersionId: string,
+  ): Promise<VersionDiffResult> {
+    const application = await this.requireApplication(applicationId);
+    this.assertApplicationReadable(actor, application);
+    const fromVersion = await this.requireVersion(fromVersionId);
+    if (fromVersion.applicationId !== applicationId) {
+      throw new Error("APPLICATION_VERSION_NOT_FOUND");
+    }
+    const toVersion = await this.requireVersion(toVersionId);
+    if (toVersion.applicationId !== applicationId) {
+      throw new Error("APPLICATION_VERSION_NOT_FOUND");
+    }
+    const [fromSnapshot, toSnapshot] = await Promise.all([
+      this.repository.findVersionSnapshot(fromVersionId),
+      this.repository.findVersionSnapshot(toVersionId),
+    ]);
+    if (fromSnapshot === null || toSnapshot === null) {
+      throw new Error("VERSION_SNAPSHOT_NOT_FOUND");
+    }
+    return diffVersionSnapshots(fromSnapshot.payload, toSnapshot.payload);
+  }
+
   async getWorkspace(
     applicationId: string,
     actor?: ActorContext,
@@ -1620,4 +1668,43 @@ export function validateDraftCompleteness(
   }
 
   return issues;
+}
+
+/** 顶层字段级快照对比（from → to）。值用 JSON 序列化比较；顶层字段集合
+ *  的差集归入 added/removed。非对象顶层（如 null/数组）整体对比，差异归入
+ *  changed 的 "$" 字段。结果按字段名字母序排序保证确定性（PostgreSQL jsonb
+ *  按长度/字节序存储键，不保证插入顺序）。 */
+export function diffVersionSnapshots(
+  from: unknown,
+  to: unknown,
+): VersionDiffResult {
+  const serialize = (value: unknown): string => JSON.stringify(value ?? null);
+  const changed: VersionDiffResult["changed"] = [];
+  const added: VersionDiffResult["added"] = [];
+  const removed: VersionDiffResult["removed"] = [];
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  if (isPlainObject(from) && isPlainObject(to)) {
+    const fromKeys = Object.keys(from).sort();
+    const toKeys = Object.keys(to).sort();
+    const toKeySet = new Set(toKeys);
+    for (const key of toKeys) {
+      if (!(key in from)) {
+        added.push({ field: key, value: to[key] });
+      }
+    }
+    for (const key of fromKeys) {
+      if (!(key in to)) {
+        removed.push({ field: key, value: from[key] });
+      }
+    }
+    for (const key of fromKeys) {
+      if (toKeySet.has(key) && serialize(from[key]) !== serialize(to[key])) {
+        changed.push({ field: key, from: from[key], to: to[key] });
+      }
+    }
+  } else if (serialize(from) !== serialize(to)) {
+    changed.push({ field: "$", from, to });
+  }
+  return { changed, added, removed };
 }

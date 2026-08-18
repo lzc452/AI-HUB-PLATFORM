@@ -127,6 +127,19 @@ const applicationService = {
   async getPublishedVersion() {
     return { applicationVersionId: "version-1" };
   },
+  async getVersionSnapshot() {
+    return {
+      createdAt: new Date("2026-08-01T02:30:00.000Z"),
+      payload: { name: "Copilot", version: "1.0.0" },
+    };
+  },
+  async getVersionDiff() {
+    return {
+      changed: [{ field: "name", from: "Copilot", to: "Copilot 2" }],
+      added: [],
+      removed: [],
+    };
+  },
 } as unknown as ApplicationService;
 
 describe("application endpoints", () => {
@@ -179,6 +192,24 @@ describe("application endpoints", () => {
       .get("/internal/applications/app-1/published-version")
       .set(headers)
       .expect(200);
+    await request(app.getHttpServer())
+      .get("/internal/applications/app-1/versions/version-1/snapshot")
+      .set(headers)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          payload: { name: "Copilot", version: "1.0.0" },
+        });
+      });
+    await request(app.getHttpServer())
+      .get("/internal/applications/app-1/versions/version-1/diff/version-1")
+      .set(headers)
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.changed).toEqual([
+          { field: "name", from: "Copilot", to: "Copilot 2" },
+        ]);
+      });
     await app.close();
   });
 });

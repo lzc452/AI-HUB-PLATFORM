@@ -492,6 +492,66 @@ export class ApplicationVersionDto {
   createdAt!: string;
 }
 
+/** 版本快照记录（版本提交时持久化的完整草稿内容）。 */
+export class VersionSnapshotDto {
+  @ApiProperty({
+    description: "快照创建时间（ISO 8601）",
+    type: String,
+    format: "date-time",
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    description: "版本提交时的完整草稿内容（ApplicationDraft 顶层字段）",
+  })
+  payload!: Record<string, unknown>;
+}
+
+/** 差异中的单个字段变化。 */
+export class VersionDiffChangeDto {
+  @ApiProperty({ type: String, description: "字段名" })
+  field!: string;
+
+  @ApiProperty({ description: "from 版本的值" })
+  from!: unknown;
+
+  @ApiProperty({ description: "to 版本的值" })
+  to!: unknown;
+}
+
+/** 差异中的新增/移除字段。 */
+export class VersionDiffEntryDto {
+  @ApiProperty({ type: String, description: "字段名" })
+  field!: string;
+
+  @ApiProperty({ description: "字段值" })
+  value!: unknown;
+}
+
+/** 两版本快照的顶层字段级差异（from → to）。 */
+export class VersionDiffDto {
+  @ApiProperty({
+    type: VersionDiffChangeDto,
+    isArray: true,
+    description: "值发生变化的字段",
+  })
+  changed!: VersionDiffChangeDto[];
+
+  @ApiProperty({
+    type: VersionDiffEntryDto,
+    isArray: true,
+    description: "to 版本新增的字段",
+  })
+  added!: VersionDiffEntryDto[];
+
+  @ApiProperty({
+    type: VersionDiffEntryDto,
+    isArray: true,
+    description: "from 版本有、to 版本移除的字段",
+  })
+  removed!: VersionDiffEntryDto[];
+}
+
 /** 交付渠道记录。 */
 export class DeliveryDto {
   @ApiProperty({ type: String, description: "交付记录 ID" })

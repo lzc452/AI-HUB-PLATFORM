@@ -1,13 +1,19 @@
 import { Button, Empty, Input, Select, Spin, Tag } from "antd";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
-import type { ApplicationVersionRecord } from "../../modules/application/application.client";
+import type {
+  ApplicationVersionRecord,
+  VersionDiff,
+} from "../../modules/application/application.client";
 import {
   useApplicationVersions,
   usePublishedVersion,
+  useVersionDiff,
+  useVersionSnapshot,
 } from "../../modules/application/useApplication";
+import { ApiError } from "../../shared/api/client";
 import { MessageError } from "../../shared/ui/message";
 import { UploadVersionDrawer } from "./UploadVersionDrawer";
 
@@ -20,11 +26,54 @@ const scanStatusMeta: Record<
   pending: { color: "warning", label: "审核中" },
 };
 
+/** 快照顶层字段的中文标签（无映射时回退原字段名）。 */
+const snapshotFieldLabels: Readonly<Record<string, string>> = {
+  name: "应用名称",
+  departmentId: "所属部门",
+  maintainerEmployeeIds: "维护人",
+  categoryId: "分类",
+  applicationType: "应用类型",
+  tagIds: "标签",
+  icon: "图标",
+  screenshotAssetIds: "截图",
+  summaryHtml: "简介",
+  manualHtml: "用户手册",
+  manualAssetId: "手册附件",
+  examplesHtml: "使用示例",
+  examplesAssetId: "示例附件",
+  faq: "FAQ",
+  audience: "受众",
+  risk: "风险声明",
+  deliveries: "交付物",
+  version: "版本号",
+  changelog: "发布说明",
+};
+
+function snapshotFieldLabel(field: string): string {
+  return snapshotFieldLabels[field] ?? field;
+}
+
+/** 快照值展示：字符串/布尔/数字原样，对象与数组 JSON 序列化。 */
+function formatSnapshotValue(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  return JSON.stringify(value);
+}
+
 export default function ApplicationVersionsPage() {
   const { applicationId } = useParams();
   const versionsQuery = useApplicationVersions(applicationId);
   const publishedVersion = usePublishedVersion(applicationId);
   const [selectedVersionId, setSelectedVersionId] = useState<string>();
+  const [versionAId, setVersionAId] = useState<string>();
+  const [versionBId, setVersionBId] = useState<string>();
+  // 点击"开始对比"后生成差异查询目标（from = 旧版本，to = 新版本）。
+  const [compareTargets, setCompareTargets] = useState<{
+    fromVersionId: string;
+    toVersionId: string;
+  }>();
   const [uploadOpen, setUploadOpen] = useState(false);
   const versions = versionsQuery.data ?? [];
   const current = publishedVersion.data ?? versions[0];
@@ -38,6 +87,50 @@ export default function ApplicationVersionsPage() {
     );
     return versions[index + 1] ?? versions[index - 1];
   }, [selected, versions]);
+
+  // 版本数据就绪后给对比选择器填充默认值（A = 选中版本，B = 上一版本）；
+  // 用户手动选择后不再覆盖。
+  useEffect(() => {
+    if (versionAId === undefined && selected !== undefined) {
+      setVersionAId(selected.applicationVersionId);
+    }
+    if (versionBId === undefined && previous !== undefined) {
+      setVersionBId(previous.applicationVersionId);
+    }
+  }, [previous, selected, versionAId, versionBId]);
+
+  const versionOptions = versions.map((item) => ({
+    label: `v${item.version.replace(/^v/, "")}`,
+    value: item.applicationVersionId,
+  }));
+  const compareEnabled =
+    versionAId !== undefined &&
+    versionBId !== undefined &&
+    versionAId !== versionBId;
+  const startCompare = () => {
+    if (!compareEnabled) return;
+    // 差异方向固定为旧 → 新：列表按创建时间倒序，索引大者更旧。
+    const indexOf = (id: string) =>
+      versions.findIndex((item) => item.applicationVersionId === id);
+    const fromId =
+      indexOf(versionAId!) > indexOf(versionBId!) ? versionAId! : versionBId!;
+    const toId = fromId === versionAId ? versionBId! : versionAId!;
+    setCompareTargets({ fromVersionId: fromId, toVersionId: toId });
+  };
+
+  const diffQuery = useVersionDiff(
+    applicationId,
+    compareTargets?.fromVersionId,
+    compareTargets?.toVersionId,
+  );
+  const snapshotQuery = useVersionSnapshot(
+    applicationId,
+    selected?.applicationVersionId,
+  );
+  const snapshotMissing =
+    snapshotQuery.isError &&
+    snapshotQuery.error instanceof ApiError &&
+    snapshotQuery.error.code === "VERSION_SNAPSHOT_NOT_FOUND";
 
   return (
     <ApplicationAdminPage
@@ -77,7 +170,7 @@ export default function ApplicationVersionsPage() {
             {versions.length === 0 && !versionsQuery.isPending ? (
               <Empty className="py-12" description="暂无版本记录" />
             ) : null}
-            {(versions.length ? versions : []).map((version, index) => {
+            {versions.map((version, index) => {
               const isCurrent =
                 version.applicationVersionId ===
                   current?.applicationVersionId ||
@@ -122,8 +215,7 @@ export default function ApplicationVersionsPage() {
                       </span>
                     </span>
                     <span className="mt-2 block text-[13px] text-[#596579]">
-                      {version.changelog ||
-                        "优化票据识别模型，提升识别准确率；新增增值税电子发票支持。"}
+                      {version.changelog}
                     </span>
                   </span>
                   <span
@@ -148,130 +240,93 @@ export default function ApplicationVersionsPage() {
                   版本对比
                 </h3>
                 <p className="m-0 mt-1 text-[13px] text-[#8a94a6]">
-                  选择两个版本查看字段、截图、风险和交付变化
+                  选择两个版本查看提交内容的字段变化
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-[13px]">
                 <span>版本 A</span>
                 <Select
+                  onChange={setVersionAId}
+                  options={versionOptions}
+                  placeholder="选择版本"
                   size="small"
-                  value={
-                    selected
-                      ? `v${selected.version.replace(/^v/, "")}`
-                      : "v2.4.1"
-                  }
-                  options={versions.map((item) => ({
-                    label: `v${item.version.replace(/^v/, "")}`,
-                    value: `v${item.version.replace(/^v/, "")}`,
-                  }))}
+                  value={versionAId ?? selected?.applicationVersionId}
                 />
                 <span>VS</span>
                 <Select
+                  onChange={setVersionBId}
+                  options={versionOptions}
+                  placeholder="选择版本"
                   size="small"
-                  value={
-                    previous
-                      ? `v${previous.version.replace(/^v/, "")}`
-                      : "v2.4.0"
-                  }
-                  options={versions.map((item) => ({
-                    label: `v${item.version.replace(/^v/, "")}`,
-                    value: `v${item.version.replace(/^v/, "")}`,
-                  }))}
+                  value={versionBId ?? previous?.applicationVersionId}
                 />
                 <Button
-                  disabled
+                  disabled={!compareEnabled}
+                  onClick={startCompare}
                   type="primary"
-                  title="版本对比尚未纳入 V1 接口"
                 >
                   开始对比
                 </Button>
               </div>
             </div>
-            <div className="space-y-4 p-5 text-[13px]">
-              <CompareSection title="1. 基本信息变化">
-                <CompareRow
-                  field="描述"
-                  oldValue="支持增值税发票、火车票等票据识别…"
-                  newValue="优化发票识别模型，提升识别准确率；新增增值税电子发票支持。"
+            <div className="p-5 text-[13px]">
+              {compareTargets === undefined ? (
+                <Empty
+                  description="选择两个不同版本后点击「开始对比」"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
                 />
-                <CompareRow
-                  field="标签"
-                  oldValue="发票、报销、行政财务、OCR"
-                  newValue="发票、报销、行政财务、电子发票、OCR"
+              ) : null}
+              {compareTargets !== undefined && diffQuery.isPending ? (
+                <Spin aria-label="版本差异加载中" />
+              ) : null}
+              {compareTargets !== undefined && diffQuery.isError ? (
+                <MessageError
+                  active
+                  cause={diffQuery.error}
+                  title="版本差异加载失败"
                 />
-                <CompareRow field="维护人" oldValue="王芳" newValue="王芳" />
-              </CompareSection>
-              <CompareSection title="2. 截图变化">
-                <div className="flex items-center gap-4">
-                  <Thumb />
-                  <Thumb variant="invoice" />
-                  <i
-                    aria-hidden="true"
-                    className="app-ui-icon app-ui-icon-arrow h-5 w-5 text-[#6b7b94]"
-                  />
-                  <Thumb />
-                  <Thumb variant="chart" />
-                </div>
-              </CompareSection>
-              <CompareSection title="3. 风险声明变化">
-                <div className="rounded-md border border-[#ffe1a8] bg-[#fff9eb] px-3 py-2 text-[#8a5a00]">
-                  本应用仅用于识别票据，提升财务流程识别效率；所有识别结果仅供参考，不作为最终报销依据。
-                </div>
-              </CompareSection>
-              <CompareSection title="4. 交付物变化">
-                <CompareRow
-                  field="Web 应用地址"
-                  oldValue="https://aihub.com/apps/ocr"
-                  newValue="https://aihub.com/apps/ocr"
-                />
-                <CompareRow
-                  field="Android APK"
-                  oldValue="ocr-app-2.4.0.apk (68.2 MB)"
-                  newValue="ocr-app-2.4.1.apk (72.1 MB)"
-                />
-                <CompareRow
-                  field="安装包签名"
-                  oldValue="-"
-                  newValue="SHA256: A1B2C3D4E5F6G7H8..."
-                />
-              </CompareSection>
+              ) : null}
+              {compareTargets !== undefined &&
+              diffQuery.data &&
+              !diffQuery.isPending ? (
+                <VersionDiffView diff={diffQuery.data} />
+              ) : null}
             </div>
           </section>
           <section className="app-admin-card px-5 py-4">
             <h3 className="m-0 text-[16px] font-semibold">版本快照详情</h3>
-            <div className="mt-3 grid gap-4 text-[13px] text-[#596579] sm:grid-cols-4">
-              <span>
-                发布人
-                <br />
-                <strong className="text-[#1f2937]">王芳</strong>
-              </span>
-              <span>
-                发布时间
-                <br />
-                <strong className="text-[#1f2937]">2026-08-01 10:30</strong>
-              </span>
-              <span>
-                审核记录
-                <br />
-                <strong className="text-[#16a66a]">
-                  <i
-                    aria-hidden="true"
-                    className="app-ui-icon app-ui-icon-check mr-1"
-                  />
-                  已通过{" "}
-                  <a className="text-[#1677ff]" href="#review">
-                    查看详情
-                  </a>
-                </strong>
-              </span>
-              <span>
-                关联工单
-                <br />
-                <strong className="text-[#1677ff]">
-                  工单 #WORK20260801001 查看
-                </strong>
-              </span>
-            </div>
+            {selected === undefined ? (
+              <Empty
+                className="py-8"
+                description="暂无版本记录"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : null}
+            {selected !== undefined && snapshotQuery.isPending ? (
+              <Spin aria-label="版本快照加载中" />
+            ) : null}
+            {snapshotMissing ? (
+              <Empty
+                className="py-8"
+                description="该版本无快照记录"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : null}
+            {selected !== undefined &&
+            snapshotQuery.isError &&
+            !snapshotMissing ? (
+              <MessageError
+                active
+                cause={snapshotQuery.error}
+                title="版本快照加载失败"
+              />
+            ) : null}
+            {snapshotQuery.data ? (
+              <SnapshotDetail
+                createdAt={snapshotQuery.data.createdAt}
+                payload={snapshotQuery.data.payload}
+              />
+            ) : null}
           </section>
         </div>
       </div>
@@ -292,6 +347,158 @@ export default function ApplicationVersionsPage() {
   );
 }
 
+/** 差异结果渲染：changed / added / removed 三组。 */
+function VersionDiffView({ diff }: { diff: VersionDiff }) {
+  const hasDiff =
+    diff.changed.length > 0 || diff.added.length > 0 || diff.removed.length > 0;
+  if (!hasDiff) {
+    return (
+      <Empty
+        description="两个版本快照内容一致，无差异"
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+      />
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {diff.changed.length > 0 ? (
+        <div>
+          <h4 className="mb-2 text-[14px] font-semibold text-[#1f2937]">
+            变化字段（{diff.changed.length}）
+          </h4>
+          <div className="space-y-1.5">
+            {diff.changed.map((change) => (
+              <DiffRow
+                field={snapshotFieldLabel(change.field)}
+                fromValue={formatSnapshotValue(change.from)}
+                key={change.field}
+                toValue={formatSnapshotValue(change.to)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {diff.added.length > 0 ? (
+        <div>
+          <h4 className="mb-2 text-[14px] font-semibold text-[#1f2937]">
+            新增字段（{diff.added.length}）
+          </h4>
+          <div className="space-y-1.5">
+            {diff.added.map((entry) => (
+              <AddedRemovedRow
+                field={snapshotFieldLabel(entry.field)}
+                key={entry.field}
+                label="新版本"
+                value={formatSnapshotValue(entry.value)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {diff.removed.length > 0 ? (
+        <div>
+          <h4 className="mb-2 text-[14px] font-semibold text-[#1f2937]">
+            移除字段（{diff.removed.length}）
+          </h4>
+          <div className="space-y-1.5">
+            {diff.removed.map((entry) => (
+              <AddedRemovedRow
+                field={snapshotFieldLabel(entry.field)}
+                key={entry.field}
+                label="旧版本"
+                value={formatSnapshotValue(entry.value)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DiffRow({
+  field,
+  fromValue,
+  toValue,
+}: {
+  field: string;
+  fromValue: string;
+  toValue: string;
+}) {
+  return (
+    <div className="grid grid-cols-[120px_1fr_1fr] overflow-hidden rounded border border-[#e2e8f0] text-[12px]">
+      <span className="bg-[#f8fafc] px-3 py-2 font-medium">{field}</span>
+      <span className="border-l border-[#e2e8f0] bg-[#fff7f7] px-3 py-2 text-[#b5492e]">
+        {fromValue}
+      </span>
+      <span className="border-l border-[#e2e8f0] bg-[#f0fff7] px-3 py-2 text-[#168255]">
+        {toValue}
+      </span>
+    </div>
+  );
+}
+
+function AddedRemovedRow({
+  field,
+  label,
+  value,
+}: {
+  field: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="grid grid-cols-[120px_1fr_2fr] overflow-hidden rounded border border-[#e2e8f0] text-[12px]">
+      <span className="bg-[#f8fafc] px-3 py-2 font-medium">{field}</span>
+      <span className="border-l border-[#e2e8f0] px-3 py-2 text-[#697386]">
+        {label}
+      </span>
+      <span className="border-l border-[#e2e8f0] px-3 py-2">{value}</span>
+    </div>
+  );
+}
+
+/** 快照详情：快照时间 + 顶层字段列表。 */
+function SnapshotDetail({
+  createdAt,
+  payload,
+}: {
+  createdAt: string;
+  payload: Record<string, unknown>;
+}) {
+  const entries = Object.entries(payload);
+  return (
+    <div className="mt-3">
+      <p className="mb-3 text-[12px] text-[#697386]">
+        快照时间：{formatDateTime(createdAt)}
+      </p>
+      {entries.length === 0 ? (
+        <Empty
+          className="py-6"
+          description="该版本快照内容为空"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        />
+      ) : (
+        <div className="grid gap-1.5 text-[13px] text-[#596579] sm:grid-cols-2">
+          {entries.map(([field, value]) => (
+            <div
+              className="flex gap-2 overflow-hidden rounded border border-[#edf0f5] px-3 py-2"
+              key={field}
+            >
+              <span className="w-20 shrink-0 font-medium text-[#1f2937]">
+                {snapshotFieldLabel(field)}
+              </span>
+              <span className="break-all text-[#596579]">
+                {formatSnapshotValue(value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString("zh-CN", {
     year: "numeric",
@@ -299,72 +506,13 @@ function formatDate(value: string) {
     day: "2-digit",
   });
 }
-function CompareSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section>
-      <h4 className="mb-2 text-[14px] font-semibold text-[#1f2937]">{title}</h4>
-      {children}
-    </section>
-  );
-}
-function CompareRow({
-  field,
-  oldValue,
-  newValue,
-}: {
-  field: string;
-  oldValue: string;
-  newValue: string;
-}) {
-  return (
-    <div className="grid grid-cols-[100px_1fr_1fr] overflow-hidden rounded border border-[#e2e8f0] text-[12px]">
-      <span className="bg-[#f8fafc] px-3 py-2 font-medium">{field}</span>
-      <span className="border-l border-[#e2e8f0] px-3 py-2 text-[#697386]">
-        {oldValue}
-      </span>
-      <span className="border-l border-[#e2e8f0] bg-[#f0fff7] px-3 py-2 text-[#168255]">
-        {newValue}
-      </span>
-    </div>
-  );
-}
-function Thumb({
-  variant = "dashboard",
-}: {
-  variant?: "dashboard" | "invoice" | "chart";
-}) {
-  return (
-    <div className="h-14 w-24 rounded border border-[#dce5f2] bg-[#f8fbff] p-1">
-      <div className="flex h-full gap-1">
-        <i className="w-2 rounded-sm bg-[#bed6fb]" />
-        <div className="flex-1 space-y-1">
-          <i className="block h-1.5 w-2/5 rounded bg-[#8bb8ff]" />
-          {variant === "chart" ? (
-            <div className="flex h-8 items-end gap-0.5">
-              <i className="h-2/5 flex-1 bg-[#8bb8ff]" />
-              <i className="h-4/5 flex-1 bg-[#4d8df4]" />
-              <i className="h-full flex-1 bg-[#a9c8f7]" />
-            </div>
-          ) : variant === "invoice" ? (
-            <div className="h-8 rounded bg-white p-1">
-              <i className="block h-1 w-3/4 bg-[#d6e3f4]" />
-              <i className="mt-1 block h-1 w-full bg-[#e7eef8]" />
-              <i className="mt-1 block h-2 w-1/3 border border-[#93b6ed]" />
-            </div>
-          ) : (
-            <div className="h-8 rounded bg-white p-1">
-              <i className="mb-1 block h-1 w-full bg-[#d6e3f4]" />
-              <i className="block h-1 w-3/4 bg-[#e7eef8]" />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }

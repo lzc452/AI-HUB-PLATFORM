@@ -109,6 +109,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
       maintainers: new Map(this.maintainers),
       drafts: new Map(this.drafts),
       versions: new Map(this.versions),
+      snapshots: new Map(this.snapshots),
       deliveries: [...this.deliveries],
       reviews: [...this.reviews],
       reviewQueue: [...this.reviewQueue],
@@ -236,11 +237,15 @@ class MemoryApplicationRepository implements ApplicationRepository {
   ) {
     // no-op in memory repository
   }
-  async snapshotVersionContent(
-    _applicationVersionId: string,
-    _payload: unknown,
-  ) {
-    // no-op in memory repository
+  snapshots = new Map<string, { payload: unknown; createdAt: Date }>();
+  async snapshotVersionContent(applicationVersionId: string, payload: unknown) {
+    this.snapshots.set(applicationVersionId, {
+      payload,
+      createdAt: new Date("2026-08-01T02:30:00.000Z"),
+    });
+  }
+  async findVersionSnapshot(applicationVersionId: string) {
+    return this.snapshots.get(applicationVersionId) ?? null;
   }
   async getApplicationType(applicationId: string) {
     return this.catalogTypes.get(applicationId) ?? null;
@@ -1136,6 +1141,220 @@ describe("ApplicationService", () => {
     await expect(
       service.submitForReview(owner, unsignedVersion.applicationVersionId),
     ).rejects.toThrow("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
+  });
+
+  it("returns the stored snapshot for a version", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    const payload = {
+      name: "Copilot",
+      version: "1.0.0",
+      tagIds: ["tag-1", "tag-2"],
+    };
+    await repository.snapshotVersionContent(
+      version.applicationVersionId,
+      payload,
+    );
+
+    const snapshot = await service.getVersionSnapshot(
+      owner,
+      application.applicationId,
+      version.applicationVersionId,
+    );
+    expect(snapshot.payload).toEqual(payload);
+    expect(snapshot.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("forbids reading a snapshot by a non-owner outsider", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await repository.snapshotVersionContent(version.applicationVersionId, {
+      name: "Copilot",
+    });
+
+    await expect(
+      service.getVersionSnapshot(
+        outsider,
+        application.applicationId,
+        version.applicationVersionId,
+      ),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    await expect(
+      service.getVersionDiff(
+        outsider,
+        application.applicationId,
+        version.applicationVersionId,
+        version.applicationVersionId,
+      ),
+    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+  });
+
+  it("rejects a version that belongs to another application", async () => {
+    const { service, repository } = makeService();
+    const first = await service.createApplication(owner, {
+      name: "First",
+      summary: "A",
+    });
+    const second = await service.createApplication(owner, {
+      name: "Second",
+      summary: "B",
+    });
+    const version = await service.createVersion(
+      owner,
+      first.applicationId,
+      versionInput,
+    );
+    await repository.snapshotVersionContent(version.applicationVersionId, {
+      name: "First",
+    });
+
+    await expect(
+      service.getVersionSnapshot(
+        owner,
+        second.applicationId,
+        version.applicationVersionId,
+      ),
+    ).rejects.toThrow("APPLICATION_VERSION_NOT_FOUND");
+  });
+
+  it("returns VERSION_SNAPSHOT_NOT_FOUND when no snapshot exists", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+
+    await expect(
+      service.getVersionSnapshot(
+        owner,
+        application.applicationId,
+        version.applicationVersionId,
+      ),
+    ).rejects.toThrow("VERSION_SNAPSHOT_NOT_FOUND");
+    await expect(
+      service.getVersionDiff(
+        owner,
+        application.applicationId,
+        version.applicationVersionId,
+        version.applicationVersionId,
+      ),
+    ).rejects.toThrow("VERSION_SNAPSHOT_NOT_FOUND");
+  });
+
+  it("computes a top-level field diff with changed, added and removed", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const fromVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, version: "1.0.0" },
+    );
+    const toVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, version: "2.0.0" },
+    );
+    const fromPayload = {
+      name: "Copilot",
+      version: "1.0.0",
+      tagIds: ["a"],
+      legacy: true,
+      risk: { handlesSensitiveData: false },
+    };
+    const toPayload = {
+      name: "Copilot 2",
+      version: "2.0.0",
+      tagIds: ["a", "b"],
+      risk: { handlesSensitiveData: true },
+      newField: 42,
+    };
+    await repository.snapshotVersionContent(
+      fromVersion.applicationVersionId,
+      fromPayload,
+    );
+    await repository.snapshotVersionContent(
+      toVersion.applicationVersionId,
+      toPayload,
+    );
+
+    const diff = await service.getVersionDiff(
+      owner,
+      application.applicationId,
+      fromVersion.applicationVersionId,
+      toVersion.applicationVersionId,
+    );
+    // 结果按字段名排序：name → risk → tagIds → version
+    expect(diff.changed).toEqual([
+      { field: "name", from: "Copilot", to: "Copilot 2" },
+      {
+        field: "risk",
+        from: { handlesSensitiveData: false },
+        to: { handlesSensitiveData: true },
+      },
+      { field: "tagIds", from: ["a"], to: ["a", "b"] },
+      { field: "version", from: "1.0.0", to: "2.0.0" },
+    ]);
+    expect(diff.added).toEqual([{ field: "newField", value: 42 }]);
+    expect(diff.removed).toEqual([{ field: "legacy", value: true }]);
+  });
+
+  it("returns an empty diff for identical snapshots", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const fromVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, version: "1.0.0" },
+    );
+    const toVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, version: "2.0.0" },
+    );
+    const payload = { name: "Copilot", version: "1.0.0" };
+    await repository.snapshotVersionContent(
+      fromVersion.applicationVersionId,
+      payload,
+    );
+    await repository.snapshotVersionContent(
+      toVersion.applicationVersionId,
+      payload,
+    );
+
+    const diff = await service.getVersionDiff(
+      owner,
+      application.applicationId,
+      fromVersion.applicationVersionId,
+      toVersion.applicationVersionId,
+    );
+    expect(diff).toEqual({ changed: [], added: [], removed: [] });
   });
 
   it("creates and claims a review queue item with an SLA notification", async () => {

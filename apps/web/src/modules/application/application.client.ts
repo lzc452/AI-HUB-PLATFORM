@@ -192,6 +192,50 @@ export function getPublishedVersion(
   );
 }
 
+/** 版本快照：版本提交时持久化的完整草稿内容；无快照记录时后端返回
+ *  404 VERSION_SNAPSHOT_NOT_FOUND。 */
+export interface VersionSnapshot {
+  createdAt: string;
+  payload: Record<string, unknown>;
+}
+
+export function getVersionSnapshot(
+  applicationId: string,
+  versionId: string,
+): Promise<VersionSnapshot> {
+  return apiFetch<VersionSnapshot>(
+    `${applicationsPath(applicationId)}/versions/${encodeURIComponent(versionId)}/snapshot`,
+  );
+}
+
+export interface VersionDiffChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+export interface VersionDiffEntry {
+  field: string;
+  value: unknown;
+}
+
+/** 两版本快照的顶层字段级差异（from → to）。 */
+export interface VersionDiff {
+  changed: VersionDiffChange[];
+  added: VersionDiffEntry[];
+  removed: VersionDiffEntry[];
+}
+
+export function getVersionDiff(
+  applicationId: string,
+  fromVersionId: string,
+  toVersionId: string,
+): Promise<VersionDiff> {
+  return apiFetch<VersionDiff>(
+    `${applicationsPath(applicationId)}/versions/${encodeURIComponent(fromVersionId)}/diff/${encodeURIComponent(toVersionId)}`,
+  );
+}
+
 export function getValidationChecks(
   applicationVersionId: string,
 ): Promise<ValidationCheckRecord[]> {

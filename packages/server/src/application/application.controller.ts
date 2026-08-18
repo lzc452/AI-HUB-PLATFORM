@@ -57,6 +57,8 @@ import {
   TransferOwnerRequestDto,
   TransferReviewRequestDto,
   ValidationCheckDto,
+  VersionDiffDto,
+  VersionSnapshotDto,
   WithdrawRequestDto,
 } from "./application.dto.js";
 import type { ApplicationDraft } from "@ai-hub/contracts";
@@ -706,6 +708,61 @@ export class ApplicationController {
   ) {
     const actor = await this.requireActor(employeeId, sessionId, "read");
     return this.applications.listVersions(applicationId, actor);
+  }
+
+  @Get(":applicationId/versions/:versionId/snapshot")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
+  @ApiOperation({ summary: "版本快照内容" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "versionId", description: "应用版本 ID" })
+  @ApiOkResponse({
+    description:
+      "版本提交时的快照内容（无快照记录返回 404 VERSION_SNAPSHOT_NOT_FOUND）",
+    type: VersionSnapshotDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getVersionSnapshot(
+    @Param("applicationId") applicationId: string,
+    @Param("versionId") versionId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() =>
+      this.applications.getVersionSnapshot(actor, applicationId, versionId),
+    );
+  }
+
+  @Get(":applicationId/versions/:fromVersionId/diff/:toVersionId")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_READ)
+  @ApiOperation({ summary: "两版本快照差异" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "fromVersionId", description: "起始版本 ID" })
+  @ApiParam({ name: "toVersionId", description: "目标版本 ID" })
+  @ApiOkResponse({
+    description:
+      "顶层字段级差异：changed（值变化）/ added（to 新增）/ removed（from 移除）",
+    type: VersionDiffDto,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async getVersionDiff(
+    @Param("applicationId") applicationId: string,
+    @Param("fromVersionId") fromVersionId: string,
+    @Param("toVersionId") toVersionId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId, "read");
+    return this.call(() =>
+      this.applications.getVersionDiff(
+        actor,
+        applicationId,
+        fromVersionId,
+        toVersionId,
+      ),
+    );
   }
 
   @Get(":applicationId/deliveries")

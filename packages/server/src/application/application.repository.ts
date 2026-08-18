@@ -15,6 +15,7 @@ import type {
   ApplicationAdminListResult,
   DeliveryChannel,
   ValidationCheckRecord,
+  VersionSnapshotRecord,
 } from "./application.types.js";
 import type {
   ActorContext,
@@ -450,6 +451,19 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .insertInto("application_version_snapshots")
       .values({ application_version_id: applicationVersionId, payload })
       .execute();
+  }
+
+  async findVersionSnapshot(
+    applicationVersionId: string,
+  ): Promise<VersionSnapshotRecord | null> {
+    const row = await this.db
+      .selectFrom("application_version_snapshots")
+      .select(["payload", "created_at"])
+      .where("application_version_id", "=", applicationVersionId)
+      .executeTakeFirst();
+    return row === undefined
+      ? null
+      : { payload: row.payload, createdAt: row.created_at };
   }
 
   async getApplicationType(applicationId: string): Promise<string | null> {

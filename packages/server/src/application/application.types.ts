@@ -72,6 +72,19 @@ export interface ApplicationVersionRecord {
   createdAt: Date;
 }
 
+/** 版本快照记录：版本提交时持久化的完整草稿内容（application_version_snapshots）。 */
+export interface VersionSnapshotRecord {
+  payload: unknown;
+  createdAt: Date;
+}
+
+/** 顶层字段级版本差异。 */
+export interface VersionDiffResult {
+  changed: Array<{ field: string; from: unknown; to: unknown }>;
+  added: Array<{ field: string; value: unknown }>;
+  removed: Array<{ field: string; value: unknown }>;
+}
+
 export interface ArtifactUploadRecord {
   uploadId: string;
   applicationId: string;
@@ -293,6 +306,9 @@ export interface ApplicationRepository {
     applicationVersionId: string,
     payload: unknown,
   ): Promise<void>;
+  findVersionSnapshot(
+    applicationVersionId: string,
+  ): Promise<VersionSnapshotRecord | null>;
   getApplicationType(applicationId: string): Promise<string | null>;
   listAdmin?(
     actor: ActorContext,
