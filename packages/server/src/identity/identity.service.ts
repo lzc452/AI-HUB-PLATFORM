@@ -36,11 +36,34 @@ const assignableRoleCodeSet: ReadonlySet<string> = new Set(
 );
 
 /**
- * V1 角色收敛：所有角色分配通道只允许分发 ASSIGNABLE_ROLE_CODES 内的编码；
- * 其余预置角色保留定义但不可新分配（存量已分配角色不受影响）。
+ * V1 角色收敛（全量校验）：用于全新用户的角色分配（创建员工、CSV 导入），
+ * 目标角色集必须全部是 ASSIGNABLE_ROLE_CODES 内的编码。
  */
 function assertAssignableRoleCodes(roleCodes: readonly string[]): void {
   if (roleCodes.some((roleCode) => !assignableRoleCodeSet.has(roleCode))) {
+    throw new Error("ROLE_NOT_ASSIGNABLE_IN_V1");
+  }
+}
+
+/**
+ * V1 角色收敛（差异校验）：用于既有员工的角色替换（直调分配、编辑更新）。
+ * 只拦截"新分配"的非分发编码；员工已持有的存量角色编码允许原样保留，
+ * 移除任意编码（含清空角色）一律允许——编辑持有 legacy 角色的用户不应 400。
+ */
+async function assertNoNewNonAssignableRoles(
+  repository: IdentityRepository,
+  employeeId: EmployeeId,
+  roleCodes: readonly string[],
+): Promise<void> {
+  const currentRoleCodes = new Set(
+    (await repository.listEmployeeRoles(employeeId)).map(
+      (role) => role.roleCode,
+    ),
+  );
+  const newlyGranted = [...new Set(roleCodes)].filter(
+    (roleCode) => !currentRoleCodes.has(roleCode),
+  );
+  if (newlyGranted.some((roleCode) => !assignableRoleCodeSet.has(roleCode))) {
     throw new Error("ROLE_NOT_ASSIGNABLE_IN_V1");
   }
 }
@@ -198,7 +221,11 @@ export class IdentityService {
     },
   ): Promise<void> {
     if (input.roleCodes !== undefined) {
-      assertAssignableRoleCodes(input.roleCodes);
+      await assertNoNewNonAssignableRoles(
+        this.repository,
+        employeeId,
+        input.roleCodes,
+      );
     }
     await this.repository.withTransaction(async (repository) => {
       await repository.updateEmployee(employeeId, input);
@@ -321,7 +348,7 @@ export class IdentityService {
     employeeId: EmployeeId,
     roleCodes: readonly string[],
   ): Promise<void> {
-    assertAssignableRoleCodes(roleCodes);
+    await assertNoNewNonAssignableRoles(this.repository, employeeId, roleCodes);
     await this.repository.withTransaction(async (repository) => {
       await repository.setEmployeeRoles(employeeId, roleCodes);
       await repository.recordAudit({

@@ -952,7 +952,7 @@ describe("IdentityService", () => {
     expect(await repository.findEmployee("E200")).toBeNull();
   });
 
-  it("rejects assigning non-assignable roles via setEmployeeRoles", async () => {
+  it("rejects granting non-assignable roles to a normal user via setEmployeeRoles", async () => {
     const repository = new MemoryIdentityRepository();
     await repository.createEmployee({
       employeeId: "E201",
@@ -961,11 +961,56 @@ describe("IdentityService", () => {
       status: "active",
       passwordHash: null,
     });
+    await repository.assignRole("E201", "employee");
     const service = new IdentityService(repository);
 
     await expect(
-      service.setEmployeeRoles(adminActor, "E201", ["application_admin"]),
+      service.setEmployeeRoles(adminActor, "E201", [
+        "employee",
+        "application_admin",
+      ]),
     ).rejects.toThrow("ROLE_NOT_ASSIGNABLE_IN_V1");
+  });
+
+  it("preserves legacy roles when setEmployeeRoles grants assignable ones", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E205",
+      displayName: "Legacy Plus",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    await repository.assignRole("E205", "application_admin");
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.setEmployeeRoles(adminActor, "E205", [
+        "application_admin",
+        "employee",
+      ]),
+    ).resolves.toBeUndefined();
+    expect(
+      (await repository.listEmployeeRoles("E205")).map((role) => role.roleCode),
+    ).toEqual(["application_admin", "employee"]);
+  });
+
+  it("allows clearing all roles via setEmployeeRoles", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E206",
+      displayName: "Clear Target",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    await repository.assignRole("E206", "application_admin");
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.setEmployeeRoles(adminActor, "E206", []),
+    ).resolves.toBeUndefined();
+    expect(await repository.listEmployeeRoles("E206")).toEqual([]);
   });
 
   it("allows assigning employee and super_admin via setEmployeeRoles", async () => {
@@ -1004,6 +1049,30 @@ describe("IdentityService", () => {
     expect(
       (await repository.listEmployeeRoles("E203")).map((role) => role.roleCode),
     ).toEqual(["application_admin"]);
+  });
+
+  it("preserves legacy roles when updateEmployee re-sends them with assignable codes", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E207",
+      displayName: "Edit Legacy",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    await repository.assignRole("E207", "application_admin");
+    const service = new IdentityService(repository);
+
+    // 前端编辑流：roleCodes = 存量 legacy 编码 + 可分发编码
+    await service.updateEmployee(adminActor, "E207", {
+      displayName: "编辑后姓名",
+      roleCodes: ["application_admin", "employee"],
+    });
+
+    expect(
+      (await repository.listEmployeeRoles("E207")).map((role) => role.roleCode),
+    ).toEqual(["application_admin", "employee"]);
+    expect(repository.employees.get("E207")?.displayName).toBe("编辑后姓名");
   });
 
   it("rejects employee creation with non-assignable V1 roles", async () => {
