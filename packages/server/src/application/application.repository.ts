@@ -744,6 +744,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         ArtifactUploadRecord,
         | "sha256"
         | "signature"
+        | "signed"
         | "sizeBytes"
         | "uploadStatus"
         | "scanStatus"
@@ -764,6 +765,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         ...(input.signature === undefined
           ? {}
           : { signature: input.signature }),
+        ...(input.signed === undefined ? {} : { signed: input.signed }),
         ...(input.sizeBytes === undefined
           ? {}
           : { size_bytes: input.sizeBytes }),
@@ -1538,7 +1540,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       kind: row.kind as ArtifactUploadRecord["kind"],
       sha256: row.sha256,
       signature: row.signature,
-      signed: row.signed,
+      // 任何查询路径都不默认 signed=true：兜底按 signature 推导（未签名→false）。
+      signed:
+        row.signed ?? (row.signature !== null && row.signature.length > 0),
       partCount: row.part_count,
       uploadStatus: row.upload_status as ArtifactUploadRecord["uploadStatus"],
       scanStatus: row.scan_status,

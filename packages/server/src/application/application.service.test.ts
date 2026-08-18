@@ -578,7 +578,10 @@ function registerVerifiedUpload(
     kind: "artifact",
     sha256: input.artifactSha256,
     signature: input.artifactSignature,
-    signed: input.signed ?? true,
+    // 与生产语义一致：未显式指定时按签名推导，不默认 true。
+    signed:
+      input.signed ??
+      (input.artifactSignature !== null && input.artifactSignature.length > 0),
     partCount: 1,
     uploadStatus: "completed",
     scanStatus: "passed",

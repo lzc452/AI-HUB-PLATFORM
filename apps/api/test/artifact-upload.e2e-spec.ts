@@ -306,6 +306,7 @@ describe("artifact upload API", () => {
     expect(completed.body).toMatchObject({
       uploadStatus: "completed",
       scanStatus: "passed",
+      signed: true,
       objectKey: `applications/app-1/artifacts/${created.body.uploadId}`,
     });
     expect(
@@ -378,6 +379,44 @@ describe("artifact upload API", () => {
     expect(casRepository.uploads.get(created.body.uploadId)?.uploadStatus).toBe(
       "verifying",
     );
+  });
+
+  it("records unsigned sync-pipeline completions as signed=false, never defaulting to true", async () => {
+    const content = Buffer.from("artifact");
+    const created = await createUpload(content.byteLength).expect(201);
+    await request(app.getHttpServer())
+      .put(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/content`,
+      )
+      .set(ownerHeaders)
+      .set("content-type", "application/octet-stream")
+      .send(content)
+      .expect(200);
+
+    const permissivePipeline = new ArtifactPipeline(storage, {
+      async scan() {
+        return "clean";
+      },
+      async verify() {
+        return true;
+      },
+    });
+    const controller = app.get(ArtifactUploadController) as unknown as {
+      pipeline: ArtifactPipeline;
+    };
+    controller.pipeline = permissivePipeline;
+
+    const completed = await request(app.getHttpServer())
+      .post(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/complete`,
+      )
+      .set(ownerHeaders)
+      .send({ signature: "" })
+      .expect(200);
+
+    expect(completed.body.uploadStatus).toBe("completed");
+    expect(completed.body.scanStatus).toBe("passed");
+    expect(completed.body.signed).toBe(false);
   });
 
   it("fails closed when verification is unavailable", async () => {

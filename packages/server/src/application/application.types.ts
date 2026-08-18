@@ -283,6 +283,7 @@ export interface ApplicationRepository {
         ArtifactUploadRecord,
         | "sha256"
         | "signature"
+        | "signed"
         | "sizeBytes"
         | "uploadStatus"
         | "scanStatus"
