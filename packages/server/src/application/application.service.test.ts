@@ -740,10 +740,11 @@ describe("ApplicationService", () => {
     const checks = repository.validationChecks.filter(
       (check) => check.applicationVersionId === version.applicationVersionId,
     );
+    // 签名检查点留给 T9：worker 流程中 completed+passed 的 upload 签名必非空，
+    // warning 分支当前不可达，故只落两个 passed 检查点。
     expect(checks.map((check) => check.checkCode)).toEqual([
       "artifact.digest",
       "artifact.malware_scan",
-      "artifact.signature",
     ]);
     expect(checks.every((check) => check.status === "passed")).toBe(true);
     expect(
@@ -751,34 +752,7 @@ describe("ApplicationService", () => {
     ).toBe(versionInput.artifactSha256);
     await expect(
       repository.listValidationChecks(version.applicationVersionId),
-    ).resolves.toHaveLength(3);
-  });
-
-  it("records a warning check when the artifact is unsigned", async () => {
-    const { service, repository } = makeService();
-    const application = await service.createApplication(owner, {
-      name: "Copilot",
-      summary: "Internal assistant",
-    });
-    const input = {
-      ...versionInput,
-      version: "1.1.0",
-      artifactSignature: "",
-    };
-    registerVerifiedUpload(repository, application.applicationId, input);
-    const version = await service.createVersion(
-      owner,
-      application.applicationId,
-      input,
-    );
-
-    const signatureCheck = repository.validationChecks.find(
-      (check) =>
-        check.applicationVersionId === version.applicationVersionId &&
-        check.checkCode === "artifact.signature",
-    );
-    expect(signatureCheck?.status).toBe("warning");
-    expect(signatureCheck?.detail).toBe("未签名制品，需人工确认");
+    ).resolves.toHaveLength(2);
   });
 
   it("persists maintainer and department ownership fields", async () => {

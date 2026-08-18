@@ -35,7 +35,8 @@ export interface CreatorRepository {
     changedFields: readonly string[];
   }>;
   getValidationReport(applicationId: string): Promise<{
-    status: "passed" | "failed";
+    /** 无任何检查点时为 no_record，绝不虚构通过/失败。 */
+    status: "passed" | "no_record";
     checks: readonly {
       code: string;
       label: string;

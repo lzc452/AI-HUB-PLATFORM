@@ -157,18 +157,14 @@ export default function CreatorCenterPage() {
                     color={
                       summary.data.validationReport.status === "passed"
                         ? "success"
-                        : "error"
+                        : "default"
                     }
                   >
                     {summary.data.validationReport.status === "passed"
                       ? "校验通过"
-                      : "校验失败"}
+                      : "尚无自动校验记录"}
                   </Tag>
-                  {summary.data.validationReport.checks.length === 0 ? (
-                    <Paragraph className="!mt-3 !mb-0 text-[13px] text-[#8a94a6]">
-                      该版本尚无自动校验记录
-                    </Paragraph>
-                  ) : (
+                  {summary.data.validationReport.checks.length > 0 && (
                     <ul className="m-0 mt-3 space-y-2 pl-5">
                       {summary.data.validationReport.checks.map((check) => (
                         <li

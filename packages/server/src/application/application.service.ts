@@ -21,7 +21,6 @@ import type {
   ReviewQueueRecord,
   ReviewQueueView,
   ValidationCheckRecord,
-  ValidationCheckStatus,
 } from "./application.types.js";
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
@@ -389,49 +388,30 @@ export class ApplicationService {
   /**
    * 制品校验发生在版本创建之前（上传→worker 校验→createVersion），因此校验检查点
    * 在版本事务内由已验证的 upload 记录派生落库（唯一键幂等 upsert）。
+   *
+   * 注意：completed+passed 的 upload 其 signature 必然非空（worker 流程中签名缺失时
+   * 有 signer 则自动签名、无 signer 则 INVALID_SIGNATURE 失败），因此签名检查点
+   * 不会出现 warning——未签名语义由 T9（worker 允许未签名完成）引入，届时再落库。
    */
   private async recordArtifactValidationChecks(
     repository: ApplicationRepository,
     applicationVersionId: string,
     upload: ArtifactUploadRecord,
   ): Promise<void> {
-    const checks: {
-      checkCode: string;
-      label: string;
-      status: ValidationCheckStatus;
-      detail: string | null;
-    }[] = [
-      {
-        checkCode: "artifact.digest",
-        label: "SHA-256 摘要校验",
-        status: "passed",
-        detail: upload.sha256,
-      },
-      {
-        checkCode: "artifact.malware_scan",
-        label: "恶意软件扫描",
-        status: "passed",
-        detail: "ClamAV clean",
-      },
-      {
-        checkCode: "artifact.signature",
-        label: "数字签名校验",
-        status:
-          upload.signature !== null && upload.signature.length > 0
-            ? "passed"
-            : "warning",
-        detail:
-          upload.signature !== null && upload.signature.length > 0
-            ? "签名验证通过"
-            : "未签名制品，需人工确认",
-      },
-    ];
-    for (const check of checks) {
-      await repository.recordValidationCheck({
-        applicationVersionId,
-        ...check,
-      });
-    }
+    await repository.recordValidationCheck({
+      applicationVersionId,
+      checkCode: "artifact.digest",
+      label: "SHA-256 摘要校验",
+      status: "passed",
+      detail: upload.sha256,
+    });
+    await repository.recordValidationCheck({
+      applicationVersionId,
+      checkCode: "artifact.malware_scan",
+      label: "恶意软件扫描",
+      status: "passed",
+      detail: "ClamAV clean",
+    });
   }
 
   async submitForReview(

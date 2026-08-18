@@ -117,7 +117,8 @@ export interface CreatorSummary {
     changedFields: string[];
   };
   validationReport: {
-    status: "passed" | "failed";
+    /** 无任何检查点时后端返回 no_record（不虚构通过/失败）。 */
+    status: "passed" | "no_record";
     checks: {
       code: string;
       label: string;

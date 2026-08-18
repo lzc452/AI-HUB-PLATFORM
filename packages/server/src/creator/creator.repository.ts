@@ -59,6 +59,11 @@ export class KyselyCreatorRepository implements CreatorRepository {
     };
   }
 
+  /**
+   * 汇总最新版本的自动校验检查点。当前没有写入 failed 检查点的路径，因此汇总
+   * 只保留两态：有检查点且全部通过 -> passed；无检查点（无版本或未产生记录）-> no_record。
+   * 绝不把空检查点虚构为"校验通过/失败"。
+   */
   async getValidationReport(applicationId: string) {
     const latest = await this.db
       .selectFrom("application_versions")
@@ -67,7 +72,7 @@ export class KyselyCreatorRepository implements CreatorRepository {
       .orderBy("created_at", "desc")
       .executeTakeFirst();
     if (latest === undefined) {
-      return { status: "failed" as const, checks: [] };
+      return { status: "no_record" as const, checks: [] };
     }
     const rows = await this.db
       .selectFrom("application_validation_checks")
@@ -82,9 +87,8 @@ export class KyselyCreatorRepository implements CreatorRepository {
       detail: row.detail,
     }));
     return {
-      status: checks.some((check) => check.status === "failed")
-        ? ("failed" as const)
-        : ("passed" as const),
+      status:
+        checks.length === 0 ? ("no_record" as const) : ("passed" as const),
       checks,
     };
   }

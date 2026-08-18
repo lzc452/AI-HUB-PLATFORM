@@ -50,7 +50,15 @@ class MemoryCreatorRepository implements CreatorRepository {
       changedFields: ["summary"],
     };
   }
-  async getValidationReport() {
+  async getValidationReport(): Promise<{
+    status: "passed" | "no_record";
+    checks: readonly {
+      code: string;
+      label: string;
+      status: "passed" | "safe" | "warning" | "info" | "failed";
+      detail: string | null;
+    }[];
+  }> {
     return {
       status: "passed" as const,
       checks: [
@@ -96,6 +104,23 @@ describe("CreatorService", () => {
       metrics: { redirectCount: 5, ratingAverage: 4.5 },
     });
     expect(result).not.toHaveProperty("visitorEmployeeIds");
+  });
+
+  it("passes through no_record when the report has no checks", async () => {
+    class EmptyReportRepository extends MemoryCreatorRepository {
+      override async getValidationReport() {
+        return { status: "no_record" as const, checks: [] };
+      }
+    }
+    const service = new CreatorService(new EmptyReportRepository(), {
+      authorize: allowAll,
+    });
+    const result = await service.getApplicationSummary(owner, "app-1");
+
+    expect(result.validationReport).toEqual({
+      status: "no_record",
+      checks: [],
+    });
   });
 
   it("rejects a non-owner and non-maintainer from creator data", async () => {
