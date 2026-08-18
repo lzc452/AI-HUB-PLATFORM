@@ -777,6 +777,21 @@ export class ApplicationService {
             sourceStatus === "withdrawn" ||
             sourceStatus === "archived")
         ) {
+          // 桌面端/移动端应用自动上架必须有安装包制品（P1-7）：向导 submitDraft
+          // 创建的无制品版本不经过 submitForReview 就直接进入审核队列，approve
+          // 自动上架是最后一道闸——与 submitForReview 门禁互为双保险，确保发布
+          // 的版本一定有安装包。类型未知（catalog metadata 缺失的存量应用）时
+          // 豁免，与 assertDeliveryChannelsComplete 的 typeKnown 豁免一致。
+          const applicationType = await repository.getApplicationType(
+            application.applicationId,
+          );
+          if (
+            (applicationType === "desktop_app" ||
+              applicationType === "mobile_app") &&
+            version.artifactKey === null
+          ) {
+            throw new Error("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+          }
           await this.assertDeliveryChannelsComplete(
             repository,
             application.applicationId,

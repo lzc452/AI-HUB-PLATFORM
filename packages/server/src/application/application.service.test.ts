@@ -2997,4 +2997,98 @@ describe("ApplicationService", () => {
     expect(published.status).toBe("published");
     expect(published.currentVersionId).toBe(version.applicationVersionId);
   });
+
+  it("rejects auto-publish approval for a wizard-submitted desktop app without an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "desktop_app",
+    });
+    // 向导路径：submitDraft 直接创建无制品版本并进入审核队列，不经过
+    // submitForReview（P1-7 缺口——approve 自动上架门禁兜底）。
+    await service.submitDraft(owner, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    // 已配置桌面渠道：若仅靠渠道完整性门禁，approve 会通过——拒绝必须来自制品门禁。
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "desktop",
+      entryUrl: "https://download.internal/app",
+      enabled: true,
+    });
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await expect(
+      service.review(reviewer, version.applicationVersionId, "approve", "ok"),
+    ).rejects.toThrow("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
+    // 事务整体回滚：不发布、不注册目录。
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ status: "in_review" });
+    expect(repository.catalogRegistrations).toHaveLength(0);
+    expect(repository.events).not.toContain("application.published");
+  });
+
+  it("allows auto-publish approval for an artifact-less app when the type is unknown", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "desktop_app",
+    });
+    await service.submitDraft(owner, application.applicationId);
+    // 模拟存量应用缺失 catalog metadata：类型未知 → 豁免制品门禁（与
+    // assertDeliveryChannelsComplete 的 typeKnown 豁免一致）。
+    repository.catalogTypes.delete(application.applicationId);
+    // 未知类型回退到四类渠道齐全才可自动上架。
+    await configureAllDeliveryChannels(service, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const published = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(published.status).toBe("published");
+    expect(repository.catalogRegistrations).toEqual([
+      application.applicationId,
+    ]);
+  });
+
+  it("auto-publishes a desktop app whose approved version has an artifact", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    repository.catalogTypes.set(application.applicationId, "desktop_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "desktop",
+      entryUrl: "https://download.internal/app",
+      enabled: true,
+    });
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const published = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(published.status).toBe("published");
+    expect(published.currentVersionId).toBe(version.applicationVersionId);
+  });
 });
