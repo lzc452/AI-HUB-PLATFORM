@@ -117,15 +117,42 @@ export class KyselyCatalogRepository implements CatalogRepository {
 
     const queryText = input.query?.trim();
     if (queryText !== undefined && queryText.length > 0) {
-      const pattern = `%${queryText}%`;
-      query = query.where((eb) =>
-        eb.or([
-          eb("metadata.search_name", "ilike", pattern),
-          eb("metadata.search_summary", "ilike", pattern),
-          eb("metadata.search_pinyin", "ilike", pattern),
-          eb("metadata.search_initials", "ilike", pattern),
-        ]),
-      );
+      const prefix = `${queryText}%`;
+      const fuzzy = `%${queryText}%`;
+      // `%` 是 pg_trgm 相似度运算符（Kysely 无此比较器，用 raw SQL 表达式）。
+      const trgmSimilar = sql<boolean>`metadata.search_name % ${queryText}`;
+      // 规格 §10.2：精确匹配、名称前缀、标签分类、简介模糊依次排序。
+      // WHERE 保留 ILIKE 中缀兜底（gin_trgm_ops 索引可加速），ORDER BY
+      // CASE 表达式给出 exact → 前缀 → trgm → 简介模糊的排序优先级。
+      query = query
+        .where((eb) =>
+          eb.or([
+            eb("metadata.search_name", "=", queryText),
+            eb("metadata.search_name", "ilike", fuzzy),
+            eb("metadata.search_pinyin", "ilike", fuzzy),
+            eb("metadata.search_initials", "ilike", prefix),
+            eb("metadata.search_summary", "ilike", fuzzy),
+            trgmSimilar,
+          ]),
+        )
+        .orderBy((eb) =>
+          eb
+            .case()
+            .when("metadata.search_name", "=", queryText)
+            .then(0)
+            .when("metadata.search_name", "ilike", prefix)
+            .then(1)
+            .when("metadata.search_pinyin", "ilike", prefix)
+            .then(2)
+            .when("metadata.search_initials", "ilike", prefix)
+            .then(3)
+            .when(trgmSimilar)
+            .then(4)
+            .when("metadata.search_summary", "ilike", fuzzy)
+            .then(5)
+            .else(6)
+            .end(),
+        );
     }
     if (input.categoryId !== undefined) {
       query = query.where("metadata.category_id", "=", input.categoryId);
@@ -200,9 +227,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
     return result.items[0] ?? null;
   }
 
-  async findApplicationOwner(
-    applicationId: string,
-  ): Promise<{
+  async findApplicationOwner(applicationId: string): Promise<{
     ownerEmployeeId: string;
     maintainerEmployeeId: string | null;
   } | null> {
