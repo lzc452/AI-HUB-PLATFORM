@@ -174,6 +174,8 @@ export async function seedDemoBusinessData(
       })
       .onConflict((conflict) =>
         conflict.column("application_id").doUpdateSet({
+          owner_employee_id: "DEMO-EMPLOYEE",
+          maintainer_employee_id: "DEMO-EMPLOYEE",
           status: "in_review",
           updated_at: startedAt,
         }),

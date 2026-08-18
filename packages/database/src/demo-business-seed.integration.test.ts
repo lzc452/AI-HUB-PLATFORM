@@ -123,6 +123,32 @@ describe("demo business seed", () => {
     expect(openReportCount).toHaveLength(1);
   });
 
+  it("converges appInReview owner/maintainer on upsert rerun", async () => {
+    // 模拟上一提交（362533a）播种的库：appInReview 的 owner/maintainer 仍为
+    // DEMO-SUPER-ADMIN（onConflict 只更新了 status）。重跑 seed 必须收敛为
+    // DEMO-EMPLOYEE，避免 owner 与版本 created_by（DEMO-EMPLOYEE）不一致。
+    await db
+      .updateTable("applications")
+      .set({
+        owner_employee_id: "DEMO-SUPER-ADMIN",
+        maintainer_employee_id: "DEMO-SUPER-ADMIN",
+      })
+      .where("application_id", "=", APP_IN_REVIEW)
+      .execute();
+
+    await seedDemoBusinessData(db);
+
+    const row = await db
+      .selectFrom("applications")
+      .select(["owner_employee_id", "maintainer_employee_id"])
+      .where("application_id", "=", APP_IN_REVIEW)
+      .executeTakeFirstOrThrow();
+    expect(row).toEqual({
+      owner_employee_id: "DEMO-EMPLOYEE",
+      maintainer_employee_id: "DEMO-EMPLOYEE",
+    });
+  });
+
   it("keeps row counts stable when seeded again", async () => {
     await seedDemoBusinessData(db);
 
