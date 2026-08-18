@@ -31,6 +31,13 @@ describe("system role registry", () => {
     ).toBe(false);
   });
 
+  it("grants demand.claim to the employee role so staff can submit claim proposals", () => {
+    const employee = SYSTEM_ROLE_DEFINITIONS.find(
+      (role) => role.roleCode === "employee",
+    );
+    expect(employee?.permissions).toContain(PERMISSIONS.DEMAND_CLAIM);
+  });
+
   it("grants notification.create to every role that can trigger a notification queue", () => {
     for (const roleCode of [
       "employee",
