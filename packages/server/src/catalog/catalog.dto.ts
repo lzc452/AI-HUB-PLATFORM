@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { Type } from "class-transformer";
-import {
-  IsIn,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from "class-validator";
+import { IsIn, IsOptional, IsString, MaxLength } from "class-validator";
 import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 /** 记录目录行为请求。 */
@@ -134,6 +128,21 @@ export class CatalogEntryDto {
     example: 4.5,
   })
   ratingAverage?: number | null;
+
+  @ApiPropertyOptional({
+    description: "当前用户评分（1-5，未评分为 null）",
+    type: Number,
+    nullable: true,
+    example: 4,
+  })
+  myRating?: number | null;
+
+  @ApiPropertyOptional({
+    description: "当前用户是否已点赞",
+    type: Boolean,
+    example: false,
+  })
+  likedByMe?: boolean;
 
   @ApiProperty({
     type: String,

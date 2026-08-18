@@ -33,6 +33,8 @@ function catalogEntry(applicationId = "app-1"): CatalogEntry {
     deliveryChannels: ["web"],
     likeCount: 0,
     ratingAverage: null,
+    myRating: null,
+    likedByMe: false,
     healthStatus: "healthy",
     deprecatedReason: null,
     replacementApplicationId: null,

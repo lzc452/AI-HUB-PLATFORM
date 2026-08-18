@@ -42,6 +42,8 @@ function publishedEntry(): CatalogEntry {
     deliveryChannels: ["web"],
     likeCount: 0,
     ratingAverage: null,
+    myRating: null,
+    likedByMe: false,
     healthStatus: "healthy",
     deprecatedReason: null,
     replacementApplicationId: null,
@@ -50,7 +52,10 @@ function publishedEntry(): CatalogEntry {
 
 function makeRepository(opts: {
   visible: CatalogEntry | null;
-  owner?: { ownerEmployeeId: string; maintainerEmployeeId: string | null } | null;
+  owner?: {
+    ownerEmployeeId: string;
+    maintainerEmployeeId: string | null;
+  } | null;
 }): Pick<CatalogRepository, "findVisible" | "findApplicationOwner"> {
   return {
     findVisible: async () => opts.visible,

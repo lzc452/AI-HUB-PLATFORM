@@ -25,6 +25,8 @@ const entry: CatalogEntry = {
   deliveryChannels: ["web"],
   likeCount: 10,
   ratingAverage: 4.5,
+  myRating: null,
+  likedByMe: false,
   healthStatus: "healthy",
   deprecatedReason: null,
   replacementApplicationId: null,

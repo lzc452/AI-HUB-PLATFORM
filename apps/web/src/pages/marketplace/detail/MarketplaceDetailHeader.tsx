@@ -1,5 +1,5 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
-import { LikeOutlined, StarFilled } from "@ant-design/icons";
+import { LikeFilled, LikeOutlined, StarFilled } from "@ant-design/icons";
 import { Button, Dropdown, Rate, Tag, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
@@ -26,13 +26,16 @@ export interface MarketplaceDetailHeaderProps {
   ratingDisabled: boolean;
   ratingPending: boolean;
   likePending: boolean;
-  myRating?: number;
+  /** 当前用户评分（1-5）；未评分时为 null/0。 */
+  myRating?: number | null;
+  /** 当前用户是否已点赞。 */
+  likedByMe: boolean;
 }
-
 
 /** 顶部 Header 区：图标 + 应用名 + 信任标签 + 元信息行 + 立即使用/收藏。 */
 export function MarketplaceDetailHeader({
   entry,
+  likedByMe,
   likePending,
   onLike,
   onRate,
@@ -40,8 +43,8 @@ export function MarketplaceDetailHeader({
   resolving,
   ratingDisabled,
   ratingPending,
+  myRating = 0,
 }: MarketplaceDetailHeaderProps) {
-  
   const departments = useDepartments();
   const departmentName = departments.data?.find(
     (item) => item.departmentId === entry.departmentId,
@@ -113,19 +116,28 @@ export function MarketplaceDetailHeader({
             </div>
           </div>
         </div>
-        <section aria-label="应用操作" className="flex flex-col gap-2 md:items-end">
-          
+        <section
+          aria-label="应用操作"
+          className="flex flex-col gap-2 md:items-end"
+        >
           <section
             aria-label="应用互动"
             className="flex flex-wrap items-center gap-4"
           >
             <Button
               aria-label="点赞应用"
-              icon={<LikeOutlined aria-hidden="true" />}
+              icon={
+                likedByMe ? (
+                  <LikeFilled aria-hidden="true" />
+                ) : (
+                  <LikeOutlined aria-hidden="true" />
+                )
+              }
               loading={likePending}
               onClick={onLike}
+              type={likedByMe ? "primary" : "default"}
             >
-              点赞
+              {likedByMe ? "已赞" : "点赞"}
             </Button>
             <span className="text-sm text-[#595959]">
               综合评分：
@@ -139,7 +151,7 @@ export function MarketplaceDetailHeader({
                 aria-label="为应用评分"
                 disabled={ratingDisabled}
                 onChange={(stars) => onRate(stars)}
-                {...(ratingPending ? { value: 0 } : {})}
+                value={ratingPending ? 0 : (myRating ?? 0)}
               />
             </span>
           </section>
@@ -176,8 +188,6 @@ export function MarketplaceDetailHeader({
           </div>
         </section>
       </div>
-
-      
     </header>
   );
 }

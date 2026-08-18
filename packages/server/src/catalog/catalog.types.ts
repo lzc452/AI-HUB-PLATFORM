@@ -27,6 +27,8 @@ export interface CatalogEntry {
   likeCount: number;
   ratingAverage: number | null;
   ratingCount?: number;
+  myRating: number | null;
+  likedByMe: boolean;
   maintainers?: readonly string[];
   attachments?: readonly {
     name: string;
@@ -88,7 +90,10 @@ export interface CatalogRepository {
   /** 应用归属信息（与发布状态无关），用于 owner/maintainer 管理自身应用的可见性判定。 */
   findApplicationOwner(
     applicationId: string,
-  ): Promise<{ ownerEmployeeId: string; maintainerEmployeeId: string | null } | null>;
+  ): Promise<{
+    ownerEmployeeId: string;
+    maintainerEmployeeId: string | null;
+  } | null>;
   recordDeliveryAction(input: {
     applicationId: string;
     applicationVersionId: string;

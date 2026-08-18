@@ -1,8 +1,7 @@
 import { Card, message, Modal, Skeleton, Tabs } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { useAuth } from "../../modules/auth/useAuth";
 import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
@@ -37,9 +36,7 @@ import { MarketplaceDetailHeader } from "./detail/MarketplaceDetailHeader";
 import { MarketplaceDetailHistory } from "./detail/MarketplaceDetailHistory";
 import { MarketplaceDetailReviews } from "./detail/MarketplaceDetailReviews";
 import { MarketplaceDetailRisk } from "./detail/MarketplaceDetailRisk";
-import {
-  useDetailTabParam,
-} from "./detail/MarketplaceDetailTabs";
+import { useDetailTabParam } from "./detail/MarketplaceDetailTabs";
 
 function MarketplaceDetailSkeleton() {
   return (
@@ -61,7 +58,6 @@ function MarketplaceDetailSkeleton() {
 }
 
 export default function MarketplaceDetailPage() {
-  const { actor } = useAuth();
   const { applicationId } = useParams();
   const { data, error, isError, isPending } = useCatalogEntry(applicationId);
   const toggleLike = useToggleLike(applicationId);
@@ -85,14 +81,6 @@ export default function MarketplaceDetailPage() {
     activeTab === "reviews" ? applicationId : undefined,
     ratingsPage,
     10,
-  );
-  const myRatingsQuery = useRatings(applicationId, 1, 10);
-  const myRating = useMemo(
-    () =>
-      myRatingsQuery.data?.items.find(
-        (rating) => rating.employeeId === actor?.employeeId,
-      )?.stars ?? 0,
-    [actor?.employeeId, myRatingsQuery.data],
   );
   const comments = useComments(
     activeTab === "reviews" ? applicationId : undefined,
@@ -191,7 +179,11 @@ export default function MarketplaceDetailPage() {
     "risk",
   ];
 
-  const TAB_LABELS: ReadonlyArray<{ key: DetailTab; label: string; children?: React.ReactNode }> = [
+  const TAB_LABELS: ReadonlyArray<{
+    key: DetailTab;
+    label: string;
+    children?: React.ReactNode;
+  }> = [
     { key: "description", label: "描述" },
     { key: "history", label: "版本历史" },
     { key: "reviews", label: "评价管理" },
@@ -210,7 +202,8 @@ export default function MarketplaceDetailPage() {
       <MarketplaceDetailHeader
         entry={data}
         likePending={toggleLike.isPending}
-        myRating={myRating}
+        likedByMe={data.likedByMe}
+        myRating={data.myRating}
         onLike={() => toggleLike.mutate()}
         onRate={(stars) => rateApplication.mutate(stars)}
         onResolve={(channel) => void handleResolve(channel)}

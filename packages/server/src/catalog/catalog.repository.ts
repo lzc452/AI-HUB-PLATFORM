@@ -23,6 +23,8 @@ type CatalogRow = {
   recommendationRank: number;
   likeCount: number;
   ratingAverage: number | null;
+  myRating: number | null;
+  likedByMe: boolean;
   healthStatus: "unknown" | "healthy" | "degraded" | "failed";
   deprecatedReason: string | null;
   replacementApplicationId: string | null;
@@ -88,6 +90,19 @@ export class KyselyCatalogRepository implements CatalogRepository {
           from application_ratings rating_count
           where rating_count.application_id = application.application_id
         )`.as("ratingCount"),
+        // 当前 actor 的评分（无评分时标量子查询返回 NULL）与点赞状态。
+        sql<number | null>`(
+          select my_rating.stars
+          from application_ratings my_rating
+          where my_rating.application_id = application.application_id
+            and my_rating.employee_id = ${input.actor.employeeId}
+        )`.as("myRating"),
+        sql<boolean>`exists (
+          select 1
+          from application_likes liked_by_me
+          where liked_by_me.application_id = application.application_id
+            and liked_by_me.employee_id = ${input.actor.employeeId}
+        )`.as("likedByMe"),
       ])
       .where("application.status", "=", "published")
       .where("application.current_version_id", "is not", null)
@@ -333,6 +348,8 @@ export class KyselyCatalogRepository implements CatalogRepository {
         likeCount: row.likeCount,
         ratingAverage: row.ratingAverage,
         ratingCount: row.ratingCount,
+        myRating: row.myRating,
+        likedByMe: row.likedByMe,
         maintainers: row.maintainerName === null ? [] : [row.maintainerName],
         attachments: appAttachments.map((attachment) => ({
           name: attachment.name,

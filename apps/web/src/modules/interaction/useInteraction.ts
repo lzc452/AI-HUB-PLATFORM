@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import {
@@ -20,11 +25,78 @@ function useInvalidateCatalog() {
   return () => queryClient.invalidateQueries({ queryKey: ["catalog"] });
 }
 
+interface LikeableCatalogEntry {
+  applicationId: string;
+  likedByMe: boolean;
+  likeCount: number;
+}
+
+function isLikeableEntry(value: unknown): value is LikeableCatalogEntry {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { applicationId?: unknown }).applicationId === "string"
+  );
+}
+
+function flipEntryLike(entry: LikeableCatalogEntry): LikeableCatalogEntry {
+  const liked = entry.likedByMe;
+  return {
+    ...entry,
+    likedByMe: !liked,
+    likeCount: Math.max(0, entry.likeCount + (liked ? -1 : 1)),
+  };
+}
+
+/**
+ * 乐观翻转 catalog 缓存（详情条目与列表分页）中指定应用的 likedByMe，
+ * 并同步 likeCount；不是目录条目的缓存数据（版本、风险说明等）原样保留。
+ */
+function flipCatalogLike(
+  queryClient: QueryClient,
+  applicationId: string,
+): void {
+  queryClient.setQueriesData<unknown>(
+    { queryKey: ["catalog"] },
+    (current: unknown) => {
+      if (current === null || typeof current !== "object") return current;
+      const record = current as { applicationId?: unknown; items?: unknown };
+      if (record.applicationId === applicationId) {
+        return isLikeableEntry(current) ? flipEntryLike(current) : current;
+      }
+      if (Array.isArray(record.items)) {
+        return {
+          ...record,
+          items: record.items.map((item) =>
+            isLikeableEntry(item) && item.applicationId === applicationId
+              ? flipEntryLike(item)
+              : item,
+          ),
+        };
+      }
+      return current;
+    },
+  );
+}
+
 export function useToggleLike(applicationId: string | undefined) {
+  const queryClient = useQueryClient();
   const invalidateCatalog = useInvalidateCatalog();
   return useMutation({
     mutationFn: () => toggleLike(applicationId as string),
-    onError: (error) => showErrorMessage(error, "点赞操作失败"),
+    onMutate: async () => {
+      if (!applicationId) return;
+      await queryClient.cancelQueries({ queryKey: ["catalog"] });
+      flipCatalogLike(queryClient, applicationId);
+    },
+    onError: (error) => {
+      if (applicationId) {
+        // 反向翻转恢复乐观状态，并失效重取以服务端结果为准。
+        flipCatalogLike(queryClient, applicationId);
+        void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      }
+      showErrorMessage(error, "点赞操作失败");
+    },
     onSuccess: async () => {
       await invalidateCatalog();
       showSuccessMessage("点赞状态已更新");

@@ -219,6 +219,8 @@ const visibleCatalog: CatalogVisibilityPort = {
       deliveryChannels: ["web"],
       likeCount: 0,
       ratingAverage: null,
+      myRating: null,
+      likedByMe: false,
       healthStatus: "healthy",
       deprecatedReason: null,
       replacementApplicationId: null,

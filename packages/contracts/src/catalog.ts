@@ -32,6 +32,10 @@ export interface CatalogEntry {
   likeCount: number;
   ratingAverage: number | null;
   ratingCount?: number;
+  /** 当前用户（actor）的评分（1-5）；未评分时为 null。 */
+  myRating: number | null;
+  /** 当前用户（actor）是否已点赞。 */
+  likedByMe: boolean;
   maintainers?: readonly string[];
   attachments?: readonly {
     name: string;

@@ -37,6 +37,8 @@ const entries: CatalogEntry[] = [
     deliveryChannels: ["web"],
     likeCount: 10,
     ratingAverage: 4.5,
+    myRating: 4,
+    likedByMe: true,
     healthStatus: "healthy",
     deprecatedReason: null,
     replacementApplicationId: null,
@@ -54,6 +56,8 @@ const entries: CatalogEntry[] = [
     deliveryChannels: ["web"],
     likeCount: 100,
     ratingAverage: 4.9,
+    myRating: null,
+    likedByMe: false,
     healthStatus: "unknown",
     deprecatedReason: null,
     replacementApplicationId: null,
@@ -159,6 +163,32 @@ describe("CatalogService", () => {
       items: [{ applicationId: "app-platform" }],
       total: 1,
     });
+  });
+
+  it("透传仓库返回的 myRating 与 likedByMe（列表与详情）", async () => {
+    const service = new CatalogService(new MemoryCatalogRepository());
+
+    // 列表：已评分的应用带出 4 星与已赞，其他应用为 null/false。
+    const list = await service.list({
+      actor: employee,
+      sort: "latest",
+      page: 1,
+      pageSize: 20,
+    });
+    expect(list.items[0]).toMatchObject({
+      applicationId: "app-platform",
+      myRating: 4,
+      likedByMe: true,
+    });
+
+    const detail = await service.getDetail(employee, "app-platform");
+    expect(detail).toMatchObject({ myRating: 4, likedByMe: true });
+
+    const financeDetail = await service.getDetail(
+      outsideEmployee,
+      "app-finance",
+    );
+    expect(financeDetail).toMatchObject({ myRating: null, likedByMe: false });
   });
 
   it("does not return a detail record to an actor outside its audience", async () => {

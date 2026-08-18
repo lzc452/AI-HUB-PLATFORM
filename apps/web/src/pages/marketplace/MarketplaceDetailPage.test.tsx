@@ -167,6 +167,8 @@ function mockEntry(): CatalogEntry {
     deprecatedReason: null,
     healthStatus: "healthy",
     likeCount: 1620,
+    myRating: null,
+    likedByMe: false,
     ratingCount: 24,
     maintainers: ["测试维护人"],
     attachments: [
@@ -287,6 +289,49 @@ describe("MarketplaceDetailPage", () => {
 
     expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
     expect(screen.queryByText("OCR 票据识别")).not.toBeInTheDocument();
+  });
+
+  it("回显当前用户评分（entry.myRating）并允许修改", async () => {
+    catalogEntryState.data = { ...mockEntry(), myRating: 4 };
+
+    const { container } = render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    const rate = screen.getByLabelText("为应用评分");
+    expect(rate).toBeInTheDocument();
+    // antd Rate：已选星数带有 ant-rate-star-full 类。
+    expect(container.querySelectorAll(".ant-rate-star-full").length).toBe(4);
+  });
+
+  it("未评分时不显示已选星星", async () => {
+    catalogEntryState.data = { ...mockEntry(), myRating: null };
+
+    const { container } = render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    expect(container.querySelectorAll(".ant-rate-star-full").length).toBe(0);
+  });
+
+  it("已点赞时按钮高亮为“已赞”主题样式", async () => {
+    catalogEntryState.data = { ...mockEntry(), likedByMe: true };
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    const likeButton = screen.getByRole("button", { name: "点赞应用" });
+    expect(likeButton).toHaveTextContent("已赞");
+    expect(likeButton).toHaveClass("ant-btn-primary");
+  });
+
+  it("未点赞时按钮显示默认“点赞”样式", async () => {
+    catalogEntryState.data = { ...mockEntry(), likedByMe: false };
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    const likeButton = screen.getByRole("button", { name: "点赞应用" });
+    expect(likeButton).toHaveTextContent("点赞");
+    expect(likeButton).not.toHaveClass("ant-btn-primary");
   });
 
   it("允许所有者对根评论发表官方回复", async () => {
