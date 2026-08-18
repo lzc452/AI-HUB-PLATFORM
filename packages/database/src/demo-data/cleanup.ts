@@ -105,6 +105,10 @@ const CLEANUP_ORDER: readonly CleanupStep[] = Object.freeze([
     table: "application_versions",
     where: `application_id::text LIKE '00000001-%'`,
   },
+  {
+    table: "application_maintainers",
+    where: `application_id::text LIKE '00000001-%'`,
+  },
 
   // ═══ ROOT ENTITY TABLES ═══
 

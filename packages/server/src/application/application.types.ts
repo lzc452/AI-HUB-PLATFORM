@@ -269,6 +269,14 @@ export interface ApplicationRepository {
     applicationId: string,
     input: { name: string; summary: string },
   ): Promise<void>;
+  /** 替换式保存维护人列表（先删后插）；主维护人（第一个）同步回写
+   *  applications.maintainer_employee_id，保持目录/列表等单列读取路径有效。 */
+  setMaintainers(
+    applicationId: string,
+    maintainerEmployeeIds: readonly string[],
+  ): Promise<void>;
+  /** 按创建顺序读取维护人列表（主维护人 = 第一个）；无记录时返回空数组。 */
+  listMaintainers(applicationId: string): Promise<readonly string[]>;
   upsertCatalogMetadata(
     applicationId: string,
     input: { categoryId: string; applicationType: string },

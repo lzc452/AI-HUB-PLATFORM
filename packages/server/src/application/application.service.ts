@@ -192,6 +192,12 @@ export class ApplicationService {
     if (sanitizedDraft.examplesHtml !== null)
       assertSafeRichText(sanitizedDraft.examplesHtml);
     await this.repository.upsertDraft(applicationId, sanitizedDraft);
+    // 同步持久化维护人列表（先删后插，主维护人 = 第一个），详情/工作区
+    // 维护人显示与自审守卫读取该关联表（见 isSelfReviewer）。
+    await this.repository.setMaintainers(
+      applicationId,
+      sanitizedDraft.maintainerEmployeeIds,
+    );
     return {
       applicationId,
       status: application.status,
@@ -280,6 +286,11 @@ export class ApplicationService {
       });
       await repository.replaceTagLinks(applicationId, draft.tagIds);
       await repository.replaceAudiences(applicationId, draft.audience);
+      // 维护人列表随提交落库（先删后插）；提交门禁已保证非空。
+      await repository.setMaintainers(
+        applicationId,
+        draft.maintainerEmployeeIds,
+      );
 
       const version = await repository.createVersion({
         applicationVersionId: randomUUID(),
@@ -1382,19 +1393,24 @@ export class ApplicationService {
     if (!decision.allowed) throw new Error("NOT_AUTHORIZED");
   }
 
-  /** 判断员工是否为该应用的负责人或维护人（自审者）。维护人列表以提交时
-   *  草稿为准（draft.maintainerEmployeeIds，与版本快照内容一致）；无草稿的
-   *  历史数据回退到 applications.maintainer_employee_id 单维护人字段。 */
+  /** 判断员工是否为该应用的负责人或维护人（自审者）。维护人列表以
+   *  application_maintainers 关联表为准（saveDraft/submitDraft 已同步写入，
+   *  0049 迁移回填了存量单维护人）；关联表为空（从未保存过维护人的历史数据）
+   *  回退到草稿维护人列表与 applications.maintainer_employee_id 单维护人字段。 */
   private async isSelfReviewer(
     employeeId: string,
     application: ApplicationRecord,
   ): Promise<boolean> {
     if (application.ownerEmployeeId === employeeId) return true;
+    const maintainerIds = await this.repository.listMaintainers(
+      application.applicationId,
+    );
+    if (maintainerIds.length > 0) return maintainerIds.includes(employeeId);
     const draft = await this.repository.findDraft(application.applicationId);
-    const maintainerIds = draft?.draft.maintainerEmployeeIds ?? [];
+    const draftMaintainerIds = draft?.draft.maintainerEmployeeIds ?? [];
     return (
       application.maintainerEmployeeId === employeeId ||
-      maintainerIds.includes(employeeId)
+      draftMaintainerIds.includes(employeeId)
     );
   }
 

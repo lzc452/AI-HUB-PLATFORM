@@ -167,6 +167,10 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .where("application_id", "=", applicationId)
       .execute();
     await this.db
+      .deleteFrom("application_maintainers")
+      .where("application_id", "=", applicationId)
+      .execute();
+    await this.db
       .deleteFrom("application_catalog_metadata")
       .where("application_id", "=", applicationId)
       .execute();
@@ -223,7 +227,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return row === undefined ? null : this.mapApplication(row);
   }
 
-  /** 查询应用详情展示所需的姓名与更新时间（负责人/维护人/部门名称）。 */
+  /** 查询应用详情展示所需的姓名与更新时间（负责人/维护人/部门名称）。
+   *  维护人显示以 application_maintainers 关联表的首条（主维护人）为准，
+   *  关联表为空（从未保存过维护人的存量应用）时回退到单列字段。 */
   async findApplicationMeta(applicationId: string): Promise<{
     ownerName: string;
     maintainerName: string;
@@ -237,10 +243,18 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         "owner.employee_id",
         "application.owner_employee_id",
       )
-      .leftJoin(
-        "employees as maintainer",
-        "maintainer.employee_id",
-        "application.maintainer_employee_id",
+      .leftJoin("employees as maintainer", (eb) =>
+        eb.on(
+          "maintainer.employee_id",
+          "=",
+          sql`coalesce((
+            select am.employee_id
+            from application_maintainers am
+            where am.application_id = application.application_id
+            order by am.created_at asc
+            limit 1
+          ), application.maintainer_employee_id)`,
+        ),
       )
       .leftJoin(
         "departments as department",
@@ -262,6 +276,50 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       departmentName: row.departmentName ?? "",
       updatedAt: row.updatedAt,
     };
+  }
+
+  /** 替换式保存维护人列表（先删后插）。主维护人（数组第一个，去重保序）
+   *  同步回写 applications.maintainer_employee_id——目录注册、工作区列表、
+   *  看板与自审守卫等既有单列读取路径继续以主维护人语义工作；完整列表存于
+   *  application_maintainers 关联表（0049 迁移）。空列表仅清空关联表，单列
+   *  保持原值（NOT NULL 列，作为创建者兜底）。 */
+  async setMaintainers(
+    applicationId: string,
+    maintainerEmployeeIds: readonly string[],
+  ): Promise<void> {
+    await this.db
+      .deleteFrom("application_maintainers")
+      .where("application_id", "=", applicationId)
+      .execute();
+    const uniqueIds = [...new Set(maintainerEmployeeIds)];
+    if (uniqueIds.length === 0) return;
+    await this.db
+      .insertInto("application_maintainers")
+      .values(
+        uniqueIds.map((employeeId) => ({
+          application_id: applicationId,
+          employee_id: employeeId,
+        })),
+      )
+      .execute();
+    await this.db
+      .updateTable("applications")
+      .set({
+        maintainer_employee_id: uniqueIds[0]!,
+        updated_at: new Date(),
+      })
+      .where("application_id", "=", applicationId)
+      .execute();
+  }
+
+  async listMaintainers(applicationId: string): Promise<readonly string[]> {
+    const rows = await this.db
+      .selectFrom("application_maintainers")
+      .select("employee_id")
+      .where("application_id", "=", applicationId)
+      .orderBy("created_at", "asc")
+      .execute();
+    return rows.map((row) => row.employee_id);
   }
 
   async upsertDraft(

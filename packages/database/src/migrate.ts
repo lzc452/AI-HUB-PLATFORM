@@ -45,6 +45,7 @@ import * as searchTrgm from "./migrations/0043_search_trgm.js";
 import * as notificationCreatePermission from "./migrations/0044_notification_create_permission.js";
 import * as demandAuditEventsIndex from "./migrations/0045_demand_audit_events_index.js";
 import * as employeeDemandClaim from "./migrations/0048_employee_demand_claim.js";
+import * as applicationMaintainers from "./migrations/0049_application_maintainers.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -95,6 +96,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0044_notification_create_permission": notificationCreatePermission,
   "0045_demand_audit_events_index": demandAuditEventsIndex,
   "0048_employee_demand_claim": employeeDemandClaim,
+  "0049_application_maintainers": applicationMaintainers,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

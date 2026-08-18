@@ -177,6 +177,12 @@ export interface ApplicationsTable {
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
 }
 
+export interface ApplicationMaintainersTable {
+  application_id: string;
+  employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface ApplicationVersionsTable {
   application_version_id: Generated<string>;
   application_id: string;
@@ -748,6 +754,7 @@ export interface DatabaseSchema {
   identity_sync_config: IdentitySyncConfigTable;
   identity_audit_events: IdentityAuditEventsTable;
   applications: ApplicationsTable;
+  application_maintainers: ApplicationMaintainersTable;
   application_versions: ApplicationVersionsTable;
   application_deliveries: ApplicationDeliveriesTable;
   application_assets: ApplicationAssetsTable;

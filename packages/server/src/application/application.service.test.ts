@@ -58,6 +58,8 @@ const superAdmin: ActorContext = {
 
 class MemoryApplicationRepository implements ApplicationRepository {
   applications = new Map<string, ApplicationRecord>();
+  /** 维护人关联表（application_id → 保序列表），与 Kysely 实现一致。 */
+  maintainers = new Map<string, string[]>();
   versions = new Map<string, ApplicationVersionRecord>();
   deliveries: DeliveryRecord[] = [];
   reviews: ReviewRecord[] = [];
@@ -104,6 +106,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
     await previous;
     const snapshot = {
       applications: new Map(this.applications),
+      maintainers: new Map(this.maintainers),
       versions: new Map(this.versions),
       deliveries: [...this.deliveries],
       reviews: [...this.reviews],
@@ -155,9 +158,14 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async findApplicationMeta(applicationId: string) {
     const current = this.applications.get(applicationId);
     if (current === undefined) return null;
+    // 与生产 findApplicationMeta 一致：维护人显示以关联表首条为准，空时回退单列。
+    const maintainers = this.maintainers.get(applicationId) ?? [];
     return {
       ownerName: `owner-${current.ownerEmployeeId}`,
-      maintainerName: `maintainer-${current.maintainerEmployeeId}`,
+      maintainerName:
+        maintainers.length > 0
+          ? `maintainer-${maintainers[0]}`
+          : `maintainer-${current.maintainerEmployeeId}`,
       departmentName: `dept-${current.departmentId}`,
       updatedAt: new Date(),
     };
@@ -177,6 +185,23 @@ class MemoryApplicationRepository implements ApplicationRepository {
     string,
     { draft: import("@ai-hub/contracts").ApplicationDraft; updatedAt: Date }
   >();
+  async setMaintainers(
+    applicationId: string,
+    maintainerEmployeeIds: readonly string[],
+  ) {
+    const uniqueIds = [...new Set(maintainerEmployeeIds)];
+    this.maintainers.set(applicationId, uniqueIds);
+    const current = this.applications.get(applicationId);
+    if (current !== undefined && uniqueIds.length > 0) {
+      this.applications.set(applicationId, {
+        ...current,
+        maintainerEmployeeId: uniqueIds[0]!,
+      });
+    }
+  }
+  async listMaintainers(applicationId: string) {
+    return this.maintainers.get(applicationId) ?? [];
+  }
   async upsertDraft(
     applicationId: string,
     draft: import("@ai-hub/contracts").ApplicationDraft,
@@ -2430,6 +2455,89 @@ describe("ApplicationService", () => {
       applicationVersionId: version.applicationVersionId,
       status: "available",
     });
+  });
+
+  it("persists maintainers when a draft is submitted", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: ["E400", "E401"],
+    });
+
+    await service.submitDraft(owner, application.applicationId);
+
+    // 完整维护人列表落库（先删后插，保序）。
+    await expect(
+      repository.listMaintainers(application.applicationId),
+    ).resolves.toEqual(["E400", "E401"]);
+    // 主维护人（第一个）同步回单列字段：目录注册、工作区列表等既有读取路径有效。
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ maintainerEmployeeId: "E400" });
+  });
+
+  it("syncs maintainers when a draft is saved", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: ["E400"],
+    });
+    await expect(
+      repository.listMaintainers(application.applicationId),
+    ).resolves.toEqual(["E400"]);
+
+    // 新增维护人后再次保存：列表与主维护人同步。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: ["E400", "E401"],
+    });
+    await expect(
+      repository.listMaintainers(application.applicationId),
+    ).resolves.toEqual(["E400", "E401"]);
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ maintainerEmployeeId: "E400" });
+
+    // 移除维护人：列表与主维护人同步收缩。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: ["E401"],
+    });
+    await expect(
+      repository.listMaintainers(application.applicationId),
+    ).resolves.toEqual(["E401"]);
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ maintainerEmployeeId: "E401" });
+  });
+
+  it("keeps the self-review guard on the persisted maintainer list even without a draft", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    // 第二维护人（不是单列主维护人 E400）也不得认领本应用审核。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: ["E400", reviewer.employeeId],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+    // 模拟草稿缺失（历史数据/后续清理）：自审守卫回退读取维护人关联表。
+    repository.drafts.delete(application.applicationId);
+
+    await expect(
+      service.claimReview(reviewer, version!.applicationVersionId),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
   });
 
   it("submits a draft into review with an artifact-less version", async () => {
