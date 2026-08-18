@@ -31,6 +31,10 @@ export const DINGTALK_NOTIFICATION_MATRIX = {
     recipientRole: "application_owner",
     messageTemplate: "应用 {aggregateId} 已撤回。",
   },
+  "application.withdraw.requested": {
+    recipientRole: "application_owner",
+    messageTemplate: "应用 {aggregateId} 已被申请下架：{reason}。",
+  },
   "demand.submitted": {
     recipientRole: "demand_operator",
     messageTemplate: "需求 {aggregateId} 已提交。",

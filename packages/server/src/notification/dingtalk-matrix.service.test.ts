@@ -20,6 +20,7 @@ const EMITTED_EVENTS = [
   "application.review.sla.overdue",
   "application.published",
   "application.withdrawn",
+  "application.withdraw.requested",
   "artifact.verification.failed",
   "demand.submitted",
   "demand.reviewed",
@@ -50,6 +51,7 @@ describe("DingTalk notification matrix", () => {
       "application.review.sla.overdue",
       "application.published",
       "application.withdrawn",
+      "application.withdraw.requested",
       "demand.submitted",
       "demand.reviewed",
       "demand.claimed",
@@ -98,7 +100,7 @@ describe("DingTalk notification matrix", () => {
       Object.keys(DINGTALK_NOTIFICATION_MATRIX).length,
     );
     expect(createForEvent).toHaveBeenNthCalledWith(
-      17,
+      18,
       actor,
       expect.objectContaining({
         recipientEmployeeId: "employee-2",

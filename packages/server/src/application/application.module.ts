@@ -22,6 +22,9 @@ import type {
 } from "./storage.port.js";
 import { AnalyticsEventService } from "../analytics/analytics.service.js";
 import { KyselyAnalyticsEventRepository } from "../analytics/analytics.repository.js";
+import { NotificationModule } from "../notification/notification.module.js";
+import { DINGTALK_NOTIFICATION_MATRIX_SERVICE } from "../notification/notification.tokens.js";
+import type { DingTalkNotificationMatrixService } from "../notification/dingtalk-matrix.service.js";
 
 const unavailableArtifactVerifier: ArtifactVerificationPort = {
   async verifyArtifact() {
@@ -52,14 +55,20 @@ function createApplicationServiceProvider(
     useFactory: (
       repository: KyselyApplicationRepository,
       identity: IdentityService,
+      notifications: DingTalkNotificationMatrixService,
     ) =>
       new ApplicationService(
         repository,
         identity,
         artifactVerifier,
         analyticsEvents,
+        notifications,
       ),
-    inject: [KyselyApplicationRepository, IdentityService],
+    inject: [
+      KyselyApplicationRepository,
+      IdentityService,
+      DINGTALK_NOTIFICATION_MATRIX_SERVICE,
+    ],
   };
 }
 
@@ -106,7 +115,10 @@ export class ApplicationModule {
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      imports: [IdentityModule.register(database)],
+      imports: [
+        IdentityModule.register(database),
+        NotificationModule.register(database),
+      ],
       providers: [
         createRepositoryProvider(database),
         createApplicationServiceProvider(database, artifactVerifier),
@@ -124,7 +136,10 @@ export class ApplicationModule {
   ): DynamicModule {
     return {
       module: ApplicationModule,
-      imports: [IdentityModule.register(database)],
+      imports: [
+        IdentityModule.register(database),
+        NotificationModule.register(database),
+      ],
       controllers: [
         ApplicationController,
         ...createUploadControllers(storageDirectory, artifactStorage),

@@ -534,6 +534,11 @@ function makeService() {
       };
     },
   };
+  const notificationCalls: Array<{
+    scenario: string;
+    recipientEmployeeId: string;
+    aggregateId: string;
+  }> = [];
   return {
     repository,
     service: new ApplicationService(
@@ -549,8 +554,27 @@ function makeService() {
           return { inserted: true };
         },
       },
+      {
+        queue: async (
+          _actor: ActorContext,
+          scenario: string,
+          input: {
+            recipientEmployeeId: string;
+            aggregateId: string;
+            variables?: Readonly<Record<string, string | number>>;
+          },
+        ) => {
+          notificationCalls.push({
+            scenario,
+            recipientEmployeeId: input.recipientEmployeeId,
+            aggregateId: input.aggregateId,
+          });
+          return { notificationId: `notification-${notificationCalls.length}` };
+        },
+      },
     ),
     analyticsEvents,
+    notificationCalls,
   };
 }
 
@@ -1072,6 +1096,142 @@ describe("ApplicationService", () => {
       "application.archived",
     ]);
     expect(repository.events).toHaveLength(14);
+  });
+
+  it("allows creating a new version from archived or withdrawn applications for recovery", async () => {
+    const { service, repository } = makeService();
+    const { application } = await preparePublishedApplication(service);
+    await service.withdraw(owner, application.applicationId, "superseded");
+    const withdrawn = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "2.0.0",
+    );
+    expect(withdrawn).toBeDefined();
+    await service.archive(owner, application.applicationId);
+    const archived = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "3.0.0",
+    );
+    expect(archived).toBeDefined();
+    expect(repository.versions.size).toBe(3);
+  });
+
+  it("restores an archived application to published after recovery review approval", async () => {
+    const { service, repository } = makeService();
+    const { application } = await preparePublishedApplication(service);
+    await service.withdraw(owner, application.applicationId, "superseded");
+    await service.archive(owner, application.applicationId);
+    const recovered = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "2.0.0",
+    );
+    await service.submitForReview(owner, recovered.applicationVersionId);
+    await service.claimReview(reviewer, recovered.applicationVersionId);
+
+    // 恢复路径审核通过直接 published（复用 T6 自动上架逻辑：registerToCatalog upsert 幂等）。
+    const result = await service.review(
+      reviewer,
+      recovered.applicationVersionId,
+      "approve",
+      "恢复上架",
+    );
+
+    expect(result.status).toBe("published");
+    expect(result.currentVersionId).toBe(recovered.applicationVersionId);
+    expect(repository.catalogRegistrations).toContain(
+      application.applicationId,
+    );
+    expect(repository.events).toContain("application.published");
+  });
+
+  it("allows a maintainer to request withdrawal with audit and notification", async () => {
+    const { service, repository, notificationCalls } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: "E400",
+    } as never);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "Approved",
+    );
+    const maintainer: ActorContext = { ...outsider, employeeId: "E400" };
+
+    await expect(
+      service.requestWithdraw(
+        maintainer,
+        application.applicationId,
+        "应用已停止维护",
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(repository.audits).toContain("application.withdraw.requested");
+    expect(repository.events).toContain("application.withdraw.requested");
+    expect(notificationCalls).toEqual([
+      {
+        scenario: "application.withdraw.requested",
+        recipientEmployeeId: "E100",
+        aggregateId: application.applicationId,
+      },
+    ]);
+  });
+
+  it("rejects withdraw requests from non-maintainers, non-published apps, or without a reason", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: "E400",
+    } as never);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "Approved",
+    );
+
+    // 非维护人/责任人不得申请。
+    await expect(
+      service.requestWithdraw(outsider, application.applicationId, "stop"),
+    ).rejects.toThrow("APPLICATION_MAINTAINER_REQUIRED");
+    // 空白原因必须被拒绝（应用仍为 published）。
+    await expect(
+      service.requestWithdraw(
+        { ...outsider, employeeId: "E400" },
+        application.applicationId,
+        "   ",
+      ),
+    ).rejects.toThrow("WITHDRAW_REASON_REQUIRED");
+    // 未发布应用不得申请下架。
+    await service.withdraw(owner, application.applicationId, "stop");
+    await expect(
+      service.requestWithdraw(owner, application.applicationId, "stop"),
+    ).rejects.toThrow("INVALID_APPLICATION_TRANSITION");
+    expect(repository.events).not.toContain("application.withdraw.requested");
   });
 
   it("requires all four delivery channels before publication", async () => {

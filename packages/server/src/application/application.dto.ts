@@ -185,6 +185,17 @@ export class WithdrawRequestDto {
   reason!: string;
 }
 
+/** 申请下架应用请求（责任人或维护人发起，通知责任人确认执行）。 */
+export class RequestWithdrawRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "申请下架原因",
+    example: "应用已停止维护",
+  })
+  @IsString()
+  reason!: string;
+}
+
 /** 回滚应用请求。 */
 export class RollbackRequestDto {
   @ApiProperty({ type: String, description: "回滚目标版本 ID" })

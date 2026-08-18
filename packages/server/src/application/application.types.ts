@@ -204,6 +204,19 @@ export interface ApplicationAuthorizationPort {
   authorize(request: AuthorizationRequest): Promise<AuthorizationDecision>;
 }
 
+/** 钉钉通知矩阵队列端口（由 notification 模块的矩阵服务实现；与 demand 模块同模式）。 */
+export interface ApplicationNotificationPort {
+  queue(
+    actor: ActorContext,
+    scenario: string,
+    input: {
+      recipientEmployeeId: string;
+      aggregateId: string;
+      variables?: Readonly<Record<string, string | number>>;
+    },
+  ): Promise<unknown>;
+}
+
 export interface ApplicationRepository {
   withTransaction<T>(
     operation: (repository: ApplicationRepository) => Promise<T>,

@@ -7,6 +7,7 @@ import {
 } from "@ai-hub/contracts";
 import type {
   ApplicationAuthorizationPort,
+  ApplicationNotificationPort,
   ApplicationRepository,
   ApplicationRecord,
   ApplicationStatus,
@@ -96,6 +97,7 @@ export class ApplicationService {
     private readonly authorization: ApplicationAuthorizationPort,
     _artifactVerifier: import("./storage.port.js").ArtifactVerificationPort,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+    private readonly notifications?: ApplicationNotificationPort,
   ) {}
 
   async createApplication(
@@ -324,12 +326,8 @@ export class ApplicationService {
     if (application.ownerEmployeeId !== actor.employeeId) {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
-    if (
-      application.status === "archived" ||
-      application.status === "withdrawn"
-    ) {
-      throw new Error("APPLICATION_NOT_EDITABLE");
-    }
+    // 恢复路径（规格 §5.5）：下架/归档后的应用允许创建新版本，由其他应用
+    // 管理员审核通过后重新上架——因此不再拒绝 archived/withdrawn 状态。
     if (input.scanStatus !== "passed") {
       throw new Error("ARTIFACT_NOT_VERIFIED");
     }
@@ -457,7 +455,13 @@ export class ApplicationService {
       }
     }
     const application = await this.requireApplication(version.applicationId);
-    if (application.status !== "draft" && application.status !== "published") {
+    // 草稿/已发布提交更新审核之外，下架/归档应用可通过新版本进入审核恢复上架
+    // （规格 §5.5），sourceStatus 会记录恢复前状态供驳回回滚与通过置 published。
+    if (
+      !["draft", "published", "withdrawn", "archived"].includes(
+        application.status,
+      )
+    ) {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
     // 已发布应用只能有一个待审核版本；存在 pending 版本时拒绝再次提交，
@@ -704,9 +708,16 @@ export class ApplicationService {
           applicationVersionId,
           actor.employeeId,
         );
-        // 首次发布审核通过：自动上架——目录注册与发布事件在审核事务内完成，
-        // 不再需要责任人手动调用 publish（等同原 publish 的效果，含渠道完整性门禁）。
-        if (approved && sourceStatus === "draft") {
+        // 首次发布（draft）与下架/归档恢复（withdrawn/archived）审核通过：
+        // 自动上架——目录注册与发布事件在审核事务内完成，不再需要责任人手动
+        // 调用 publish（等同原 publish 的效果，含渠道完整性门禁）。恢复路径的
+        // registerToCatalog 为 upsert，对已注册过的应用幂等无害。
+        if (
+          approved &&
+          (sourceStatus === "draft" ||
+            sourceStatus === "withdrawn" ||
+            sourceStatus === "archived")
+        ) {
           await this.assertDeliveryChannelsComplete(
             repository,
             application.applicationId,
@@ -820,6 +831,45 @@ export class ApplicationService {
       reason,
       actor.employeeId,
     );
+  }
+
+  /** 责任人或维护人可以申请下架已发布应用（规格 §5.5）：仅写审计与站内通知
+   *  （通知责任人），不改变应用状态——确认下架仍由 withdraw 执行。维护人判定
+   *  与自审守卫一致：单维护人字段或草稿维护人列表（isSelfReviewer）。 */
+  async requestWithdraw(
+    actor: ActorContext,
+    applicationId: string,
+    reason: string,
+  ): Promise<void> {
+    const application = await this.requireApplication(applicationId);
+    if (!(await this.isSelfReviewer(actor.employeeId, application))) {
+      throw new Error("APPLICATION_MAINTAINER_REQUIRED");
+    }
+    this.requireStatus(application, "published");
+    if (reason.trim().length === 0) {
+      throw new Error("WITHDRAW_REASON_REQUIRED");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      await this.recordChange(
+        repository,
+        "application.withdraw.requested",
+        applicationId,
+        null,
+        actor.employeeId,
+        { reason, by: actor.employeeId },
+      );
+      if (this.notifications !== undefined) {
+        await this.notifications.queue(
+          actor,
+          "application.withdraw.requested",
+          {
+            recipientEmployeeId: application.ownerEmployeeId,
+            aggregateId: applicationId,
+            variables: { reason },
+          },
+        );
+      }
+    });
   }
 
   async rollback(

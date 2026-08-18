@@ -45,6 +45,7 @@ import {
   CreateVersionRequestDto,
   DeliveryDto,
   PublishRequestDto,
+  RequestWithdrawRequestDto,
   ReviewDto,
   ReviewQueueDto,
   ReviewRequestDto,
@@ -454,6 +455,34 @@ export class ApplicationController {
     return this.call(async () =>
       this.applications.withdraw(
         await this.requireActor(employeeId, sessionId, "publish"),
+        applicationId,
+        body.reason,
+      ),
+    );
+  }
+
+  @Post(":applicationId/request-withdraw")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "申请下架应用",
+    description:
+      "责任人或维护人可以申请下架已发布应用：写入审计与站内通知（通知责任人），不改变应用状态；确认下架仍由撤回（withdraw）完成。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: RequestWithdrawRequestDto })
+  @ApiOkResponse({ description: "已受理" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async requestWithdraw(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: RequestWithdrawRequestDto,
+  ) {
+    return this.call(async () =>
+      this.applications.requestWithdraw(
+        await this.requireActor(employeeId, sessionId, "update"),
         applicationId,
         body.reason,
       ),

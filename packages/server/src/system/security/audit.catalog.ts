@@ -18,6 +18,7 @@ export const AUDIT_EVENT_CATALOG = {
   "application.review.decided": { module: "review", risk: "high" },
   "application.published": { module: "application", risk: "high" },
   "application.withdrawn": { module: "application", risk: "high" },
+  "application.withdraw.requested": { module: "application", risk: "low" },
   "catalog.delivery.resolved": { module: "catalog", risk: "low" },
   "catalog.comment.moderated": { module: "catalog", risk: "medium" },
   "feedback.created": { module: "feedback", risk: "low" },
