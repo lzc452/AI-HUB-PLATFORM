@@ -4,6 +4,7 @@ import { setSession } from "../auth";
 import {
   submitApplicationReview,
   uploadArtifactContent,
+  withdrawApplicationReview,
 } from "./application.client";
 
 class XMLHttpRequestStub {
@@ -89,6 +90,26 @@ describe("submitApplicationReview", () => {
   it("未确认时不携带请求体", async () => {
     await submitApplicationReview("version-1");
 
+    const options = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(options.method).toBe("POST");
+    expect(options.body).toBeUndefined();
+  });
+});
+
+describe("withdrawApplicationReview", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn(async () => Response.json({ applicationId: "app-1" }));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("POST 到 review-withdraw 且不带请求体", async () => {
+    await withdrawApplicationReview("version-1");
+
+    expect(String(fetchMock.mock.calls[0]![0])).toContain(
+      "/internal/applications/versions/version-1/review-withdraw",
+    );
     const options = fetchMock.mock.calls[0]![1] as RequestInit;
     expect(options.method).toBe("POST");
     expect(options.body).toBeUndefined();

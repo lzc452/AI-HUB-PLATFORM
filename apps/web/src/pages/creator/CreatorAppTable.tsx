@@ -13,6 +13,7 @@ import type {
 import {
   useDeleteApplication,
   useWithdrawApplication,
+  useWithdrawReview,
 } from "../../modules/application/useApplication";
 import { MessageError } from "../../shared/ui/message";
 import {
@@ -58,6 +59,7 @@ export function CreatorAppTable({
     });
   };
   const withdraw = useWithdrawApplication();
+  const withdrawReview = useWithdrawReview();
 
   const [statusFilter, setStatusFilter] = useState<string>();
   const [categoryFilter, setCategoryFilter] = useState<string>();
@@ -222,6 +224,9 @@ export function CreatorAppTable({
           );
         }
         if (record.status === "in_review") {
+          const withdrawReviewPending =
+            withdrawReview.isPending &&
+            withdrawReview.variables === record.pendingVersionId;
           return (
             <span className="flex items-center">
               <Button
@@ -231,14 +236,27 @@ export function CreatorAppTable({
               >
                 查看
               </Button>
-              <Button
-                disabled
-                size="small"
-                title="暂不支持撤回审核中的应用（待后端状态机扩展）"
-                type="link"
-              >
-                撤回
-              </Button>
+              <ConfirmModal
+                buttonProps={{
+                  disabled: record.pendingVersionId === null,
+                  loading: withdrawReviewPending,
+                  size: "small",
+                  title:
+                    record.pendingVersionId === null
+                      ? "暂无待审核版本"
+                      : undefined,
+                  type: "link",
+                }}
+                buttonText="撤回"
+                content="撤回后该版本将停止审核，可修改后重新提交。"
+                okText="确认撤回"
+                onOk={() => {
+                  if (record.pendingVersionId !== null) {
+                    withdrawReview.mutate(record.pendingVersionId);
+                  }
+                }}
+                title="撤回审核"
+              />
             </span>
           );
         }

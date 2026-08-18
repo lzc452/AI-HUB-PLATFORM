@@ -136,6 +136,15 @@ export class CreatorApplicationItemDto {
 
   @ApiProperty({ type: Number, description: "点赞数", example: 5 })
   likeCount!: number;
+
+  @ApiPropertyOptional({
+    description:
+      "审核中的待生效版本 ID（仅 status=in_review 时非空，供创作者撤回审核）",
+    type: String,
+    nullable: true,
+    example: "version-9",
+  })
+  pendingVersionId?: string | null;
 }
 
 /** 我的应用列表结果。 */

@@ -88,6 +88,8 @@ export interface CreatorApplicationRecord {
   publishedAt: string | null;
   ratingAverage: number | null;
   likeCount: number;
+  /** 审核中的待生效版本（仅 status=in_review 时非空，供创作者撤回审核）。 */
+  pendingVersionId: string | null;
 }
 
 export interface CreatorApplicationList {
@@ -325,6 +327,16 @@ export function submitApplicationReview(
         ? { body: JSON.stringify({ acceptUnsigned: true }) }
         : {}),
     },
+  );
+}
+
+/** 撤回待审核版本（提交人在最终审核结论前撤销自己的审核申请）。 */
+export function withdrawApplicationReview(
+  applicationVersionId: string,
+): Promise<ApplicationRecord> {
+  return apiFetch<ApplicationRecord>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/review-withdraw`,
+    { method: "POST" },
   );
 }
 

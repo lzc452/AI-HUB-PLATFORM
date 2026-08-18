@@ -14,6 +14,8 @@ export interface CreatorApplicationRecord {
   publishedAt: string | null;
   ratingAverage: number | null;
   likeCount: number;
+  /** 审核中的待生效版本（仅 status=in_review 时非空，供创作者撤回审核）。 */
+  pendingVersionId: string | null;
 }
 
 /** 我的应用列表结果（预留分页结构）。 */

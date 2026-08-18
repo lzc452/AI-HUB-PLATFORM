@@ -24,6 +24,7 @@ const myApplications: readonly CreatorApplicationRecord[] = [
     publishedAt: "2026-08-01T00:00:00.000Z",
     ratingAverage: 4.5,
     likeCount: 4,
+    pendingVersionId: null,
   },
   {
     applicationId: "app-2",
@@ -34,6 +35,7 @@ const myApplications: readonly CreatorApplicationRecord[] = [
     publishedAt: null,
     ratingAverage: null,
     likeCount: 0,
+    pendingVersionId: null,
   },
 ];
 

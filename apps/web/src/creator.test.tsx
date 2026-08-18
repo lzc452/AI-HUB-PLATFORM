@@ -16,6 +16,7 @@ import CreatorCenterPage from "./pages/creator/CreatorCenterPage";
 const state = vi.hoisted(() => ({
   creatorApplications: undefined as unknown,
   withdrawMutate: vi.fn(),
+  withdrawReviewMutate: vi.fn(),
 }));
 
 vi.mock("./modules/application/useApplication", () => ({
@@ -40,6 +41,11 @@ vi.mock("./modules/application/useApplication", () => ({
   useWithdrawApplication: () => ({
     isPending: false,
     mutate: state.withdrawMutate,
+    mutateAsync: vi.fn(),
+  }),
+  useWithdrawReview: () => ({
+    isPending: false,
+    mutate: state.withdrawReviewMutate,
     mutateAsync: vi.fn(),
   }),
 }));
@@ -72,6 +78,7 @@ const sampleItems = [
     categoryId: "办公效率",
     likeCount: 1200,
     name: "文档问答助手",
+    pendingVersionId: null,
     publishedAt: "2026-05-01T00:00:00.000Z",
     ratingAverage: 4.8,
     status: "published",
@@ -82,6 +89,7 @@ const sampleItems = [
     categoryId: "",
     likeCount: 30,
     name: "智能报表分析",
+    pendingVersionId: "version-2",
     publishedAt: null,
     ratingAverage: null,
     status: "in_review",
@@ -126,7 +134,7 @@ describe("创作者中心页面", () => {
     }
   });
 
-  it("渲染页面标题与欢迎横幅文案", () => {
+  it("渲染欢迎横幅与工号文案", () => {
     state.creatorApplications = {
       ...settled,
       data: { items: sampleItems, page: 1, pageSize: 20, total: 2 },
@@ -135,12 +143,9 @@ describe("创作者中心页面", () => {
     renderPage();
 
     expect(
-      screen.getByRole("heading", { name: "创作者中心" }),
+      screen.getByRole("heading", { name: /欢迎回来！/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText("欢迎回来！您的 AI 创新中心")).toBeInTheDocument();
-    expect(
-      screen.getByText("统一查找、体验与分享各部门 AI 工具"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("工号 E0001")).toBeInTheDocument();
   });
 
   it("展示四张核心指标卡", () => {
@@ -245,5 +250,73 @@ describe("创作者中心页面", () => {
 
     expect(state.withdrawMutate).toHaveBeenCalledTimes(1);
     expect(state.withdrawMutate).toHaveBeenCalledWith("app-001");
+  });
+
+  it("in_review 行的撤回按钮可用", () => {
+    state.creatorApplications = {
+      ...settled,
+      data: { items: sampleItems, page: 1, pageSize: 20, total: 2 },
+    };
+
+    renderPage();
+
+    const withdrawReviewButton = screen.getByRole("button", {
+      name: /撤\s*回/,
+    });
+    expect(withdrawReviewButton).toBeEnabled();
+  });
+
+  it("撤回审核中的版本需经确认框二次确认，取消后不触发撤回", async () => {
+    Modal.destroyAll();
+    vi.useFakeTimers();
+    state.creatorApplications = {
+      ...settled,
+      data: { items: sampleItems, page: 1, pageSize: 20, total: 2 },
+    };
+    state.withdrawReviewMutate.mockClear();
+
+    const { container } = renderPage();
+
+    // 限定在页面容器内查询，避免与 Modal portal 中的同名按钮冲突。
+    fireEvent.click(within(container).getByRole("button", { name: /撤\s*回/ }));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getAllByText("撤回审核").length).toBeGreaterThan(0);
+    expect(
+      within(latestDialog()).getByText(
+        "撤回后该版本将停止审核，可修改后重新提交。",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(latestDialog()).getByRole("button", { name: /取\s*消/ }),
+    );
+
+    expect(state.withdrawReviewMutate).not.toHaveBeenCalled();
+  });
+
+  it("确认后携带待审核版本 ID 执行撤回审核 mutation", async () => {
+    Modal.destroyAll();
+    vi.useFakeTimers();
+    state.creatorApplications = {
+      ...settled,
+      data: { items: sampleItems, page: 1, pageSize: 20, total: 2 },
+    };
+    state.withdrawReviewMutate.mockClear();
+
+    const { container } = renderPage();
+
+    fireEvent.click(within(container).getByRole("button", { name: /撤\s*回/ }));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getAllByText("撤回审核").length).toBeGreaterThan(0);
+    fireEvent.click(
+      within(latestDialog()).getByRole("button", { name: /确认撤回/ }),
+    );
+
+    expect(state.withdrawReviewMutate).toHaveBeenCalledTimes(1);
+    expect(state.withdrawReviewMutate).toHaveBeenCalledWith("version-2");
   });
 });

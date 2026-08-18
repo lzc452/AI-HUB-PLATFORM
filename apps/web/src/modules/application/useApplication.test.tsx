@@ -4,17 +4,25 @@ import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../shared/api/client";
-import { useSubmitApplicationReview } from "./useApplication";
+import {
+  useSubmitApplicationReview,
+  useWithdrawReview,
+} from "./useApplication";
 
 const hoisted = vi.hoisted(() => ({
   showErrorMessage: vi.fn(),
   showSuccessMessage: vi.fn(),
   submitReview: vi.fn(),
+  withdrawReview: vi.fn(),
 }));
 
 vi.mock("./application.client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./application.client")>();
-  return { ...actual, submitApplicationReview: hoisted.submitReview };
+  return {
+    ...actual,
+    submitApplicationReview: hoisted.submitReview,
+    withdrawApplicationReview: hoisted.withdrawReview,
+  };
 });
 
 vi.mock("../../shared/ui/message", async (importOriginal) => {
@@ -145,6 +153,86 @@ describe("useSubmitApplicationReview", () => {
       expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
         "制品未签名，请勾选确认接受风险后再操作（追踪 ID：trace-3）",
         "提交版本审核失败",
+      ),
+    );
+  });
+});
+
+describe("useWithdrawReview", () => {
+  beforeEach(() => {
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+    hoisted.withdrawReview.mockReset();
+  });
+
+  it("撤回待审核版本并失效所有发布链缓存域", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { retry: false },
+      },
+    });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    hoisted.withdrawReview.mockResolvedValue({ applicationId: "app-001" });
+    const { result } = renderHook(() => useWithdrawReview(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync("version-latest");
+    });
+
+    expect(hoisted.withdrawReview).toHaveBeenCalledWith("version-latest");
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["creator"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["catalog"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["applications"] });
+    expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("已撤回审核");
+  });
+
+  it("REVIEW_NOT_PENDING 时提示版本已不在审核中", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { retry: false },
+      },
+    });
+    hoisted.withdrawReview.mockRejectedValue(
+      new ApiError(400, "REVIEW_NOT_PENDING", undefined, "trace-4"),
+    );
+    const { result } = renderHook(() => useWithdrawReview(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    act(() => result.current.mutate("version-latest"));
+
+    await waitFor(() =>
+      expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
+        null,
+        "该版本已不在审核中，请刷新后重试",
+      ),
+    );
+  });
+
+  it("其他领域错误映射为可操作提示", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        mutations: { retry: false },
+        queries: { retry: false },
+      },
+    });
+    hoisted.withdrawReview.mockRejectedValue(
+      new ApiError(403, "APPLICATION_OWNER_REQUIRED", undefined, "trace-5"),
+    );
+    const { result } = renderHook(() => useWithdrawReview(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    act(() => result.current.mutate("version-latest"));
+
+    await waitFor(() =>
+      expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
+        "仅应用负责人可以执行此操作（追踪 ID：trace-5）",
+        "撤回审核失败",
       ),
     );
   });

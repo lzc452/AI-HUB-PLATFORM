@@ -14,6 +14,7 @@ type CreatorApplicationRow = {
   categoryId: string | null;
   likeCount: number;
   ratingAverage: number | null;
+  pendingVersionId: string | null;
 };
 
 export class KyselyCreatorRepository implements CreatorRepository {
@@ -142,6 +143,7 @@ export class KyselyCreatorRepository implements CreatorRepository {
         "application.name as name",
         "application.status as status",
         "application.updated_at as updatedAt",
+        "application.pending_version_id as pendingVersionId",
         "metadata.category_id as categoryId",
         sql<number>`(
           select count(*)::int
@@ -202,6 +204,7 @@ export class KyselyCreatorRepository implements CreatorRepository {
         row.status === "published" ? row.updatedAt.toISOString() : null,
       ratingAverage: row.ratingAverage,
       likeCount: row.likeCount,
+      pendingVersionId: row.pendingVersionId,
     };
   }
 }

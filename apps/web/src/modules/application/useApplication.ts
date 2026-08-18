@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { DeliveryChannel } from "@ai-hub/contracts";
+import { ApiError } from "../../shared/api/client";
 
 import {
   archiveApplication,
@@ -31,10 +32,11 @@ import {
   reviewApplicationVersion,
   submitApplicationReview,
   transferApplicationOwner,
+  withdrawApplication,
+  withdrawApplicationReview,
   type ArtifactUploadRecord,
   type CreateVersionInput,
   type ConfigureDeliveryInput,
-  withdrawApplication,
 } from "./application.client";
 import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import { toApplicationErrorMessage } from "./application.errors";
@@ -301,6 +303,27 @@ export function useSubmitApplicationReview() {
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("版本已提交审核");
+    },
+  });
+}
+
+/** 撤回待审核版本（in_review 应用行内操作）。 */
+export function useWithdrawReview() {
+  const invalidateCaches = useInvalidateApplicationCaches();
+  return useMutation({
+    mutationFn: (applicationVersionId: string) =>
+      withdrawApplicationReview(applicationVersionId),
+    onError: (error) => {
+      if (error instanceof ApiError && error.code === "REVIEW_NOT_PENDING") {
+        // 审核已推进或已被他人处理，提示刷新后以最新状态重试。
+        showErrorMessage(null, "该版本已不在审核中，请刷新后重试");
+        return;
+      }
+      showErrorMessage(toApplicationErrorMessage(error), "撤回审核失败");
+    },
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("已撤回审核");
     },
   });
 }
