@@ -167,7 +167,7 @@ export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
     },
     {
       export_id: at(IDS.analyticsExportJob, 1),
-      requested_by_employee_id: at(EMPS, 2),
+      requested_by_employee_id: at(EMPS, 1),
       target: "demand_metrics",
       from_date: todayString(daysAgo(anchor, 60)),
       to_date: todayString(daysAgo(anchor, 30)),
@@ -212,7 +212,7 @@ export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
     },
     {
       audit_event_id: at(IDS.analyticsAuditEvent, 2),
-      actor_employee_id: at(EMPS, 2),
+      actor_employee_id: at(EMPS, 1),
       action: "export.created",
       aggregate_type: "analytics_export",
       aggregate_id: at(IDS.analyticsExportJob, 1),
@@ -239,7 +239,7 @@ export function buildAnalyticsFixture(anchor: Date): AnalyticsFixtureData {
     },
     {
       audit_event_id: at(IDS.analyticsAuditEvent, 5),
-      actor_employee_id: at(EMPS, 4),
+      actor_employee_id: at(EMPS, 1),
       action: "dashboard.viewed",
       aggregate_type: "analytics_dashboard",
       aggregate_id: "overview",

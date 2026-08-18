@@ -12,7 +12,7 @@ docker compose -f compose.yaml -f compose.dev.yaml up -d --build --wait --wait-t
 ```
 
 开发应用地址为 `http://127.0.0.1:8080`。
-开发环境的 Compose API 会自动执行 `pnpm init:dev`（数据库迁移 + 演示账号 + 业务演示数据）。可初始化数据包括：系统角色与分析指标定义（随迁移自动写入）、演示组织与账号（4 个部门、5 个账号）、业务演示数据（示例应用、需求、评论、通知与分析行为事件，仅用于本地联调）。如需为已迁移的数据库手动补充种子数据，请运行：
+开发环境的 Compose API 会自动执行 `pnpm init:dev`（数据库迁移 + 演示账号 + 业务演示数据）。可初始化数据包括：系统角色与分析指标定义（随迁移自动写入）、演示组织与账号（4 个部门、2 个账号）、业务演示数据（示例应用、需求、评论、通知与分析行为事件，仅用于本地联调）。如需为已迁移的数据库手动补充种子数据，请运行：
 
 ```powershell
 corepack pnpm init:dev
@@ -20,15 +20,12 @@ corepack pnpm init:dev
 
 生产环境初始化：部署时在容器外针对生产 `DATABASE_URL` 一次性执行 `corepack pnpm init:production`（仅数据库迁移，不写入任何演示或业务数据）。
 
-以下凭据仅用于本地开发与测试，严禁在生产环境使用：
+以下凭据仅用于本地开发与测试，严禁在生产环境使用。V1 仅分发 `employee` 与 `super_admin` 两种角色；其余预置角色（如 `application_admin`、`demand_operator`、`organization_admin`）保留定义但不实施分发：
 
-| 员工 ID            | 角色                 | 密码                    |
-| ------------------ | -------------------- | ----------------------- |
-| `DEMO-EMPLOYEE`    | `employee`           | `Demo-Employee-2026!`   |
-| `DEMO-APP-ADMIN`   | `application_admin`  | `Demo-AppAdmin-2026!`   |
-| `DEMO-INNOVATION`  | `demand_operator`    | `Demo-Innovation-2026!` |
-| `DEMO-ORG-ADMIN`   | `organization_admin` | `Demo-OrgAdmin-2026!`   |
-| `DEMO-SUPER-ADMIN` | `super_admin`        | `Demo-SuperAdmin-2026!` |
+| 员工 ID            | 角色          | 密码                    |
+| ------------------ | ------------- | ----------------------- |
+| `DEMO-EMPLOYEE`    | `employee`    | `Demo-Employee-2026!`   |
+| `DEMO-SUPER-ADMIN` | `super_admin` | `Demo-SuperAdmin-2026!` |
 
 使用 Windows VPN HTTP 代理时，请在首次拉取前将 Rancher Desktop 的容器代理配置为 `http://host.rancher-desktop.internal:7897`（而不是 `127.0.0.1:7897`）。原因与完整启动检查请参见 [Windows Docker Compose 指南](docs/development/windows-docker-compose.md)。
 同一套 Compose 工作流在 Windows、macOS 与 Linux 上均可通过 Rancher Desktop、Docker Desktop 或其他基于 Linux 容器的引擎运行；完整的初始化与 Codex 配置检查请参见[跨设备开发指南](docs/development/cross-device-development.md)。

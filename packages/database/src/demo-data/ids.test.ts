@@ -350,8 +350,8 @@ describe("IDS access patterns", () => {
     expect(IDS.department.rnd).toBe("demo-rnd");
   });
 
-  it("IDS.employee.appAdmin returns the expected string", () => {
-    expect(IDS.employee.appAdmin).toBe("DEMO-APP-ADMIN");
+  it("IDS.employee.superAdmin returns the expected string", () => {
+    expect(IDS.employee.superAdmin).toBe("DEMO-SUPER-ADMIN");
   });
 
   it("IDS.catalog.category.ai returns the expected string", () => {

@@ -69,13 +69,7 @@ describe("buildAnalyticsFixture", () => {
   });
 
   it("behavior events have valid employee references", () => {
-    const validEmps = new Set([
-      "DEMO-EMPLOYEE",
-      "DEMO-APP-ADMIN",
-      "DEMO-INNOVATION",
-      "DEMO-ORG-ADMIN",
-      "DEMO-SUPER-ADMIN",
-    ]);
+    const validEmps = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
     for (const e of fixture.behaviorEvents) {
       expect(validEmps.has(e.actor_employee_id!)).toBe(true);
     }

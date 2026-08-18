@@ -21,9 +21,6 @@ if (!databaseUrl) {
 
 const demoPasswords: Readonly<Record<string, string>> = Object.freeze({
   "DEMO-EMPLOYEE": "Demo-Employee-2026!",
-  "DEMO-APP-ADMIN": "Demo-AppAdmin-2026!",
-  "DEMO-INNOVATION": "Demo-Innovation-2026!",
-  "DEMO-ORG-ADMIN": "Demo-OrgAdmin-2026!",
   "DEMO-SUPER-ADMIN": "Demo-SuperAdmin-2026!",
 });
 

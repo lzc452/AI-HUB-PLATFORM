@@ -107,13 +107,7 @@ describe("buildApplicationInteractionFixture", () => {
   });
 
   it("delivery action actor_employee_id references are valid demo employees", () => {
-    const validEmployees = new Set([
-      "DEMO-EMPLOYEE",
-      "DEMO-APP-ADMIN",
-      "DEMO-INNOVATION",
-      "DEMO-ORG-ADMIN",
-      "DEMO-SUPER-ADMIN",
-    ]);
+    const validEmployees = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
     for (const da of fixture.deliveryActions) {
       expect(validEmployees.has(da.actor_employee_id)).toBe(true);
     }
@@ -240,7 +234,7 @@ describe("buildApplicationInteractionFixture", () => {
     const employees = new Set(
       fixture.applicationLikes.map((l) => l.employee_id),
     );
-    expect(employees.size).toBeGreaterThanOrEqual(3);
+    expect(employees.size).toBeGreaterThanOrEqual(2);
   });
 
   // ── version references ────────────────────────────────────────────────────

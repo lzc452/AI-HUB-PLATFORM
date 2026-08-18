@@ -305,11 +305,9 @@ const DEPARTMENTS = Object.freeze({
   admin: "demo-admin",
 } as const);
 
+/** V1 分发账号仅两个：普通员工与超级管理员。 */
 const EMPLOYEES = Object.freeze({
   employee: "DEMO-EMPLOYEE",
-  appAdmin: "DEMO-APP-ADMIN",
-  innovation: "DEMO-INNOVATION",
-  orgAdmin: "DEMO-ORG-ADMIN",
   superAdmin: "DEMO-SUPER-ADMIN",
 } as const);
 
@@ -344,7 +342,7 @@ const EMPLOYEES = Object.freeze({
  *
  * // Departments & employees (reused from demo-seed.ts)
  * IDS.department.rnd             // "demo-rnd"
- * IDS.employee.appAdmin          // "DEMO-APP-ADMIN"
+ * IDS.employee.superAdmin        // "DEMO-SUPER-ADMIN"
  * ```
  */
 export const IDS = Object.freeze({

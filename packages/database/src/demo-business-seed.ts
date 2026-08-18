@@ -138,7 +138,7 @@ export async function seedDemoBusinessData(
       .insertInto("applications")
       .values({
         application_id: IDS.appPublished,
-        owner_employee_id: "DEMO-APP-ADMIN",
+        owner_employee_id: "DEMO-EMPLOYEE",
         maintainer_employee_id: "DEMO-EMPLOYEE",
         department_id: "demo-rnd",
         name: "智能考勤助手",
@@ -148,7 +148,7 @@ export async function seedDemoBusinessData(
       })
       .onConflict((conflict) =>
         conflict.column("application_id").doUpdateSet({
-          owner_employee_id: "DEMO-APP-ADMIN",
+          owner_employee_id: "DEMO-EMPLOYEE",
           maintainer_employee_id: "DEMO-EMPLOYEE",
           department_id: "demo-rnd",
           name: "智能考勤助手",
@@ -164,8 +164,8 @@ export async function seedDemoBusinessData(
       .insertInto("applications")
       .values({
         application_id: IDS.appInReview,
-        owner_employee_id: "DEMO-APP-ADMIN",
-        maintainer_employee_id: "DEMO-APP-ADMIN",
+        owner_employee_id: "DEMO-SUPER-ADMIN",
+        maintainer_employee_id: "DEMO-SUPER-ADMIN",
         department_id: "demo-rnd",
         name: "需求智能匹配平台",
         summary: "基于语义分析的创新需求自动匹配应用",
@@ -204,8 +204,8 @@ export async function seedDemoBusinessData(
       .insertInto("applications")
       .values({
         application_id: IDS.appArchived,
-        owner_employee_id: "DEMO-APP-ADMIN",
-        maintainer_employee_id: "DEMO-APP-ADMIN",
+        owner_employee_id: "DEMO-SUPER-ADMIN",
+        maintainer_employee_id: "DEMO-SUPER-ADMIN",
         department_id: "demo-admin",
         name: "旧版报销助手",
         summary: "已由财务中台取代的报销辅助工具",
@@ -230,7 +230,7 @@ export async function seedDemoBusinessData(
         artifact_sha256: "a".repeat(64),
         artifact_signature: "demo-signature-published",
         scan_status: "passed",
-        created_by_employee_id: "DEMO-APP-ADMIN",
+        created_by_employee_id: "DEMO-EMPLOYEE",
       },
       {
         application_version_id: IDS.versionInReview,
@@ -241,7 +241,7 @@ export async function seedDemoBusinessData(
         artifact_sha256: "b".repeat(64),
         artifact_signature: "demo-signature-in-review",
         scan_status: "passed",
-        created_by_employee_id: "DEMO-APP-ADMIN",
+        created_by_employee_id: "DEMO-SUPER-ADMIN",
       },
       {
         application_version_id: IDS.versionArchived,
@@ -252,7 +252,7 @@ export async function seedDemoBusinessData(
         artifact_sha256: "c".repeat(64),
         artifact_signature: "demo-signature-archived",
         scan_status: "passed",
-        created_by_employee_id: "DEMO-APP-ADMIN",
+        created_by_employee_id: "DEMO-SUPER-ADMIN",
       },
     ] as const;
     for (const version of versions) {
@@ -335,8 +335,8 @@ export async function seedDemoBusinessData(
         review_id: IDS.reviewPublished,
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
-        reviewer_employee_id: "DEMO-INNOVATION",
-        application_owner_employee_id: "DEMO-APP-ADMIN",
+        reviewer_employee_id: "DEMO-SUPER-ADMIN",
+        application_owner_employee_id: "DEMO-EMPLOYEE",
         decision: "approve",
         comment: "功能完整，扫描通过，准予发布。",
         created_at: daysAgo(6),
@@ -444,7 +444,7 @@ export async function seedDemoBusinessData(
     }
 
     // —— 互动（点赞/评分/评论/举报）——
-    for (const employeeId of ["DEMO-EMPLOYEE", "DEMO-INNOVATION"]) {
+    for (const employeeId of ["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]) {
       await transaction
         .insertInto("application_likes")
         .values({ application_id: IDS.appPublished, employee_id: employeeId })
@@ -508,7 +508,7 @@ export async function seedDemoBusinessData(
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
         parent_comment_id: IDS.commentPublishedRoot,
-        author_employee_id: "DEMO-APP-ADMIN",
+        author_employee_id: "DEMO-SUPER-ADMIN",
         body: "支持，下一版本将提供 Excel 批量导入。",
         display_anonymously: false,
         hidden_at: null,
@@ -545,7 +545,7 @@ export async function seedDemoBusinessData(
         admin_priority: 4,
         priority_score: 4.2,
         priority_explanation: "业务价值高，成本可控，建议优先实施。",
-        owner_employee_id: "DEMO-INNOVATION",
+        owner_employee_id: "DEMO-SUPER-ADMIN",
         version: 5,
         merged_into_demand_id: null,
         primary_solution_application_id: IDS.appPublished,
@@ -675,7 +675,7 @@ export async function seedDemoBusinessData(
     const collaborators = [
       {
         demand_id: IDS.demandPublished,
-        employee_id: "DEMO-INNOVATION",
+        employee_id: "DEMO-SUPER-ADMIN",
         role: "owner",
       },
       {
@@ -696,7 +696,7 @@ export async function seedDemoBusinessData(
         .execute();
     }
 
-    for (const employeeId of ["DEMO-EMPLOYEE", "DEMO-APP-ADMIN"]) {
+    for (const employeeId of ["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]) {
       await transaction
         .insertInto("ai_demand_likes")
         .values({ demand_id: IDS.demandPublished, employee_id: employeeId })
@@ -722,7 +722,7 @@ export async function seedDemoBusinessData(
         comment_id: IDS.commentDemand2,
         demand_id: IDS.demandPublished,
         parent_comment_id: IDS.commentDemand1,
-        author_employee_id: "DEMO-INNOVATION",
+        author_employee_id: "DEMO-SUPER-ADMIN",
         body: "已列入迭代计划，预计两周内启动。",
         display_anonymously: false,
         hidden_at: null,
@@ -733,7 +733,7 @@ export async function seedDemoBusinessData(
         comment_id: IDS.commentDemand3,
         demand_id: IDS.demandPublished,
         parent_comment_id: null,
-        author_employee_id: "DEMO-APP-ADMIN",
+        author_employee_id: "DEMO-SUPER-ADMIN",
         body: "智能考勤助手可以作为试点应用。",
         display_anonymously: false,
         hidden_at: null,
@@ -785,7 +785,7 @@ export async function seedDemoBusinessData(
         reporter_employee_id: "DEMO-EMPLOYEE",
         reason: "重复需求",
         status: "dismissed",
-        resolved_by_employee_id: "DEMO-INNOVATION",
+        resolved_by_employee_id: "DEMO-SUPER-ADMIN",
         resolved_at: daysAgo(5),
         created_at: daysAgo(6),
       },
@@ -809,7 +809,7 @@ export async function seedDemoBusinessData(
       {
         progress_id: IDS.progress1,
         demand_id: IDS.demandPublished,
-        author_employee_id: "DEMO-INNOVATION",
+        author_employee_id: "DEMO-SUPER-ADMIN",
         status: "pending_claim",
         title: "需求完成评审并发布",
         body: "已通过创新运营评审，正式发布并开放协作。",
@@ -818,7 +818,7 @@ export async function seedDemoBusinessData(
       {
         progress_id: IDS.progress2,
         demand_id: IDS.demandPublished,
-        author_employee_id: "DEMO-INNOVATION",
+        author_employee_id: "DEMO-SUPER-ADMIN",
         status: "claimed",
         title: "试点应用已就绪",
         body: "智能考勤助手已作为试点应用接入。",
@@ -850,7 +850,7 @@ export async function seedDemoBusinessData(
         ends_at: null,
         outcome: null,
         status: "running",
-        created_by_employee_id: "DEMO-INNOVATION",
+        created_by_employee_id: "DEMO-SUPER-ADMIN",
         created_at: pilotStartedAt,
         updated_at: pilotStartedAt,
       })
@@ -872,14 +872,14 @@ export async function seedDemoBusinessData(
         application_id: IDS.appPublished,
         role: "solution",
         is_primary: true,
-        linked_by_employee_id: "DEMO-INNOVATION",
+        linked_by_employee_id: "DEMO-SUPER-ADMIN",
         created_at: daysAgo(2),
       })
       .onConflict((conflict) =>
         conflict.columns(["demand_id", "application_id"]).doUpdateSet({
           role: "solution",
           is_primary: true,
-          linked_by_employee_id: "DEMO-INNOVATION",
+          linked_by_employee_id: "DEMO-SUPER-ADMIN",
         }),
       )
       .execute();
@@ -906,7 +906,7 @@ export async function seedDemoBusinessData(
         audit_event_id: IDS.auditApplication,
         application_id: IDS.appPublished,
         application_version_id: null,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-EMPLOYEE",
         event_type: "application.created",
         details: { source: "demo-seed" },
       },
@@ -914,7 +914,7 @@ export async function seedDemoBusinessData(
         audit_event_id: IDS.auditVersion,
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-EMPLOYEE",
         event_type: "application.version.created",
         details: { version: "1.0.0" },
       },
@@ -922,7 +922,7 @@ export async function seedDemoBusinessData(
         audit_event_id: IDS.auditSubmitted,
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-EMPLOYEE",
         event_type: "application.submitted",
         details: { source: "demo-seed" },
       },
@@ -930,7 +930,7 @@ export async function seedDemoBusinessData(
         audit_event_id: IDS.auditReviewed,
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
-        actor_employee_id: "DEMO-INNOVATION",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         event_type: "application.reviewed",
         details: { decision: "approve" },
       },
@@ -938,7 +938,7 @@ export async function seedDemoBusinessData(
         audit_event_id: IDS.auditPublished,
         application_id: IDS.appPublished,
         application_version_id: IDS.versionPublished,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         event_type: "application.published",
         details: { source: "demo-seed" },
       },
@@ -952,14 +952,14 @@ export async function seedDemoBusinessData(
       {
         audit_event_id: IDS.auditDemandClaimed,
         demand_id: IDS.demandPublished,
-        actor_employee_id: "DEMO-INNOVATION",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         event_type: "demand.claimed",
         details: { source: "demo-seed" },
       },
       {
         audit_event_id: IDS.auditDemandMerged,
         demand_id: IDS.demandMerged,
-        actor_employee_id: "DEMO-INNOVATION",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         event_type: "demand.merged",
         details: { targetDemandId: IDS.demandPublished },
       },
@@ -1001,21 +1001,21 @@ export async function seedDemoBusinessData(
     const notifications = [
       {
         notification_id: IDS.notificationReviewRequested,
-        recipient_employee_id: "DEMO-INNOVATION",
+        recipient_employee_id: "DEMO-SUPER-ADMIN",
         event_type: "application.review.requested",
         aggregate_id: IDS.appInReview,
         idempotency_key:
-          "application.review.requested:10000000-0000-4000-8000-000000000002:DEMO-INNOVATION",
+          "application.review.requested:10000000-0000-4000-8000-000000000002:DEMO-SUPER-ADMIN",
         message: "应用「需求智能匹配平台」已提交评审，请及时处理。",
         read_at: null,
       },
       {
         notification_id: IDS.notificationApproved,
-        recipient_employee_id: "DEMO-APP-ADMIN",
+        recipient_employee_id: "DEMO-EMPLOYEE",
         event_type: "application.reviewed",
         aggregate_id: IDS.appPublished,
         idempotency_key:
-          "application.reviewed:10000000-0000-4000-8000-000000000001:DEMO-APP-ADMIN",
+          "application.reviewed:10000000-0000-4000-8000-000000000001:DEMO-EMPLOYEE",
         message: "应用「智能考勤助手」的评审结论：approve。",
         read_at: daysAgo(6),
       },
@@ -1111,7 +1111,7 @@ export async function seedDemoBusinessData(
         event_name: "application_viewed",
         aggregate_type: "application",
         aggregate_id: IDS.appPublished,
-        actor_employee_id: "DEMO-INNOVATION",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         idempotency_key: "demo-behavior:application-viewed-2",
         occurred_at: daysAgo(2),
       },
@@ -1135,7 +1135,7 @@ export async function seedDemoBusinessData(
         event_name: "demand_viewed",
         aggregate_type: "demand",
         aggregate_id: IDS.demandPublished,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         idempotency_key: "demo-behavior:demand-viewed-2",
         occurred_at: daysAgo(1),
       },
@@ -1143,7 +1143,7 @@ export async function seedDemoBusinessData(
         event_name: "demand_liked",
         aggregate_type: "demand",
         aggregate_id: IDS.demandPublished,
-        actor_employee_id: "DEMO-APP-ADMIN",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         idempotency_key: "demo-behavior:demand-liked-1",
         occurred_at: daysAgo(1),
       },
@@ -1151,7 +1151,7 @@ export async function seedDemoBusinessData(
         event_name: "review_decided",
         aggregate_type: "review",
         aggregate_id: IDS.versionPublished,
-        actor_employee_id: "DEMO-INNOVATION",
+        actor_employee_id: "DEMO-SUPER-ADMIN",
         idempotency_key: "demo-behavior:review-decided-1",
         occurred_at: daysAgo(6),
       },

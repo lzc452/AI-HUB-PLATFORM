@@ -16,20 +16,20 @@ describe("buildIdentityFixture", () => {
     expect(fixture.departments).toHaveLength(4);
   });
 
-  it("produces 5 employees", () => {
-    expect(fixture.employees).toHaveLength(5);
+  it("produces 2 employees", () => {
+    expect(fixture.employees).toHaveLength(2);
   });
 
-  it("produces 5 department memberships", () => {
-    expect(fixture.departmentMemberships).toHaveLength(5);
+  it("produces 2 department memberships", () => {
+    expect(fixture.departmentMemberships).toHaveLength(2);
   });
 
-  it("produces 9 role assignments", () => {
-    expect(fixture.employeeRoles).toHaveLength(9);
+  it("produces 3 role assignments", () => {
+    expect(fixture.employeeRoles).toHaveLength(3);
   });
 
-  it("produces 6 audit events", () => {
-    expect(fixture.identityAuditEvents).toHaveLength(6);
+  it("produces 3 audit events", () => {
+    expect(fixture.identityAuditEvents).toHaveLength(3);
   });
 
   // ── FK resolution ─────────────────────────────────────────────────────────
@@ -121,14 +121,14 @@ describe("buildIdentityFixture", () => {
     }
   });
 
-  it("audit events include exactly 5 login events and 1 profile_updated", () => {
+  it("audit events include exactly 2 login events and 1 profile_updated", () => {
     const loginCount = fixture.identityAuditEvents.filter(
       (ev) => ev.event_type === "login",
     ).length;
     const profileCount = fixture.identityAuditEvents.filter(
       (ev) => ev.event_type === "profile_updated",
     ).length;
-    expect(loginCount).toBe(5);
+    expect(loginCount).toBe(2);
     expect(profileCount).toBe(1);
   });
 
@@ -162,14 +162,14 @@ describe("buildIdentityFixture", () => {
     const times = fixture.identityAuditEvents.map((ev) =>
       (ev.created_at as Date).getTime(),
     );
-    // Login events are at anchor - 30, -29, -28, -27, -26 days;
+    // Login events are at anchor - 30, -29 days;
     // extra event is at anchor - 15 days (newer).
     // So timestamps in array order should be strictly decreasing
     // if newest is first, or increasing if oldest is first.
-    // Our map puts the newest login (anchor - 26) first,
-    // followed by older logins ... down to anchor - 30,
+    // Our map puts the newest login (anchor - 29) first,
+    // followed by the older login at anchor - 30,
     // then the extra event at anchor - 15.
-    // Array order: [anchor-30, anchor-29, anchor-28, anchor-27, anchor-26, anchor-15]
+    // Array order: [anchor-30, anchor-29, anchor-15]
     // This is increasing (oldest → newest).
     for (let i = 1; i < times.length; i++) {
       expect(times[i - 1]!).toBeLessThanOrEqual(times[i]!);

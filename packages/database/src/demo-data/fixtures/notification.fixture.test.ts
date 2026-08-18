@@ -27,13 +27,7 @@ const CANONICAL_EVENT_TYPES: readonly string[] = Object.freeze([
   "application.reported",
 ]);
 
-const VALID_EMPLOYEES = new Set([
-  "DEMO-EMPLOYEE",
-  "DEMO-APP-ADMIN",
-  "DEMO-INNOVATION",
-  "DEMO-ORG-ADMIN",
-  "DEMO-SUPER-ADMIN",
-]);
+const VALID_EMPLOYEES = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
 
 describe("buildNotificationFixture", () => {
   const fixture = buildNotificationFixture(ANCHOR);
@@ -49,7 +43,7 @@ describe("buildNotificationFixture", () => {
     expect(types).toEqual([...CANONICAL_EVENT_TYPES].sort());
   });
 
-  it("distributes notifications across all 5 demo employees", () => {
+  it("distributes notifications across both demo employees", () => {
     const byEmployee = new Map<string, number>();
     for (const n of fixture.notifications) {
       byEmployee.set(
@@ -57,7 +51,7 @@ describe("buildNotificationFixture", () => {
         (byEmployee.get(n.recipient_employee_id) ?? 0) + 1,
       );
     }
-    expect(byEmployee.size).toBe(5);
+    expect(byEmployee.size).toBe(2);
     for (const emp of VALID_EMPLOYEES) {
       expect(byEmployee.get(emp)).toBeGreaterThanOrEqual(1);
     }
@@ -206,7 +200,7 @@ describe("buildNotificationFixture", () => {
 
   // ── employee references ───────────────────────────────────────────────────
 
-  it("all recipient_employee_ids reference the 5 demo employees", () => {
+  it("all recipient_employee_ids reference the 2 demo employees", () => {
     for (const n of fixture.notifications) {
       expect(VALID_EMPLOYEES.has(n.recipient_employee_id)).toBe(true);
     }

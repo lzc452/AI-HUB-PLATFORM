@@ -43,14 +43,11 @@ pnpm dev:worker
 
 访问：打开浏览器 `http://localhost:5173`
 
-**演示账号**（种子数据已导入时可用）：
+**演示账号**（种子数据已导入时可用；V1 仅分发 `employee` 与 `super_admin` 两种角色，其余预置角色保留定义但不实施分发）：
 
 | 账号 | 工号 | 密码 |
 |------|------|------|
 | 普通员工 | `DEMO-EMPLOYEE` | `Demo-Employee-2026!` |
-| 应用管理员 | `DEMO-APP-ADMIN` | `Demo-AppAdmin-2026!` |
-| 创新运营管理员 | `DEMO-INNOVATION` | `Demo-Innovation-2026!` |
-| 组织管理员 | `DEMO-ORG-ADMIN` | `Demo-OrgAdmin-2026!` |
 | 超级管理员 | `DEMO-SUPER-ADMIN` | `Demo-SuperAdmin-2026!` |
 
 ### 全 Docker 开发（可选）

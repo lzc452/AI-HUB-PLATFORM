@@ -27,6 +27,35 @@ const DEMO_PASSWORDS = {
   "DEMO-SUPER-ADMIN": "Demo-SuperAdmin-2026!",
 } as const;
 
+/**
+ * V1 演示环境只分发 DEMO-EMPLOYEE 与 DEMO-SUPER-ADMIN 两个账号。
+ * 本 e2e 是测试环境（不受 V1 分发约束），仍验证 3 个 legacy 角色账号
+ * （application_admin / demand_operator / organization_admin）的登录与权限，
+ * 因此由测试自身创建这些账号，而非由演示种子分发。
+ */
+const LEGACY_ACCOUNTS = [
+  {
+    employeeId: "DEMO-APP-ADMIN",
+    displayName: "演示应用管理员",
+    primaryDepartmentId: "demo-rnd",
+    roleCodes: ["employee", "application_admin"],
+  },
+  {
+    employeeId: "DEMO-INNOVATION",
+    displayName: "演示创新运营管理员",
+    primaryDepartmentId: "demo-innovation",
+    roleCodes: ["employee", "demand_operator"],
+  },
+  {
+    employeeId: "DEMO-ORG-ADMIN",
+    displayName: "演示组织管理员",
+    primaryDepartmentId: "demo-admin",
+    roleCodes: ["employee", "organization_admin"],
+  },
+] as const;
+
+const ALL_ACCOUNTS = [...DEMO_ACCOUNT_DEFINITIONS, ...LEGACY_ACCOUNTS];
+
 const BASE_EMPLOYEE_PERMISSIONS = [
   "catalog.read",
   "demand.read",
@@ -106,12 +135,41 @@ describe("real demo account login", () => {
 
     const passwordService = new PasswordService();
     const passwordHashes: Record<string, string> = {};
-    for (const account of DEMO_ACCOUNT_DEFINITIONS) {
+    for (const account of ALL_ACCOUNTS) {
       passwordHashes[account.employeeId] = await passwordService.hashPassword(
         DEMO_PASSWORDS[account.employeeId as keyof typeof DEMO_PASSWORDS],
       );
     }
     await seedDemoAccounts(db, passwordHashes);
+
+    // 演示种子只分发 2 个账号；legacy 角色账号由 e2e 自身创建（测试环境）。
+    for (const account of LEGACY_ACCOUNTS) {
+      await db
+        .insertInto("employees")
+        .values({
+          employee_id: account.employeeId,
+          display_name: account.displayName,
+          status: "active",
+          primary_department_id: account.primaryDepartmentId,
+          password_hash: passwordHashes[account.employeeId]!,
+          password_reset_required: false,
+        })
+        .execute();
+      await db
+        .insertInto("department_memberships")
+        .values({
+          employee_id: account.employeeId,
+          department_id: account.primaryDepartmentId,
+          is_primary: true,
+        })
+        .execute();
+      for (const roleCode of account.roleCodes) {
+        await db
+          .insertInto("employee_roles")
+          .values({ employee_id: account.employeeId, role_code: roleCode })
+          .execute();
+      }
+    }
 
     const encryption = await LoginEncryptionService.generateDev();
     identity = new IdentityService(
@@ -139,7 +197,7 @@ describe("real demo account login", () => {
     await stop?.();
   }, 60_000);
 
-  it.each(DEMO_ACCOUNT_DEFINITIONS)(
+  it.each(ALL_ACCOUNTS)(
     "logs in $employeeId as $roleCodes",
     async (account) => {
       const password =

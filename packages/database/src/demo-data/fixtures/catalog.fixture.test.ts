@@ -125,13 +125,7 @@ describe("buildCatalogFixture", () => {
   });
 
   it("delivery action actor_employee_id reference is a valid demo employee", () => {
-    const validEmployees = new Set([
-      "DEMO-EMPLOYEE",
-      "DEMO-APP-ADMIN",
-      "DEMO-INNOVATION",
-      "DEMO-ORG-ADMIN",
-      "DEMO-SUPER-ADMIN",
-    ]);
+    const validEmployees = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
     for (const da of fixture.deliveryActions) {
       expect(validEmployees.has(da.actor_employee_id)).toBe(true);
     }
@@ -152,13 +146,7 @@ describe("buildCatalogFixture", () => {
   });
 
   it("audience employee_id references a valid demo employee when set", () => {
-    const validEmployees = new Set([
-      "DEMO-EMPLOYEE",
-      "DEMO-APP-ADMIN",
-      "DEMO-INNOVATION",
-      "DEMO-ORG-ADMIN",
-      "DEMO-SUPER-ADMIN",
-    ]);
+    const validEmployees = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
     for (const a of fixture.audiences) {
       if (a.employee_id !== null) {
         expect(validEmployees.has(a.employee_id!)).toBe(true);

@@ -6,12 +6,16 @@ import { DEMO_ACCOUNT_DEFINITIONS } from "../../demo-seed.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * V1 演示账号收敛：仅分发 DEMO-EMPLOYEE 与 DEMO-SUPER-ADMIN 两个账号。
+ * 管理类演示操作（应用管理、需求运营、组织管理）统一由超级管理员承担。
+ */
 const EMP = Object.freeze({
   employee: DEMO_ACCOUNT_DEFINITIONS[0]!.employeeId,
   appAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
-  innovation: DEMO_ACCOUNT_DEFINITIONS[2]!.employeeId,
-  orgAdmin: DEMO_ACCOUNT_DEFINITIONS[3]!.employeeId,
-  superAdmin: DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
+  innovation: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
+  orgAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
+  superAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
 });
 
 const DEPT = Object.freeze({
@@ -57,7 +61,7 @@ const APP_DEFS: readonly AppDef[] = Object.freeze([
   {
     name: "智能客服机器人",
     summary: "基于知识图谱的对话式客服机器人，支持多轮交互与工单自动创建",
-    ownerEmployeeId: EMP.appAdmin,
+    ownerEmployeeId: EMP.employee,
     maintainerEmployeeId: EMP.appAdmin,
     departmentId: DEPT.rnd,
   },
@@ -79,7 +83,7 @@ const APP_DEFS: readonly AppDef[] = Object.freeze([
   {
     name: "项目管理工具",
     summary: "敏捷项目管理平台，支持Scrum/Kanban双模式与效能度量",
-    ownerEmployeeId: EMP.appAdmin,
+    ownerEmployeeId: EMP.employee,
     maintainerEmployeeId: EMP.employee,
     departmentId: DEPT.rnd,
   },
@@ -87,14 +91,14 @@ const APP_DEFS: readonly AppDef[] = Object.freeze([
   {
     name: "智能考勤助手",
     summary: "面向研发团队的智能考勤与排班应用，集成钉钉与企业微信",
-    ownerEmployeeId: EMP.appAdmin,
+    ownerEmployeeId: EMP.employee,
     maintainerEmployeeId: EMP.employee,
     departmentId: DEPT.rnd,
   },
   {
     name: "财务报销系统",
     summary: "企业级智能财务报销审批平台，支持OCR发票识别与预算管控",
-    ownerEmployeeId: EMP.appAdmin,
+    ownerEmployeeId: EMP.employee,
     maintainerEmployeeId: EMP.appAdmin,
     departmentId: DEPT.admin,
   },
@@ -136,7 +140,7 @@ const APP_DEFS: readonly AppDef[] = Object.freeze([
   {
     name: "容器管理控制台",
     summary: "容器化应用编排与监控管理控制台，支持多集群统一管理",
-    ownerEmployeeId: EMP.appAdmin,
+    ownerEmployeeId: EMP.employee,
     maintainerEmployeeId: EMP.appAdmin,
     departmentId: DEPT.rnd,
   },
@@ -485,13 +489,13 @@ export function buildApplicationFixture(anchor: Date): ApplicationFixtureData {
     {
       appIdx: 3,
       eventType: "application.created",
-      actorEmployeeId: EMP.appAdmin,
+      actorEmployeeId: EMP.employee,
       details: { source: "demo-seed" },
     },
     {
       appIdx: 3,
       eventType: "application.submitted",
-      actorEmployeeId: EMP.appAdmin,
+      actorEmployeeId: EMP.employee,
       details: { status: "in_review" },
     },
     {
@@ -503,19 +507,19 @@ export function buildApplicationFixture(anchor: Date): ApplicationFixtureData {
     {
       appIdx: 6,
       eventType: "application.created",
-      actorEmployeeId: EMP.appAdmin,
+      actorEmployeeId: EMP.employee,
       details: { source: "demo-seed" },
     },
     {
       appIdx: 7,
       eventType: "application.created",
-      actorEmployeeId: EMP.appAdmin,
+      actorEmployeeId: EMP.employee,
       details: { source: "demo-seed" },
     },
     {
       appIdx: 7,
       eventType: "application.submitted",
-      actorEmployeeId: EMP.appAdmin,
+      actorEmployeeId: EMP.employee,
       details: { status: "in_review" },
     },
     {

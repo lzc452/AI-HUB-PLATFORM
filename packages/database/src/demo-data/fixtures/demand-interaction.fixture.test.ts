@@ -242,19 +242,13 @@ describe("buildDemandInteractionFixture", () => {
 
   // ── employee references ───────────────────────────────────────────────────
 
-  it("likes span at least 3 different employees", () => {
+  it("likes span both demo employees", () => {
     const employees = new Set(fixture.demandLikes.map((l) => l.employee_id));
-    expect(employees.size).toBeGreaterThanOrEqual(3);
+    expect(employees.size).toBeGreaterThanOrEqual(2);
   });
 
   it("comment authors reference valid demo employees", () => {
-    const validEmployees = new Set([
-      "DEMO-EMPLOYEE",
-      "DEMO-APP-ADMIN",
-      "DEMO-INNOVATION",
-      "DEMO-ORG-ADMIN",
-      "DEMO-SUPER-ADMIN",
-    ]);
+    const validEmployees = new Set(["DEMO-EMPLOYEE", "DEMO-SUPER-ADMIN"]);
     for (const c of fixture.demandComments) {
       expect(validEmployees.has(c.author_employee_id)).toBe(true);
     }

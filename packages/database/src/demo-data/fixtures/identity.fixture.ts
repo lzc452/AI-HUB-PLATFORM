@@ -31,10 +31,10 @@ export interface IdentityFixtureData {
  *
  * Produces:
  * - 4 departments (from {@link DEMO_DEPARTMENT_DEFINITIONS})
- * - 5 employees (from {@link DEMO_ACCOUNT_DEFINITIONS})
- * - 5 department memberships (one primary per employee)
- * - 9 employee-role assignments (all role codes across all accounts)
- * - 6 identity audit events (5 login + 1 profile-update)
+ * - 2 employees (from {@link DEMO_ACCOUNT_DEFINITIONS})
+ * - 2 department memberships (one primary per employee)
+ * - 3 employee-role assignments (all role codes across all accounts)
+ * - 3 identity audit events (2 login + 1 profile-update)
  */
 export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
   // ── departments (4) ──────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
       updated_at: daysAgo(anchor, 90),
     }));
 
-  // ── employees (5) ────────────────────────────────────────────────────────
+  // ── employees (2) ────────────────────────────────────────────────────────
 
   const employees: Array<Insertable<DatabaseSchema["employees"]>> =
     DEMO_ACCOUNT_DEFINITIONS.map((a) => ({
@@ -64,7 +64,7 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
       updated_at: daysAgo(anchor, 90),
     }));
 
-  // ── department memberships (5) ───────────────────────────────────────────
+  // ── department memberships (2) ───────────────────────────────────────────
 
   const departmentMemberships: Array<
     Insertable<DatabaseSchema["department_memberships"]>
@@ -74,7 +74,7 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
     is_primary: true,
   }));
 
-  // ── employee roles (9) ───────────────────────────────────────────────────
+  // ── employee roles (3) ───────────────────────────────────────────────────
 
   const employeeRoles: Array<Insertable<DatabaseSchema["employee_roles"]>> =
     DEMO_ACCOUNT_DEFINITIONS.flatMap((a) =>
@@ -84,9 +84,9 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
       })),
     );
 
-  // ── identity audit events (6) ────────────────────────────────────────────
+  // ── identity audit events (3) ────────────────────────────────────────────
 
-  // 5 login events — one per account, spread across the last 30 days.
+  // 2 login events — one per account, spread across the last 30 days.
   const loginEvents: Array<
     Insertable<DatabaseSchema["identity_audit_events"]>
   > = DEMO_ACCOUNT_DEFINITIONS.map((a, i) => ({
@@ -99,7 +99,7 @@ export function buildIdentityFixture(anchor: Date): IdentityFixtureData {
 
   // 1 extra event: the super admin updates the regular employee's profile.
   const extraEvent: Insertable<DatabaseSchema["identity_audit_events"]> = {
-    actor_employee_id: DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
+    actor_employee_id: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
     event_type: "profile_updated",
     subject_employee_id: DEMO_ACCOUNT_DEFINITIONS[0]!.employeeId,
     details: { field: "display_name" },

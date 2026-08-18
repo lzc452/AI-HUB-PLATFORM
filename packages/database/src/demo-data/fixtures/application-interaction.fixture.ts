@@ -6,12 +6,16 @@ import { DEMO_ACCOUNT_DEFINITIONS } from "../../demo-seed.js";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * V1 演示账号收敛：仅分发 DEMO-EMPLOYEE 与 DEMO-SUPER-ADMIN 两个账号。
+ * 管理类演示操作（应用管理、需求运营、组织管理）统一由超级管理员承担。
+ */
 const EMP = Object.freeze({
   employee: DEMO_ACCOUNT_DEFINITIONS[0]!.employeeId,
   appAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
-  innovation: DEMO_ACCOUNT_DEFINITIONS[2]!.employeeId,
-  orgAdmin: DEMO_ACCOUNT_DEFINITIONS[3]!.employeeId,
-  superAdmin: DEMO_ACCOUNT_DEFINITIONS[4]!.employeeId,
+  innovation: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
+  orgAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
+  superAdmin: DEMO_ACCOUNT_DEFINITIONS[1]!.employeeId,
 });
 
 /**

@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 
 const baseUrl = process.env.V1_SMOKE_BASE_URL ?? "http://127.0.0.1:3000";
 const passwords = {
-  "DEMO-APP-ADMIN": "Demo-AppAdmin-2026!",
   "DEMO-SUPER-ADMIN": "Demo-SuperAdmin-2026!",
 } as const;
 
@@ -130,10 +129,10 @@ async function poll(
   throw new Error(`POLL_TIMEOUT_${path}`);
 }
 
-const appAdmin = await login("DEMO-APP-ADMIN");
+const session = await login("DEMO-SUPER-ADMIN");
 const createdApplication = await requestJson("/internal/applications", {
   method: "POST",
-  headers: appAdmin.headers,
+  headers: session.headers,
   body: JSON.stringify({
     name: `V1 Artifact Smoke ${Date.now()}`,
     summary: "本地 V1 Artifact Intake 运行时验收应用",
@@ -152,7 +151,7 @@ const createdUpload = await requestJson(
   `/internal/applications/${applicationId}/artifact-uploads`,
   {
     method: "POST",
-    headers: appAdmin.headers,
+    headers: session.headers,
     body: JSON.stringify({
       fileName: "v1-smoke.txt",
       mimeType: "text/plain",
@@ -171,7 +170,7 @@ const uploadContent = await requestJson(
   {
     method: "PUT",
     headers: {
-      ...appAdmin.headers,
+      ...session.headers,
       "content-type": "application/octet-stream",
     },
     body: content,
@@ -186,7 +185,7 @@ const queued = await requestJson(
   `/internal/applications/${applicationId}/artifact-uploads/${uploadId}/complete`,
   {
     method: "POST",
-    headers: appAdmin.headers,
+    headers: session.headers,
     body: JSON.stringify({}),
   },
 );
@@ -207,10 +206,9 @@ if (
   throw new Error(`ARTIFACT_VERIFY_FAILED_${JSON.stringify(completed)}`);
 }
 
-const superAdmin = await login("DEMO-SUPER-ADMIN");
 const exportCreated = await requestJson("/internal/security/audit-exports", {
   method: "POST",
-  headers: superAdmin.headers,
+  headers: session.headers,
   body: JSON.stringify({ filterSnapshot: { source: "v1-runtime-smoke" } }),
 });
 if (exportCreated.status !== 200) {
@@ -221,7 +219,7 @@ if (exportCreated.status !== 200) {
 const exportId = exportCreated.body.exportJobId as string;
 const exportStatus = await poll(
   `/internal/security/audit-exports/${exportId}`,
-  superAdmin,
+  session,
   (body) => body.status === "completed" || body.status === "failed",
 );
 if (exportStatus.status !== "completed") {
@@ -230,7 +228,7 @@ if (exportStatus.status !== "completed") {
 const exportDownload = await fetch(
   `${baseUrl}/internal/security/audit-exports/${exportId}/download`,
   {
-    headers: superAdmin.headers,
+    headers: session.headers,
   },
 );
 const exportText = await exportDownload.text();
@@ -244,8 +242,7 @@ console.log(
   JSON.stringify(
     {
       login: {
-        appAdmin: appAdmin.employeeId,
-        superAdmin: superAdmin.employeeId,
+        superAdmin: session.employeeId,
       },
       artifact: {
         applicationId,

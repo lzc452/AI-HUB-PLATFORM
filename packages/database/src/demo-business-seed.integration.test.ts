@@ -112,7 +112,7 @@ describe("demo business seed", () => {
       .executeTakeFirstOrThrow();
     expect(resolvedReport).toEqual({
       status: "dismissed",
-      resolved_by_employee_id: "DEMO-INNOVATION",
+      resolved_by_employee_id: "DEMO-SUPER-ADMIN",
     });
 
     const openReportCount = await db

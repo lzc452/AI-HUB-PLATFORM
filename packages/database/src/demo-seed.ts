@@ -56,6 +56,12 @@ export const DEMO_DEPARTMENT_DEFINITIONS: readonly DemoDepartmentDefinition[] =
 export const DEMO_ROLE_DEFINITIONS: readonly DemoRoleDefinition[] =
   SYSTEM_ROLE_DEFINITIONS;
 
+/**
+ * V1 演示账号：只分发 `employee` 与 `super_admin` 两种角色。
+ *
+ * 其余预置角色（application_admin、demand_operator、organization_admin 等）
+ * 保留定义（roles 表）但不实施分发；管理类演示操作由 DEMO-SUPER-ADMIN 承担。
+ */
 export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] =
   Object.freeze([
     {
@@ -63,24 +69,6 @@ export const DEMO_ACCOUNT_DEFINITIONS: readonly DemoAccountDefinition[] =
       displayName: "演示普通员工",
       primaryDepartmentId: "demo-rnd",
       roleCodes: ["employee"],
-    },
-    {
-      employeeId: "DEMO-APP-ADMIN",
-      displayName: "演示应用管理员",
-      primaryDepartmentId: "demo-rnd",
-      roleCodes: ["employee", "application_admin"],
-    },
-    {
-      employeeId: "DEMO-INNOVATION",
-      displayName: "演示创新运营管理员",
-      primaryDepartmentId: "demo-innovation",
-      roleCodes: ["employee", "demand_operator"],
-    },
-    {
-      employeeId: "DEMO-ORG-ADMIN",
-      displayName: "演示组织管理员",
-      primaryDepartmentId: "demo-admin",
-      roleCodes: ["employee", "organization_admin"],
     },
     {
       employeeId: "DEMO-SUPER-ADMIN",
@@ -173,9 +161,9 @@ export async function seedDemoAccounts(
         finishedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 + 1000 * 60 * 4),
         summary: {
           departments: 4,
-          employees: 5,
+          employees: 2,
           createdEmployees: 0,
-          boundEmployees: 5,
+          boundEmployees: 2,
         },
       },
       {

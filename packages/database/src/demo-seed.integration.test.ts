@@ -39,9 +39,9 @@ describe("demo account seed", () => {
     expect(result).toEqual({
       departments: 4,
       roles: DEMO_ROLE_DEFINITIONS.length,
-      employees: 5,
-      memberships: 5,
-      roleAssignments: 9,
+      employees: 2,
+      memberships: 2,
+      roleAssignments: 3,
     });
 
     const departments = await db
