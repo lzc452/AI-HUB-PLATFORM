@@ -31,6 +31,7 @@ const admin: ActorContext = {
 
 class MemoryInteractionRepository implements InteractionRepository {
   liked = new Set<string>();
+  likeIds = new Map<string, string>();
   ratings: RatingRecord[] = [];
   comments: CommentRecord[] = [];
   reports: ReportRecord[] = [];
@@ -58,8 +59,15 @@ class MemoryInteractionRepository implements InteractionRepository {
     return this.liked.has(`${applicationId}:${employeeId}`);
   }
   async addLike(applicationId: string, employeeId: string) {
-    this.liked.add(`${applicationId}:${employeeId}`);
-    return `like-${applicationId}-${employeeId}`;
+    const key = `${applicationId}:${employeeId}`;
+    if (this.liked.has(key)) {
+      // 预置行（并发插入冲突）：返回已存在行的 like id，与真实仓库冲突路径一致
+      return this.likeIds.get(key) ?? `like-${applicationId}-${employeeId}`;
+    }
+    this.liked.add(key);
+    const likeId = `like-${applicationId}-${employeeId}`;
+    this.likeIds.set(key, likeId);
+    return likeId;
   }
   async removeLike(applicationId: string, employeeId: string) {
     this.liked.delete(`${applicationId}:${employeeId}`);
@@ -270,6 +278,24 @@ describe("InteractionService", () => {
     );
     await service.toggleLike(actor, "app-1");
     expect(recorded[0]).toBe("application-liked:like-app-1-DEMO-EMPLOYEE");
+  });
+
+  it("returns the existing like row id on insert conflict instead of a degenerate key", async () => {
+    const repository = new MemoryInteractionRepository();
+    // 模拟并发双击：T1 已插入并提交（like id 与退化键不同），T2 的 addLike 命中唯一冲突
+    repository.liked.add("app-1:E100");
+    repository.likeIds.set("app-1:E100", "like-existing-1");
+
+    // 冲突路径：返回已存在行的 like id，而非退化键 like-app-1-E100
+    await expect(repository.addLike("app-1", "E100")).resolves.toBe(
+      "like-existing-1",
+    );
+    // 同一行仍只有一条
+    expect(repository.liked.size).toBe(1);
+    // 无冲突路径：仍返回新行的 like id
+    await expect(repository.addLike("app-2", "E100")).resolves.toBe(
+      "like-app-2-E100",
+    );
   });
 
   it("validates a rating and updates the employee's single application rating", async () => {

@@ -62,7 +62,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
   }
 
   async addLike(applicationId: string, employeeId: string): Promise<string> {
-    const row = await this.db
+    const inserted = await this.db
       .insertInto("application_likes")
       .values({ application_id: applicationId, employee_id: employeeId })
       .onConflict((oc) =>
@@ -70,9 +70,22 @@ export class KyselyInteractionRepository implements InteractionRepository {
       )
       .returning("like_id")
       .executeTakeFirst();
-    return row === undefined
-      ? `like-${applicationId}-${employeeId}` // 并发冲突时无新行，退化为稳定键
-      : String(row.like_id);
+    if (inserted !== undefined) return String(inserted.like_id);
+    // 并发插入冲突：onConflict doNothing 无返回行，对方事务已提交（READ COMMITTED
+    // 下行可见）——查询现有行的 like_id 并返回，使冲突路径与插入路径对同一 like
+    // 行产生同一个幂等键，避免同一 like 被行为事件计两次。
+    const existing = await this.db
+      .selectFrom("application_likes")
+      .select("like_id")
+      .where("application_id", "=", applicationId)
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    if (existing === undefined) {
+      // 冲突检测到行存在、但查询时行已被并发删除：无法取得该行的 like_id，
+      // 此时抛错比退化为独立键更安全（独立键会造成重复计数）。
+      throw new Error("LIKE_ROW_NOT_FOUND_ON_CONFLICT");
+    }
+    return String(existing.like_id);
   }
 
   async removeLike(applicationId: string, employeeId: string): Promise<void> {
