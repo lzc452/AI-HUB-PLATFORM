@@ -52,9 +52,6 @@ export default function CreatorCenterPage() {
 
   return (
     <div className="space-y-4">
-      <Title className="!mb-0" level={1}>
-        创作者中心
-      </Title>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <CreatorWelcomeBanner />

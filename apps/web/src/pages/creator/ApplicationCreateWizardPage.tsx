@@ -27,6 +27,8 @@ export default function ApplicationCreateWizardPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdFromQuery = searchParams.get("applicationId");
+  const wizardType =
+    searchParams.get("type") ?? (draftIdFromQuery ? "edit" : "add");
 
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [defaultValues, setDefaultValues] = useState<FieldValues>(
@@ -79,7 +81,7 @@ export default function ApplicationCreateWizardPage() {
     let cancelled = false;
     (async () => {
       try {
-        if (draftIdFromQuery) {
+        if (wizardType === "edit" && draftIdFromQuery) {
           const record = await getApplicationDraft(draftIdFromQuery);
           if (!cancelled) {
             setApplicationId(draftIdFromQuery);
@@ -89,6 +91,8 @@ export default function ApplicationCreateWizardPage() {
               examplesHtml: record.draft.examplesHtml ?? "",
             });
           }
+        } else if (wizardType === "edit" && !draftIdFromQuery) {
+          message.error("编辑模式缺少应用 ID");
         } else {
           const created = await createApplicationDraft();
           if (!cancelled) setApplicationId(created.applicationId);

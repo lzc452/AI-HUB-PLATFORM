@@ -43,7 +43,14 @@ export class KyselyCreatorRepository implements CreatorRepository {
       .execute();
     const latest = rows[0];
     const previous = rows[1] ?? latest;
-    if (latest === undefined) throw new Error("APPLICATION_VERSION_NOT_FOUND");
+    // 草稿等尚无版本的应用返回空差异，不抛错。
+    if (latest === undefined) {
+      return {
+        fromVersion: "",
+        toVersion: "",
+        changedFields: [],
+      };
+    }
     return {
       fromVersion: previous?.version ?? latest.version,
       toVersion: latest.version,

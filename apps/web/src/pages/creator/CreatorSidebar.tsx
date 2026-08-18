@@ -30,7 +30,7 @@ const resourceIcons: Record<DeveloperResource["icon"], React.ReactNode> = {
 export function CreatorSidebar() {
   return (
     <aside aria-label="创作者资源" className="space-y-4">
-      <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
+      {/* <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
         <Title level={5} className="!mb-4 !mt-0 !text-base">
           创作者成就
         </Title>
@@ -53,7 +53,7 @@ export function CreatorSidebar() {
             </li>
           ))}
         </ul>
-      </section>
+      </section> */}
 
       <section className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
         <Title level={5} className="!mb-2 !mt-0 !text-base">

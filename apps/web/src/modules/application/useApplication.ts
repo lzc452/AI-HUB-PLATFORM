@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import type { DeliveryChannel } from "@ai-hub/contracts";
 
 import {
@@ -8,7 +9,9 @@ import {
   configureDelivery,
   createArtifactUpload,
   createVersion,
+  deleteApplication,
   deleteAsset,
+  getAssetContent,
   getApplication,
   getApplicationWorkspace,
   getApplicationDeliveries,
@@ -24,6 +27,7 @@ import {
   releaseReview,
   reviewApplicationVersion,
   submitApplicationReview,
+  transferApplicationOwner,
   type ArtifactUploadRecord,
   type CreateVersionInput,
   type ConfigureDeliveryInput,
@@ -72,9 +76,12 @@ export function useApplicationReviews(applicationId: string | undefined) {
   });
 }
 
-export function usePublishedVersion(applicationId: string | undefined) {
+export function usePublishedVersion(
+  applicationId: string | undefined,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
-    enabled: Boolean(applicationId),
+    enabled: Boolean(applicationId) && (options?.enabled ?? true),
     queryFn: () => getPublishedVersion(applicationId as string),
     queryKey: ["applications", "published-version", applicationId],
   });
@@ -129,6 +136,69 @@ export function useArchiveApplication() {
       showSuccessMessage("应用已归档");
     },
   });
+}
+
+export function useDeleteApplication() {
+  const invalidateCaches = useInvalidateApplicationCaches();
+  return useMutation({
+    mutationFn: (applicationId: string) => deleteApplication(applicationId),
+    onError: (error) => showErrorMessage(error, "应用删除失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("应用已删除");
+    },
+  });
+}
+
+export function useTransferApplicationOwner() {
+  const invalidateCaches = useInvalidateApplicationCaches();
+  return useMutation({
+    mutationFn: (input: {
+      applicationId: string;
+      ownerEmployeeId: string;
+    }) => transferApplicationOwner(input.applicationId, input.ownerEmployeeId),
+    onError: (error) => showErrorMessage(error, "责任人移交失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("责任人已移交");
+    },
+  });
+}
+
+/** 拉取资产内容并生成可预览的 object URL（组件卸载时自动释放）。 */
+export function useAssetImage(
+  applicationId: string | undefined,
+  assetId: string | undefined,
+): { objectUrl: string | null; failed: boolean } {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let url: string | null = null;
+    if (!applicationId || !assetId) {
+      setObjectUrl(null);
+      setFailed(false);
+      return;
+    }
+    setObjectUrl(null);
+    setFailed(false);
+    void getAssetContent(applicationId, assetId)
+      .then((blob) => {
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setObjectUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      if (url !== null) URL.revokeObjectURL(url);
+    };
+  }, [applicationId, assetId]);
+
+  return { objectUrl, failed };
 }
 
 // ---------------------------------------------------------------------------

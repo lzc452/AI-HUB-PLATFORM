@@ -62,13 +62,13 @@ export function Navigation() {
         path: ROUTES.applications,
         requiredPermissions: ROUTE_ACCESS.applications,
       },
-      {
-        icon: <CheckCircleOutlined aria-hidden="true" />,
-        key: "review",
-        label: "审核工作台",
-        path: reviewPath,
-        requiredPermissions: ROUTE_ACCESS.applicationReview,
-      },
+      // {
+      //   icon: <CheckCircleOutlined aria-hidden="true" />,
+      //   key: "review",
+      //   label: "审核工作台",
+      //   path: reviewPath,
+      //   requiredPermissions: ROUTE_ACCESS.applicationReview,
+      // },
       {
         icon: <DashboardOutlined aria-hidden="true" />,
         key: "analytics",
@@ -90,13 +90,13 @@ export function Navigation() {
         path: ROUTES.security,
         requiredPermissions: ROUTE_ACCESS.security,
       },
-      {
-        icon: <RobotOutlined aria-hidden="true" />,
-        key: "assistant",
-        label: "AI 助手",
-        path: ROUTES.assistant,
-        requiredPermissions: ROUTE_ACCESS.assistant,
-      },
+      // {
+      //   icon: <RobotOutlined aria-hidden="true" />,
+      //   key: "assistant",
+      //   label: "AI 助手",
+      //   path: ROUTES.assistant,
+      //   requiredPermissions: ROUTE_ACCESS.assistant,
+      // },
       {
         icon: <BellOutlined aria-hidden="true" />,
         key: "notifications",

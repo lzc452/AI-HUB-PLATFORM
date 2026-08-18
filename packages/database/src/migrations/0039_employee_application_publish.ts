@@ -1,11 +1,10 @@
 import { sql, type Kysely } from "kysely";
-import { PERMISSIONS } from "@ai-hub/contracts";
 import { SYSTEM_ROLE_DEFINITIONS } from "../authorization/system-roles.js";
 
 /**
- * 需求规格（§5.4 应用发布）：所有正常员工都可以创建草稿、提交应用并管理自己的应用。
- * 将数据库 registry 中 employee 系统角色的权限与 SYSTEM_ROLE_DEFINITIONS
- * 对齐（纯数据更新，不改表结构），补齐 application.create / application.publish。
+ * 补充同步 employee 系统角色权限（application.publish）。
+ * 0037 已在部分环境执行过旧版本（仅 application.create），该迁移幂等地将
+ * employee 权限与 SYSTEM_ROLE_DEFINITIONS 对齐，纯数据更新，不改表结构。
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   const employeeRole = SYSTEM_ROLE_DEFINITIONS.find(
@@ -30,7 +29,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {
-  // 回滚：仅移除本次授予普通员工的 application.create / application.publish，保留其他权限。
   await sql`
     update roles
     set permissions = (
@@ -40,15 +38,9 @@ export async function down(db: Kysely<unknown>): Promise<void> {
       )
       from jsonb_array_elements_text(roles.permissions)
         as permission_values(permission)
-      where permission not in (
-        ${sql.val(PERMISSIONS.APPLICATION_CREATE)},
-        ${sql.val(PERMISSIONS.APPLICATION_PUBLISH)}
-      )
+      where permission <> 'application.publish'
     )
     where role_code = 'employee'
-      and (
-        permissions ? ${sql.val(PERMISSIONS.APPLICATION_CREATE)}
-        or permissions ? ${sql.val(PERMISSIONS.APPLICATION_PUBLISH)}
-      )
+      and permissions ? 'application.publish'
   `.execute(db);
 }

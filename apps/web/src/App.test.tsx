@@ -118,6 +118,7 @@ vi.mock("./modules/application/useApplication", () => {
       ...settled,
       data: {
         application,
+        assets: [],
         deliveries: [],
         reviewQueue: null,
         reviews: [],
@@ -171,6 +172,15 @@ vi.mock("./modules/application/useApplication", () => {
       isPending: false,
       mutate: vi.fn(),
       mutateAsync: vi.fn(),
+    }),
+    useAssetImage: () => ({ objectUrl: null, failed: false }),
+    useTransferApplicationOwner: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+    }),
+    useDeleteApplication: () => ({
+      isPending: false,
+      mutate: vi.fn(),
     }),
   };
 });

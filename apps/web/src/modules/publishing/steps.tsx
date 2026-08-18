@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import type { FieldValues } from "react-hook-form";
 import {
   Button,
@@ -18,6 +18,8 @@ import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { RichTextView } from "../../shared/ui/RichTextView";
+import { getAssetContent } from "../application/application.client";
+import { useAssetImage } from "../application/useApplication";
 import { deleteAsset, uploadAsset } from "./publishing.client";
 
 const { Text } = Typography;
@@ -75,6 +77,13 @@ function IconField({ applicationId }: { applicationId: string }) {
   const name = watch("name");
   const bg = watch("icon.backgroundColor");
   const [iconUrl, setIconUrl] = useState<string | null>(null);
+  const watchedAssetId = watch("icon.assetId");
+  const { objectUrl: assetImageUrl } = useAssetImage(
+    applicationId,
+    typeof watchedAssetId === "string" && watchedAssetId.length > 0
+      ? watchedAssetId
+      : undefined,
+  );
 
   // 首字母预览自动取自应用名称，无需重新输入。
   const letter =
@@ -172,7 +181,7 @@ function IconField({ applicationId }: { applicationId: string }) {
                   >
                     {assetField.value ? (
                       <img
-                        src={iconUrl ?? ""}
+                        src={iconUrl ?? assetImageUrl ?? ""}
                         alt="应用图标"
                         style={{
                           width: "100%",
@@ -207,6 +216,13 @@ interface ScreenshotFile {
 
 function ScreenshotField({ applicationId }: { applicationId: string }) {
   const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const watchedScreenshotIds = useWatch({
+    control,
+    name: "screenshotAssetIds",
+  }) as string[] | undefined;
+  const watchedScreenshotKey = Array.isArray(watchedScreenshotIds)
+    ? watchedScreenshotIds.join(",")
+    : "";
   // 本地保存已上传图片的预览地址，保证步骤间切换（组件常驻挂载）后缩略图不丢失。
   const filesRef = useRef<ScreenshotFile[]>([]);
   const [files, setFiles] = useState<ScreenshotFile[]>([]);
@@ -218,6 +234,43 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
     filesRef.current = next;
     setFiles(next);
   };
+
+  // 编辑模式回显：草稿中的截图资产拉取图片并生成预览。
+  useEffect(() => {
+    if (!applicationId || !Array.isArray(watchedScreenshotIds)) {
+      return;
+    }
+    const existing = new Set(filesRef.current.map((file) => file.assetId));
+    const missing = watchedScreenshotIds.filter(
+      (assetId) =>
+        typeof assetId === "string" &&
+        assetId.length > 0 &&
+        !existing.has(assetId),
+    );
+    if (missing.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      missing.map(async (assetId) => {
+        const blob = await getAssetContent(applicationId, assetId);
+        return {
+          assetId,
+          name: "历史截图",
+          uid: assetId,
+          url: URL.createObjectURL(blob),
+        };
+      }),
+    )
+      .then((added) => {
+        if (cancelled) return;
+        syncFiles([...filesRef.current, ...added].slice(0, 6));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId, watchedScreenshotKey]);
 
   return (
     <Controller

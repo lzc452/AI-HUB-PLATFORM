@@ -11,25 +11,18 @@ export function CreatorWelcomeBanner() {
   return (
     <section
       aria-label="创作者中心欢迎"
-      className="flex items-center justify-between gap-6 rounded-2xl bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-6 lg:p-8"
+      className="flex items-center justify-between gap-6 rounded-xl bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 lg:p-4"
     >
       <div className="min-w-0 space-y-2">
-        <Title level={1} className="!mb-0 !text-2xl lg:!text-3xl">
-          欢迎回来！您的 AI 创新中心
+        <Title level={1} className="!mt-0 !text-2xl lg:!text-3xl">
+          欢迎回来！{actor.data?.displayName || "创作者"} 
         </Title>
-        <Paragraph className="!mb-0" style={{ color: "#595959", fontSize: 14 }}>
-          统一查找、体验与分享各部门 AI 工具
-        </Paragraph>
         {actor.data ? (
           <Text style={{ color: "#8c8c8c", fontSize: 12 }}>
             工号 {actor.data.employeeId}
           </Text>
         ) : null}
       </div>
-      <div
-        aria-hidden="true"
-        className="hidden h-24 w-24 shrink-0 rounded-2xl bg-gradient-to-br from-[#3d6bff] to-[#7c9bff] opacity-30 shadow-inner md:block lg:h-32 lg:w-32"
-      />
     </section>
   );
 }

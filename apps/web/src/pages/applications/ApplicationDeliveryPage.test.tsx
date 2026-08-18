@@ -71,8 +71,12 @@ const hoisted = vi.hoisted(() => {
     application,
     assets: [],
     deliveries,
+    departmentName: "研发部",
+    maintainerName: "E0002",
+    ownerName: "E0001",
     reviewQueue: null,
     reviews: [],
+    updatedAt: "2026-08-12T08:00:00.000Z",
     versions: [latestVersion],
   };
   return {
@@ -115,6 +119,29 @@ vi.mock("../../modules/application/useApplication", () => ({
   useSubmitApplicationReview: () => ({
     isPending: false,
     mutate: hoisted.submitReview,
+  }),
+  useAssetImage: () => ({ objectUrl: null, failed: false }),
+  useWithdrawApplication: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+  }),
+  useArchiveApplication: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+  }),
+  useTransferApplicationOwner: () => ({
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+  }),
+}));
+
+vi.mock("../../modules/auth/useAuth", () => ({
+  useAuth: () => ({
+    actor: { employeeId: "E0001" },
+    canAccess: () => true,
   }),
 }));
 

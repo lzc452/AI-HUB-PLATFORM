@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Headers,
@@ -49,6 +50,7 @@ import {
   ReviewRequestDto,
   RollbackRequestDto,
   SaveApplicationDraftRequestDto,
+  TransferOwnerRequestDto,
   WithdrawRequestDto,
 } from "./application.dto.js";
 import type { ApplicationDraft } from "@ai-hub/contracts";
@@ -417,6 +419,58 @@ export class ApplicationController {
       this.applications.archive(
         await this.requireActor(employeeId, sessionId, "publish"),
         applicationId,
+      ),
+    );
+  }
+
+  @Delete(":applicationId")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(204)
+  @ApiOperation({
+    summary: "删除草稿应用",
+    description:
+      "仅负责人可删除 status=draft 的应用；级联清理子表数据并写入审计与 outbox 事件。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async deleteDraft(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    await this.call(async () =>
+      this.applications.deleteApplication(
+        await this.requireActor(employeeId, sessionId, "update"),
+        applicationId,
+      ),
+    );
+  }
+
+  @Post(":applicationId/transfer")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_UPDATE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "移交责任人",
+    description:
+      "负责人本人或应用管理员可将应用移交给在职员工，写入审计与 outbox 事件。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiBody({ type: TransferOwnerRequestDto })
+  @ApiOkResponse({ description: "移交后的应用记录", type: ApplicationDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async transferOwner(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Body() body: TransferOwnerRequestDto,
+  ) {
+    return this.call(async () =>
+      this.applications.transferOwner(
+        await this.requireActor(employeeId, sessionId, "update"),
+        applicationId,
+        body.ownerEmployeeId,
       ),
     );
   }

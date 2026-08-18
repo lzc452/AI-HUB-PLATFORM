@@ -1,13 +1,25 @@
 import { Button, Empty, Spin, Tag, Tooltip, Typography } from "antd";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import type { AudienceRule } from "@ai-hub/contracts";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
 import {
   useApplication,
   useApplicationWorkspace,
+  useAssetImage,
+  useCreatorApplications,
   usePublishedVersion,
 } from "../../modules/application/useApplication";
 import type { AssetRecord } from "../../modules/application/application.client";
+import { useAuth } from "../../modules/auth/useAuth";
+import {
+  listDepartmentMembers,
+  listDepartments,
+} from "../../modules/auth/auth.client";
+import { getApplicationDraft } from "../../modules/publishing";
+import { listCategories, listTags } from "../../modules/publishing/publishing.client";
 import { MessageError } from "../../shared/ui/message";
 
 const { Paragraph, Text } = Typography;
@@ -24,12 +36,47 @@ const lifecycleStates = [
 
 export default function ApplicationDetailsPage() {
   const { applicationId } = useParams();
+  const { actor } = useAuth();
   const applicationQuery = useApplication(applicationId);
-  const workspaceQuery = useApplicationWorkspace(applicationId);
-  const publishedVersion = usePublishedVersion(applicationId);
   const application = applicationQuery.data;
+  const workspaceQuery = useApplicationWorkspace(applicationId);
+  const publishedVersion = usePublishedVersion(applicationId, {
+    enabled: Boolean(application?.currentVersionId),
+  });
+  const creatorApplicationsQuery = useCreatorApplications();
+  const categoriesQuery = useQuery({
+    queryFn: listCategories,
+    queryKey: ["catalog", "categories"],
+  });
+  const tagsQuery = useQuery({
+    queryFn: listTags,
+    queryKey: ["catalog", "tags"],
+  });
   const version = publishedVersion.data;
   const assets = workspaceQuery.data?.assets ?? [];
+  const workspace = workspaceQuery.data;
+  const isOwner =
+    application !== undefined &&
+    actor !== null &&
+    application.ownerEmployeeId === actor.employeeId;
+  const draftQuery = useQuery({
+    enabled: Boolean(applicationId && isOwner),
+    queryFn: () => getApplicationDraft(applicationId as string),
+    queryKey: ["applications", "draft", applicationId],
+  });
+  const audienceLabels = useAudienceLabels(draftQuery.data?.draft.audience);
+  const creatorRecord = creatorApplicationsQuery.data?.items.find(
+    (item) => item.applicationId === applicationId,
+  );
+  const categoryLabel = categoriesQuery.data?.find(
+    (category) => category.categoryId === creatorRecord?.categoryId,
+  )?.name;
+  const tagLabels = (creatorRecord?.tagIds ?? [])
+    .map(
+      (tagId) =>
+        tagsQuery.data?.find((tag) => tag.tagId === tagId)?.name ?? "",
+    )
+    .filter(Boolean);
   const screenshots = assets.filter(
     (asset) => asset.assetType === "screenshot",
   );
@@ -39,7 +86,7 @@ export default function ApplicationDetailsPage() {
 
   return (
     <ApplicationAdminPage
-      description={`${application?.name ?? "OCR 票据识别"} 的应用信息与发布状态。`}
+      description={`${application?.name ?? "获取名称失败"} 的应用信息与发布状态。`}
       title="应用详情"
     >
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,3fr)_minmax(340px,1.1fr)]">
@@ -64,7 +111,6 @@ export default function ApplicationDetailsPage() {
                   {version?.changelog || application?.summary || "暂无版本说明"}
                 </Paragraph>
               </div>
-              {screenshots[0] ? <AssetPreview asset={screenshots[0]} /> : null}
             </div>
           </section>
           <DetailSection title="应用简介">
@@ -102,7 +148,11 @@ export default function ApplicationDetailsPage() {
             {screenshots.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {screenshots.map((asset) => (
-                  <AssetPreview asset={asset} key={asset.assetId} />
+                  <AssetPreview
+                    applicationId={applicationId}
+                    asset={asset}
+                    key={asset.assetId}
+                  />
                 ))}
               </div>
             ) : (
@@ -155,35 +205,52 @@ export default function ApplicationDetailsPage() {
         <aside className="space-y-3">
           <InfoCard title="应用信息">
             <InfoRow
-              label="分类"
-              value={application?.departmentId ?? "未设置"}
+              label="分类："
+              value={categoryLabel ?? "未设置"}
             />
-            <InfoRow label="标签" value="未设置" />
             <InfoRow
-              label="最近更新时间"
+              label="标签："
+              value={tagLabels.length > 0 ? tagLabels.join("、") : "未设置"}
+            />
+            <InfoRow
+              label="最近更新："
               value={
-                version?.createdAt ? formatDate(version.createdAt) : "未提供"
+                workspace?.updatedAt ? formatDate(workspace.updatedAt) : "未提供"
               }
             />
           </InfoCard>
           <InfoCard title="可见范围 / 受众">
-            <InfoRow label="可见部门" value="由后端受众策略判定" />
-            <InfoRow label="目标用户" value="由后端受众策略判定" />
+            <InfoRow
+              label="可见部门："
+              value={audienceLabels.department ?? "由后端受众策略判定"}
+            />
+            <InfoRow
+              label="目标用户："
+              value={audienceLabels.employee ?? "由后端受众策略判定"}
+            />
           </InfoCard>
           <InfoCard title="维护团队">
             <InfoRow
-              label="责任人"
-              value={application?.ownerEmployeeId ?? "未提供"}
-            />
-            <InfoRow
-              label="维护人"
-              value={application?.maintainerEmployeeId ?? "未提供"}
-            />
-            <InfoRow
-              label="最近操作"
+              label="责任人："
               value={
-                version?.createdAt
-                  ? `版本创建于 ${formatDate(version.createdAt)}`
+                workspace?.ownerName ||
+                application?.ownerEmployeeId ||
+                "未提供"
+              }
+            />
+            <InfoRow
+              label="维护人："
+              value={
+                workspace?.maintainerName ||
+                application?.maintainerEmployeeId ||
+                "未提供"
+              }
+            />
+            <InfoRow
+              label="最近操作："
+              value={
+                workspace?.updatedAt
+                  ? `${formatDate(workspace.updatedAt)}`
                   : "暂无操作记录"
               }
             />
@@ -305,7 +372,108 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-function AssetPreview({ asset }: { asset: AssetRecord }) {
+/** 将草稿受众规则映射为可读的部门/员工名称。 */
+function useAudienceLabels(audience: readonly AudienceRule[] | undefined): {
+  department: string | null;
+  employee: string | null;
+} {
+  const departmentsQuery = useQuery({
+    queryFn: listDepartments,
+    queryKey: ["identity", "departments"],
+  });
+  const [memberNames, setMemberNames] = useState<Record<string, string>>({});
+
+  const departmentIds = [
+    ...new Set(
+      (audience ?? [])
+        .filter(
+          (rule) =>
+            rule.audienceType === "department" && rule.departmentId !== null,
+        )
+        .map((rule) => rule.departmentId as string),
+    ),
+  ];
+  const departmentKey = departmentIds.join(",");
+
+  useEffect(() => {
+    if (departmentIds.length === 0) {
+      setMemberNames({});
+      return;
+    }
+    let cancelled = false;
+    void Promise.all(
+      departmentIds.map((id) =>
+        listDepartmentMembers(id).catch(() => []),
+      ),
+    ).then((groups) => {
+      if (cancelled) return;
+      const names: Record<string, string> = {};
+      for (const group of groups) {
+        for (const member of group) {
+          names[member.employeeId] = member.displayName;
+        }
+      }
+      setMemberNames(names);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [departmentKey]);
+
+  if (!audience || audience.length === 0) {
+    return { department: null, employee: null };
+  }
+
+  const departmentLabels: string[] = [];
+  const employeeLabels: string[] = [];
+  for (const rule of audience) {
+    if (rule.audienceType === "all") {
+      departmentLabels.push("全员");
+      employeeLabels.push("全员");
+    } else if (rule.audienceType === "department" && rule.departmentId) {
+      departmentLabels.push(
+        departmentsQuery.data?.find(
+          (department) => department.departmentId === rule.departmentId,
+        )?.name ?? rule.departmentId,
+      );
+    } else if (rule.audienceType === "employee" && rule.employeeId) {
+      employeeLabels.push(
+        memberNames[rule.employeeId] ?? rule.employeeId,
+      );
+    }
+  }
+  return {
+    department:
+      departmentLabels.length > 0 ? departmentLabels.join("、") : null,
+    employee: employeeLabels.length > 0 ? employeeLabels.join("、") : null,
+  };
+}
+
+function AssetPreview({
+  applicationId,
+  asset,
+}: {
+  applicationId: string | undefined;
+  asset: AssetRecord;
+}) {
+  const { objectUrl } = useAssetImage(applicationId, asset.assetId);
+  if (objectUrl !== null && asset.mimeType.startsWith("image/")) {
+    return (
+      <div className="flex min-h-[72px] items-center gap-3 rounded-md border border-[#d8e0eb] bg-[#f8fbff] p-3">
+        <img
+          alt={asset.name}
+          className="h-20 w-20 rounded-md border border-[#d8e0eb] object-cover"
+          src={objectUrl}
+        />
+        <div className="min-w-0">
+          <div className="truncate text-sm text-[#374151]">{asset.name}</div>
+          <div className="text-xs text-[#8a94a6]">
+            {asset.mimeType} · {formatBytes(asset.sizeBytes)}
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-[72px] items-center gap-3 rounded-md border border-[#d8e0eb] bg-[#f8fbff] p-3">
       <i

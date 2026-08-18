@@ -15,6 +15,9 @@ describe("system role registry", () => {
     expect(SYSTEM_ROLE_PERMISSION_MAP.get("employee")).toContain(
       PERMISSIONS.APPLICATION_CREATE,
     );
+    expect(SYSTEM_ROLE_PERMISSION_MAP.get("employee")).toContain(
+      PERMISSIONS.APPLICATION_PUBLISH,
+    );
     expect(SYSTEM_ROLE_PERMISSION_MAP.get("demand_operator")).toContain(
       PERMISSIONS.APPLICATION_CREATE,
     );
