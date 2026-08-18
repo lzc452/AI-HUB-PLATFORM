@@ -93,6 +93,7 @@ export class AnalyticsController {
       "risk",
       "runtime",
       "integration",
+      "demand_value",
     ],
   })
   @ApiQuery({
@@ -107,6 +108,13 @@ export class AnalyticsController {
     required: false,
     example: "",
   })
+  @ApiQuery({
+    name: "applicationId",
+    description:
+      "单应用筛选（仅 application 看板支持；校验 owner/maintainer 或应用分析权限）",
+    required: false,
+    example: "",
+  })
   @ApiOkResponse({ description: "看板结果", type: DashboardResultDto })
   @ApiProblemResponses([400, 401, 403])
   async dashboard(
@@ -115,6 +123,7 @@ export class AnalyticsController {
     @Headers("x-session-id") sessionId: string | undefined,
     @Query("from") from = "",
     @Query("to") to = "",
+    @Query("applicationId") applicationId?: string,
   ) {
     return this.call(async () => {
       const actor = await this.requireActor(employeeId, sessionId);
@@ -130,6 +139,7 @@ export class AnalyticsController {
         dashboardKey as DashboardKey,
         from,
         to,
+        applicationId,
       );
     });
   }

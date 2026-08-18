@@ -9,9 +9,11 @@ import {
   FlagOutlined,
   MinusOutlined,
   MoneyCollectOutlined,
+  RiseOutlined,
   ScanOutlined,
   ScheduleOutlined,
   SendOutlined,
+  StopOutlined,
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
@@ -42,6 +44,8 @@ const kpiIcons: Record<string, React.ReactNode> = {
   月活员工: <UserOutlined aria-hidden="true" />,
   活跃应用: <AppstoreOutlined aria-hidden="true" />,
   交付总数: <SendOutlined aria-hidden="true" />,
+  转化需求: <RiseOutlined aria-hidden="true" />,
+  高风险应用: <StopOutlined aria-hidden="true" />,
 };
 
 const appIconMap: Record<string, React.ComponentType> = {

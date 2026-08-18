@@ -28,6 +28,7 @@ const targetPermissions: Readonly<
   risk: PERMISSIONS.ANALYTICS_RISK_READ,
   runtime: PERMISSIONS.ANALYTICS_RUNTIME_READ,
   integration: PERMISSIONS.ANALYTICS_INTEGRATION_READ,
+  demand_value: PERMISSIONS.ANALYTICS_INNOVATION_READ,
 };
 
 export class AnalyticsExportService {

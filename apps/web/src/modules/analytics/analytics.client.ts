@@ -11,13 +11,12 @@ export type DashboardKey =
   | "department"
   | "risk"
   | "runtime"
-  | "integration";
+  | "integration"
+  | "demand_value";
 
-export const DASHBOARD_PERMISSIONS: Record<
-  DashboardKey,
-  `analytics.${DashboardKey}.read`
-> = {
+export const DASHBOARD_PERMISSIONS: Record<DashboardKey, string> = {
   application: PERMISSIONS.ANALYTICS_APPLICATION_READ,
+  demand_value: PERMISSIONS.ANALYTICS_INNOVATION_READ,
   department: PERMISSIONS.ANALYTICS_DEPARTMENT_READ,
   innovation: PERMISSIONS.ANALYTICS_INNOVATION_READ,
   integration: PERMISSIONS.ANALYTICS_INTEGRATION_READ,
@@ -52,8 +51,17 @@ export interface AnalyticsDateRange {
 export function getDashboard(
   dashboardKey: DashboardKey,
   range?: AnalyticsDateRange,
+  applicationId?: string,
 ): Promise<DashboardResult> {
-  const query = range ? `?from=${range.from}&to=${range.to}` : "";
+  const params = new URLSearchParams();
+  if (range) {
+    params.set("from", range.from);
+    params.set("to", range.to);
+  }
+  if (applicationId !== undefined) {
+    params.set("applicationId", applicationId);
+  }
+  const query = params.size > 0 ? `?${params.toString()}` : "";
   return apiFetch<DashboardResult>(
     `/internal/analytics/dashboards/${encodeURIComponent(dashboardKey)}${query}`,
   );

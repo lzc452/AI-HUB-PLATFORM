@@ -126,6 +126,13 @@ export async function getPlatformOverviewData(
         "#fadb14",
         "#fffbe6",
       ),
+      metric("转化需求", "demand.converted_count", "#13c2c2", "#e6fffb"),
+      metric(
+        "高风险应用",
+        "risk.high_risk_application_count",
+        "#eb2f96",
+        "#fff0f6",
+      ),
     ],
     slaPolicies: [],
   };

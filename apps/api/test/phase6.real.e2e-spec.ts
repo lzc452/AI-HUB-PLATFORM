@@ -198,6 +198,45 @@ describe("real Phase 6 analytics API", () => {
       "2026-08-03T00:00:00.000Z",
       "2026-08-04T00:00:00.000Z",
     );
+
+    // 需求价值看板数据源：ai_demands + ai_demand_audit_events（无行为事件）。
+    await sql`
+      insert into ai_demands (
+        demand_id, requester_employee_id, title, problem_statement, desired_outcome,
+        status, audience_type, audience_department_id, include_children, display_anonymously,
+        priority_score, version
+      ) values (
+        '11111111-1111-1111-1111-111111111111', 'E900', 'Demand for e2e', 'Problem',
+        'Outcome', 'converted', 'department', 'dept-rnd', false, false,
+        4.2, 1
+      )
+    `.execute(db);
+    await sql`
+      insert into ai_demand_audit_events (
+        demand_id, actor_employee_id, event_type, details, created_at
+      ) values
+        ('11111111-1111-1111-1111-111111111111', 'E900', 'demand.submitted', '{}', '2026-08-03T09:00:00.000Z'),
+        ('11111111-1111-1111-1111-111111111111', 'E900', 'demand.status.changed', '{"from":"pending_review","to":"converted"}', '2026-08-03T10:00:00.000Z'),
+        ('11111111-1111-1111-1111-111111111111', 'E900', 'demand.priority.updated', '{"score":4.2}', '2026-08-03T11:00:00.000Z'),
+        ('11111111-1111-1111-1111-111111111111', 'E900', 'demand.pilot.updated', '{"status":"completed"}', '2026-08-03T12:00:00.000Z')
+    `.execute(db);
+    await event.record(
+      {
+        employeeId: "E900",
+        roleCodes: ["analytics_operator"],
+        departmentIds: ["dept-rnd"],
+        primaryDepartmentId: "dept-rnd",
+        sessionId: "session-E900",
+      },
+      {
+        eventName: "application_downloaded",
+        aggregateType: "application",
+        aggregateId: "application-1",
+        occurredAt: "2026-08-03T14:00:00.000Z",
+        idempotencyKey: "phase6-real-event-download-1",
+        metadata: { channel: "web" },
+      },
+    );
   }, 60_000);
 
   afterAll(async () => {
@@ -344,6 +383,76 @@ describe("real Phase 6 analytics API", () => {
     const rawEvents = await sql<{ count: string }>`
       select count(*)::text as count from analytics_behavior_events
     `.execute(db);
-    expect(rawEvents.rows[0]?.count).toBe("2");
+    expect(rawEvents.rows[0]?.count).toBe("3");
+  });
+
+  it("serves demand-value metrics, snapshot KPIs, and application-scoped dashboards from PostgreSQL", async () => {
+    const demandValue = await request(app.getHttpServer())
+      .get("/internal/analytics/dashboards/demand_value")
+      .query({ from: "2026-08-03", to: "2026-08-04" })
+      .set(headers)
+      .expect(200);
+    const byKey = new Map(
+      demandValue.body.metrics.map(
+        (metric: { metricKey: string; value: number }) => [
+          metric.metricKey,
+          metric.value,
+        ],
+      ),
+    );
+    expect(byKey.get("demand.converted_count")).toBe(1);
+    expect(byKey.get("demand.converted_rate")).toBe(100);
+    expect(byKey.get("demand.avg_priority_score")).toBe(4.2);
+    expect(byKey.get("demand.pilot_completed_count")).toBe(1);
+
+    const platform = await request(app.getHttpServer())
+      .get("/internal/analytics/dashboards/platform")
+      .query({ from: "2026-08-03", to: "2026-08-04" })
+      .set(headers)
+      .expect(200);
+    expect(platform.body.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricKey: "demand.converted_count",
+          value: 1,
+        }),
+        expect.objectContaining({
+          metricKey: "risk.high_risk_application_count",
+        }),
+      ]),
+    );
+
+    const scoped = await request(app.getHttpServer())
+      .get("/internal/analytics/dashboards/application")
+      .query({
+        from: "2026-08-03",
+        to: "2026-08-04",
+        applicationId: "application-1",
+      })
+      .set(headers)
+      .expect(200);
+    expect(scoped.body.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          metricKey: "application.downloads",
+          value: 1,
+        }),
+      ]),
+    );
+
+    await request(app.getHttpServer())
+      .get("/internal/analytics/dashboards/platform")
+      .query({
+        from: "2026-08-03",
+        to: "2026-08-04",
+        applicationId: "application-1",
+      })
+      .set(headers)
+      .expect(400)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          code: "ANALYTICS_DASHBOARD_APPLICATION_SCOPE_INVALID",
+        });
+      });
   });
 });

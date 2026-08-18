@@ -10,7 +10,8 @@ export type DashboardKey =
   | "department"
   | "risk"
   | "runtime"
-  | "integration";
+  | "integration"
+  | "demand_value";
 
 export interface DashboardReadInput {
   actor: ActorContext;
@@ -20,6 +21,7 @@ export interface DashboardReadInput {
   to: string;
   audienceScopeKey: string | null;
   audienceScopeKeys?: readonly string[];
+  applicationId?: string;
 }
 
 export interface AnalyticsDashboardRepository {
@@ -29,9 +31,19 @@ export interface AnalyticsDashboardRepository {
   readDailyAggregates(
     input: DashboardReadInput,
   ): Promise<readonly DailyAggregate[]>;
+  readDemandValueAggregates(
+    input: DashboardReadInput,
+  ): Promise<readonly DailyAggregate[]>;
+  readApplicationDailyAggregates(
+    input: DashboardReadInput,
+  ): Promise<readonly DailyAggregate[]>;
   readSnapshotCounts(): Promise<
     readonly { metricKey: string; value: number }[]
   >;
+  isApplicationOwnerOrMaintainer(
+    employeeId: string,
+    applicationId: string,
+  ): Promise<boolean>;
   recordAudit(input: {
     actorEmployeeId: string;
     action: string;

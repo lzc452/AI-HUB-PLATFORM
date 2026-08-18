@@ -66,6 +66,12 @@ const dashboardTabs: ReadonlyArray<DashboardTab> = [
     key: "risk",
     label: "风险治理",
   },
+  {
+    dashboardKey: "demand_value",
+    description: "需求转化、优先级与试点完成聚合",
+    key: "demand_value",
+    label: "需求价值",
+  },
 ];
 
 const timeFilterOptions = [

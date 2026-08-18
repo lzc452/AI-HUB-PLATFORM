@@ -11,6 +11,8 @@ export const dashboardMetricKeys: Readonly<
     "platform.published_application_count",
     "platform.pending_review_count",
     "platform.pending_claim_count",
+    "demand.converted_count",
+    "risk.high_risk_application_count",
   ],
   market: ["market.application_deliveries"],
   application: [
@@ -31,6 +33,12 @@ export const dashboardMetricKeys: Readonly<
   integration: [
     "integration.assistant_requests",
     "integration.assistant_failures",
+  ],
+  demand_value: [
+    "demand.converted_count",
+    "demand.converted_rate",
+    "demand.avg_priority_score",
+    "demand.pilot_completed_count",
   ],
 };
 
