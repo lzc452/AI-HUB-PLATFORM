@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { App, Spin } from "antd";
+import { message, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import type { FieldValues, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ApplicationDraft } from "@ai-hub/contracts";
 
+import { formatSubmitError } from "../../modules/application/application.errors";
 import { FormWizard } from "../../shared/forms/FormWizard";
 import {
   applicationDraftDefaults,
@@ -23,7 +24,6 @@ import {
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
 
 export default function ApplicationCreateWizardPage() {
-  const { message } = App.useApp();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const draftIdFromQuery = searchParams.get("applicationId");
@@ -145,10 +145,15 @@ export default function ApplicationCreateWizardPage() {
       navigate(`/creator/${applicationId}`);
       return;
     }
-    await saveApplicationDraft(applicationId, withDeliveries(values));
-    await submitApplicationDraft(applicationId);
-    message.success("已提交审核");
-    navigate(`/creator/${applicationId}`);
+    try {
+      await saveApplicationDraft(applicationId, withDeliveries(values));
+      await submitApplicationDraft(applicationId);
+      message.success("已提交审核");
+      navigate(`/creator/${applicationId}`);
+    } catch (error) {
+      // 提交失败必须用户可见：展示业务错误映射（DRAFT_VALIDATION_FAILED 附问题清单）。
+      message.error(formatSubmitError(error));
+    }
   };
 
   if (loading) {
@@ -170,7 +175,11 @@ export default function ApplicationCreateWizardPage() {
         onSubmit={handleSubmit}
         saveState={saveState}
         submitDisabled={!submittable}
-        resolver={zodResolver(applicationDraftFormSchema) as unknown as Resolver<FieldValues>}
+        resolver={
+          zodResolver(
+            applicationDraftFormSchema,
+          ) as unknown as Resolver<FieldValues>
+        }
       />
     </div>
   );

@@ -4,6 +4,8 @@ import { Button, Space, Steps } from "antd";
 import { FormProvider, useForm } from "react-hook-form";
 import type { FieldValues, Resolver, UseFormReturn } from "react-hook-form";
 
+import { showErrorMessage } from "../ui/message";
+
 /**
  * 通用分步表单容器（组件化复用核心）。
  *
@@ -103,6 +105,10 @@ export function FormWizard({
     setSubmitting(true);
     try {
       await onSubmit(form.getValues());
+    } catch (error) {
+      // 提交失败必须用户可见：恢复按钮状态并通过全局消息提示。
+      // 调用方若已自行捕获并展示详情（如业务错误码映射），此处不会重复触发。
+      showErrorMessage(error, "提交失败");
     } finally {
       setSubmitting(false);
     }

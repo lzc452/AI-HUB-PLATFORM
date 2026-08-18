@@ -5,6 +5,7 @@ const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   APPLICATION_OWNER_REQUIRED: "仅应用负责人可以执行此操作",
   ARTIFACT_NOT_VERIFIED: "版本制品尚未通过安全校验",
   DELIVERY_CHANNELS_INCOMPLETE: "发布前必须启用全部四个交付渠道",
+  DRAFT_VALIDATION_FAILED: "草稿未通过提交校验",
   INVALID_APPLICATION_TRANSITION: "当前应用状态不允许执行此操作",
   UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION:
     "制品未签名，请勾选确认接受风险后再操作",
@@ -33,4 +34,24 @@ export function toApplicationErrorMessage(error: unknown): unknown {
 export function getArtifactUploadErrorMessage(code: string | null): string {
   if (code === null) return "制品扫描或上传未完成，请重试";
   return ARTIFACT_UPLOAD_ERROR_MESSAGES[code] ?? `制品校验失败（${code}）`;
+}
+
+/** 将「提交审核」失败错误格式化为用户提示（DRAFT_VALIDATION_FAILED 附校验问题清单）。 */
+export function formatSubmitError(error: unknown): string {
+  if (error instanceof ApiError && error.code === "DRAFT_VALIDATION_FAILED") {
+    const issues = error.issues ?? [];
+    const trace = error.traceId ? `（追踪 ID：${error.traceId}）` : "";
+    const header =
+      APPLICATION_ERROR_MESSAGES.DRAFT_VALIDATION_FAILED ??
+      "草稿未通过提交校验";
+    if (issues.length === 0) return `${header}${trace}`;
+    const lines = issues
+      .map((issue) => `- ${issue.message ?? issue.code ?? "未知校验问题"}`)
+      .join("\n");
+    return `${header}${trace}：\n${lines}`;
+  }
+  const mapped = toApplicationErrorMessage(error);
+  if (typeof mapped === "string") return mapped;
+  if (mapped instanceof Error) return `提交失败：${mapped.message}`;
+  return "提交失败，请重试";
 }

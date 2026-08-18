@@ -4,19 +4,34 @@ import type { ApiErrorResponse } from "@ai-hub/contracts";
 const BASE = ""; // 同源，无需前缀
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+/** 提交校验问题（后端 400 DRAFT_VALIDATION_FAILED 响应体 issues 项）。 */
+export interface ApiIssue {
+  /** 校验问题码（如 DELIVERY_TARGETS_INCOMPLETE）。 */
+  code?: string;
+  /** 问题所在字段路径（部分后端实现提供）。 */
+  path?: string;
+  /** 人类可读的问题描述。 */
+  message?: string;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
     public readonly detail?: string,
     public readonly traceId?: string,
+    /** 400 校验失败响应携带的问题清单（如 DRAFT_VALIDATION_FAILED）。 */
+    public readonly issues?: ReadonlyArray<ApiIssue>,
   ) {
     super(detail ?? code);
     this.name = "ApiError";
   }
 }
 
-type ErrorBody = Partial<ApiErrorResponse> & { detail?: string };
+type ErrorBody = Partial<ApiErrorResponse> & {
+  detail?: string;
+  issues?: readonly ApiIssue[];
+};
 
 function readCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
@@ -82,6 +97,7 @@ async function apiRequest(
       body.code ?? "UNKNOWN",
       body.message ?? body.detail,
       body.traceId,
+      body.issues,
     );
   }
 
@@ -158,6 +174,7 @@ export function apiUpload<T>(
           body.code ?? "UNKNOWN",
           body.message ?? body.detail,
           body.traceId,
+          body.issues,
         ),
       );
     };
@@ -208,6 +225,7 @@ export function apiUploadRaw<T>(
           body.code ?? "UNKNOWN",
           body.detail,
           body.traceId,
+          body.issues,
         ),
       );
     };
@@ -248,6 +266,7 @@ export function apiUploadMultipart<T>(
           body.code ?? "UNKNOWN",
           body.message ?? body.detail,
           body.traceId,
+          body.issues,
         ),
       );
     };

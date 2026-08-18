@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setSession } from "../../modules/auth/session.store";
-import { apiFetch, apiUpload } from "./client";
+import { ApiError, apiFetch, apiUpload } from "./client";
 
 class XMLHttpRequestStub {
   readonly headers = new Headers();
@@ -80,5 +80,57 @@ describe("API 安全请求头", () => {
         Date.parse(request.headers.get("x-request-timestamp") ?? ""),
       ),
     ).toBe(false);
+  });
+});
+
+describe("API 错误响应解析", () => {
+  it("从 400 校验失败响应解析问题清单", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          {
+            code: "DRAFT_VALIDATION_FAILED",
+            detail: "草稿未通过提交校验",
+            issues: [
+              {
+                code: "DELIVERY_TARGETS_INCOMPLETE",
+                message: "交付目标不完整",
+              },
+              { code: "MANUAL_HTML_REQUIRED", message: "手册内容为空" },
+            ],
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    await expect(
+      apiFetch("/internal/applications/app-1/submit-draft", {
+        method: "POST",
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "DRAFT_VALIDATION_FAILED",
+      detail: "草稿未通过提交校验",
+      issues: [
+        { code: "DELIVERY_TARGETS_INCOMPLETE", message: "交付目标不完整" },
+        { code: "MANUAL_HTML_REQUIRED", message: "手册内容为空" },
+      ],
+    });
+  });
+
+  it("非 JSON 错误响应回退为 UNKNOWN 且无问题清单", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("gateway timeout", { status: 502 })),
+    );
+
+    const error = await apiFetch("/internal/applications/app-1").catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 502, code: "UNKNOWN" });
+    expect((error as ApiError).issues).toBeUndefined();
   });
 });
