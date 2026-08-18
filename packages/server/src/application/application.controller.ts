@@ -52,6 +52,7 @@ import {
   RollbackRequestDto,
   SaveApplicationDraftRequestDto,
   TransferOwnerRequestDto,
+  TransferReviewRequestDto,
   WithdrawRequestDto,
 } from "./application.dto.js";
 import type { ApplicationDraft } from "@ai-hub/contracts";
@@ -334,6 +335,33 @@ export class ApplicationController {
       this.applications.releaseReview(
         await this.requireActor(employeeId, sessionId, "review"),
         versionId,
+      ),
+    );
+  }
+
+  @Post("versions/:applicationVersionId/transfer-review")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_MANAGE)
+  @HttpCode(200)
+  @ApiOperation({
+    summary: "转交评审任务",
+    description: "超级管理员可将已领取的评审任务转交给其他员工（规格 §5.5）。",
+  })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiBody({ type: TransferReviewRequestDto })
+  @ApiOkResponse({ description: "转交后的评审队列记录", type: ReviewQueueDto })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async transferReview(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+    @Param("applicationVersionId") versionId: string,
+    @Body() body: TransferReviewRequestDto,
+  ) {
+    return this.call(async () =>
+      this.applications.transferReviewTask(
+        await this.requireActor(employeeId, sessionId, "review"),
+        versionId,
+        body.claimedByEmployeeId,
       ),
     );
   }

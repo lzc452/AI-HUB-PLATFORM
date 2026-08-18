@@ -47,6 +47,9 @@ const identityRepository = {
     return [employeeId === "E100" ? "dept-platform" : "dept-review"];
   },
   async listEmployeeRoles(employeeId: string) {
+    if (employeeId === "E300") {
+      return [{ roleCode: "super_admin", permissions: ["*"] }];
+    }
     return [
       {
         roleCode:
@@ -122,7 +125,9 @@ describe("real application lifecycle API", () => {
     `.execute(db);
     await sql`
       insert into employees (employee_id, display_name, status, primary_department_id)
-      values ('E100', 'Owner', 'active', 'dept-platform'), ('E200', 'Reviewer', 'active', 'dept-review')
+      values ('E100', 'Owner', 'active', 'dept-platform'),
+             ('E200', 'Reviewer', 'active', 'dept-review'),
+             ('E300', 'Super Admin', 'active', 'dept-platform')
     `.execute(db);
     // publish 路径的 registerToCatalog 写入 catalog_metadata（category_id FK）
     await sql`
@@ -184,7 +189,7 @@ describe("real application lifecycle API", () => {
       .send({
         name: "Real Copilot",
         summary: "PostgreSQL-backed e2e",
-        maintainerEmployeeId: "E200",
+        // 注意：维护人不得自审，因此维护人不能是承担审核角色的 E200。
         departmentId: "dept-platform",
       })
       .expect(201);
@@ -331,7 +336,7 @@ describe("real application lifecycle API", () => {
       .send({
         name: "Withdrawable",
         summary: "Pending review withdrawal",
-        maintainerEmployeeId: "E200",
+        // 维护人不得自审，因此维护人不能是承担审核角色的 E200。
         departmentId: "dept-platform",
       })
       .expect(201);
@@ -513,6 +518,12 @@ describe("real application lifecycle API", () => {
       .post(`/internal/applications/versions/${versionId}/claim-review`)
       .set(actorHeaders("E200"))
       .expect(200);
+    // 驳回原因必填：空/纯空白原因被 DTO 校验拒绝（400）。
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/review`)
+      .set(actorHeaders("E200"))
+      .send({ decision: "reject", comment: "   " })
+      .expect(400);
     await request(app.getHttpServer())
       .post(`/internal/applications/versions/${versionId}/review`)
       .set(actorHeaders("E200"))
@@ -523,5 +534,168 @@ describe("real application lifecycle API", () => {
         .get(`/internal/applications/${applicationId}`)
         .set(actorHeaders("E100")),
     ).resolves.toMatchObject({ body: { status: "draft" } });
+  });
+
+  it("bans the maintainer from claiming self-review", async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/applications")
+      .set(actorHeaders("E100"))
+      .send({
+        name: "Maintained",
+        summary: "Maintainer ban",
+        maintainerEmployeeId: "E200",
+        departmentId: "dept-platform",
+      })
+      .expect(201);
+    const applicationId = createResponse.body.applicationId as string;
+    const artifactKey = "applications/maintained/artifact.zip";
+    await registerArtifact(
+      "upload-maintained",
+      artifactKey,
+      "signature-maintained",
+    );
+    await registerVerifiedArtifactRow(
+      applicationId,
+      artifactKey,
+      "signature-maintained",
+    );
+    const versionResponse = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/versions`)
+      .set(actorHeaders("E100"))
+      .send({
+        version: "1.0.0",
+        changelog: "Initial",
+        artifactKey,
+        artifactSha256,
+        artifactSignature: "signature-maintained",
+        scanStatus: "passed",
+      })
+      .expect(201);
+    const versionId = versionResponse.body.applicationVersionId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/submit-review`)
+      .set(actorHeaders("E100"))
+      .expect(200);
+    // E200 是该应用的维护人（maintainer_employee_id）→ 认领被拒绝（403）。
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/claim-review`)
+      .set(actorHeaders("E200"))
+      .expect(403);
+  });
+
+  it("lets a super admin transfer a claimed review task", async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/applications")
+      .set(actorHeaders("E100"))
+      .send({ name: "Transferable", summary: "Transfer flow" })
+      .expect(201);
+    const applicationId = createResponse.body.applicationId as string;
+    const artifactKey = "applications/transferable/artifact.zip";
+    await registerArtifact(
+      "upload-transferable",
+      artifactKey,
+      "signature-transferable",
+    );
+    await registerVerifiedArtifactRow(
+      applicationId,
+      artifactKey,
+      "signature-transferable",
+    );
+    const versionResponse = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/versions`)
+      .set(actorHeaders("E100"))
+      .send({
+        version: "1.0.0",
+        changelog: "Initial",
+        artifactKey,
+        artifactSha256,
+        artifactSignature: "signature-transferable",
+        scanStatus: "passed",
+      })
+      .expect(201);
+    const versionId = versionResponse.body.applicationVersionId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/submit-review`)
+      .set(actorHeaders("E100"))
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/claim-review`)
+      .set(actorHeaders("E200"))
+      .expect(200);
+    // 非超管转交 → 403（APPLICATION_MANAGE 权限不足）；超管转交 → 200 并更新认领人。
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/transfer-review`)
+      .set(actorHeaders("E200"))
+      .send({ claimedByEmployeeId: "E100" })
+      .expect(403);
+    const transferred = await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/transfer-review`)
+      .set(actorHeaders("E300"))
+      .send({ claimedByEmployeeId: "E100" })
+      .expect(200);
+    expect(transferred.body).toMatchObject({
+      status: "claimed",
+      claimedByEmployeeId: "E100",
+    });
+  });
+
+  it("releases claims held beyond the 24h hold window", async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/applications")
+      .set(actorHeaders("E100"))
+      .send({ name: "Expirable", summary: "Claim expiry" })
+      .expect(201);
+    const applicationId = createResponse.body.applicationId as string;
+    const artifactKey = "applications/expirable/artifact.zip";
+    await registerArtifact(
+      "upload-expirable",
+      artifactKey,
+      "signature-expirable",
+    );
+    await registerVerifiedArtifactRow(
+      applicationId,
+      artifactKey,
+      "signature-expirable",
+    );
+    const versionResponse = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/versions`)
+      .set(actorHeaders("E100"))
+      .send({
+        version: "1.0.0",
+        changelog: "Initial",
+        artifactKey,
+        artifactSha256,
+        artifactSignature: "signature-expirable",
+        scanStatus: "passed",
+      })
+      .expect(201);
+    const versionId = versionResponse.body.applicationVersionId as string;
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/submit-review`)
+      .set(actorHeaders("E100"))
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${versionId}/claim-review`)
+      .set(actorHeaders("E200"))
+      .expect(200);
+    // 将认领时间拨回 25 小时前，模拟超时认领。
+    await sql`
+      update application_review_queue
+      set claimed_at = now() - interval '25 hours'
+      where application_version_id = ${versionId}
+    `.execute(db);
+    const repository = new KyselyApplicationRepository(db);
+    const expired = await repository.listExpiredClaims(new Date());
+    expect(expired).toContainEqual({
+      applicationVersionId: versionId,
+      claimedByEmployeeId: "E200",
+    });
+    // CAS 释放后队列回到 available，可供再次认领。
+    await repository.releaseReviewQueue(versionId, "E200");
+    await expect(
+      request(app.getHttpServer())
+        .get(`/internal/applications/versions/${versionId}/review-queue`)
+        .set(actorHeaders("E200")),
+    ).resolves.toMatchObject({ body: { status: "available" } });
   });
 });

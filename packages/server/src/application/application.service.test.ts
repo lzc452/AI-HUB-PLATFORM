@@ -5,6 +5,7 @@ import type {
   BehaviorEventInput,
 } from "@ai-hub/contracts";
 import { ApplicationService } from "./application.service.js";
+import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
 import type {
   ApplicationRecord,
   ApplicationRepository,
@@ -37,6 +38,14 @@ const outsider: ActorContext = {
   departmentIds: ["dept-other"],
   primaryDepartmentId: "dept-other",
   sessionId: "session-outsider",
+};
+const superAdmin: ActorContext = {
+  employeeId: "E999",
+  roleCodes: ["super_admin"],
+  departmentIds: [],
+  primaryDepartmentId: "",
+  sessionId: "session-super-admin",
+  permissions: ["*"],
 };
 
 class MemoryApplicationRepository implements ApplicationRepository {
@@ -363,7 +372,11 @@ class MemoryApplicationRepository implements ApplicationRepository {
     const queue = this.reviewQueue.find(
       (candidate) => candidate.applicationVersionId === id,
     );
-    if (queue === undefined || queue.claimedByEmployeeId !== employeeId) {
+    if (
+      queue === undefined ||
+      queue.claimedByEmployeeId !== employeeId ||
+      queue.status !== "claimed"
+    ) {
       throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
     }
     const updated = {
@@ -374,6 +387,35 @@ class MemoryApplicationRepository implements ApplicationRepository {
     };
     this.reviewQueue[this.reviewQueue.indexOf(queue)] = updated;
     return updated;
+  }
+  async transferReviewQueue(id: string, employeeId: string) {
+    const queue = this.reviewQueue.find(
+      (candidate) => candidate.applicationVersionId === id,
+    );
+    if (queue === undefined || queue.status !== "claimed") {
+      throw new Error("REVIEW_QUEUE_NOT_CLAIMED");
+    }
+    const updated = {
+      ...queue,
+      claimedByEmployeeId: employeeId,
+      claimedAt: new Date(),
+    };
+    this.reviewQueue[this.reviewQueue.indexOf(queue)] = updated;
+    return updated;
+  }
+  async listExpiredClaims(now: Date) {
+    const cutoff = new Date(now.getTime() - CLAIM_HOLD_MS);
+    return this.reviewQueue
+      .filter(
+        (queue) =>
+          queue.status === "claimed" &&
+          queue.claimedAt !== null &&
+          queue.claimedAt < cutoff,
+      )
+      .map((queue) => ({
+        applicationVersionId: queue.applicationVersionId,
+        claimedByEmployeeId: queue.claimedByEmployeeId,
+      }));
   }
   async completeReviewQueue(applicationVersionId: string) {
     const queue = this.reviewQueue.find(
@@ -523,7 +565,9 @@ function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
   return {
     name: "智能考勤助手",
     departmentId: "dept-rnd",
-    maintainerEmployeeIds: ["E200"],
+    // 注意：维护人不得自审（claimReview 会拒绝维护人认领），
+    // 因此草稿维护人不能是下面测试中承担审核角色的 E200。
+    maintainerEmployeeIds: ["E400"],
     categoryId: "productivity",
     applicationType: "web_app",
     tagIds: ["ai"],
@@ -972,6 +1016,157 @@ describe("ApplicationService", () => {
     await expect(
       service.review(owner, version.applicationVersionId, "approve", "self"),
     ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+  });
+
+  it("rejects a review without a required comment for reject decision", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    // 空白原因（含纯空白）必须被拒绝；审核事务不得写入任何结论。
+    await expect(
+      service.review(reviewer, version.applicationVersionId, "reject", "   "),
+    ).rejects.toThrow("REVIEW_COMMENT_REQUIRED");
+    await expect(
+      service.review(
+        reviewer,
+        version.applicationVersionId,
+        "request_changes",
+        "",
+      ),
+    ).rejects.toThrow("REVIEW_COMMENT_REQUIRED");
+    expect(repository.reviews).toHaveLength(0);
+  });
+
+  it("bans maintainers from self-review", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    // 草稿维护人列表中的员工（与 submitDraft 快照一致）不得认领本应用审核。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      maintainerEmployeeIds: [reviewer.employeeId],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const [version] = [...repository.versions.values()];
+
+    await expect(
+      service.claimReview(reviewer, version!.applicationVersionId),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+  });
+
+  it("bans the legacy single maintainer from claiming review", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+      maintainerEmployeeId: reviewer.employeeId,
+    } as never);
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+
+    await expect(
+      service.claimReview(reviewer, version.applicationVersionId),
+    ).rejects.toThrow("SELF_REVIEW_FORBIDDEN");
+    // 非维护人的审核员仍可认领。
+    await expect(
+      service.claimReview(outsider, version.applicationVersionId),
+    ).resolves.toMatchObject({ status: "claimed" });
+  });
+
+  it("lets a super admin transfer a claimed review task", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const transferred = await service.transferReviewTask(
+      superAdmin,
+      version.applicationVersionId,
+      "E300",
+    );
+
+    expect(transferred.claimedByEmployeeId).toBe("E300");
+    expect(transferred.status).toBe("claimed");
+    expect(repository.events).toContain("application.review.transferred");
+    // 转交后新认领人可以直接出结论（首次发布自动上架需先配齐交付渠道）。
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await expect(
+      service.review(
+        { ...outsider, employeeId: "E300" },
+        version.applicationVersionId,
+        "approve",
+        "ok",
+      ),
+    ).resolves.toMatchObject({ status: "published" });
+  });
+
+  it("rejects review transfer by non-super-admins", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await expect(
+      service.transferReviewTask(
+        reviewer,
+        version.applicationVersionId,
+        "E300",
+      ),
+    ).rejects.toThrow("REVIEW_TRANSFER_FORBIDDEN");
+  });
+
+  it("rejects transferring a review task that is not claimed", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await service.submitForReview(owner, version.applicationVersionId);
+
+    await expect(
+      service.transferReviewTask(
+        superAdmin,
+        version.applicationVersionId,
+        "E300",
+      ),
+    ).rejects.toThrow("REVIEW_QUEUE_NOT_CLAIMED");
   });
 
   it("allows owner to delete own draft application with audit", async () => {

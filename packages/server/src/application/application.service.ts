@@ -145,9 +145,12 @@ export class ApplicationService {
     const sanitizedDraft: ApplicationDraft = {
       ...draft,
       summaryHtml: sanitizeRichText(draft.summaryHtml),
-      manualHtml: draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
+      manualHtml:
+        draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
       examplesHtml:
-        draft.examplesHtml === null ? null : sanitizeRichText(draft.examplesHtml),
+        draft.examplesHtml === null
+          ? null
+          : sanitizeRichText(draft.examplesHtml),
     };
     // 次级防御：白名单清洗后再用既有黑名单校验一遍（fail-closed）。
     assertSafeRichText(sanitizedDraft.summaryHtml);
@@ -209,9 +212,12 @@ export class ApplicationService {
     const sanitizedDraft: ApplicationDraft = {
       ...draft,
       summaryHtml: sanitizeRichText(draft.summaryHtml),
-      manualHtml: draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
+      manualHtml:
+        draft.manualHtml === null ? null : sanitizeRichText(draft.manualHtml),
       examplesHtml:
-        draft.examplesHtml === null ? null : sanitizeRichText(draft.examplesHtml),
+        draft.examplesHtml === null
+          ? null
+          : sanitizeRichText(draft.examplesHtml),
     };
     // 次级防御：白名单清洗后再用既有黑名单校验一遍（fail-closed）。
     assertSafeRichText(sanitizedDraft.summaryHtml);
@@ -265,7 +271,9 @@ export class ApplicationService {
         // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
         // draft 提交审核才进入 in_review。
         status: isPublishedUpdate ? "published" : "in_review",
-        pendingVersionId: isPublishedUpdate ? version.applicationVersionId : null,
+        pendingVersionId: isPublishedUpdate
+          ? version.applicationVersionId
+          : null,
       });
       await repository.createReviewQueue({
         applicationId,
@@ -469,6 +477,17 @@ export class ApplicationService {
     if (application.ownerEmployeeId === actor.employeeId) {
       throw new Error("SELF_REVIEW_FORBIDDEN");
     }
+    // 维护人同样不得自审（规格 §5.5）。维护人列表以提交时草稿为准
+    // （draft.maintainerEmployeeIds，与版本快照内容一致）；无草稿的历史
+    // 数据回退到 applications.maintainer_employee_id 单维护人字段。
+    const draft = await this.repository.findDraft(application.applicationId);
+    const maintainerIds = draft?.draft.maintainerEmployeeIds ?? [];
+    if (
+      application.maintainerEmployeeId === actor.employeeId ||
+      maintainerIds.includes(actor.employeeId)
+    ) {
+      throw new Error("SELF_REVIEW_FORBIDDEN");
+    }
     const queue = await this.requireReviewQueue(applicationVersionId);
     if (queue.status !== "available") {
       throw new Error("REVIEW_QUEUE_NOT_AVAILABLE");
@@ -519,6 +538,35 @@ export class ApplicationService {
     });
   }
 
+  /** 超级管理员可以将已领取的审核任务转交给其他员工（规格 §5.5）。 */
+  async transferReviewTask(
+    actor: ActorContext,
+    applicationVersionId: string,
+    newClaimantEmployeeId: string,
+  ): Promise<ReviewQueueRecord> {
+    if (!hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)) {
+      throw new Error("REVIEW_TRANSFER_FORBIDDEN");
+    }
+    const queue = await this.requireReviewQueue(applicationVersionId);
+    if (queue.status !== "claimed") {
+      throw new Error("REVIEW_QUEUE_NOT_CLAIMED");
+    }
+    return this.repository.withTransaction(async (repository) => {
+      const updated = await repository.transferReviewQueue(
+        applicationVersionId,
+        newClaimantEmployeeId,
+      );
+      await this.recordChange(
+        repository,
+        "application.review.transferred",
+        queue.applicationId,
+        applicationVersionId,
+        actor.employeeId,
+      );
+      return updated;
+    });
+  }
+
   async review(
     actor: ActorContext,
     applicationVersionId: string,
@@ -545,6 +593,14 @@ export class ApplicationService {
     }
     if (queue.status !== "claimed") {
       throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
+    }
+    // 驳回与要求修改必须给出原因（规格 §5.5）；DTO 层已强制非空，
+    // 这里对直接调用服务的情况做防御性校验。
+    if (
+      (decision === "reject" || decision === "request_changes") &&
+      !comment?.trim()
+    ) {
+      throw new Error("REVIEW_COMMENT_REQUIRED");
     }
     // 依据审核前的应用状态决定终态：驳回回滚到原状态；通过时
     // 首次发布（审核前为 draft）直接置 published 并自动注册目录（自动上架），

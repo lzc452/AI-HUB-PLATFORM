@@ -65,7 +65,10 @@ describe("createSlaReminderRunner", () => {
   ): Parameters<typeof createSlaReminderRunner>[0] => ({
     listReviewsDueWithin: async () => [],
     listExpiredReviews: async () => [],
+    listExpiredClaims: async () => [],
+    releaseClaim: vi.fn().mockResolvedValue(undefined),
     listApplicationAdmins: async () => [],
+    listApplicationReviewers: async () => [],
     createNotification: vi.fn().mockResolvedValue(undefined),
     now: () => new Date("2026-08-18T10:00:00Z"),
     ...overrides,
@@ -163,6 +166,65 @@ describe("createSlaReminderRunner", () => {
 
     await runner();
 
+    expect(createNotification).not.toHaveBeenCalled();
+  });
+
+  it("releases claims held beyond 24 hours and notifies reviewers", async () => {
+    const releaseClaim = vi.fn().mockResolvedValue(undefined);
+    const createNotification = vi.fn().mockResolvedValue(undefined);
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listExpiredClaims: async () => [
+          {
+            applicationVersionId: "version-4",
+            claimedByEmployeeId: "reviewer-4",
+          },
+        ],
+        releaseClaim,
+        listApplicationReviewers: async () => ["reviewer-1", "reviewer-2"],
+        createNotification,
+      }),
+    );
+
+    await runner();
+
+    expect(releaseClaim).toHaveBeenCalledTimes(1);
+    expect(releaseClaim).toHaveBeenCalledWith("version-4", "reviewer-4");
+    expect(createNotification).toHaveBeenCalledTimes(2);
+    expect(createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientEmployeeId: "reviewer-1",
+        eventType: "application.review.claim_expired",
+        aggregateId: "version-4",
+        message: expect.stringContaining("超时释放"),
+      }),
+    );
+    expect(createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientEmployeeId: "reviewer-2",
+        eventType: "application.review.claim_expired",
+        aggregateId: "version-4",
+      }),
+    );
+  });
+
+  it("skips expired claims without a claimer and does not release twice", async () => {
+    const releaseClaim = vi.fn().mockResolvedValue(undefined);
+    const createNotification = vi.fn().mockResolvedValue(undefined);
+    const runner = createSlaReminderRunner(
+      runnerDeps({
+        listExpiredClaims: async () => [
+          { applicationVersionId: "version-5", claimedByEmployeeId: null },
+        ],
+        releaseClaim,
+        listApplicationReviewers: async () => ["reviewer-1"],
+        createNotification,
+      }),
+    );
+
+    await runner();
+
+    expect(releaseClaim).not.toHaveBeenCalled();
     expect(createNotification).not.toHaveBeenCalled();
   });
 });

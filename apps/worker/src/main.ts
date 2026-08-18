@@ -129,6 +129,15 @@ async function bootstrap() {
     listExpiredReviews: runtime.reviewRepository.listExpiredReviews.bind(
       runtime.reviewRepository,
     ),
+    listExpiredClaims: runtime.reviewRepository.listExpiredClaims.bind(
+      runtime.reviewRepository,
+    ),
+    releaseClaim: async (applicationVersionId, claimedByEmployeeId) => {
+      await runtime.reviewRepository.releaseReviewQueue(
+        applicationVersionId,
+        claimedByEmployeeId,
+      );
+    },
     listApplicationAdmins: async () => {
       const [admins, superAdmins] = await Promise.all([
         runtime.identityRepository.listEmployeeIdsWithRole("application_admin"),
@@ -136,6 +145,10 @@ async function bootstrap() {
       ]);
       return [...new Set([...admins, ...superAdmins])];
     },
+    listApplicationReviewers: () =>
+      runtime.identityRepository.listEmployeeIdsWithRole(
+        "application_reviewer",
+      ),
     createNotification: async (input) => {
       await runtime.notifications.createForEvent(systemActor, input);
     },

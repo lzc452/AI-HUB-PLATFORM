@@ -20,6 +20,7 @@ import type {
   AudienceRule,
   ApplicationAdminKpis,
 } from "@ai-hub/contracts";
+import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
 
 export class KyselyApplicationRepository implements ApplicationRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -1116,9 +1117,53 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       })
       .where("application_version_id", "=", applicationVersionId)
       .where("claimed_by_employee_id", "=", employeeId)
+      // 仅 claimed 状态可释放：防止审核已结论（completed）的队列被
+      // 手动释放或超时释放“复活”回 available。
+      .where("status", "=", "claimed")
       .returningAll()
       .executeTakeFirstOrThrow();
     return this.mapReviewQueue(row);
+  }
+
+  /** 超级管理员转交已领取的评审任务（CAS：仅 status='claimed' 可转交）。 */
+  async transferReviewQueue(
+    applicationVersionId: string,
+    employeeId: string,
+  ): Promise<ReviewQueueRecord> {
+    const row = await this.db
+      .updateTable("application_review_queue")
+      .set({
+        claimed_by_employee_id: employeeId,
+        claimed_at: new Date(),
+      })
+      .where("application_version_id", "=", applicationVersionId)
+      .where("status", "=", "claimed")
+      .returningAll()
+      .executeTakeFirstOrThrow();
+    return this.mapReviewQueue(row);
+  }
+
+  /** 领取超时（claimed_at 早于 now - CLAIM_HOLD_MS）且仍未结论的认领。 */
+  async listExpiredClaims(now: Date): Promise<
+    Array<{
+      applicationVersionId: string;
+      claimedByEmployeeId: string | null;
+    }>
+  > {
+    const cutoff = new Date(now.getTime() - CLAIM_HOLD_MS);
+    const rows = await this.db
+      .selectFrom("application_review_queue")
+      .select([
+        "application_version_id as applicationVersionId",
+        "claimed_by_employee_id as claimedByEmployeeId",
+      ])
+      .where("status", "=", "claimed")
+      .where("claimed_at", "<", cutoff)
+      .execute();
+    return rows.map((row) => ({
+      applicationVersionId: row.applicationVersionId,
+      claimedByEmployeeId: row.claimedByEmployeeId,
+    }));
   }
 
   async completeReviewQueue(

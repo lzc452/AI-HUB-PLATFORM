@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsNotEmpty,
   ValidateIf,
   IsNumber,
   IsObject,
@@ -127,8 +128,22 @@ export class ReviewRequestDto {
     description: "评审意见",
     example: "版本通过，可以发布。",
   })
+  // 驳回（reject / request_changes）必须有原因；批准也要求非空，
+  // request_changes 语义等同驳回，同样需要原因（规格 §5.5）。
+  @IsNotEmpty()
   @IsString()
   comment!: string;
+}
+
+/** 转交评审任务请求。 */
+export class TransferReviewRequestDto {
+  @ApiProperty({
+    type: String,
+    description: "新认领人员工工号",
+    example: "DEMO-INNOVATION",
+  })
+  @IsString()
+  claimedByEmployeeId!: string;
 }
 
 /** 发布应用请求。 */

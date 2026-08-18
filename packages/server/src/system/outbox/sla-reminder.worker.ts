@@ -4,11 +4,16 @@
  * - SLA 截止前 24h 内且已领取 → 提醒领取人（站内通知，事件 application.review.sla.reminder）。
  * - SLA 已超时且未结论（available/claimed）→ 通知全部应用管理员 + 超级管理员
  *   （站内通知，事件 application.review.sla.overdue）。
+ * - 领取超过 CLAIM_HOLD_MS（24h）仍未结论 → CAS 释放认领并通知全部应用审核员
+ *   （站内通知，事件 application.review.claim_expired）。
  *
  * 只发提醒，不自动审批。通知走 NotificationService.createForEvent —— 幂等键
  * `${eventType}:${aggregateId}:${recipientEmployeeId}` 保证每次提醒只入站一次；
  * 该通道同时写入 notification.created outbox 事件，由 worker 的钉钉处理器投递。
  */
+
+/** 认领最长持有时长：超过即视为超时，由定时任务自动释放。 */
+export const CLAIM_HOLD_MS = 24 * 60 * 60 * 1000;
 export function addBusinessDays(start: Date, days: number): Date {
   const result = new Date(start);
   let remaining = days;
@@ -27,6 +32,11 @@ export interface ExpiredReview {
   name: string;
 }
 
+export interface ExpiredClaim {
+  applicationVersionId: string;
+  claimedByEmployeeId: string | null;
+}
+
 export interface SlaReminderDeps {
   /** SLA 截止前 hours 小时内已领取（status='claimed'）的审核。 */
   listReviewsDueWithin: (
@@ -35,7 +45,16 @@ export interface SlaReminderDeps {
   ) => Promise<readonly ExpiredReview[]>;
   /** 已超时（sla_due_at < now）且未结论（status in available/claimed）的审核。 */
   listExpiredReviews: (now: Date) => Promise<readonly ExpiredReview[]>;
+  /** 领取超时（claimed_at 早于 now - CLAIM_HOLD_MS）且仍未结论的认领。 */
+  listExpiredClaims: (now: Date) => Promise<readonly ExpiredClaim[]>;
+  /** 按 CAS 释放超时认领（claimed_by 匹配，防并发重复释放）。 */
+  releaseClaim: (
+    applicationVersionId: string,
+    claimedByEmployeeId: string,
+  ) => Promise<void>;
   listApplicationAdmins: () => Promise<string[]>;
+  /** 全部应用审核员（application_reviewer 角色成员）。 */
+  listApplicationReviewers: () => Promise<string[]>;
   createNotification: (input: {
     recipientEmployeeId: string;
     eventType: string;
@@ -68,6 +87,22 @@ export function createSlaReminderRunner(deps: SlaReminderDeps) {
           eventType: "application.review.sla.overdue",
           aggregateId: review.applicationVersionId,
           message: `应用「${review.name}」审核已超过 SLA（2 个工作日），请处理。`,
+        });
+      }
+    }
+    for (const claim of await deps.listExpiredClaims(current)) {
+      // 防御性判空：claimed 认领必定有领取人，无领取人则跳过。
+      if (claim.claimedByEmployeeId === null) continue;
+      await deps.releaseClaim(
+        claim.applicationVersionId,
+        claim.claimedByEmployeeId,
+      );
+      for (const reviewer of await deps.listApplicationReviewers()) {
+        await deps.createNotification({
+          recipientEmployeeId: reviewer,
+          eventType: "application.review.claim_expired",
+          aggregateId: claim.applicationVersionId,
+          message: `评审任务 ${claim.applicationVersionId} 已超时释放。`,
         });
       }
     }
