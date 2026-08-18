@@ -257,10 +257,16 @@ export class InteractionService {
     });
     // 事务外通知举报人（规格 §5.8 通知提交人；失败不回滚处理结论）。
     if (this.notifications !== undefined) {
-      await this.notifications.queue(actor, "interaction.report.resolved", {
-        recipientEmployeeId: existing.reporterEmployeeId,
-        aggregateId: existing.applicationId,
-      });
+      try {
+        await this.notifications.queue(actor, "interaction.report.resolved", {
+          recipientEmployeeId: existing.reporterEmployeeId,
+          aggregateId: existing.applicationId,
+        });
+      } catch {
+        // 规格 §5.8：外部通知失败不回滚业务操作——处理结论已在事务内提交；
+        // 收件人被除权（NOTIFICATION_RECIPIENT_NOT_AUTHORIZED）或 DB 故障时
+        // 不得让已提交的结论以 500 返回给客户端（客户端重试会撞状态错误）。
+      }
     }
     return report;
   }

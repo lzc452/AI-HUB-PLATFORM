@@ -196,11 +196,17 @@ export class DemandService {
       this.notifications !== undefined &&
       current.requesterEmployeeId !== null
     ) {
-      await this.notifications.queue(actor, "demand.reviewed", {
-        recipientEmployeeId: current.requesterEmployeeId,
-        aggregateId: demandId,
-        variables: { decision },
-      });
+      try {
+        await this.notifications.queue(actor, "demand.reviewed", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+          variables: { decision },
+        });
+      } catch {
+        // 规格 §5.8：外部通知失败不回滚业务操作——审核结论已在事务内提交；
+        // 收件人被除权（NOTIFICATION_RECIPIENT_NOT_AUTHORIZED）或 DB 故障时
+        // 不得让已提交的结论以 500 返回给客户端（客户端重试会撞状态错误）。
+      }
     }
     return reviewed;
   }

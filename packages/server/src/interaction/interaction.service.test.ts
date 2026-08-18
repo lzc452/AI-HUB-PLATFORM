@@ -456,6 +456,39 @@ describe("InteractionService", () => {
     ).resolves.toMatchObject({ status: "dismissed" });
   });
 
+  it("keeps the report resolution committed when the notification queue fails", async () => {
+    const repository = new MemoryInteractionRepository();
+    const notifications = {
+      queue: vi.fn().mockRejectedValue(new Error("NOT_AUTHORIZED")),
+    };
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+      undefined,
+      notifications,
+    );
+    const comment = await service.createComment(owner, {
+      applicationId: "app-1",
+      body: "content",
+    });
+    const report = await service.report(employee, {
+      applicationId: "app-1",
+      commentId: comment.commentId,
+      reason: "policy",
+    });
+
+    await expect(
+      service.resolveReport(admin, report.reportId, "hidden"),
+    ).resolves.toMatchObject({ status: "hidden" });
+
+    expect(notifications.queue).toHaveBeenCalledWith(
+      admin,
+      "interaction.report.resolved",
+      expect.anything(),
+    );
+  });
+
   it("rejects direct-ID interaction when the application is outside the actor audience", async () => {
     const repository = new MemoryInteractionRepository();
     const hiddenCatalog: CatalogVisibilityPort = {

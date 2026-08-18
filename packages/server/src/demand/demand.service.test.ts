@@ -1411,4 +1411,29 @@ describe("DemandService demand.reviewed notification", () => {
       service.review(reviewer, demand.demandId, "publish"),
     ).resolves.toMatchObject({ status: "pending_claim" });
   });
+
+  it("keeps the review committed when the notification queue fails", async () => {
+    const { repository, demand } = reviewHarness();
+    const notifications = {
+      queue: vi.fn().mockRejectedValue(new Error("NOT_AUTHORIZED")),
+    };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      undefined,
+      undefined,
+      undefined,
+      notifications,
+    );
+
+    await expect(
+      service.review(reviewer, demand.demandId, "reject", "重复需求"),
+    ).resolves.toMatchObject({ status: "rejected" });
+
+    expect(notifications.queue).toHaveBeenCalledWith(
+      reviewer,
+      "demand.reviewed",
+      expect.anything(),
+    );
+  });
 });
