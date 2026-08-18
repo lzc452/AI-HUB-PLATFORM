@@ -282,7 +282,17 @@ export class KyselyApplicationRepository implements ApplicationRepository {
    *  同步回写 applications.maintainer_employee_id——目录注册、工作区列表、
    *  看板与自审守卫等既有单列读取路径继续以主维护人语义工作；完整列表存于
    *  application_maintainers 关联表（0049 迁移）。空列表仅清空关联表，单列
-   *  保持原值（NOT NULL 列，作为创建者兜底）。 */
+   *  保持原值（NOT NULL 列，作为创建者兜底）。
+   *
+   *  刻意不 bump applications.updated_at：本方法是维护人关系同步，应用
+   *  "最近更新"只随内容提交（updateApplicationContent）与状态变更
+   *  （setApplicationStatus）变化——否则草稿保存（含未改维护人的自动保存）
+   *  会不断刷新详情页时间与 admin 列表排序。
+   *
+   *  注意：同批插入的 created_at 共享 now() 时间戳，listMaintainers 的
+   *  created_at 排序在并列时间戳下退回物理堆序（非 SQL 保证）。这不影响
+   *  正确性——权威主维护人是单列字段（上面已回写），列表消费方（详情页
+   *  首条展示、自审守卫成员判定）对同批顺序不敏感。 */
   async setMaintainers(
     applicationId: string,
     maintainerEmployeeIds: readonly string[],
@@ -304,10 +314,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .execute();
     await this.db
       .updateTable("applications")
-      .set({
-        maintainer_employee_id: uniqueIds[0]!,
-        updated_at: new Date(),
-      })
+      .set({ maintainer_employee_id: uniqueIds[0]! })
       .where("application_id", "=", applicationId)
       .execute();
   }

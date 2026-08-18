@@ -107,6 +107,7 @@ class MemoryApplicationRepository implements ApplicationRepository {
     const snapshot = {
       applications: new Map(this.applications),
       maintainers: new Map(this.maintainers),
+      drafts: new Map(this.drafts),
       versions: new Map(this.versions),
       deliveries: [...this.deliveries],
       reviews: [...this.reviews],
@@ -2517,6 +2518,27 @@ describe("ApplicationService", () => {
     await expect(
       service.getApplication(application.applicationId),
     ).resolves.toMatchObject({ maintainerEmployeeId: "E401" });
+  });
+
+  it("rolls back both the draft and the maintainer list when saveDraft fails mid-write", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    // 模拟维护人写入中途失败（崩溃窗口）：草稿 JSON 与维护人关联表必须
+    // 同事务回滚——否则 in_review 期间编辑草稿恰逢失败时，自审守卫（优先
+    // 读关联表）会基于陈旧的关联表放行新加入的维护人。
+    const originalSetMaintainers = repository.setMaintainers.bind(repository);
+    repository.setMaintainers = async () => {
+      throw new Error("SIMULATED_MAINTAINER_WRITE_FAILURE");
+    };
+    await expect(
+      service.saveDraft(owner, application.applicationId, completeDraft()),
+    ).rejects.toThrow("SIMULATED_MAINTAINER_WRITE_FAILURE");
+    expect(repository.drafts.has(application.applicationId)).toBe(false);
+    expect(repository.maintainers.has(application.applicationId)).toBe(false);
+    repository.setMaintainers = originalSetMaintainers;
   });
 
   it("keeps the self-review guard on the persisted maintainer list even without a draft", async () => {

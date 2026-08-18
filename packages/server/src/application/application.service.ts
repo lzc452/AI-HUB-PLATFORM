@@ -191,13 +191,18 @@ export class ApplicationService {
       assertSafeRichText(sanitizedDraft.manualHtml);
     if (sanitizedDraft.examplesHtml !== null)
       assertSafeRichText(sanitizedDraft.examplesHtml);
-    await this.repository.upsertDraft(applicationId, sanitizedDraft);
-    // 同步持久化维护人列表（先删后插，主维护人 = 第一个），详情/工作区
-    // 维护人显示与自审守卫读取该关联表（见 isSelfReviewer）。
-    await this.repository.setMaintainers(
-      applicationId,
-      sanitizedDraft.maintainerEmployeeIds,
-    );
+    // 草稿 JSON 与维护人关联表在同一事务内写入：自审守卫优先读关联表
+    // （isSelfReviewer），若中途失败只落一半，in_review 期间编辑草稿恰逢
+    // 崩溃时，新加入的维护人可能绕过自审阻断——事务保证两者同生共死。
+    await this.repository.withTransaction(async (repository) => {
+      await repository.upsertDraft(applicationId, sanitizedDraft);
+      // 同步持久化维护人列表（先删后插，主维护人 = 第一个），详情/工作区
+      // 维护人显示与自审守卫读取该关联表（见 isSelfReviewer）。
+      await repository.setMaintainers(
+        applicationId,
+        sanitizedDraft.maintainerEmployeeIds,
+      );
+    });
     return {
       applicationId,
       status: application.status,
