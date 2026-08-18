@@ -1194,14 +1194,14 @@ export class ApplicationService {
   }
 
   /** 读取版本快照：授权（APPLICATION_READ + 可读性）+ 版本属于该应用校验 +
-   *  无快照记录返回 VERSION_SNAPSHOT_NOT_FOUND（404）。 */
+   *  无快照记录返回 VERSION_SNAPSHOT_NOT_FOUND（404）。不可读（他人应用）
+   *  按规格 §11.2 隐藏存在性，返回 404 APPLICATION_NOT_FOUND。 */
   async getVersionSnapshot(
     actor: ActorContext,
     applicationId: string,
     versionId: string,
   ): Promise<VersionSnapshotRecord> {
-    const application = await this.requireApplication(applicationId);
-    this.assertApplicationReadable(actor, application);
+    await this.requireReadableApplication(actor, applicationId);
     const version = await this.requireVersion(versionId);
     if (version.applicationId !== applicationId) {
       throw new Error("APPLICATION_VERSION_NOT_FOUND");
@@ -1212,15 +1212,15 @@ export class ApplicationService {
   }
 
   /** 两版本快照顶层字段级差异（from → to）。任一版本无快照记录返回
-   *  VERSION_SNAPSHOT_NOT_FOUND（404）。 */
+   *  VERSION_SNAPSHOT_NOT_FOUND（404）；不可读（他人应用）按规格 §11.2
+   *  隐藏存在性，返回 404 APPLICATION_NOT_FOUND。 */
   async getVersionDiff(
     actor: ActorContext,
     applicationId: string,
     fromVersionId: string,
     toVersionId: string,
   ): Promise<VersionDiffResult> {
-    const application = await this.requireApplication(applicationId);
-    this.assertApplicationReadable(actor, application);
+    await this.requireReadableApplication(actor, applicationId);
     const fromVersion = await this.requireVersion(fromVersionId);
     if (fromVersion.applicationId !== applicationId) {
       throw new Error("APPLICATION_VERSION_NOT_FOUND");
@@ -1491,6 +1491,24 @@ export class ApplicationService {
     throw new Error("APPLICATION_ACCESS_FORBIDDEN");
   }
 
+  /** 快照/差异读取的可见性校验：与 assertApplicationReadable 同条件，但按
+   *  规格 §11.2（权限拒绝不暴露受限对象是否存在）对不可读对象返回 404
+   *  APPLICATION_NOT_FOUND 而非 403。 */
+  private async requireReadableApplication(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<ApplicationRecord> {
+    const application = await this.requireApplication(applicationId);
+    if (
+      application.ownerEmployeeId === actor.employeeId ||
+      application.maintainerEmployeeId === actor.employeeId ||
+      hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
+      return application;
+    }
+    throw new Error("APPLICATION_NOT_FOUND");
+  }
+
   private async requireApplication(
     applicationId: string,
   ): Promise<ApplicationRecord> {
@@ -1689,12 +1707,12 @@ export function diffVersionSnapshots(
     const toKeys = Object.keys(to).sort();
     const toKeySet = new Set(toKeys);
     for (const key of toKeys) {
-      if (!(key in from)) {
+      if (!Object.prototype.hasOwnProperty.call(from, key)) {
         added.push({ field: key, value: to[key] });
       }
     }
     for (const key of fromKeys) {
-      if (!(key in to)) {
+      if (!Object.prototype.hasOwnProperty.call(to, key)) {
         removed.push({ field: key, value: from[key] });
       }
     }

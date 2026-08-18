@@ -324,6 +324,21 @@ describe("ApplicationVersionsPage", () => {
     ).toBeTruthy();
   });
 
+  it("renders a non-object snapshot payload as raw JSON", async () => {
+    hoisted.useVersionSnapshot.mockReturnValue({
+      data: {
+        createdAt: "2026-08-12T08:00:00.000Z",
+        payload: ["a", "b"] as unknown as Record<string, unknown>,
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(await screen.findByText(/"a","b"/)).toBeTruthy();
+  });
+
   it("shows a no-difference state when the two snapshots are identical", async () => {
     hoisted.useVersionDiff.mockReturnValue({
       data: { changed: [], added: [], removed: [] },

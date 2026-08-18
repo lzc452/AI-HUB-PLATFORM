@@ -458,7 +458,8 @@ function AddedRemovedRow({
   );
 }
 
-/** 快照详情：快照时间 + 顶层字段列表。 */
+/** 快照详情：快照时间 + 顶层字段列表。payload 非普通对象（数组/标量）时
+ *  整体按 JSON 字符串展示，避免 Object.entries 产出误导性条目。 */
 function SnapshotDetail({
   createdAt,
   payload,
@@ -466,13 +467,19 @@ function SnapshotDetail({
   createdAt: string;
   payload: Record<string, unknown>;
 }) {
-  const entries = Object.entries(payload);
+  const isPlainObject =
+    typeof payload === "object" && payload !== null && !Array.isArray(payload);
+  const entries = isPlainObject ? Object.entries(payload) : [];
   return (
     <div className="mt-3">
       <p className="mb-3 text-[12px] text-[#697386]">
         快照时间：{formatDateTime(createdAt)}
       </p>
-      {entries.length === 0 ? (
+      {!isPlainObject ? (
+        <div className="rounded border border-[#edf0f5] px-3 py-2 break-all text-[#596579]">
+          {formatSnapshotValue(payload)}
+        </div>
+      ) : entries.length === 0 ? (
         <Empty
           className="py-6"
           description="该版本快照内容为空"

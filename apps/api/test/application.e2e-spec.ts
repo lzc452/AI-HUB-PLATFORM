@@ -212,4 +212,41 @@ describe("application endpoints", () => {
       });
     await app.close();
   });
+
+  it("maps hidden snapshot resources to 404 for snapshot and diff routes", async () => {
+    // 规格 §11.2：权限拒绝不暴露受限对象是否存在——不可读应用快照/差异返回 404。
+    const hiddenService = {
+      async getVersionSnapshot() {
+        throw new Error("APPLICATION_NOT_FOUND");
+      },
+      async getVersionDiff() {
+        throw new Error("APPLICATION_NOT_FOUND");
+      },
+    } as unknown as ApplicationService;
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ApiModule.forTest({
+          databaseCheck: async () => true,
+          identity: new IdentityService(identityRepository),
+          application: hiddenService,
+        }),
+      ],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+
+    const headers = {
+      "x-employee-id": actor.employeeId,
+      "x-session-id": actor.sessionId,
+    };
+    await request(app.getHttpServer())
+      .get("/internal/applications/app-1/versions/version-1/snapshot")
+      .set(headers)
+      .expect(404);
+    await request(app.getHttpServer())
+      .get("/internal/applications/app-1/versions/version-1/diff/version-1")
+      .set(headers)
+      .expect(404);
+    await app.close();
+  });
 });

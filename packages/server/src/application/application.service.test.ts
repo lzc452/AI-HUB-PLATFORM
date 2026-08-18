@@ -1173,7 +1173,7 @@ describe("ApplicationService", () => {
     expect(snapshot.createdAt).toBeInstanceOf(Date);
   });
 
-  it("forbids reading a snapshot by a non-owner outsider", async () => {
+  it("hides snapshot existence from a non-owner outsider with 404 semantics", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
       name: "Copilot",
@@ -1188,13 +1188,14 @@ describe("ApplicationService", () => {
       name: "Copilot",
     });
 
+    // 规格 §11.2：权限拒绝不暴露受限对象是否存在——他人应用一律 404。
     await expect(
       service.getVersionSnapshot(
         outsider,
         application.applicationId,
         version.applicationVersionId,
       ),
-    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    ).rejects.toThrow("APPLICATION_NOT_FOUND");
     await expect(
       service.getVersionDiff(
         outsider,
@@ -1202,7 +1203,7 @@ describe("ApplicationService", () => {
         version.applicationVersionId,
         version.applicationVersionId,
       ),
-    ).rejects.toThrow("APPLICATION_ACCESS_FORBIDDEN");
+    ).rejects.toThrow("APPLICATION_NOT_FOUND");
   });
 
   it("rejects a version that belongs to another application", async () => {
