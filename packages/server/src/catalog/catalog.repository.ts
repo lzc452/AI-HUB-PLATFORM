@@ -121,18 +121,39 @@ export class KyselyCatalogRepository implements CatalogRepository {
       const fuzzy = `%${queryText}%`;
       // `%` 是 pg_trgm 相似度运算符（Kysely 无此比较器，用 raw SQL 表达式）。
       const trgmSimilar = sql<boolean>`metadata.search_name % ${queryText}`;
-      // 规格 §10.2：精确匹配、名称前缀、标签分类、简介模糊依次排序。
-      // WHERE 保留 ILIKE 中缀兜底（gin_trgm_ops 索引可加速），ORDER BY
-      // CASE 表达式给出 exact → 前缀 → trgm → 简介模糊的排序优先级。
+      const nameFuzzy = sql<boolean>`metadata.search_name ilike ${fuzzy}`;
+      const pinyinFuzzy = sql<boolean>`metadata.search_pinyin ilike ${fuzzy}`;
+      const summaryFuzzy = sql<boolean>`metadata.search_summary ilike ${fuzzy}`;
+      // 规格 §10.2 第三位：标签名/分类名文本命中。EXISTS 子查询按应用关联
+      // （application_tag_links → catalog_tags、category_id → catalog_categories），
+      // 不改变行数，与 audience/分页过滤正交。
+      const tagMatch = sql<boolean>`exists (
+        select 1
+        from application_tag_links tag_link
+        join catalog_tags tag on tag.tag_id = tag_link.tag_id
+        where tag_link.application_id = metadata.application_id
+          and tag.name ilike ${fuzzy}
+      )`;
+      const categoryMatch = sql<boolean>`exists (
+        select 1
+        from catalog_categories category
+        where category.category_id = metadata.category_id
+          and category.name ilike ${fuzzy}
+      )`;
+      const tagOrCategoryMatch = sql<boolean>`(${tagMatch}) or (${categoryMatch})`;
+      // WHERE 的每个分支在 CASE 中都有对应排序位（含名称/拼音模糊兜底层），
+      // else 7 实际不可达 —— 过滤与排序保持对称。
+      const anyFuzzy = sql<boolean>`(${nameFuzzy}) or (${pinyinFuzzy}) or (${summaryFuzzy})`;
       query = query
         .where((eb) =>
           eb.or([
             eb("metadata.search_name", "=", queryText),
-            eb("metadata.search_name", "ilike", fuzzy),
-            eb("metadata.search_pinyin", "ilike", fuzzy),
+            nameFuzzy,
+            pinyinFuzzy,
             eb("metadata.search_initials", "ilike", prefix),
-            eb("metadata.search_summary", "ilike", fuzzy),
+            summaryFuzzy,
             trgmSimilar,
+            tagOrCategoryMatch,
           ]),
         )
         .orderBy((eb) =>
@@ -142,15 +163,17 @@ export class KyselyCatalogRepository implements CatalogRepository {
             .then(0)
             .when("metadata.search_name", "ilike", prefix)
             .then(1)
-            .when("metadata.search_pinyin", "ilike", prefix)
+            .when(tagOrCategoryMatch)
             .then(2)
-            .when("metadata.search_initials", "ilike", prefix)
+            .when("metadata.search_pinyin", "ilike", prefix)
             .then(3)
-            .when(trgmSimilar)
+            .when("metadata.search_initials", "ilike", prefix)
             .then(4)
-            .when("metadata.search_summary", "ilike", fuzzy)
+            .when(trgmSimilar)
             .then(5)
-            .else(6)
+            .when(anyFuzzy)
+            .then(6)
+            .else(7)
             .end(),
         );
     }

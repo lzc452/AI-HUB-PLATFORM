@@ -28,6 +28,7 @@ async function seedApplication(
     searchSummary: string;
     searchPinyin: string;
     searchInitials: string;
+    categoryId?: string;
   },
 ): Promise<void> {
   await db
@@ -40,6 +41,8 @@ async function seedApplication(
       name: app.name,
       summary: app.summary,
       status: "published",
+      // 固定 updated_at：同层排序并列时由 application_id 决定，跨用例可复现。
+      updated_at: new Date("2026-01-01T00:00:00Z"),
     })
     .execute();
   // 版本先写，再回填 current_version_id，避免循环外键（同 demo-business-seed）。
@@ -76,7 +79,7 @@ async function seedApplication(
     .insertInto("application_catalog_metadata")
     .values({
       application_id: app.applicationId,
-      category_id: "productivity",
+      category_id: app.categoryId ?? "productivity",
       application_type: "web_app",
       search_name: app.searchName,
       search_summary: app.searchSummary,
@@ -188,6 +191,76 @@ describe("catalog search ranking (pg_trgm)", () => {
     expect(result.items.map((item) => item.name)).toEqual([
       "报销助手",
       "报销助手Pro",
+      "智能报销平台",
+    ]);
+  });
+
+  it("ranks tag and category matches above fuzzy summary matches", async () => {
+    await db
+      .insertInto("catalog_categories")
+      .values({
+        category_id: "expense-assistant",
+        name: "报销助手系统",
+        sort_order: 2,
+        enabled: true,
+      })
+      .execute();
+    await db
+      .insertInto("catalog_tags")
+      .values({
+        tag_id: "tag-expense",
+        name: "报销助手",
+        enabled: true,
+      })
+      .execute();
+    // D：名称/拼音/首字母/简介均不命中查询词，仅标签名命中 —— 应排在仅
+    // summary 命中的应用 C 之前（标签/分类层级 > 简介模糊层级）。
+    await seedApplication(db, {
+      applicationId: "00000000-0000-0000-0000-0000000000d1",
+      versionId: "00000000-0000-0000-0000-0000000000d2",
+      name: "预算管控台",
+      summary: "预算与费用管控",
+      searchName: "预算管控台",
+      searchSummary: "预算与费用管控",
+      searchPinyin: "ysgkt",
+      searchInitials: "ysgkt",
+    });
+    await db
+      .insertInto("application_tag_links")
+      .values({
+        application_id: "00000000-0000-0000-0000-0000000000d1",
+        tag_id: "tag-expense",
+      })
+      .execute();
+    // E：仅分类名命中查询词，同样应排在 summary 模糊命中之前。
+    await seedApplication(db, {
+      applicationId: "00000000-0000-0000-0000-0000000000e1",
+      versionId: "00000000-0000-0000-0000-0000000000e2",
+      name: "财务数据中心",
+      summary: "财务数据管理",
+      searchName: "财务数据中心",
+      searchSummary: "财务数据管理",
+      searchPinyin: "cwsjzx",
+      searchInitials: "cwsjzx",
+      categoryId: "expense-assistant",
+    });
+
+    const repository = new KyselyCatalogRepository(db);
+    const result = await repository.listVisiblePage({
+      actor,
+      query: "报销助手",
+      sort: "latest",
+      page: 1,
+      pageSize: 10,
+    });
+    expect(result.total).toBe(5);
+    // D 与 E 同层（标签/分类，rank 2），并列时按 updated_at（固定值）→
+    // application_id 升序，d1 < e1。
+    expect(result.items.map((item) => item.name)).toEqual([
+      "报销助手",
+      "报销助手Pro",
+      "预算管控台",
+      "财务数据中心",
       "智能报销平台",
     ]);
   });
