@@ -30,6 +30,7 @@ import { IdentityService } from "./identity.service.js";
 import { AuditService } from "../system/security/audit.service.js";
 import { SECURITY_AUDIT_STORAGE } from "../system/security/security.tokens.js";
 import type { ReadableObjectStoragePort } from "../application/storage.port.js";
+import { SecurityAuditQueryDto } from "./identity.dto.js";
 
 /** 审计导出请求。 */
 export class AuditExportRequestDto {
@@ -58,37 +59,31 @@ export class SecurityController {
   async listAuditLogs(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("keyword") keyword?: string,
-    @Query("module") module?: string,
-    @Query("action") action?: string,
-    @Query("actor") actor?: string,
-    @Query("result") result?: string,
-    @Query("from") from?: string,
-    @Query("to") to?: string,
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: SecurityAuditQueryDto,
   ) {
     if (employeeId === undefined || sessionId === undefined) {
       throw new BadRequestException("IDENTITY_HEADERS_REQUIRED");
     }
     await this.identity.getActorContext(employeeId, sessionId);
     const resultValue =
-      result === "success" ||
-      result === "failure" ||
-      result === "denied" ||
-      result === "error"
-        ? result
+      query.result === "success" ||
+      query.result === "failure" ||
+      query.result === "denied" ||
+      query.result === "error"
+        ? query.result
         : undefined;
     return this.audit.listEvents({
-      ...(keyword === undefined ? {} : { keyword }),
-      ...(module === undefined ? {} : { module }),
-      ...(action === undefined ? {} : { action }),
-      ...(actor === undefined ? {} : { actorEmployeeId: actor }),
+      ...(query.keyword === undefined ? {} : { keyword: query.keyword }),
+      ...(query.module === undefined ? {} : { module: query.module }),
+      ...(query.action === undefined ? {} : { action: query.action }),
+      ...(query.actor === undefined
+        ? {}
+        : { actorEmployeeId: query.actor }),
       ...(resultValue === undefined ? {} : { result: resultValue }),
-      ...(from === undefined ? {} : { from }),
-      ...(to === undefined ? {} : { to }),
-      page: Number.parseInt(page ?? "1", 10) || 1,
-      pageSize: Math.min(200, Number.parseInt(pageSize ?? "50", 10) || 50),
+      ...(query.from === undefined ? {} : { from: query.from }),
+      ...(query.to === undefined ? {} : { to: query.to }),
+      page: query.page ?? 1,
+      pageSize: Math.min(200, query.pageSize ?? 50),
     });
   }
 

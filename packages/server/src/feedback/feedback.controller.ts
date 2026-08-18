@@ -32,6 +32,7 @@ import { FeedbackService } from "./feedback.service.js";
 import {
   CreateFeedbackRequestDto,
   FeedbackDto,
+  ListFeedbackQueryDto,
   UpdateFeedbackRequestDto,
 } from "./feedback.dto.js";
 import {
@@ -91,11 +92,11 @@ export class FeedbackController {
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("scope") scope?: "mine" | "all",
+    @Query() query: ListFeedbackQueryDto,
   ) {
     return this.call(async () => {
       const actor = await this.actor(employeeId, sessionId);
-      return scope === "all"
+      return query.scope === "all"
         ? this.feedback.listApplicationFeedback(actor, applicationId)
         : this.feedback.listMyFeedback(actor, applicationId);
     });

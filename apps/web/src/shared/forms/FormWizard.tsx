@@ -36,6 +36,8 @@ export interface FormWizardProps {
   saveState?: "idle" | "saving" | "saved";
   /** 提交按钮文案。 */
   submitLabel?: string;
+  /** 是否禁用最终提交（如应用已进入审核等不可提交状态）。 */
+  submitDisabled?: boolean;
   /** 表单校验器（如 zodResolver），用于「下一步」与「提交」时按 schema 校验。 */
   resolver?: Resolver<FieldValues>;
 }
@@ -47,6 +49,7 @@ export function FormWizard({
   onSubmit,
   saveState = "idle",
   submitLabel = "提交审核",
+  submitDisabled = false,
   resolver,
 }: FormWizardProps) {
   const [current, setCurrent] = useState(0);
@@ -147,7 +150,12 @@ export function FormWizard({
             </Button>
           )}
           {isLast && (
-            <Button type="primary" loading={submitting} onClick={handleSubmit}>
+            <Button
+              type="primary"
+              loading={submitting}
+              disabled={submitDisabled}
+              onClick={handleSubmit}
+            >
               {submitLabel}
             </Button>
           )}

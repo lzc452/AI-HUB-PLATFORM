@@ -4,11 +4,16 @@ import {
   IsBoolean,
   IsIn,
   ValidateIf,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
+  Max,
+  MaxLength,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 /** 登录加密信封。 */
 export class EncryptedLoginEnvelopeDto {
@@ -729,4 +734,102 @@ export class BulkDisableRolesRequestDto {
   @IsArray()
   @IsString({ each: true })
   roleIds!: string[];
+}
+
+const AUDIT_RESULTS = ["success", "failure", "denied", "error"] as const;
+
+/** 员工分页列表查询参数。 */
+export class ListEmployeesQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ type: String, description: "关键词搜索" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  keyword?: string;
+}
+
+/** 同步记录列表查询参数。 */
+export class ListSyncRunsQueryDto {
+  @ApiPropertyOptional({
+    type: Number,
+    description: "返回条数上限（1-100）",
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+/** 钉钉 SSO 发起查询参数。 */
+export class DingTalkSsoStartQueryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "登录成功后回跳地址",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  returnTo?: string;
+}
+
+/** 钉钉 SSO 回调查询参数。 */
+export class DingTalkSsoCallbackQueryDto {
+  @ApiProperty({ type: String, description: "OAuth state" })
+  @IsString()
+  @MaxLength(512)
+  state!: string;
+
+  @ApiProperty({ type: String, description: "OAuth code" })
+  @IsString()
+  @MaxLength(512)
+  code!: string;
+}
+
+/** 安全审计日志查询参数。 */
+export class SecurityAuditQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ type: String, description: "关键词搜索" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  keyword?: string;
+
+  @ApiPropertyOptional({ type: String, description: "模块" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  module?: string;
+
+  @ApiPropertyOptional({ type: String, description: "动作" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  action?: string;
+
+  @ApiPropertyOptional({ type: String, description: "操作员工号" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  actor?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "结果",
+    enum: AUDIT_RESULTS,
+  })
+  @IsOptional()
+  @IsIn(AUDIT_RESULTS)
+  result?: (typeof AUDIT_RESULTS)[number];
+
+  @ApiPropertyOptional({ type: String, description: "起始时间（ISO 8601）" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  from?: string;
+
+  @ApiPropertyOptional({ type: String, description: "结束时间（ISO 8601）" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  to?: string;
 }

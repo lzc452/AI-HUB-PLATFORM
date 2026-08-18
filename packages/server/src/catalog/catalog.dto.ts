@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsOptional, IsString } from "class-validator";
+import { Type } from "class-transformer";
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from "class-validator";
+import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 /** 记录目录行为请求。 */
 export class CatalogActionRequestDto {
@@ -207,4 +214,34 @@ export class TagSummaryDto {
 
   @ApiProperty({ type: String, description: "标签名称", example: "AI 助手" })
   name!: string;
+}
+
+/** 目录列表查询参数。 */
+export class ListCatalogQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ type: String, description: "搜索关键词" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  query?: string;
+
+  @ApiPropertyOptional({ type: String, description: "分类 ID" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  categoryId?: string;
+
+  @ApiPropertyOptional({ type: String, description: "应用类型" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  applicationType?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "排序方式",
+    enum: ["recommended", "latest", "popular"],
+  })
+  @IsOptional()
+  @IsIn(["recommended", "latest", "popular"])
+  sort?: "recommended" | "latest" | "popular";
 }

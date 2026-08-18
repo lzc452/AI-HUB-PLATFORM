@@ -72,6 +72,8 @@ import {
   DemandClaimConfirmRequestDto,
   DemandReleaseRequestDto,
   DemandAttachmentDto,
+  DemandVersionQueryDto,
+  ListDemandsQueryDto,
 } from "./demand.dto.js";
 import {
   EmployeeIdResultDto,
@@ -534,7 +536,7 @@ export class DemandController {
   removeCollaborator(
     @Param("demandId") demandId: string,
     @Param("collaboratorEmployeeId") collaboratorEmployeeId: string,
-    @Query("expectedVersion") expectedVersion: string | undefined,
+    @Query() query: DemandVersionQueryDto,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
@@ -543,7 +545,7 @@ export class DemandController {
         await this.actor(employeeId, sessionId),
         demandId,
         collaboratorEmployeeId,
-        this.parsePositive(expectedVersion, 0),
+        this.parsePositive(query.expectedVersion, 0),
       ),
     );
   }
@@ -883,7 +885,7 @@ export class DemandController {
   unlinkApplication(
     @Param("demandId") demandId: string,
     @Param("applicationId") applicationId: string,
-    @Query("expectedVersion") expectedVersion: string | undefined,
+    @Query() query: DemandVersionQueryDto,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
   ) {
@@ -892,7 +894,7 @@ export class DemandController {
         await this.actor(employeeId, sessionId),
         demandId,
         applicationId,
-        this.parsePositive(expectedVersion, 0),
+        this.parsePositive(query.expectedVersion, 0),
       ),
     );
   }
@@ -944,25 +946,21 @@ export class DemandController {
   list(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("status") status?: Parameters<DemandService["list"]>[1]["status"],
-    @Query("query") query?: string,
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
-    @Query("requesterDepartmentId") requesterDepartmentId?: string,
-    @Query("audienceType") audienceType?: "all" | "department" | "employee",
-    @Query("sort") sort?: "recent" | "priority" | "hot",
+    @Query() query: ListDemandsQueryDto,
   ) {
-    const parsedPage = this.parsePositive(page, 1);
-    const parsedPageSize = this.parsePositive(pageSize, 20);
+    const parsedPage = this.parsePositive(query.page, 1);
+    const parsedPageSize = this.parsePositive(query.pageSize, 20);
     return this.call(async () =>
       this.demands.list(await this.actor(employeeId, sessionId), {
-        ...(status === undefined ? {} : { status }),
-        ...(query === undefined ? {} : { query }),
-        ...(requesterDepartmentId === undefined
+        ...(query.status === undefined ? {} : { status: query.status }),
+        ...(query.query === undefined ? {} : { query: query.query }),
+        ...(query.requesterDepartmentId === undefined
           ? {}
-          : { requesterDepartmentId }),
-        ...(audienceType === undefined ? {} : { audienceType }),
-        ...(sort === undefined ? {} : { sort }),
+          : { requesterDepartmentId: query.requesterDepartmentId }),
+        ...(query.audienceType === undefined
+          ? {}
+          : { audienceType: query.audienceType }),
+        ...(query.sort === undefined ? {} : { sort: query.sort }),
         page: parsedPage,
         pageSize: parsedPageSize,
       }),
@@ -1215,7 +1213,10 @@ export class DemandController {
     }
   }
 
-  private parsePositive(value: string | undefined, fallback: number): number {
+  private parsePositive(
+    value: string | number | undefined,
+    fallback: number,
+  ): number {
     if (value === undefined) return fallback;
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 1) {

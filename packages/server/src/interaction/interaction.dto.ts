@@ -1,14 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
   IsBoolean,
   IsIn,
   ValidateIf,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
   Min,
   Max,
 } from "class-validator";
+import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 /** 应用评分请求。 */
 export class RatingRequestDto {
@@ -262,3 +265,9 @@ export class PaginatedCommentsDto {
   @ApiProperty({ type: Number, description: "根评论总数" })
   total!: number;
 }
+
+/** 评论列表查询参数。 */
+export class ListCommentsQueryDto extends PaginationQueryDto {}
+
+/** 评分列表查询参数。 */
+export class ListRatingsQueryDto extends PaginationQueryDto {}

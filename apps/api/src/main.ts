@@ -21,6 +21,7 @@ import {
   PinoNestLogger,
   KyselyReplayNonceRepository,
   createProductionSecurityMiddleware,
+  createIdentityCookieBridge,
   createRateLimitMiddleware,
   ArtifactPipeline,
   DiskObjectStorage,
@@ -110,6 +111,7 @@ async function bootstrap() {
       set(key: string, value: number): unknown;
     }
   ).set("trust proxy", 1);
+
   // 安全地基：全局校验管道。whitelist 剔除请求体中任何未声明校验装饰器的字段，
   // 阻断 mass-assignment 与多余字段注入；transform 按 DTO 装饰器做类型转换。
   // 注意：所有请求 DTO 必须带 class-validator 装饰器，否则合法字段会被一并剔除。
@@ -123,6 +125,9 @@ async function bootstrap() {
   );
 
   app.use(createHttpLogger(logger));
+  // 身份已由 HttpOnly Cookie 承载；桥接回请求头，使控制器 @Headers 读取
+  // 与 PermissionGuard 的 Cookie 优先语义一致（无 Cookie 的客户端不受影响）。
+  app.use(createIdentityCookieBridge());
   app.use(
     createRateLimitMiddleware({
       limits: [

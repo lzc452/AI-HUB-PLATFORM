@@ -431,6 +431,8 @@ export interface ApplicationRepository {
     applicationVersionId?: string | null;
     eventType: string;
     details?: unknown;
+    /** 稳定业务幂等键；传入后同一业务事件重试将去重（低危-6/7）。缺失时回退随机键。 */
+    idempotencyKey?: string;
   }): Promise<void>;
   registerToCatalog(input: {
     applicationId: string;

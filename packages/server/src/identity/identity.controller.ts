@@ -46,6 +46,10 @@ import {
 import { IdentityService, parseCsv } from "./identity.service.js";
 import { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import {
+  buildSessionCookieAttributes,
+  shouldSecureSessionCookie,
+} from "./session-cookie.js";
+import {
   ActorContextDto,
   AssignRolesRequestDto,
   BulkDisableEmployeesRequestDto,
@@ -76,6 +80,10 @@ import {
   UpdateRoleRequestDto,
   UpdateSyncConfigRequestDto,
   UpsertDepartmentRequestDto,
+  ListEmployeesQueryDto,
+  ListSyncRunsQueryDto,
+  DingTalkSsoStartQueryDto,
+  DingTalkSsoCallbackQueryDto,
 } from "./identity.dto.js";
 import {
   ApiIdentityHeaders,
@@ -433,14 +441,12 @@ export class IdentityController {
   @ApiOkResponse({ description: "分页结果", type: EmployeePageResultDto })
   @ApiProblemResponses([400, 401, 403])
   async listEmployeesPage(
-    @Query("keyword") keyword?: string,
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: ListEmployeesQueryDto,
   ) {
     return this.identity.listEmployeesPage({
-      ...(keyword === undefined ? {} : { keyword }),
-      page: Number.parseInt(page ?? "1", 10) || 1,
-      pageSize: Math.min(100, Number.parseInt(pageSize ?? "20", 10) || 20),
+      ...(query.keyword === undefined ? {} : { keyword: query.keyword }),
+      page: query.page ?? 1,
+      pageSize: Math.min(100, query.pageSize ?? 20),
     });
   }
 
@@ -604,10 +610,8 @@ export class IdentityController {
     isArray: true,
   })
   @ApiProblemResponses([400, 401, 403])
-  async listSyncRuns(@Query("limit") limit?: string) {
-    return this.identity.listSyncRuns(
-      Math.min(100, Number.parseInt(limit ?? "20", 10) || 20),
-    );
+  async listSyncRuns(@Query() query: ListSyncRunsQueryDto) {
+    return this.identity.listSyncRuns(Math.min(100, query.limit ?? 20));
   }
 
   @Get("/sync/overview")
@@ -859,13 +863,13 @@ export class IdentityController {
   @ApiOkResponse({ description: "钉钉授权页跳转 URL" })
   @ApiProblemResponses([400])
   async startDingTalkSso(
-    @Query("returnTo") returnTo: string,
+    @Query() query: DingTalkSsoStartQueryDto,
     @Res({ passthrough: true }) res: Response,
   ) {
     if (this.dingtalkSso === undefined) {
       throw new BadRequestException("DINGTALK_SSO_DISABLED");
     }
-    const result = await this.dingtalkSso.startSso(returnTo ?? "/");
+    const result = await this.dingtalkSso.startSso(query.returnTo ?? "/");
     res.setHeader("Set-Cookie", [
       result.browserBindingCookie,
       result.stateCookie,
@@ -878,8 +882,7 @@ export class IdentityController {
   @ApiOperation({ summary: "钉钉 OAuth 2.0 回调" })
   @ApiProblemResponses([400])
   async dingtalkCallback(
-    @Query("state") state: string,
-    @Query("code") code: string,
+    @Query() query: DingTalkSsoCallbackQueryDto,
     @Req() req: Request,
     @Res() res: Response,
   ) {
@@ -899,8 +902,8 @@ export class IdentityController {
       );
 
       const result = await this.dingtalkSso.handleCallback(
-        state,
-        code,
+        query.state,
+        query.code,
         bindingCookie,
         stateCookie,
       );
@@ -971,9 +974,9 @@ export class IdentityController {
       0,
       Math.floor((expires.getTime() - Date.now()) / 1000),
     );
-    // HttpOnly 防止 XSS 读取；SameSite=Lax 缓解 CSRF。未在本地 http 下加 Secure，
-    // 以便开发环境可用；生产走 https 时建议通过配置补 Secure。
-    const flags = "Path=/; HttpOnly; SameSite=Lax";
+    // HttpOnly 防止 XSS 读取；SameSite=Lax 缓解 CSRF；Secure 防止明文 HTTP 降级泄露，
+    // 仅在 HTTPS 环境（生产或显式覆盖）开启，以免影响本地 http 开发。
+    const flags = buildSessionCookieAttributes(shouldSecureSessionCookie());
     return [
       `aihub_sid=${session.sessionId}; ${flags}; Max-Age=${maxAge}`,
       `aihub_eid=${employeeId}; ${flags}; Max-Age=${maxAge}`,

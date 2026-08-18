@@ -10,9 +10,11 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MaxLength,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
+import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 /** 创建应用请求。 */
 export class CreateApplicationRequestDto {
@@ -1142,4 +1144,91 @@ export class ValidationCheckDto {
 
   @ApiProperty({ type: String, description: "记录时间（ISO）" })
   createdAt!: string;
+}
+
+const APPLICATION_STATUSES = [
+  "draft",
+  "in_review",
+  "approved",
+  "published",
+  "withdrawn",
+  "archived",
+] as const;
+
+const APPLICATION_MODES = ["all", "review", "owned"] as const;
+
+const DELIVERY_CHANNELS = [
+  "web",
+  "desktop",
+  "mobile",
+  "mini_program",
+] as const;
+
+/** 应用管理列表查询参数。 */
+export class ListApplicationsAdminQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ type: String, description: "关键词搜索" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  keyword?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "列表模式",
+    enum: APPLICATION_MODES,
+  })
+  @IsOptional()
+  @IsIn(APPLICATION_MODES)
+  mode?: (typeof APPLICATION_MODES)[number];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "应用状态",
+    enum: APPLICATION_STATUSES,
+  })
+  @IsOptional()
+  @IsIn(APPLICATION_STATUSES)
+  status?: (typeof APPLICATION_STATUSES)[number];
+
+  @ApiPropertyOptional({ type: String, description: "所属部门 ID" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  departmentId?: string;
+
+  @ApiPropertyOptional({ type: String, description: "应用类型" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  applicationType?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "交付渠道",
+    enum: DELIVERY_CHANNELS,
+  })
+  @IsOptional()
+  @IsIn(DELIVERY_CHANNELS)
+  channel?: (typeof DELIVERY_CHANNELS)[number];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "排序方式",
+    enum: ["recent", "name", "status"],
+  })
+  @IsOptional()
+  @IsIn(["recent", "name", "status"])
+  sort?: "recent" | "name" | "status";
+}
+
+/** 完成上传请求体（统一上传通道）。 */
+export class CompleteUnifiedUploadBodyDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "内容签名，缺省为空字符串",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(512)
+  signature?: string;
 }

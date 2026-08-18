@@ -72,6 +72,7 @@ export {
   createProductionSecurityMiddleware,
   type ProductionSecurityOptions,
 } from "./system/security/production.middleware.js";
+export { createIdentityCookieBridge } from "./system/security/identity-cookie.middleware.js";
 export { createRateLimitMiddleware } from "./system/security/rate-limit.middleware.js";
 export { IdentityController } from "./identity/identity.controller.js";
 export { IdentityModule } from "./identity/identity.module.js";

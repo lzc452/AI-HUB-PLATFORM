@@ -35,6 +35,7 @@ import {
   AnalyticsDownloadResultDto,
   AnalyticsExportRequestDto,
   AnalyticsExportResultDto,
+  DashboardQueryDto,
   DashboardResultDto,
 } from "./analytics.dto.js";
 import {
@@ -121,9 +122,7 @@ export class AnalyticsController {
     @Param("dashboardKey") dashboardKey: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("from") from = "",
-    @Query("to") to = "",
-    @Query("applicationId") applicationId?: string,
+    @Query() query: DashboardQueryDto,
   ) {
     return this.call(async () => {
       const actor = await this.requireActor(employeeId, sessionId);
@@ -137,9 +136,9 @@ export class AnalyticsController {
       return this.dashboards.read(
         actor,
         dashboardKey as DashboardKey,
-        from,
-        to,
-        applicationId,
+        query.from,
+        query.to,
+        query.applicationId,
       );
     });
   }

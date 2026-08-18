@@ -38,6 +38,8 @@ import {
   ReportRecordDto,
   ReportRequestDto,
   ResolveReportRequestDto,
+  ListCommentsQueryDto,
+  ListRatingsQueryDto,
 } from "./interaction.dto.js";
 import { LikeResultDto } from "../system/http/simple-results.dto.js";
 import {
@@ -225,11 +227,10 @@ export class InteractionController {
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: ListRatingsQueryDto,
   ) {
-    const p = this.parsePositive(page, 1);
-    const ps = this.parsePositive(pageSize, 20);
+    const p = this.parsePositive(query.page, 1);
+    const ps = this.parsePositive(query.pageSize, 20);
     return this.call(async () =>
       this.interactions.listRatings(
         await this.actor(employeeId, sessionId),
@@ -256,11 +257,10 @@ export class InteractionController {
     @Param("applicationId") applicationId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: ListCommentsQueryDto,
   ) {
-    const p = this.parsePositive(page, 1);
-    const ps = this.parsePositive(pageSize, 20);
+    const p = this.parsePositive(query.page, 1);
+    const ps = this.parsePositive(query.pageSize, 20);
     return this.call(async () =>
       this.interactions.listComments(
         await this.actor(employeeId, sessionId),
@@ -323,9 +323,13 @@ export class InteractionController {
     );
   }
 
-  private parsePositive(raw: string | undefined, fallback: number): number {
+  private parsePositive(
+    raw: string | number | undefined,
+    fallback: number,
+  ): number {
     if (raw === undefined) return fallback;
-    const n = Number.parseInt(raw, 10);
+    const n =
+      typeof raw === "number" ? raw : Number.parseInt(raw, 10);
     return Number.isFinite(n) && n > 0 ? n : fallback;
   }
 

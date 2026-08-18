@@ -31,6 +31,8 @@ export default function ApplicationCreateWizardPage() {
     searchParams.get("type") ?? (draftIdFromQuery ? "edit" : "add");
 
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  // 当前应用状态：编辑模式从草稿记录读取；新增模式为 draft。
+  const [appStatus, setAppStatus] = useState<string>("draft");
   const [defaultValues, setDefaultValues] = useState<FieldValues>(
     applicationDraftDefaults as unknown as FieldValues,
   );
@@ -85,6 +87,7 @@ export default function ApplicationCreateWizardPage() {
           const record = await getApplicationDraft(draftIdFromQuery);
           if (!cancelled) {
             setApplicationId(draftIdFromQuery);
+            setAppStatus(record.status);
             setDefaultValues({
               ...(record.draft as unknown as FieldValues),
               manualHtml: record.draft.manualHtml ?? "",
@@ -131,8 +134,17 @@ export default function ApplicationCreateWizardPage() {
     }
   };
 
+  // 与后端 submitDraft 的状态机一致：仅 draft / published 可提交审核；
+  // 已进入审核（in_review）等状态重复提交会返回 INVALID_APPLICATION_TRANSITION。
+  const submittable = appStatus === "draft" || appStatus === "published";
+
   const handleSubmit = async (values: FieldValues) => {
     if (!applicationId) return;
+    if (!submittable) {
+      message.info("该应用已提交审核，无法重复提交，请到应用详情页查看");
+      navigate(`/creator/${applicationId}`);
+      return;
+    }
     await saveApplicationDraft(applicationId, withDeliveries(values));
     await submitApplicationDraft(applicationId);
     message.success("已提交审核");
@@ -157,6 +169,7 @@ export default function ApplicationCreateWizardPage() {
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
         saveState={saveState}
+        submitDisabled={!submittable}
         resolver={zodResolver(applicationDraftFormSchema) as unknown as Resolver<FieldValues>}
       />
     </div>

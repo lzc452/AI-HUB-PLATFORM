@@ -598,6 +598,7 @@ describe("DemandService innovation-square interactions", () => {
       updatedAt: new Date(),
     };
     const audits: string[] = [];
+    const outboxCalls: Array<{ eventType: string; idempotencyKey?: string }> = [];
     const repository = {
       withTransaction: async <T>(
         operation: (repo: DemandRepository) => Promise<T>,
@@ -628,7 +629,12 @@ describe("DemandService innovation-square interactions", () => {
       recordAudit: async ({ eventType }: { eventType: string }) => {
         audits.push(eventType);
       },
-      emitOutbox: async () => undefined,
+      emitOutbox: async (input: {
+        eventType: string;
+        idempotencyKey?: string;
+      }) => {
+        outboxCalls.push(input);
+      },
     } as unknown as DemandRepository;
     const service = new DemandService(repository, { authorize: allowAll });
 
@@ -638,6 +644,8 @@ describe("DemandService innovation-square interactions", () => {
       body: "Please include source links.",
       displayAnonymously: true,
     });
+    // 低危-6/7：emitOutbox 必须携带稳定的业务幂等键（含实体 ID），使 outbox 唯一索引去重生效。
+    expect(outboxCalls[0]?.idempotencyKey).toContain("comment-1");
     comment.parentCommentId = "comment-root";
     await expect(
       service.addComment(requester, {

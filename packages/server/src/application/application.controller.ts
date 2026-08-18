@@ -53,6 +53,7 @@ import {
   RollbackRequestDto,
   SaveApplicationDraftRequestDto,
   SubmitReviewRequestDto,
+  ListApplicationsAdminQueryDto,
   TransferOwnerRequestDto,
   TransferReviewRequestDto,
   ValidationCheckDto,
@@ -604,33 +605,24 @@ export class ApplicationController {
   async listAdmin(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("keyword") keyword?: string,
-    @Query("mode") mode?: "all" | "review" | "owned",
-    @Query("status")
-    status?: import("./application.types.js").ApplicationStatus,
-    @Query("departmentId") departmentId?: string,
-    @Query("applicationType") applicationType?: string,
-    @Query("channel")
-    channel?: import("./application.types.js").DeliveryChannel,
-    @Query("sort") sort?: "recent" | "name" | "status",
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: ListApplicationsAdminQueryDto,
   ) {
     const actor = await this.requireActor(employeeId, sessionId, "read");
-    const parsedPage = Math.max(1, Number.parseInt(page ?? "1", 10) || 1);
-    const parsedPageSize = Math.min(
-      100,
-      Math.max(1, Number.parseInt(pageSize ?? "10", 10) || 10),
-    );
+    const parsedPage = Math.max(1, query.page ?? 1);
+    const parsedPageSize = Math.min(100, Math.max(1, query.pageSize ?? 10));
     return this.call(() =>
       this.applications.listAdmin(actor, {
-        ...(keyword === undefined ? {} : { keyword }),
-        ...(mode === undefined ? {} : { mode }),
-        ...(status === undefined ? {} : { status }),
-        ...(departmentId === undefined ? {} : { departmentId }),
-        ...(applicationType === undefined ? {} : { applicationType }),
-        ...(channel === undefined ? {} : { channel }),
-        ...(sort === undefined ? {} : { sort }),
+        ...(query.keyword === undefined ? {} : { keyword: query.keyword }),
+        ...(query.mode === undefined ? {} : { mode: query.mode }),
+        ...(query.status === undefined ? {} : { status: query.status }),
+        ...(query.departmentId === undefined
+          ? {}
+          : { departmentId: query.departmentId }),
+        ...(query.applicationType === undefined
+          ? {}
+          : { applicationType: query.applicationType }),
+        ...(query.channel === undefined ? {} : { channel: query.channel }),
+        ...(query.sort === undefined ? {} : { sort: query.sort }),
         page: parsedPage,
         pageSize: parsedPageSize,
       }),

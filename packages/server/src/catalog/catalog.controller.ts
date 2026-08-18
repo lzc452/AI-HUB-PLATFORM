@@ -44,6 +44,7 @@ import {
   CatalogEntryDto,
   CatalogListResultDto,
   CategorySummaryDto,
+  ListCatalogQueryDto,
   RiskDescriptionDto,
   SaveRiskDescriptionRequestDto,
   TagSummaryDto,
@@ -106,21 +107,18 @@ export class CatalogController {
   async list(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Query("query") query?: string,
-    @Query("categoryId") categoryId?: string,
-    @Query("applicationType") applicationType?: string,
-    @Query("sort") sort?: "recommended" | "latest" | "popular",
-    @Query("page") page?: string,
-    @Query("pageSize") pageSize?: string,
+    @Query() query: ListCatalogQueryDto,
   ) {
     const input: CatalogSearchInput = {
       actor: await this.requireActor(employeeId, sessionId),
-      sort: sort ?? "recommended",
-      page: this.parsePositive(page, 1),
-      pageSize: this.parsePositive(pageSize, 20),
-      ...(query === undefined ? {} : { query }),
-      ...(categoryId === undefined ? {} : { categoryId }),
-      ...(applicationType === undefined ? {} : { applicationType }),
+      sort: query.sort ?? "recommended",
+      page: this.parsePositive(query.page, 1),
+      pageSize: this.parsePositive(query.pageSize, 20),
+      ...(query.query === undefined ? {} : { query: query.query }),
+      ...(query.categoryId === undefined ? {} : { categoryId: query.categoryId }),
+      ...(query.applicationType === undefined
+        ? {}
+        : { applicationType: query.applicationType }),
     };
     return this.call(() => this.catalog.list(input));
   }
@@ -360,7 +358,10 @@ export class CatalogController {
     return actor;
   }
 
-  private parsePositive(value: string | undefined, fallback: number): number {
+  private parsePositive(
+    value: string | number | undefined,
+    fallback: number,
+  ): number {
     if (value === undefined) return fallback;
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 1) {

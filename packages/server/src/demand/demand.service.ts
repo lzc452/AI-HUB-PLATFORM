@@ -1171,6 +1171,7 @@ export class DemandService {
         await repository.emitOutbox({
           demandId: input.demandId,
           eventType: "demand.comment.created",
+          idempotencyKey: `demand-comment-created:${comment.commentId}`,
         });
         return comment;
       },
@@ -1236,6 +1237,7 @@ export class DemandService {
       await repository.emitOutbox({
         demandId: input.demandId,
         eventType: "demand.report.created",
+        idempotencyKey: `demand-report-created:${report.reportId}`,
       });
       return report;
     });
@@ -1289,6 +1291,7 @@ export class DemandService {
       await repository.emitOutbox({
         demandId: report.demandId,
         eventType: "demand.report.resolved",
+        idempotencyKey: `demand-report-resolved:${report.reportId}`,
       });
       return report;
     });

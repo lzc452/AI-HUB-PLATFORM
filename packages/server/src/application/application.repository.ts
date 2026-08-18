@@ -1402,6 +1402,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     applicationVersionId?: string | null;
     eventType: string;
     details?: unknown;
+    idempotencyKey?: string;
   }): Promise<void> {
     await this.db
       .insertInto("outbox_events")
@@ -1414,7 +1415,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
           applicationVersionId: input.applicationVersionId ?? null,
           ...(input.details === undefined ? {} : { details: input.details }),
         },
-        idempotency_key: `${input.eventType}:${input.applicationId}:${input.applicationVersionId ?? "none"}:${randomUUID()}`,
+        idempotency_key:
+          input.idempotencyKey ??
+          `${input.eventType}:${input.applicationId}:${input.applicationVersionId ?? "none"}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
         available_at: new Date(),
@@ -1423,6 +1426,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         last_error: null,
         completed_at: null,
       })
+      .onConflict((oc) => oc.column("idempotency_key").doNothing())
       .execute();
   }
 
