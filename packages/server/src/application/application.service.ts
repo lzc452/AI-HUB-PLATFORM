@@ -439,7 +439,9 @@ export class ApplicationService {
       throw new Error("REVIEW_NOT_PENDING");
     }
     return this.repository.withTransaction(async (repository) => {
-      await repository.completeReviewQueue(applicationVersionId);
+      // 删除队列行而非置 completed：application_review_queue.application_version_id
+      // 有 UNIQUE 约束，保留终态行会阻塞同一版本撤回后的再次提交。
+      await repository.deleteReviewQueue(applicationVersionId);
       const updated = await repository.setApplicationStatus({
         applicationId: application.applicationId,
         expectedStatus: "published",

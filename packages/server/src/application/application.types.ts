@@ -330,10 +330,13 @@ export interface ApplicationRepository {
     applicationVersionId: string,
     employeeId: string,
   ): Promise<ReviewQueueRecord>;
-  /** 审核结束（通过、驳回或提交人撤回）后将队列置为终态 'completed'，避免其继续残留。 */
+  /** 审核结束（通过或驳回）后将队列置为终态 'completed'，避免其继续残留。 */
   completeReviewQueue(
     applicationVersionId: string,
   ): Promise<ReviewQueueRecord>;
+  /** 提交人撤回待审核版本时删除队列行（application_version_id 有 UNIQUE 约束，
+   *  保留 completed 行会阻塞同一版本的再次提交）。 */
+  deleteReviewQueue(applicationVersionId: string): Promise<void>;
   recordAudit(input: {
     applicationId: string;
     applicationVersionId?: string | null;

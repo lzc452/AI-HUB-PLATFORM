@@ -286,6 +286,14 @@ class MemoryApplicationRepository implements ApplicationRepository {
     if (current.status !== input.expectedStatus) {
       throw new Error("APPLICATION_STATE_CONFLICT");
     }
+    // 与 Kysely 实现一致：写入非空 pendingVersionId 时 CAS 要求当前没有 pending 版本。
+    if (
+      input.pendingVersionId !== undefined &&
+      input.pendingVersionId !== null &&
+      current.pendingVersionId !== null
+    ) {
+      throw new Error("REVIEW_ALREADY_PENDING");
+    }
     const updated = {
       ...current,
       status: input.status,
@@ -375,6 +383,12 @@ class MemoryApplicationRepository implements ApplicationRepository {
     const updated = { ...queue, status: "completed" as const };
     this.reviewQueue[this.reviewQueue.indexOf(queue)] = updated;
     return updated;
+  }
+  async deleteReviewQueue(applicationVersionId: string) {
+    const index = this.reviewQueue.findIndex(
+      (candidate) => candidate.applicationVersionId === applicationVersionId,
+    );
+    if (index >= 0) this.reviewQueue.splice(index, 1);
   }
   async recordAudit(input: { eventType: string }) {
     this.audits.push(input.eventType);
@@ -1010,7 +1024,7 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("REVIEW_ALREADY_PENDING");
   });
 
-  it("cancels a pending review and restores the previous state", async () => {
+  it("cancels a pending review, frees the slot and allows re-submission", async () => {
     const { service, repository } = makeService();
     const { application } = await preparePublishedApplication(service);
     const second = await createVersionFor(
@@ -1028,9 +1042,54 @@ describe("ApplicationService", () => {
 
     expect(result.status).toBe("published");
     expect(result.pendingVersionId).toBeNull();
-    const queue = await service.getReviewQueue(second.applicationVersionId);
-    expect(queue.status).toBe("completed");
+    // 队列行被删除（而非置 completed）：查询语义与"无待审核版本"一致，
+    // 且同一版本可再次提交——application_review_queue.application_version_id
+    // 的 UNIQUE 约束不再阻塞重新提交。
+    await expect(
+      service.getReviewQueue(second.applicationVersionId),
+    ).rejects.toThrow("REVIEW_QUEUE_NOT_FOUND");
+    await expect(
+      service.submitForReview(owner, second.applicationVersionId),
+    ).resolves.toMatchObject({
+      status: "published",
+      pendingVersionId: second.applicationVersionId,
+    });
     expect(repository.events).toContain("application.review.withdrawn");
+  });
+
+  it("rejects a pending write through repository CAS when the slot is occupied", async () => {
+    const repository = new MemoryApplicationRepository();
+    const application = await repository.createApplication({
+      ownerEmployeeId: owner.employeeId,
+      maintainerEmployeeId: owner.employeeId,
+      departmentId: owner.primaryDepartmentId,
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    repository.applications.set(application.applicationId, {
+      ...application,
+      status: "published",
+      pendingVersionId: "version-1",
+    });
+    // 模拟并发窗口：服务层预检读到 pending=null，但事务提交时 pending 已被占用——
+    // setApplicationStatus 的 pending CAS 必须拒绝第二次写入并抛 REVIEW_ALREADY_PENDING。
+    await expect(
+      repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: "published",
+        status: "published",
+        pendingVersionId: "version-2",
+      }),
+    ).rejects.toThrow("REVIEW_ALREADY_PENDING");
+    // 清空 pending 的写入不受该 CAS 限制（审核结束、撤回路径仍需能清除）。
+    await expect(
+      repository.setApplicationStatus({
+        applicationId: application.applicationId,
+        expectedStatus: "published",
+        status: "published",
+        pendingVersionId: null,
+      }),
+    ).resolves.toMatchObject({ pendingVersionId: null });
   });
 
   it("aggregates the application workspace for the four detail routes", async () => {

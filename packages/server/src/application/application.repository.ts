@@ -945,7 +945,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     currentVersionId?: string;
     pendingVersionId?: string | null;
   }): Promise<ApplicationRecord> {
-    const row = await this.db
+    let query = this.db
       .updateTable("applications")
       .set({
         status: input.status,
@@ -958,11 +958,36 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         updated_at: new Date(),
       })
       .where("application_id", "=", input.applicationId)
-      .where("status", "=", input.expectedStatus)
-      .returningAll()
-      .executeTakeFirst();
-    if (row === undefined) throw new Error("APPLICATION_STATE_CONFLICT");
-    return this.mapApplication(row);
+      .where("status", "=", input.expectedStatus);
+    // 写入待生效版本时 CAS 额外要求当前没有 pending 版本：服务层预检在事务外，
+    // 仅凭 status 条件会让两个并发提交同时通过并相互覆盖 pending_version_id。
+    if (
+      input.pendingVersionId !== undefined &&
+      input.pendingVersionId !== null
+    ) {
+      query = query.where("pending_version_id", "is", null);
+    }
+    const row = await query.returningAll().executeTakeFirst();
+    if (row !== undefined) return this.mapApplication(row);
+    // 更新 0 行：区分是状态不符还是 pending 已被占用，给出准确的错误码。
+    if (
+      input.pendingVersionId !== undefined &&
+      input.pendingVersionId !== null
+    ) {
+      const current = await this.db
+        .selectFrom("applications")
+        .select(["status", "pending_version_id"])
+        .where("application_id", "=", input.applicationId)
+        .executeTakeFirst();
+      if (
+        current !== undefined &&
+        current.status === input.expectedStatus &&
+        current.pending_version_id !== null
+      ) {
+        throw new Error("REVIEW_ALREADY_PENDING");
+      }
+    }
+    throw new Error("APPLICATION_STATE_CONFLICT");
   }
 
   async createDelivery(
@@ -1106,6 +1131,15 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       .returningAll()
       .executeTakeFirstOrThrow();
     return this.mapReviewQueue(row);
+  }
+
+  /** 提交人撤回待审核版本时删除队列行：application_version_id 有 UNIQUE 约束，
+   *  若保留 completed 行会阻塞同一版本的再次提交。 */
+  async deleteReviewQueue(applicationVersionId: string): Promise<void> {
+    await this.db
+      .deleteFrom("application_review_queue")
+      .where("application_version_id", "=", applicationVersionId)
+      .execute();
   }
 
   /** SLA 提醒任务查询：截止前 hours 小时内已领取（status='claimed'）的审核队列。 */

@@ -429,17 +429,33 @@ describe("real application lifecycle API", () => {
     ).resolves.toMatchObject({
       body: { status: "published", pendingVersionId: null },
     });
-    const withdrawnQueue = await request(app.getHttpServer())
+    // 撤回删除队列行：查询返回 404（而非 completed），
+    // 避免 application_version_id 的 UNIQUE 约束阻塞同一版本的重新提交。
+    await request(app.getHttpServer())
       .get(`/internal/applications/versions/${secondVersionId}/review-queue`)
       .set(reviewerHeaders)
-      .expect(200);
-    expect(withdrawnQueue.body.status).toBe("completed");
-
-    // 撤回后同一版本可再次提交审核。
+      .expect(404);
+    // 撤回后同一版本（v2）可再次提交审核。
     await request(app.getHttpServer())
-      .post(`/internal/applications/versions/${thirdVersionId}/submit-review`)
+      .post(`/internal/applications/versions/${secondVersionId}/submit-review`)
       .set(ownerHeaders)
       .expect(200);
+    await expect(
+      request(app.getHttpServer())
+        .get(`/internal/applications/${applicationId}`)
+        .set(ownerHeaders),
+    ).resolves.toMatchObject({
+      body: { status: "published", pendingVersionId: secondVersionId },
+    });
+    // 重新提交后又占用 pending 槽位：第三个版本仍被并发上限拒绝。
+    const reRejected = await request(app.getHttpServer())
+      .post(`/internal/applications/versions/${thirdVersionId}/submit-review`)
+      .set(ownerHeaders)
+      .expect(400);
+    expect(reRejected.body).toMatchObject({
+      status: 400,
+      code: "REVIEW_ALREADY_PENDING",
+    });
   });
 
   it("rejects unauthorized application creation", async () => {
