@@ -25,6 +25,7 @@ import {
   KyselyApplicationRepository,
   AuditExportWorker,
   KyselyAuditRepository,
+  createSlaReminderRunner,
   type ReadableObjectStoragePort,
 } from "@ai-hub/server";
 
@@ -113,6 +114,38 @@ async function bootstrap() {
     },
     24 * 60 * 60 * 1000,
   );
+  // 系统进程发出的站内提醒，授权固定通过（RBAC 校验不适用于后台任务）。
+  const systemActor = {
+    employeeId: "system-sla-reminder",
+    roleCodes: ["super_admin"],
+    departmentIds: [],
+    primaryDepartmentId: "",
+    sessionId: "sla-reminder",
+  };
+  const slaReminderRunner = createSlaReminderRunner({
+    listExpiredReviews: runtime.reviewRepository.listExpiredReviews.bind(
+      runtime.reviewRepository,
+    ),
+    listApplicationAdmins: async () => {
+      const [admins, superAdmins] = await Promise.all([
+        runtime.identityRepository.listEmployeeIdsWithRole("application_admin"),
+        runtime.identityRepository.listEmployeeIdsWithRole("super_admin"),
+      ]);
+      return [...new Set([...admins, ...superAdmins])];
+    },
+    createNotification: async (input) => {
+      await runtime.notifications.createForEvent(systemActor, input);
+    },
+  });
+  await slaReminderRunner();
+  const slaTimer = setInterval(
+    () => {
+      void slaReminderRunner().catch((error: unknown) => {
+        logger.error({ error }, "审核 SLA 提醒任务执行失败");
+      });
+    },
+    15 * 60 * 1000,
+  );
   const artifactRecoveryTimer =
     artifactVerificationWorker === undefined
       ? undefined
@@ -129,6 +162,7 @@ async function bootstrap() {
       outboxWorker: runtime.outboxWorker,
       close: async () => {
         clearInterval(retentionTimer);
+        clearInterval(slaTimer);
         if (artifactRecoveryTimer !== undefined)
           clearInterval(artifactRecoveryTimer);
         await metricsListener.close();

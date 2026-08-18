@@ -23,6 +23,7 @@ import type {
 import { randomUUID } from "node:crypto";
 import type { AnalyticsBehaviorEventRecorder } from "../analytics/analytics.types.js";
 import { assertSafeRichText, sanitizeRichText } from "./content-security.js";
+import { addBusinessDays } from "../system/outbox/sla-reminder.worker.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -272,7 +273,7 @@ export class ApplicationService {
         status: "available",
         claimedByEmployeeId: null,
         claimedAt: null,
-        slaDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        slaDueAt: addBusinessDays(new Date(), 2),
         // 记录审核前的应用状态，驳回时据其正确回滚。
         sourceStatus: application.status,
       });
@@ -389,7 +390,7 @@ export class ApplicationService {
         status: "available",
         claimedByEmployeeId: null,
         claimedAt: null,
-        slaDueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        slaDueAt: addBusinessDays(new Date(), 2),
         // 记录审核前的应用状态，驳回时据其正确回滚。
         sourceStatus: application.status,
       });

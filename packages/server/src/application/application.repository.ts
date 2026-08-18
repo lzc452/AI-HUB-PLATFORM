@@ -1112,6 +1112,41 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     return this.mapReviewQueue(row);
   }
 
+  /** SLA 提醒任务查询：已超时且仍未完成的审核队列。 */
+  async listExpiredReviews(
+    now: Date,
+  ): Promise<
+    Array<{
+      applicationVersionId: string;
+      claimedByEmployeeId: string | null;
+      ownerEmployeeId: string;
+      name: string;
+    }>
+  > {
+    const rows = await this.db
+      .selectFrom("application_review_queue as queue")
+      .innerJoin(
+        "applications as app",
+        "app.application_id",
+        "queue.application_id",
+      )
+      .select([
+        "queue.application_version_id as applicationVersionId",
+        "queue.claimed_by_employee_id as claimedByEmployeeId",
+        "app.owner_employee_id as ownerEmployeeId",
+        "app.name",
+      ])
+      .where("queue.status", "in", ["available", "claimed"])
+      .where("queue.sla_due_at", "<", now)
+      .execute();
+    return rows.map((row) => ({
+      applicationVersionId: row.applicationVersionId,
+      claimedByEmployeeId: row.claimedByEmployeeId,
+      ownerEmployeeId: row.ownerEmployeeId,
+      name: row.name,
+    }));
+  }
+
   async recordAudit(input: {
     applicationId: string;
     applicationVersionId?: string | null;

@@ -16,6 +16,8 @@ const actor: ActorContext = {
 const EMITTED_EVENTS = [
   "application.review.requested",
   "application.review.decided",
+  "application.review.sla.reminder",
+  "application.review.sla.overdue",
   "application.published",
   "application.withdrawn",
   "artifact.verification.failed",
@@ -44,6 +46,8 @@ describe("DingTalk notification matrix", () => {
       "application.review.requested",
       "application.review.decided",
       "application.review.claim_expired",
+      "application.review.sla.reminder",
+      "application.review.sla.overdue",
       "application.published",
       "application.withdrawn",
       "demand.submitted",
@@ -94,7 +98,7 @@ describe("DingTalk notification matrix", () => {
       Object.keys(DINGTALK_NOTIFICATION_MATRIX).length,
     );
     expect(createForEvent).toHaveBeenNthCalledWith(
-      15,
+      17,
       actor,
       expect.objectContaining({
         recipientEmployeeId: "employee-2",

@@ -12,7 +12,10 @@ import {
   KyselyAnalyticsRetentionRepository,
   AnalyticsEventService,
   KyselyAnalyticsEventRepository,
+  KyselyApplicationRepository,
+  KyselyIdentityRepository,
   KyselyNotificationRepository,
+  NotificationService,
   createDingTalkNotificationOutboxHandler,
 } from "@ai-hub/server";
 
@@ -72,6 +75,9 @@ export class WorkerOutboxRuntime implements OnApplicationShutdown {
     private readonly database: ReturnType<typeof createDatabase>,
     public readonly outboxWorker: OutboxWorker,
     public readonly retention: AnalyticsRetentionService,
+    public readonly reviewRepository: KyselyApplicationRepository,
+    public readonly identityRepository: KyselyIdentityRepository,
+    public readonly notifications: NotificationService,
   ) {}
 
   public async onApplicationShutdown(): Promise<void> {
@@ -105,10 +111,11 @@ export class WorkerModule {
         {
           provide: WorkerOutboxRuntime,
           useFactory: () => {
+            const outboxStore = new OutboxStore(database, {
+              leaseDurationMs: outboxLeaseDurationMs,
+            });
             const outboxWorker = new OutboxWorker(
-              new OutboxStore(database, {
-                leaseDurationMs: outboxLeaseDurationMs,
-              }),
+              outboxStore,
               createOutboxHandlers(
                 database,
                 artifactVerificationHandler,
@@ -125,6 +132,19 @@ export class WorkerModule {
                 new AnalyticsEventService(
                   new KyselyAnalyticsEventRepository(database),
                 ),
+              ),
+              new KyselyApplicationRepository(database),
+              new KyselyIdentityRepository(database),
+              new NotificationService(
+                new KyselyNotificationRepository(database),
+                // worker 是系统进程：后台提醒不需要按员工授权。
+                {
+                  authorize: async () => ({
+                    allowed: true,
+                    reasonCode: "SYSTEM_ACTOR",
+                  }),
+                },
+                unavailableDingTalk,
               ),
             );
           },

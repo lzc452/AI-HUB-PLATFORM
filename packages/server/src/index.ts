@@ -11,6 +11,11 @@ export type {
   OutboxHandlerMap,
 } from "./system/outbox/outbox-worker.js";
 export {
+  addBusinessDays,
+  createSlaReminderRunner,
+} from "./system/outbox/sla-reminder.worker.js";
+export type { SlaReminderDeps } from "./system/outbox/sla-reminder.worker.js";
+export {
   createApplicationLogger,
   createHttpLogger,
   PinoNestLogger,
