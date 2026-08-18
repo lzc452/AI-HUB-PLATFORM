@@ -42,33 +42,39 @@ export const faqEntrySchema = z.object({
   answer: z.string().min(1, "回答不能为空"),
 });
 
+/**
+ * 单条受众规则（与 @ai-hub/contracts AudienceRule 同源）：
+ * 每条规则只承载一个部门或一名员工（标量），受众整体是「多条规则数组」——
+ * 全体员工一条 all 规则、每个部门一条 department 规则、每名员工一条 employee 规则。
+ * 后端 application_audiences 为每规则一行（标量列），数组形状会导致 Postgres 类型错误。
+ */
 export const audienceRuleSchema = z
   .object({
     audienceType: z.enum(["all", "department", "employee"]),
-    departmentId: z.array(z.string()).nullable().optional(),
-    employeeId: z.array(z.string()).nullable().optional(),
-    includeChildren: z.boolean().optional(),
+    departmentId: z.string().nullable(),
+    employeeId: z.string().nullable(),
+    includeChildren: z.boolean(),
   })
   .superRefine((rule, ctx) => {
-    // 指定部门 / 指定员工时，对应选择必须非空（受众-必填校验）。
+    // 指定部门 / 指定员工时，对应值必须非空（受众-必填校验）。
     if (
       rule.audienceType === "department" &&
-      (!rule.departmentId || rule.departmentId.length === 0)
+      (typeof rule.departmentId !== "string" || rule.departmentId.length === 0)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["departmentId"],
-        message: "请至少选择一个部门",
+        message: "请选择部门",
       });
     }
     if (
       rule.audienceType === "employee" &&
-      (!rule.employeeId || rule.employeeId.length === 0)
+      (typeof rule.employeeId !== "string" || rule.employeeId.length === 0)
     ) {
       ctx.addIssue({
         code: "custom",
         path: ["employeeId"],
-        message: "请至少选择一名员工",
+        message: "请选择员工",
       });
     }
   });

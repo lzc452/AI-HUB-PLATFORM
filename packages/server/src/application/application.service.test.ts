@@ -2352,6 +2352,56 @@ describe("ApplicationService", () => {
     expect(repository.events).toContain("application.review.requested");
   });
 
+  it("submits a draft with multiple audience rules (all + departments + employees)", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    const multiAudienceDraft = {
+      ...completeDraft(),
+      // 前端多选映射：全体员工一条 all、每个部门一条 department、每名员工一条 employee。
+      audience: [
+        {
+          audienceType: "all" as const,
+          departmentId: null,
+          employeeId: null,
+          includeChildren: false,
+        },
+        {
+          audienceType: "department" as const,
+          departmentId: "dept-rnd",
+          employeeId: null,
+          includeChildren: true,
+        },
+        {
+          audienceType: "department" as const,
+          departmentId: "dept-ops",
+          employeeId: null,
+          includeChildren: false,
+        },
+        {
+          audienceType: "employee" as const,
+          departmentId: null,
+          employeeId: "E400",
+          includeChildren: false,
+        },
+      ],
+    };
+    await service.saveDraft(
+      owner,
+      application.applicationId,
+      multiAudienceDraft,
+    );
+
+    const updated = await service.submitDraft(owner, application.applicationId);
+
+    expect(updated.status).toBe("in_review");
+    // 提交链路的草稿持久化保持多条标量规则不变（replaceAudiences 每规则一行）。
+    const stored = await repository.findDraft(application.applicationId);
+    expect(stored?.draft.audience).toEqual(multiAudienceDraft.audience);
+  });
+
   it("rejects an incomplete draft submission", async () => {
     const { service } = makeService();
     const application = await service.createApplication(owner, {

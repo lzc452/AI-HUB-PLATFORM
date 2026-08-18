@@ -721,4 +721,116 @@ describe("real application lifecycle API", () => {
         .set(actorHeaders("E200")),
     ).resolves.toMatchObject({ body: { status: "available" } });
   });
+
+  it("submits a draft with multiple audience rules (per department/employee) without type errors", async () => {
+    const createResponse = await request(app.getHttpServer())
+      .post("/internal/applications")
+      .set(actorHeaders("E100"))
+      .send({
+        name: "多受众应用",
+        summary: "audience rules",
+        departmentId: "dept-platform",
+      })
+      .expect(201);
+    const applicationId = createResponse.body.applicationId as string;
+
+    // 前端多选映射出的多条标量规则：每个部门/员工一条（与契约 AudienceRule 一致）。
+    const multiAudienceDraft = {
+      name: "多受众应用",
+      departmentId: "dept-platform",
+      maintainerEmployeeIds: ["E400"],
+      categoryId: "productivity",
+      applicationType: "web_app",
+      tagIds: [],
+      icon: { mode: "auto", backgroundColor: "#185FA5", text: "多" },
+      screenshotAssetIds: ["asset-1"],
+      summaryHtml: "<p>简介</p>",
+      manualHtml: "<p>手册</p>",
+      manualAssetId: null,
+      examplesHtml: "<p>示例</p>",
+      examplesAssetId: null,
+      faq: [],
+      audience: [
+        {
+          audienceType: "department",
+          departmentId: "dept-platform",
+          employeeId: null,
+          includeChildren: true,
+        },
+        {
+          audienceType: "department",
+          departmentId: "dept-review",
+          employeeId: null,
+          includeChildren: false,
+        },
+        {
+          audienceType: "employee",
+          departmentId: null,
+          employeeId: "E400",
+          includeChildren: false,
+        },
+      ],
+      risk: {
+        handlesSensitiveData: false,
+        sendsDataExternally: false,
+        retainsConversations: false,
+        retentionPeriod: null,
+        modelProviders: ["local"],
+        providerNote: null,
+        affectsHighRiskDecisions: false,
+        inputRestrictionDisclaimer: "请勿输入敏感信息",
+      },
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://apps.example.com",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+      version: "1.0.0",
+      changelog: "首次发布",
+    };
+    await request(app.getHttpServer())
+      .put(`/internal/applications/${applicationId}/draft`)
+      .set(actorHeaders("E100"))
+      .send(multiAudienceDraft)
+      .expect(200);
+
+    const submitted = await request(app.getHttpServer())
+      .post(`/internal/applications/${applicationId}/submit-draft`)
+      .set(actorHeaders("E100"))
+      .send()
+      .expect(200);
+    expect(submitted.body.status).toBe("in_review");
+
+    // 受众落库为每规则一行（标量列）：数组形状曾导致 Postgres 类型错误 500。
+    const audienceRows = await sql`
+      select audience_type, department_id, employee_id, include_children
+      from application_audiences
+      where application_id = ${applicationId}
+      order by audience_type, department_id nulls last
+    `.execute(db);
+    expect(audienceRows.rows).toEqual([
+      {
+        audience_type: "department",
+        department_id: "dept-platform",
+        employee_id: null,
+        include_children: true,
+      },
+      {
+        audience_type: "department",
+        department_id: "dept-review",
+        employee_id: null,
+        include_children: false,
+      },
+      {
+        audience_type: "employee",
+        department_id: null,
+        employee_id: "E400",
+        include_children: false,
+      },
+    ]);
+  });
 });

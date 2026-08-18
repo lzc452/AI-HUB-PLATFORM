@@ -11,16 +11,24 @@ import {
   Modal,
   Radio,
   Select,
+  Switch,
   Typography,
   Upload,
 } from "antd";
 import type { UploadFile } from "antd";
 import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import type { AudienceRule } from "@ai-hub/contracts";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { RichTextView } from "../../shared/ui/RichTextView";
 import { getAssetContent } from "../application/application.client";
 import { useAssetImage } from "../application/useApplication";
+import {
+  formatAudienceParts,
+  rulesToSelection,
+  selectionToRules,
+  type AudienceSelection,
+} from "./audience";
 import { deleteAsset, uploadAsset } from "./publishing.client";
 
 const { Text } = Typography;
@@ -427,38 +435,132 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
   );
 }
 
-function DepartmentSelect({ options }: { options: PublishingOptions }) {
-  const { control, watch } = useFormContext<FieldValues>();
-  const audienceType = watch("audience.0.audienceType");
-  if (audienceType !== "department" && audienceType !== "employee") return null;
-  const name =
-    audienceType === "department"
-      ? "audience.0.departmentId"
-      : "audience.0.employeeId";
-  const opts =
-    audienceType === "department" ? options.departments : options.employees;
+/** 从 RHF 嵌套错误结构中提取第一条受众错误（数组级或规则级）。 */
+function firstAudienceError(error: unknown): { message?: string } | undefined {
+  if (error === undefined || error === null) return undefined;
+  const record = error as {
+    message?: string;
+    [key: string]: unknown;
+  };
+  if (typeof record.message === "string" && record.message.length > 0) {
+    return record;
+  }
+  if (Array.isArray(error)) {
+    for (const item of error) {
+      const found = firstAudienceError(item);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  for (const key of Object.keys(record)) {
+    if (key === "ref" || key === "type" || key === "types") continue;
+    const found = firstAudienceError(record[key]);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+/**
+ * 受众步：多选生成多条 AudienceRule（与契约一致）。
+ * - 「全体员工」开关：勾选生成一条 all 规则；
+ * - 「指定部门」多选：每个部门生成一条 department 规则（包含子部门为全局开关）；
+ * - 「指定员工」多选：每名员工生成一条 employee 规则。
+ * 编辑回显：draft.audience 多条规则反解为 UI 选择（rulesToSelection）。
+ */
+export function AudienceField({ options }: { options: PublishingOptions }) {
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const audience = useWatch({ control, name: "audience" }) as
+    | AudienceRule[]
+    | undefined;
+  const selection = rulesToSelection(audience);
+
+  const commit = (next: AudienceSelection) => {
+    setValue("audience", selectionToRules(next), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    void trigger("audience");
+  };
+
   return (
     <Controller
       control={control}
-      name={name}
-      render={({ field, fieldState }) => (
-        <>
-          <Select
-            {...field}
-            mode="multiple"
-            status={fieldState.error ? "error" : ""}
-            placeholder={
-              audienceType === "department" ? "选择部门" : "选择员工"
-            }
-            options={opts as { value: string; label: string }[]}
-            style={{ ...CONTROL_STYLE, marginTop: 12 }}
-          />
-          {fieldState.error !== undefined && (
-            <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
-              {fieldState.error.message}
+      name="audience"
+      render={({ fieldState }) => (
+        <Form.Item
+          label="受众"
+          required
+          validateStatus={fieldState.error ? "error" : ""}
+          help={firstAudienceError(fieldState.error)?.message}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              maxWidth: 480,
+            }}
+          >
+            <div>
+              <Switch
+                aria-label="全体员工"
+                checked={selection.includeAll}
+                onChange={(checked) =>
+                  commit({ ...selection, includeAll: checked })
+                }
+              />
+              <span style={{ marginLeft: 8 }}>全体员工（全体可见）</span>
             </div>
-          )}
-        </>
+            <div>
+              <div style={{ marginBottom: 4 }}>
+                指定部门（每个部门生成一条可见规则）
+              </div>
+              <Select
+                aria-label="指定部门"
+                mode="multiple"
+                placeholder="选择部门（可多选）"
+                value={selection.departmentIds}
+                onChange={(value: string[]) =>
+                  commit({ ...selection, departmentIds: value })
+                }
+                options={
+                  options.departments as { value: string; label: string }[]
+                }
+                style={{ width: 480 }}
+              />
+              <Checkbox
+                checked={selection.includeChildren}
+                onChange={(event) =>
+                  commit({
+                    ...selection,
+                    includeChildren: event.target.checked,
+                  })
+                }
+                style={{ marginTop: 8 }}
+              >
+                包含子部门（对所选部门生效）
+              </Checkbox>
+            </div>
+            <div>
+              <div style={{ marginBottom: 4 }}>
+                指定员工（每名员工生成一条可见规则）
+              </div>
+              <Select
+                aria-label="指定员工"
+                mode="multiple"
+                placeholder="选择员工（可多选）"
+                value={selection.employeeIds}
+                onChange={(value: string[]) =>
+                  commit({ ...selection, employeeIds: value })
+                }
+                options={
+                  options.employees as { value: string; label: string }[]
+                }
+                style={{ width: 480 }}
+              />
+            </div>
+          </div>
+        </Form.Item>
       )}
     />
   );
@@ -816,28 +918,7 @@ function BasicInfoStep({
           typeof applicationType === "string" ? applicationType : ""
         }
       />
-      <Controller
-        control={control}
-        name="audience.0.audienceType"
-        render={({ field, fieldState }) => (
-          <Form.Item
-            label="受众"
-            required
-            validateStatus={fieldState.error ? "error" : ""}
-            help={fieldState.error?.message}
-          >
-            <Radio.Group
-              {...field}
-              options={[
-                { value: "all", label: "全体员工" },
-                { value: "department", label: "指定部门" },
-                { value: "employee", label: "指定员工" },
-              ]}
-            />
-            <DepartmentSelect options={options} />
-          </Form.Item>
-        )}
-      />
+      <AudienceField options={options} />
       <Form.Item label="应用图标" required>
         <IconField applicationId={applicationId} />
       </Form.Item>
@@ -1062,15 +1143,19 @@ function labelOf(
 function PreviewStep({ options }: { options: PublishingOptions }) {
   const { watch } = useFormContext<FieldValues>();
   const draft = watch();
-  const audience = Array.isArray(draft.audience)
-    ? draft.audience[0]
-    : undefined;
   const audienceText =
-    audience?.audienceType === "department"
-      ? "指定部门"
-      : audience?.audienceType === "employee"
-        ? "指定员工"
-        : "全体员工";
+    formatAudienceParts(draft.audience, {
+      departments: Object.fromEntries(
+        (options.departments as { value: string; label: string }[]).map(
+          (option) => [option.value, option.label],
+        ),
+      ),
+      employees: Object.fromEntries(
+        (options.employees as { value: string; label: string }[]).map(
+          (option) => [option.value, option.label],
+        ),
+      ),
+    }).join("、") || "—";
   const risk = draft.risk ?? {};
 
   return (
@@ -1166,9 +1251,7 @@ export function createWizardSteps(
         "maintainerEmployeeIds",
         "categoryId",
         "applicationType",
-        "audience.0.audienceType",
-        "audience.0.departmentId",
-        "audience.0.employeeId",
+        "audience",
         "icon.mode",
         "icon.assetId",
         "screenshotAssetIds",

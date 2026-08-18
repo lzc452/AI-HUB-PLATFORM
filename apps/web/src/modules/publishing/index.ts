@@ -20,5 +20,11 @@ export {
   defaultDeliveriesForType,
 } from "./schema";
 export type { ApplicationDraftFormValues } from "./schema";
+export {
+  formatAudienceParts,
+  rulesToSelection,
+  selectionToRules,
+} from "./audience";
+export type { AudienceSelection } from "./audience";
 export { createWizardSteps } from "./steps";
 export type { PublishingOptions } from "./steps";

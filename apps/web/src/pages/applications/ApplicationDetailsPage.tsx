@@ -18,8 +18,14 @@ import {
   listDepartmentMembers,
   listDepartments,
 } from "../../modules/auth/auth.client";
-import { getApplicationDraft } from "../../modules/publishing";
-import { listCategories, listTags } from "../../modules/publishing/publishing.client";
+import {
+  formatAudienceParts,
+  getApplicationDraft,
+} from "../../modules/publishing";
+import {
+  listCategories,
+  listTags,
+} from "../../modules/publishing/publishing.client";
 import { MessageError } from "../../shared/ui/message";
 
 const { Paragraph, Text } = Typography;
@@ -64,7 +70,7 @@ export default function ApplicationDetailsPage() {
     queryFn: () => getApplicationDraft(applicationId as string),
     queryKey: ["applications", "draft", applicationId],
   });
-  const audienceLabels = useAudienceLabels(draftQuery.data?.draft.audience);
+  const audienceLabel = useAudienceLabel(draftQuery.data?.draft.audience);
   const creatorRecord = creatorApplicationsQuery.data?.items.find(
     (item) => item.applicationId === applicationId,
   );
@@ -73,8 +79,7 @@ export default function ApplicationDetailsPage() {
   )?.name;
   const tagLabels = (creatorRecord?.tagIds ?? [])
     .map(
-      (tagId) =>
-        tagsQuery.data?.find((tag) => tag.tagId === tagId)?.name ?? "",
+      (tagId) => tagsQuery.data?.find((tag) => tag.tagId === tagId)?.name ?? "",
     )
     .filter(Boolean);
   const screenshots = assets.filter(
@@ -204,10 +209,7 @@ export default function ApplicationDetailsPage() {
 
         <aside className="space-y-3">
           <InfoCard title="应用信息">
-            <InfoRow
-              label="分类："
-              value={categoryLabel ?? "未设置"}
-            />
+            <InfoRow label="分类：" value={categoryLabel ?? "未设置"} />
             <InfoRow
               label="标签："
               value={tagLabels.length > 0 ? tagLabels.join("、") : "未设置"}
@@ -215,27 +217,23 @@ export default function ApplicationDetailsPage() {
             <InfoRow
               label="最近更新："
               value={
-                workspace?.updatedAt ? formatDate(workspace.updatedAt) : "未提供"
+                workspace?.updatedAt
+                  ? formatDate(workspace.updatedAt)
+                  : "未提供"
               }
             />
           </InfoCard>
           <InfoCard title="可见范围 / 受众">
             <InfoRow
-              label="可见部门："
-              value={audienceLabels.department ?? "由后端受众策略判定"}
-            />
-            <InfoRow
-              label="目标用户："
-              value={audienceLabels.employee ?? "由后端受众策略判定"}
+              label="受众范围："
+              value={audienceLabel ?? "由后端受众策略判定"}
             />
           </InfoCard>
           <InfoCard title="维护团队">
             <InfoRow
               label="责任人："
               value={
-                workspace?.ownerName ||
-                application?.ownerEmployeeId ||
-                "未提供"
+                workspace?.ownerName || application?.ownerEmployeeId || "未提供"
               }
             />
             <InfoRow
@@ -372,11 +370,10 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-/** 将草稿受众规则映射为可读的部门/员工名称。 */
-function useAudienceLabels(audience: readonly AudienceRule[] | undefined): {
-  department: string | null;
-  employee: string | null;
-} {
+/** 将草稿受众多条规则映射为可读标签（all → 全体员工；部门 → 名称（含子部门）；员工 → 姓名）。 */
+function useAudienceLabel(
+  audience: readonly AudienceRule[] | undefined,
+): string | null {
   const departmentsQuery = useQuery({
     queryFn: listDepartments,
     queryKey: ["identity", "departments"],
@@ -402,9 +399,7 @@ function useAudienceLabels(audience: readonly AudienceRule[] | undefined): {
     }
     let cancelled = false;
     void Promise.all(
-      departmentIds.map((id) =>
-        listDepartmentMembers(id).catch(() => []),
-      ),
+      departmentIds.map((id) => listDepartmentMembers(id).catch(() => [])),
     ).then((groups) => {
       if (cancelled) return;
       const names: Record<string, string> = {};
@@ -421,32 +416,19 @@ function useAudienceLabels(audience: readonly AudienceRule[] | undefined): {
   }, [departmentKey]);
 
   if (!audience || audience.length === 0) {
-    return { department: null, employee: null };
+    return null;
   }
 
-  const departmentLabels: string[] = [];
-  const employeeLabels: string[] = [];
-  for (const rule of audience) {
-    if (rule.audienceType === "all") {
-      departmentLabels.push("全员");
-      employeeLabels.push("全员");
-    } else if (rule.audienceType === "department" && rule.departmentId) {
-      departmentLabels.push(
-        departmentsQuery.data?.find(
-          (department) => department.departmentId === rule.departmentId,
-        )?.name ?? rule.departmentId,
-      );
-    } else if (rule.audienceType === "employee" && rule.employeeId) {
-      employeeLabels.push(
-        memberNames[rule.employeeId] ?? rule.employeeId,
-      );
-    }
-  }
-  return {
-    department:
-      departmentLabels.length > 0 ? departmentLabels.join("、") : null,
-    employee: employeeLabels.length > 0 ? employeeLabels.join("、") : null,
-  };
+  const parts = formatAudienceParts(audience, {
+    departments: Object.fromEntries(
+      (departmentsQuery.data ?? []).map((department) => [
+        department.departmentId,
+        department.name,
+      ]),
+    ),
+    employees: memberNames,
+  });
+  return parts.length > 0 ? parts.join("、") : null;
 }
 
 function AssetPreview({
