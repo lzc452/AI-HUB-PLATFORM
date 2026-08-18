@@ -59,7 +59,7 @@ export interface InteractionRepository {
   findApplication(applicationId: string): Promise<ApplicationTeamRecord | null>;
   findCurrentVersionId(applicationId: string): Promise<string>;
   hasLike(applicationId: string, employeeId: string): Promise<boolean>;
-  addLike(applicationId: string, employeeId: string): Promise<void>;
+  addLike(applicationId: string, employeeId: string): Promise<string>;
   removeLike(applicationId: string, employeeId: string): Promise<void>;
   upsertRating(
     input: Omit<RatingRecord, "ratingId" | "createdAt" | "updatedAt">,

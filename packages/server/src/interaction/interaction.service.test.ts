@@ -59,6 +59,7 @@ class MemoryInteractionRepository implements InteractionRepository {
   }
   async addLike(applicationId: string, employeeId: string) {
     this.liked.add(`${applicationId}:${employeeId}`);
+    return `like-${applicationId}-${employeeId}`;
   }
   async removeLike(applicationId: string, employeeId: string) {
     this.liked.delete(`${applicationId}:${employeeId}`);
@@ -246,6 +247,29 @@ describe("InteractionService", () => {
       liked: false,
     });
     expect(repository.liked.size).toBe(0);
+  });
+
+  it("uses a stable idempotency key derived from the like row id", async () => {
+    const repository = new MemoryInteractionRepository();
+    const recorded: string[] = [];
+    const actor: ActorContext = {
+      ...employee,
+      employeeId: "DEMO-EMPLOYEE",
+      sessionId: "session-demo",
+    };
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+      {
+        record: async (_actor, input) => {
+          recorded.push(input.idempotencyKey);
+          return { inserted: true };
+        },
+      },
+    );
+    await service.toggleLike(actor, "app-1");
+    expect(recorded[0]).toBe("application-liked:like-app-1-DEMO-EMPLOYEE");
   });
 
   it("validates a rating and updates the employee's single application rating", async () => {

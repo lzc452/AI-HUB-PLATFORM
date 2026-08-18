@@ -61,14 +61,18 @@ export class KyselyInteractionRepository implements InteractionRepository {
     return row !== undefined;
   }
 
-  async addLike(applicationId: string, employeeId: string): Promise<void> {
-    await this.db
+  async addLike(applicationId: string, employeeId: string): Promise<string> {
+    const row = await this.db
       .insertInto("application_likes")
       .values({ application_id: applicationId, employee_id: employeeId })
       .onConflict((oc) =>
         oc.columns(["application_id", "employee_id"]).doNothing(),
       )
-      .execute();
+      .returning("like_id")
+      .executeTakeFirst();
+    return row === undefined
+      ? `like-${applicationId}-${employeeId}` // 并发冲突时无新行，退化为稳定键
+      : String(row.like_id);
   }
 
   async removeLike(applicationId: string, employeeId: string): Promise<void> {

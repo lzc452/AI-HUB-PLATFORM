@@ -21,8 +21,9 @@ export class InteractionService {
     await this.requireApplication(applicationId);
     return this.repository.withTransaction(async (repository) => {
       const liked = await repository.hasLike(applicationId, actor.employeeId);
+      let likeId: string | null = null;
       if (liked) await repository.removeLike(applicationId, actor.employeeId);
-      else await repository.addLike(applicationId, actor.employeeId);
+      else likeId = await repository.addLike(applicationId, actor.employeeId);
       await repository.recordAudit({
         applicationId,
         actorEmployeeId: actor.employeeId,
@@ -42,7 +43,7 @@ export class InteractionService {
           aggregateType: "application",
           aggregateId: applicationId,
           occurredAt: new Date().toISOString(),
-          idempotencyKey: `application-liked:${applicationId}:${actor.employeeId}:${Date.now()}`,
+          idempotencyKey: `application-liked:${likeId}`,
           metadata: { source: "interaction.like" },
         });
       }

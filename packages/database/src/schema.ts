@@ -382,6 +382,7 @@ export interface CatalogDeliveryActionsTable {
 }
 
 export interface ApplicationLikesTable {
+  like_id: Generated<number>;
   application_id: string;
   employee_id: string;
   created_at: ColumnType<Date, Date | undefined, never>;
