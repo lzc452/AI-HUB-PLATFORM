@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsObject, IsString } from "class-validator";
+import { IsIn, IsObject, IsOptional, IsString, MaxLength } from "class-validator";
 
 const DASHBOARD_KEYS = [
   "platform",
@@ -168,4 +168,25 @@ export class AnalyticsAssistantResultDto {
     example: "本周平台应用浏览量合计 120 次。",
   })
   answer!: string;
+}
+
+/** 看板查询参数。 */
+export class DashboardQueryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "起始时间（ISO 8601），缺省为空",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  from = "";
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "结束时间（ISO 8601），缺省为空",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  to = "";
 }

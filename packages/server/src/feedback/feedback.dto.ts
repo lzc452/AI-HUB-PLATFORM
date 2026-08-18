@@ -90,3 +90,15 @@ export class FeedbackDto {
   })
   resolvedAt?: string | null;
 }
+
+/** 反馈列表查询参数。 */
+export class ListFeedbackQueryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "查看范围",
+    enum: ["mine", "all"],
+  })
+  @IsOptional()
+  @IsIn(["mine", "all"])
+  scope?: "mine" | "all";
+}

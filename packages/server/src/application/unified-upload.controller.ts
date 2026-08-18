@@ -43,6 +43,7 @@ import {
 import {
   UnifiedUploadDto,
   UnifiedUploadInitRequestDto,
+  CompleteUnifiedUploadBodyDto,
 } from "./application.dto.js";
 import {
   UPLOAD_KIND_POLICIES,
@@ -173,7 +174,7 @@ export class UnifiedUploadController {
     @Param("uploadId") uploadId: string,
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
-    @Body() body: { signature?: string },
+    @Body() body: CompleteUnifiedUploadBodyDto,
   ): Promise<UnifiedUploadDto> {
     const actor = await this.requireActor(employeeId, sessionId, "update");
     await this.requireApplicationOwner(applicationId, actor);

@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
   IsArray,
   IsBoolean,
@@ -7,7 +8,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from "class-validator";
+import { PaginationQueryDto } from "../system/http/pagination.dto.js";
 
 const DEMAND_STATUS = [
   "draft",
@@ -1349,4 +1352,58 @@ export class DemandAttachmentDto {
     format: "date-time",
   })
   createdAt!: string;
+}
+
+/** 需求列表查询参数。 */
+export class ListDemandsQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "需求状态",
+    enum: DEMAND_STATUS,
+  })
+  @IsOptional()
+  @IsIn(DEMAND_STATUS)
+  status?: (typeof DEMAND_STATUS)[number];
+
+  @ApiPropertyOptional({ type: String, description: "关键词搜索" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(256)
+  query?: string;
+
+  @ApiPropertyOptional({ type: String, description: "发起部门 ID" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  requesterDepartmentId?: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "受众类型",
+    enum: AUDIENCE_TYPE,
+  })
+  @IsOptional()
+  @IsIn(AUDIENCE_TYPE)
+  audienceType?: (typeof AUDIENCE_TYPE)[number];
+
+  @ApiPropertyOptional({
+    type: String,
+    description: "排序方式",
+    enum: ["recent", "priority", "hot"],
+  })
+  @IsOptional()
+  @IsIn(["recent", "priority", "hot"])
+  sort?: "recent" | "priority" | "hot";
+}
+
+/** 乐观锁版本查询参数（移除协作成员 / 解除应用关联）。 */
+export class DemandVersionQueryDto {
+  @ApiPropertyOptional({
+    type: String,
+    description: "期望版本号（乐观锁），缺省视为忽略版本校验",
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  expectedVersion?: string;
 }
