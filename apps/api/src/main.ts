@@ -100,6 +100,14 @@ async function bootstrap() {
     { logger: new PinoNestLogger(logger) },
   );
 
+  // 生产与开发 compose 均位于 nginx 之后，nginx 将最左 X-Forwarded-For 置为真实
+  // 客户端 IP（infra/docker/nginx*.conf）。信任一跳，否则限流等中间件看到的
+  // req.ip 恒为 nginx 容器地址，所有客户端共享同一限流桶。
+  (
+    app.getHttpAdapter().getInstance() as {
+      set(key: string, value: number): unknown;
+    }
+  ).set("trust proxy", 1);
   // 安全地基：全局校验管道。whitelist 剔除请求体中任何未声明校验装饰器的字段，
   // 阻断 mass-assignment 与多余字段注入；transform 按 DTO 装饰器做类型转换。
   // 注意：所有请求 DTO 必须带 class-validator 装饰器，否则合法字段会被一并剔除。

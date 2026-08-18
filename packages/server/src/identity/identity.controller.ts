@@ -5,6 +5,8 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
+  HttpStatus,
   Inject,
   NotFoundException,
   Optional,
@@ -813,6 +815,12 @@ export class IdentityController {
         }
         if (msg === "LOGIN_REPLAY_DETECTED") {
           throw new BadRequestException("LOGIN_REPLAY_DETECTED");
+        }
+        if (msg === "LOGIN_RATE_LIMITED") {
+          throw new HttpException(
+            "LOGIN_RATE_LIMITED",
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
         }
         if (msg.startsWith("LOGIN_")) {
           throw new BadRequestException(msg);

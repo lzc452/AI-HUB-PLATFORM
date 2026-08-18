@@ -27,13 +27,20 @@ import type {
   LoginEncryptionService,
 } from "./login-encryption.service.js";
 import type { LoginChallengeStore } from "./login-challenge.store.js";
+import { createFixedWindowCounter } from "../system/security/rate-limit.middleware.js";
 import { createHash, randomBytes } from "crypto";
 
 const sessionTtlMs = 1000 * 60 * 60 * 24 * 14;
 const passwordResetTtlMs = 1000 * 60 * 30;
 const loginChallengeTtlMs = 1000 * 60 * 5;
+/** 账号维度密码尝试限流（规格 §5.1）：每账号每分钟最多 5 次。 */
+const loginAttemptLimitPerAccount = 5;
+const loginAttemptWindowMs = 1000 * 60;
 
 export class IdentityService {
+  /** 进程内账号维度登录尝试计数（固定窗口，带容量上限与定期清扫）。 */
+  private readonly loginAttempts = createFixedWindowCounter();
+
   constructor(
     private readonly repository: IdentityRepository,
     private readonly passwords = new PasswordService(),
@@ -1315,6 +1322,17 @@ export class IdentityService {
       envelope,
       envelope.nonce,
     );
+
+    // 账号维度限流（规格 §5.1）：解密成功（已归属账号）后、密码校验前计数。
+    // IP 维度由 HTTP 限流中间件负责；此处防御跨 IP 的分布式口令猜测。
+    const attempts = this.loginAttempts.increment(
+      `employee:${payload.employeeId}`,
+      loginAttemptWindowMs,
+      Date.now(),
+    );
+    if (attempts > loginAttemptLimitPerAccount) {
+      throw new Error("LOGIN_RATE_LIMITED");
+    }
 
     return this.loginWithPassword({
       employeeId: payload.employeeId,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { DepartmentSummary, EmployeeId } from "@ai-hub/contracts";
+import type {
+  DepartmentSummary,
+  EmployeeId,
+  EncryptedLoginEnvelope,
+} from "@ai-hub/contracts";
 import { IdentityService, parseCsv } from "./identity.service.js";
 import { PasswordService } from "./password.service.js";
 import type {
@@ -11,6 +15,8 @@ import type {
   PasswordResetChallengeRecord,
   SessionRecord,
 } from "./identity.types.js";
+import type { LoginEncryptionService } from "./login-encryption.service.js";
+import type { LoginChallengeStore } from "./login-challenge.store.js";
 
 class MemoryIdentityRepository implements IdentityRepository {
   readonly departments = new Map<string, DepartmentSummary>();
@@ -374,6 +380,47 @@ class MemoryIdentityRepository implements IdentityRepository {
   }
 }
 
+/** 解密 mock：nonce 以 "b" 开头归属账号 B001，否则归属 A001。 */
+const fakeEncryption = {
+  async decryptEnvelope(envelope: EncryptedLoginEnvelope) {
+    return {
+      employeeId: envelope.nonce.startsWith("b") ? "B001" : "A001",
+      password: "not-checked",
+      deviceLabel: "browser",
+    };
+  },
+};
+
+const fakeChallengeStore = {
+  async issue() {
+    return new Date();
+  },
+  async consume() {
+    return true;
+  },
+};
+
+function envelopeFor(nonce: string): EncryptedLoginEnvelope {
+  return {
+    keyId: "k",
+    nonce,
+    encryptedPayload: "",
+    wrappedKey: "",
+    iv: "",
+    aad: "",
+  };
+}
+
+function serviceWithLoginThrottle() {
+  return new IdentityService(
+    new MemoryIdentityRepository(),
+    new PasswordService(),
+    undefined,
+    fakeEncryption as unknown as LoginEncryptionService,
+    fakeChallengeStore as unknown as LoginChallengeStore,
+  );
+}
+
 describe("IdentityService", () => {
   it("parses CSV values with embedded quotes and commas", () => {
     expect(
@@ -455,6 +502,38 @@ describe("IdentityService", () => {
         deviceLabel: "browser",
       }),
     ).rejects.toThrow("INVALID_CREDENTIALS");
+  });
+
+  it("rejects the 6th password login attempt for the same account within a minute", async () => {
+    const service = serviceWithLoginThrottle();
+    // 前 5 次通过账号限流（到达密码校验 → INVALID_CREDENTIALS）
+    for (let i = 0; i < 5; i++) {
+      await expect(
+        service.loginWithEncryptedPassword(envelopeFor(`a${i}`)),
+      ).rejects.toThrow("INVALID_CREDENTIALS");
+    }
+    // 第 6 次在密码校验之前被账号限流拒绝
+    await expect(
+      service.loginWithEncryptedPassword(envelopeFor("a5")),
+    ).rejects.toThrow("LOGIN_RATE_LIMITED");
+  });
+
+  it("does not let one account's attempts consume another account's quota", async () => {
+    const service = serviceWithLoginThrottle();
+    // 账号 B 连续尝试 5 次，占满自己的配额
+    for (let i = 0; i < 5; i++) {
+      await expect(
+        service.loginWithEncryptedPassword(envelopeFor(`b${i}`)),
+      ).rejects.toThrow("INVALID_CREDENTIALS");
+    }
+    // 账号 A 的首次尝试不受 B 的影响（仍到达密码校验）
+    await expect(
+      service.loginWithEncryptedPassword(envelopeFor("a0")),
+    ).rejects.toThrow("INVALID_CREDENTIALS");
+    // 账号 B 第 6 次 → 429 语义错误码
+    await expect(
+      service.loginWithEncryptedPassword(envelopeFor("b5")),
+    ).rejects.toThrow("LOGIN_RATE_LIMITED");
   });
 
   it("uses persisted role permissions for custom authorization", async () => {
