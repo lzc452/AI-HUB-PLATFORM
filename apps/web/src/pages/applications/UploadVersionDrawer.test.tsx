@@ -121,6 +121,60 @@ describe("UploadVersionDrawer", () => {
     expect(hoisted.onClose).toHaveBeenCalledOnce();
   });
 
+  it("未签名制品须勾选风险确认后才能创建版本", async () => {
+    hoisted.complete.mockResolvedValue({
+      ...uploadSession,
+      objectKey: "applications/app-001/artifacts/upload-1",
+      scanStatus: "passed",
+      sha256: "a".repeat(64),
+      signature: null,
+      signed: false,
+      uploadStatus: "completed",
+    });
+    hoisted.createVersion.mockResolvedValue({});
+    render(
+      <UploadVersionDrawer
+        applicationId="app-001"
+        onClose={hoisted.onClose}
+        open
+      />,
+    );
+
+    selectFile(new File(["unsigned"], "unsigned.zip"));
+    fireEvent.click(await screen.findByRole("button", { name: "开始上传" }));
+
+    const createButton = await screen.findByRole("button", {
+      name: "创建版本",
+    });
+    expect(
+      await screen.findByText("我已知晓制品未签名并接受风险"),
+    ).toBeInTheDocument();
+    expect(createButton).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("版本号"), {
+      target: { value: "1.0.0" },
+    });
+    fireEvent.change(screen.getByLabelText("变更说明"), {
+      target: { value: "未签名发布" },
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    expect(createButton).toBeEnabled();
+    fireEvent.click(createButton);
+
+    await waitFor(() =>
+      expect(hoisted.createVersion).toHaveBeenCalledWith({
+        acceptUnsigned: true,
+        artifactKey: "applications/app-001/artifacts/upload-1",
+        artifactSha256: "a".repeat(64),
+        artifactSignature: "",
+        changelog: "未签名发布",
+        version: "1.0.0",
+      }),
+    );
+    expect(hoisted.onClose).toHaveBeenCalledOnce();
+  });
+
   it("扫描失败时展示错误且禁止创建版本", async () => {
     hoisted.complete.mockResolvedValue({
       ...uploadSession,

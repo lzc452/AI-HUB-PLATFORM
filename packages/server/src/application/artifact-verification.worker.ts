@@ -70,15 +70,12 @@ export class ArtifactVerificationWorker {
       return null;
     }
 
-    let signature = upload.signature ?? "";
-    if (signature.length === 0) {
-      if (this.options.signer === undefined) {
-        await this.fail(upload, "INVALID_SIGNATURE");
-        return null;
-      }
-      signature = await this.options.signer.sign(content);
-    }
-    if (!(await this.options.verifier.verify(content, signature))) {
+    // 规格 §5.5：未签名制品不得自动签名。无签名（或空签名）的制品在通过
+    // 摘要与恶意软件校验后以 signed=false 完成，显著标记并进入人工确认；
+    // 已签名制品仍须通过签名校验（fail-closed）。
+    const signature = upload.signature ?? "";
+    const signed = signature.length > 0;
+    if (signed && !(await this.options.verifier.verify(content, signature))) {
       await this.fail(upload, "INVALID_SIGNATURE");
       return null;
     }
@@ -101,7 +98,8 @@ export class ArtifactVerificationWorker {
         const result = await finalize.call(repository, {
           uploadId,
           objectKey: finalKey,
-          signature,
+          signature: signed ? signature : null,
+          signed,
         });
         if (result === null) return null;
         await repository.recordAudit({

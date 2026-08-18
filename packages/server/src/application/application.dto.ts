@@ -87,6 +87,27 @@ export class CreateVersionRequestDto {
   @ApiProperty({ type: String, description: "扫描状态", enum: ["passed"] })
   @IsIn(["passed"])
   scanStatus!: "passed";
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      "制品未签名（signed=false）时是否已显式确认接受风险；未确认则拒绝创建版本",
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptUnsigned?: boolean;
+}
+
+/** 提交版本审核请求（未签名制品需显式确认风险）。 */
+export class SubmitReviewRequestDto {
+  @ApiPropertyOptional({
+    type: Boolean,
+    description:
+      "版本制品未签名（signed=false）时是否已显式确认接受风险；未确认则拒绝提交审核",
+  })
+  @IsOptional()
+  @IsBoolean()
+  acceptUnsigned?: boolean;
 }
 
 /** 配置交付渠道请求。 */
@@ -602,6 +623,12 @@ export class ArtifactUploadDto {
 
   @ApiProperty({ type: String, nullable: true, description: "服务端签名" })
   signature!: string | null;
+
+  @ApiProperty({
+    type: Boolean,
+    description: "制品是否已签名（未签名制品需人工确认风险）",
+  })
+  signed!: boolean;
 
   @ApiProperty({ type: Number, description: "校验尝试次数" })
   verificationAttempts!: number;

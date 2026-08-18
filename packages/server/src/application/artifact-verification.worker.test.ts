@@ -52,7 +52,8 @@ function makeRepository(upload: ArtifactUploadRecord) {
     },
     async finalizeArtifactVerification(input: {
       objectKey: string;
-      signature: string;
+      signature: string | null;
+      signed: boolean;
     }) {
       if (upload.uploadStatus !== "verifying") return null;
       Object.assign(upload, {
@@ -60,6 +61,7 @@ function makeRepository(upload: ArtifactUploadRecord) {
         objectKey: input.objectKey,
         scanStatus: "passed",
         signature: input.signature,
+        signed: input.signed,
         uploadStatus: "completed",
       });
       return upload;
@@ -91,7 +93,8 @@ function makeRepository(upload: ArtifactUploadRecord) {
 
 describe("ArtifactVerificationWorker", () => {
   it("verifies, finalizes and removes staging content", async () => {
-    const { content, upload } = makeUpload();
+    // 已签名制品：校验通过后以 signed=true 完成。
+    const { content, upload } = makeUpload({ signature: "sig" });
     const stagingKey = upload.objectKey;
     const repository = makeRepository(upload);
     const storage = new MemoryObjectStorage();
@@ -99,7 +102,6 @@ describe("ArtifactVerificationWorker", () => {
     const worker = new ArtifactVerificationWorker({
       repository,
       scanner: { scan: async () => "clean" },
-      signer: { sign: async () => "sig" },
       storage,
       verifier: { verify: async (_content, signature) => signature === "sig" },
     });
@@ -108,11 +110,54 @@ describe("ArtifactVerificationWorker", () => {
       objectKey: "applications/app-1/artifacts/upload-1/content",
       scanStatus: "passed",
       signature: "sig",
+      signed: true,
       uploadStatus: "completed",
     });
     await expect(storage.get(stagingKey)).resolves.toBeNull();
     expect(repository.audits).toHaveLength(1);
     expect(repository.outbox).toHaveLength(1);
+  });
+
+  it("does not auto-sign unsigned artifacts and flags them for human review", async () => {
+    const { content, upload } = makeUpload();
+    const repository = makeRepository(upload);
+    const storage = new MemoryObjectStorage();
+    await storage.put(upload.objectKey, content);
+    const worker = new ArtifactVerificationWorker({
+      repository,
+      scanner: { scan: async () => "clean" },
+      signer: { sign: async () => "should-never-be-used" },
+      storage,
+      verifier: { verify: async () => true },
+    });
+
+    const result = await worker.verify(upload.uploadId);
+    expect(result).not.toBeNull();
+    // 规格 §5.5：未签名制品不得自动签名，标记 signed=false 进入人工确认。
+    expect(result?.signed).toBe(false);
+    expect(result?.signature).toBeNull();
+    expect(upload.uploadStatus).toBe("completed");
+    expect(repository.audits).toHaveLength(1);
+    expect(repository.outbox).toHaveLength(1);
+  });
+
+  it("completes unsigned artifacts without a signer and flags them", async () => {
+    const { content, upload } = makeUpload();
+    const repository = makeRepository(upload);
+    const storage = new MemoryObjectStorage();
+    await storage.put(upload.objectKey, content);
+    const worker = new ArtifactVerificationWorker({
+      repository,
+      scanner: { scan: async () => "clean" },
+      storage,
+      verifier: { verify: async () => true },
+    });
+
+    const result = await worker.verify(upload.uploadId);
+    expect(result).not.toBeNull();
+    expect(result?.signed).toBe(false);
+    expect(result?.errorCode).toBeNull();
+    expect(upload.uploadStatus).toBe("completed");
   });
 
   it("fails closed on malware and never publishes a final object", async () => {
@@ -170,14 +215,14 @@ describe("ArtifactVerificationWorker", () => {
   );
 
   it("fails closed on an invalid signature before copying the final object", async () => {
-    const { content, upload } = makeUpload();
+    // 已声明签名但校验失败：fail-closed（未签名走 §5.5 人工确认路径，不在此列）。
+    const { content, upload } = makeUpload({ signature: "declared-signature" });
     const repository = makeRepository(upload);
     const storage = new MemoryObjectStorage();
     await storage.put(upload.objectKey, content);
     const worker = new ArtifactVerificationWorker({
       repository,
       scanner: { scan: async () => "clean" },
-      signer: { sign: async () => "generated-signature" },
       storage,
       verifier: { verify: async () => false },
     });

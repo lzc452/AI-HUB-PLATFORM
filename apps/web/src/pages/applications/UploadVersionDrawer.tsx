@@ -1,6 +1,7 @@
 import {
   Alert,
   Button,
+  Checkbox,
   Drawer,
   Form,
   Input,
@@ -50,6 +51,8 @@ export function UploadVersionDrawer({
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
+  // 未签名制品（signed=false）必须由提交人显式确认风险（规格 §5.5）。
+  const [acceptUnsigned, setAcceptUnsigned] = useState(false);
   const [form] = Form.useForm<VersionFormValues>();
   const busy = uploading || creating;
   const statusUploadId =
@@ -84,6 +87,7 @@ export function UploadVersionDrawer({
     setUploading(false);
     setCreating(false);
     setProcessError(null);
+    setAcceptUnsigned(false);
     form.resetFields();
   };
 
@@ -154,6 +158,7 @@ export function UploadVersionDrawer({
         artifactKey: uploadRecord.objectKey,
         artifactSha256: uploadRecord.sha256,
         artifactSignature: uploadRecord.signature ?? "",
+        ...(uploadRecord.signed === false ? { acceptUnsigned: true } : {}),
       });
       reset();
       onClose();
@@ -251,8 +256,27 @@ export function UploadVersionDrawer({
             >
               <Input.TextArea placeholder="描述本次版本的变更内容" rows={3} />
             </Form.Item>
+            {uploadRecord.signed === false ? (
+              <>
+                <Alert
+                  showIcon
+                  type="warning"
+                  title="该制品未签名"
+                  description="制品未经数字签名校验，审核时将显著标记该风险。请确认来源可信后再创建版本。"
+                />
+                <Checkbox
+                  checked={acceptUnsigned}
+                  onChange={(event) => setAcceptUnsigned(event.target.checked)}
+                >
+                  我已知晓制品未签名并接受风险
+                </Checkbox>
+              </>
+            ) : null}
             <Button
-              disabled={!isVerifiedUpload(uploadRecord)}
+              disabled={
+                !isVerifiedUpload(uploadRecord) ||
+                (uploadRecord.signed === false && !acceptUnsigned)
+              }
               loading={creating}
               onClick={() => void handleCreateVersion()}
               type="primary"

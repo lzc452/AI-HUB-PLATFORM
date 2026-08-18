@@ -51,6 +51,7 @@ import {
   ReviewWithdrawRequestDto,
   RollbackRequestDto,
   SaveApplicationDraftRequestDto,
+  SubmitReviewRequestDto,
   TransferOwnerRequestDto,
   TransferReviewRequestDto,
   ValidationCheckDto,
@@ -232,17 +233,20 @@ export class ApplicationController {
   @ApiOperation({ summary: "提交版本评审" })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationVersionId", description: "应用版本 ID" })
+  @ApiBody({ type: SubmitReviewRequestDto, required: false })
   @ApiOkResponse({ description: "提交后的应用记录", type: ApplicationDto })
   @ApiProblemResponses([400, 401, 403, 404])
   async submitReview(
     @Headers("x-employee-id") employeeId: string | undefined,
     @Headers("x-session-id") sessionId: string | undefined,
     @Param("applicationVersionId") versionId: string,
+    @Body() body: SubmitReviewRequestDto | undefined,
   ) {
     return this.call(async () =>
       this.applications.submitForReview(
         await this.requireActor(employeeId, sessionId, "update"),
         versionId,
+        body?.acceptUnsigned === true ? { acceptUnsigned: true } : undefined,
       ),
     );
   }

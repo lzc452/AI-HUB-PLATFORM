@@ -6,6 +6,8 @@ const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   ARTIFACT_NOT_VERIFIED: "版本制品尚未通过安全校验",
   DELIVERY_CHANNELS_INCOMPLETE: "发布前必须启用全部四个交付渠道",
   INVALID_APPLICATION_TRANSITION: "当前应用状态不允许执行此操作",
+  UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION:
+    "制品未签名，请勾选确认接受风险后再操作",
   UPLOAD_ALREADY_COMPLETED: "该上传会话已经结束，请重新选择文件",
   UPLOAD_CONTENT_MISSING: "上传内容缺失，请重新上传文件",
   UPLOAD_EXPIRED: "上传会话已过期，请重新上传文件",

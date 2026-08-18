@@ -578,6 +578,7 @@ export class ArtifactUploadController {
       scanStatus: record.scanStatus,
       sha256: record.sha256,
       signature: record.signature,
+      signed: record.signed ?? true,
       errorCode: record.errorCode,
       verificationAttempts: record.verificationAttempts ?? 0,
       expiresAt: record.expiresAt.toISOString(),

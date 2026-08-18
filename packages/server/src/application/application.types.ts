@@ -79,6 +79,10 @@ export interface ArtifactUploadRecord {
   kind: UploadKind;
   sha256: string | null;
   signature: string | null;
+  /** 制品验证完成后是否已签名（0041 迁移新增；未签名制品必须由提交人显式
+   *  确认风险才能创建版本/提交审核，规格 §5.5）。NOT NULL 列，mapper 恒填充；
+   *  旧测试 fixture 省略时视为已签名。 */
+  signed?: boolean;
   partCount: number;
   uploadStatus: ArtifactUploadStatus;
   scanStatus: ApplicationVersionScanStatus;
@@ -270,7 +274,7 @@ export interface ApplicationRepository {
     applicationId: string;
     objectKey: string;
     sha256: string;
-    signature: string;
+    signature: string | null;
   }): Promise<ArtifactUploadRecord | null>;
   updateArtifactUpload(
     uploadId: string,
@@ -300,7 +304,8 @@ export interface ApplicationRepository {
   finalizeArtifactVerification?(input: {
     uploadId: string;
     objectKey: string;
-    signature: string;
+    signature: string | null;
+    signed: boolean;
   }): Promise<ArtifactUploadRecord | null>;
   failArtifactVerification?(input: {
     uploadId: string;

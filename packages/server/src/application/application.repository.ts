@@ -716,19 +716,24 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     applicationId: string;
     objectKey: string;
     sha256: string;
-    signature: string;
+    signature: string | null;
   }): Promise<ArtifactUploadRecord | null> {
-    const row = await this.db
+    // 空字符串语义等同未签名（前端对无签名上传传 ""），与落库的 NULL 对齐。
+    const signature = input.signature === "" ? null : input.signature;
+    let query = this.db
       .selectFrom("application_artifact_uploads")
       .selectAll()
       .where("application_id", "=", input.applicationId)
       .where("object_key", "=", input.objectKey)
       .where("sha256", "=", input.sha256)
-      .where("signature", "=", input.signature)
       .where("upload_status", "=", "completed")
       .where("scan_status", "=", "passed")
-      .where("completed_at", "is not", null)
-      .executeTakeFirst();
+      .where("completed_at", "is not", null);
+    query =
+      signature === null
+        ? query.where("signature", "is", null)
+        : query.where("signature", "=", signature);
+    const row = await query.executeTakeFirst();
     return row === undefined ? null : this.mapArtifactUpload(row);
   }
 
@@ -822,7 +827,8 @@ export class KyselyApplicationRepository implements ApplicationRepository {
   async finalizeArtifactVerification(input: {
     uploadId: string;
     objectKey: string;
-    signature: string;
+    signature: string | null;
+    signed: boolean;
   }): Promise<ArtifactUploadRecord | null> {
     const row = await this.db
       .updateTable("application_artifact_uploads")
@@ -830,6 +836,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         upload_status: "completed",
         scan_status: "passed",
         signature: input.signature,
+        signed: input.signed,
         object_key: input.objectKey,
         completed_at: new Date(),
         updated_at: new Date(),
@@ -1531,6 +1538,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       kind: row.kind as ArtifactUploadRecord["kind"],
       sha256: row.sha256,
       signature: row.signature,
+      signed: row.signed,
       partCount: row.part_count,
       uploadStatus: row.upload_status as ArtifactUploadRecord["uploadStatus"],
       scanStatus: row.scan_status,

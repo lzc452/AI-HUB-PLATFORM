@@ -230,15 +230,17 @@ class MemoryApplicationRepository implements ApplicationRepository {
     applicationId: string;
     objectKey: string;
     sha256: string;
-    signature: string;
+    signature: string | null;
   }) {
+    // 空字符串语义等同未签名（与 Kysely 实现一致）。
+    const signature = input.signature === "" ? null : input.signature;
     return (
       [...this.uploads.values()].find(
         (upload) =>
           upload.applicationId === input.applicationId &&
           upload.objectKey === input.objectKey &&
           upload.sha256 === input.sha256 &&
-          upload.signature === input.signature &&
+          upload.signature === signature &&
           upload.uploadStatus === "completed" &&
           upload.scanStatus === "passed",
       ) ?? null
@@ -555,7 +557,15 @@ function makeService() {
 function registerVerifiedUpload(
   repository: MemoryApplicationRepository,
   applicationId: string,
-  input = versionInput,
+  input: {
+    version: string;
+    changelog: string;
+    artifactKey: string;
+    artifactSha256: string;
+    artifactSignature: string | null;
+    scanStatus: "passed";
+    signed?: boolean;
+  } = versionInput,
 ): void {
   repository.uploads.set(`verified-${applicationId}-${input.version}`, {
     uploadId: `verified-${applicationId}-${input.version}`,
@@ -568,6 +578,7 @@ function registerVerifiedUpload(
     kind: "artifact",
     sha256: input.artifactSha256,
     signature: input.artifactSignature,
+    signed: input.signed ?? true,
     partCount: 1,
     uploadStatus: "completed",
     scanStatus: "passed",
@@ -740,11 +751,11 @@ describe("ApplicationService", () => {
     const checks = repository.validationChecks.filter(
       (check) => check.applicationVersionId === version.applicationVersionId,
     );
-    // 签名检查点留给 T9：worker 流程中 completed+passed 的 upload 签名必非空，
-    // warning 分支当前不可达，故只落两个 passed 检查点。
+    // 已签名制品：摘要 / 恶意软件扫描 / 签名三检查点全部通过。
     expect(checks.map((check) => check.checkCode)).toEqual([
       "artifact.digest",
       "artifact.malware_scan",
+      "artifact.signature",
     ]);
     expect(checks.every((check) => check.status === "passed")).toBe(true);
     expect(
@@ -752,7 +763,7 @@ describe("ApplicationService", () => {
     ).toBe(versionInput.artifactSha256);
     await expect(
       repository.listValidationChecks(version.applicationVersionId),
-    ).resolves.toHaveLength(2);
+    ).resolves.toHaveLength(3);
   });
 
   it("persists maintainer and department ownership fields", async () => {
@@ -835,6 +846,71 @@ describe("ApplicationService", () => {
     await expect(
       service.createVersion(owner, application.applicationId, versionInput),
     ).rejects.toThrow("ARTIFACT_NOT_VERIFIED");
+  });
+
+  it("requires explicit acceptance for unsigned artifacts at version creation", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    registerVerifiedUpload(repository, application.applicationId, {
+      ...versionInput,
+      artifactSignature: null,
+      signed: false,
+    });
+
+    await expect(
+      service.createVersion(owner, application.applicationId, {
+        ...versionInput,
+        artifactSignature: null,
+      }),
+    ).rejects.toThrow("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
+    expect(repository.versions).toHaveLength(0);
+
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, artifactSignature: null, acceptUnsigned: true },
+    );
+    expect(version).toBeDefined();
+    // T8 承接：未签名制品在版本校验报告中显著标记为 warning。
+    const checks = repository.validationChecks.filter(
+      (check) => check.applicationVersionId === version.applicationVersionId,
+    );
+    expect(
+      checks.find((check) => check.checkCode === "artifact.signature"),
+    ).toMatchObject({
+      status: "warning",
+      detail: "未签名制品，需人工确认",
+    });
+  });
+
+  it("rejects submitting an unsigned-artifact version for review without explicit acceptance", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    registerVerifiedUpload(repository, application.applicationId, {
+      ...versionInput,
+      artifactSignature: null,
+      signed: false,
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, artifactSignature: null, acceptUnsigned: true },
+    );
+
+    await expect(
+      service.submitForReview(owner, version.applicationVersionId),
+    ).rejects.toThrow("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
+    await expect(
+      service.submitForReview(owner, version.applicationVersionId, {
+        acceptUnsigned: true,
+      }),
+    ).resolves.toBeDefined();
   });
 
   it("creates and claims a review queue item with an SLA notification", async () => {

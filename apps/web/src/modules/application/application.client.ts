@@ -283,6 +283,8 @@ export interface CreateVersionInput {
   artifactKey: string;
   artifactSha256: string;
   artifactSignature: string;
+  /** 制品未签名（signed=false）时，是否已确认接受风险（后端强制校验）。 */
+  acceptUnsigned?: boolean;
 }
 
 export function createVersion(
@@ -379,6 +381,8 @@ export interface ArtifactUploadRecord {
   scanStatus: "pending" | "passed" | "failed";
   sha256: string | null;
   signature: string | null;
+  /** 制品是否已签名；false 表示未签名，创建版本前必须显式确认风险。 */
+  signed: boolean;
   errorCode: string | null;
   verificationAttempts: number;
   expiresAt: string;

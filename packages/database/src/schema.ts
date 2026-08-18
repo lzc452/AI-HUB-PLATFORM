@@ -236,6 +236,7 @@ export interface ApplicationArtifactUploadsTable {
   kind: ColumnType<string, string | undefined, string>;
   sha256: string | null;
   signature: string | null;
+  signed: ColumnType<boolean, boolean | undefined, boolean>;
   part_count: number;
   upload_status: ColumnType<
     "uploading" | "verifying" | "completed" | "failed",

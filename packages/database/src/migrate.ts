@@ -39,6 +39,7 @@ import * as employeeApplicationCreate from "./migrations/0037_employee_applicati
 import * as employeeApplicationPublish from "./migrations/0038_employee_application_publish.js";
 import * as applicationPublishedReviewState from "./migrations/0039_application_published_review_state.js";
 import * as applicationLikesId from "./migrations/0040_application_likes_id.js";
+import * as artifactSigned from "./migrations/0041_artifact_signed.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -83,6 +84,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0038_employee_application_publish": employeeApplicationPublish,
   "0039_application_published_review_state": applicationPublishedReviewState,
   "0040_application_likes_id": applicationLikesId,
+  "0041_artifact_signed": artifactSigned,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

@@ -39,8 +39,10 @@ export interface CreateVersionInput {
   changelog: string;
   artifactKey: string;
   artifactSha256: string;
-  artifactSignature: string;
+  artifactSignature: string | null;
   scanStatus: "passed";
+  /** 制品未签名（signed=false）时，提交人是否已显式确认接受风险。 */
+  acceptUnsigned?: boolean;
 }
 
 export interface CreateDeliveryInput {
@@ -335,10 +337,14 @@ export class ApplicationService {
       applicationId,
       objectKey: input.artifactKey,
       sha256: input.artifactSha256,
-      signature: input.artifactSignature,
+      signature: input.artifactSignature ?? null,
     });
     if (verifiedUpload === null) {
       throw new Error("ARTIFACT_NOT_VERIFIED");
+    }
+    // 规格 §5.5：未签名制品必须由提交人显式确认风险后才能绑定为版本。
+    if (verifiedUpload.signed === false && input.acceptUnsigned !== true) {
+      throw new Error("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
     }
     const versions = await this.repository.listVersions(applicationId);
     if (versions.some((version) => version.version === input.version)) {
@@ -389,9 +395,9 @@ export class ApplicationService {
    * 制品校验发生在版本创建之前（上传→worker 校验→createVersion），因此校验检查点
    * 在版本事务内由已验证的 upload 记录派生落库（唯一键幂等 upsert）。
    *
-   * 注意：completed+passed 的 upload 其 signature 必然非空（worker 流程中签名缺失时
-   * 有 signer 则自动签名、无 signer 则 INVALID_SIGNATURE 失败），因此签名检查点
-   * 不会出现 warning——未签名语义由 T9（worker 允许未签名完成）引入，届时再落库。
+   * 规格 §5.5：未签名制品（worker 以 signed=false 完成）在签名检查点落
+   * warning，显著标记并进入人工确认——检查点本身不阻断，门禁在
+   * createVersion / submitForReview 的 acceptUnsigned 校验。
    */
   private async recordArtifactValidationChecks(
     repository: ApplicationRepository,
@@ -412,11 +418,19 @@ export class ApplicationService {
       status: "passed",
       detail: "ClamAV clean",
     });
+    await repository.recordValidationCheck({
+      applicationVersionId,
+      checkCode: "artifact.signature",
+      label: "签名校验",
+      status: upload.signed === false ? "warning" : "passed",
+      detail: upload.signed === false ? "未签名制品，需人工确认" : "签名有效",
+    });
   }
 
   async submitForReview(
     actor: ActorContext,
     applicationVersionId: string,
+    options?: { acceptUnsigned?: boolean },
   ): Promise<ApplicationRecord> {
     await this.assertAuthorized(actor, allowedActions.update);
     const version = await this.requireVersion(applicationVersionId);
@@ -425,6 +439,22 @@ export class ApplicationService {
     }
     if (version.scanStatus !== "passed") {
       throw new Error("ARTIFACT_NOT_VERIFIED");
+    }
+    // 规格 §5.5：带制品的版本在提交审核时再次校验未签名确认（提交点二次门禁）。
+    if (version.artifactKey !== null && version.artifactSha256 !== null) {
+      const upload = await this.repository.findVerifiedArtifact({
+        applicationId: version.applicationId,
+        objectKey: version.artifactKey,
+        sha256: version.artifactSha256,
+        signature: version.artifactSignature ?? null,
+      });
+      if (
+        upload !== null &&
+        upload.signed === false &&
+        options?.acceptUnsigned !== true
+      ) {
+        throw new Error("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
+      }
     }
     const application = await this.requireApplication(version.applicationId);
     if (application.status !== "draft" && application.status !== "published") {
