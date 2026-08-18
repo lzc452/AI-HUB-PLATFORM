@@ -170,10 +170,9 @@ export class IdentityController {
   @ApiOperation({ summary: "解析员工 CSV 导入文件并预览差异" })
   @ApiIdentityHeaders()
   @ApiProblemResponses([400, 401, 403])
-  async previewEmployeeImport(
-    @UploadedFile() file?: { buffer: Buffer },
-  ) {
-    if (file === undefined) throw new BadRequestException("IMPORT_FILE_REQUIRED");
+  async previewEmployeeImport(@UploadedFile() file?: { buffer: Buffer }) {
+    if (file === undefined)
+      throw new BadRequestException("IMPORT_FILE_REQUIRED");
     const records = recordsFromCsv(file.buffer.toString("utf8"));
     return this.identity.previewEmployeeImport(records);
   }
@@ -379,9 +378,7 @@ export class IdentityController {
     @CurrentActor() actor: ActorContext,
     @Body() body: CopyRoleRequestDto,
   ) {
-    await this.call(() =>
-      this.identity.copyRole(actor, roleCode, body),
-    );
+    await this.call(() => this.identity.copyRole(actor, roleCode, body));
     return { created: true };
   }
 
@@ -440,9 +437,7 @@ export class IdentityController {
   @ApiIdentityHeaders()
   @ApiOkResponse({ description: "分页结果", type: EmployeePageResultDto })
   @ApiProblemResponses([400, 401, 403])
-  async listEmployeesPage(
-    @Query() query: ListEmployeesQueryDto,
-  ) {
+  async listEmployeesPage(@Query() query: ListEmployeesQueryDto) {
     return this.identity.listEmployeesPage({
       ...(query.keyword === undefined ? {} : { keyword: query.keyword }),
       page: query.page ?? 1,
@@ -523,10 +518,9 @@ export class IdentityController {
   @ApiOperation({ summary: "解析部门 CSV 导入文件并预览差异" })
   @ApiIdentityHeaders()
   @ApiProblemResponses([400, 401, 403])
-  async previewDepartmentImport(
-    @UploadedFile() file?: { buffer: Buffer },
-  ) {
-    if (file === undefined) throw new BadRequestException("IMPORT_FILE_REQUIRED");
+  async previewDepartmentImport(@UploadedFile() file?: { buffer: Buffer }) {
+    if (file === undefined)
+      throw new BadRequestException("IMPORT_FILE_REQUIRED");
     const records = recordsFromCsv(file.buffer.toString("utf8"));
     return this.identity.previewDepartmentImport(records);
   }
@@ -1028,6 +1022,8 @@ export class IdentityController {
       error instanceof Error ? error.message : "IDENTITY_REQUEST_FAILED";
     if (code.endsWith("_NOT_FOUND")) throw new NotFoundException(code);
     if (code.endsWith("_NOT_EMPTY")) throw new BadRequestException(code);
+    if (code === "ROLE_NOT_ASSIGNABLE_IN_V1")
+      throw new BadRequestException(code);
     throw new BadRequestException(code);
   }
 }

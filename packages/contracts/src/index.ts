@@ -24,6 +24,7 @@ export type {
   ResourceId,
 } from "./identity.js";
 export {
+  ASSIGNABLE_ROLE_CODES,
   PERMISSIONS,
   hasAllPermissions,
   hasAnyPermission,

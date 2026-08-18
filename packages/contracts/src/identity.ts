@@ -58,6 +58,17 @@ export const PERMISSIONS = Object.freeze({
   ANALYTICS_SCOPE_ALL: "analytics.scope.all",
 } as const);
 
+/**
+ * V1 可分发角色编码：仅普通员工（employee）与超级管理员（super_admin）。
+ * 其余预置角色（application_admin、demand_operator、organization_admin 等）
+ * 保留定义但不实施分发——服务端所有角色分配通道（创建/更新/直调分配/CSV 导入）
+ * 只允许本列表内的编码。
+ */
+export const ASSIGNABLE_ROLE_CODES: readonly string[] = [
+  "employee",
+  "super_admin",
+];
+
 export const PERMISSION_LABELS: Readonly<Record<string, string>> =
   Object.freeze({
     [PERMISSIONS.IDENTITY_EMPLOYEE_READ]: "员工查看",

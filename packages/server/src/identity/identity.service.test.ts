@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  ActorContext,
   DepartmentSummary,
   EmployeeId,
   EncryptedLoginEnvelope,
@@ -914,5 +915,117 @@ describe("IdentityService", () => {
     expect(await service.listEmployeeIdsWithRole("application_admin")).toEqual(
       [],
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // V1 角色收敛：所有分配通道只允许 ASSIGNABLE_ROLE_CODES（employee / super_admin）
+  // -------------------------------------------------------------------------
+
+  const adminActor = {
+    employeeId: "E001",
+  } as unknown as ActorContext;
+
+  it("rejects CSV import rows that assign non-assignable V1 roles", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createDepartment({
+      departmentId: "dept-a",
+      name: "研发部",
+      parentDepartmentId: null,
+      source: "local",
+    });
+    const service = new IdentityService(repository, new PasswordService());
+
+    const result = await service.applyEmployeeImport(adminActor, [
+      {
+        employeeId: "E200",
+        displayName: "导入用户",
+        primaryDepartmentId: "dept-a",
+        roleCodes: ["application_admin"],
+        password: "Import-123",
+        status: "active",
+      },
+    ]);
+
+    expect(result.created).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.errors[0]).toContain("ROLE_NOT_ASSIGNABLE_IN_V1");
+    expect(await repository.findEmployee("E200")).toBeNull();
+  });
+
+  it("rejects assigning non-assignable roles via setEmployeeRoles", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E201",
+      displayName: "Role Target",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.setEmployeeRoles(adminActor, "E201", ["application_admin"]),
+    ).rejects.toThrow("ROLE_NOT_ASSIGNABLE_IN_V1");
+  });
+
+  it("allows assigning employee and super_admin via setEmployeeRoles", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E202",
+      displayName: "Assignable Target",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    const service = new IdentityService(repository);
+
+    await expect(
+      service.setEmployeeRoles(adminActor, "E202", ["employee", "super_admin"]),
+    ).resolves.toBeUndefined();
+    expect(
+      (await repository.listEmployeeRoles("E202")).map((role) => role.roleCode),
+    ).toEqual(["employee", "super_admin"]);
+  });
+
+  it("keeps existing non-assignable roles when editing other fields without roleCodes", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createEmployee({
+      employeeId: "E203",
+      displayName: "Legacy Holder",
+      primaryDepartmentId: "dept-a",
+      status: "active",
+      passwordHash: null,
+    });
+    await repository.assignRole("E203", "application_admin");
+    const service = new IdentityService(repository);
+
+    await service.updateEmployee(adminActor, "E203", { displayName: "新名字" });
+
+    expect(
+      (await repository.listEmployeeRoles("E203")).map((role) => role.roleCode),
+    ).toEqual(["application_admin"]);
+  });
+
+  it("rejects employee creation with non-assignable V1 roles", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createDepartment({
+      departmentId: "dept-a",
+      name: "研发部",
+      parentDepartmentId: null,
+      source: "local",
+    });
+    const service = new IdentityService(repository, new PasswordService());
+
+    await expect(
+      service.createEmployeeByAdmin(adminActor, {
+        employeeId: "E204",
+        displayName: "New Admin",
+        primaryDepartmentId: "dept-a",
+        roleCodes: ["organization_admin"],
+        password: "Create-123",
+        status: "active",
+      }),
+    ).rejects.toThrow("ROLE_NOT_ASSIGNABLE_IN_V1");
+    expect(await repository.findEmployee("E204")).toBeNull();
   });
 });

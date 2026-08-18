@@ -7,6 +7,7 @@ import type {
   EncryptedLoginEnvelope,
 } from "@ai-hub/contracts";
 import {
+  ASSIGNABLE_ROLE_CODES,
   PERMISSIONS,
   hasPermission,
   permissionGroupLabel,
@@ -29,6 +30,20 @@ import type {
 import type { LoginChallengeStore } from "./login-challenge.store.js";
 import { createFixedWindowCounter } from "../system/security/rate-limit.middleware.js";
 import { createHash, randomBytes } from "crypto";
+
+const assignableRoleCodeSet: ReadonlySet<string> = new Set(
+  ASSIGNABLE_ROLE_CODES,
+);
+
+/**
+ * V1 角色收敛：所有角色分配通道只允许分发 ASSIGNABLE_ROLE_CODES 内的编码；
+ * 其余预置角色保留定义但不可新分配（存量已分配角色不受影响）。
+ */
+function assertAssignableRoleCodes(roleCodes: readonly string[]): void {
+  if (roleCodes.some((roleCode) => !assignableRoleCodeSet.has(roleCode))) {
+    throw new Error("ROLE_NOT_ASSIGNABLE_IN_V1");
+  }
+}
 
 const sessionTtlMs = 1000 * 60 * 60 * 24 * 14;
 const passwordResetTtlMs = 1000 * 60 * 30;
@@ -182,6 +197,9 @@ export class IdentityService {
       roleCodes?: readonly string[];
     },
   ): Promise<void> {
+    if (input.roleCodes !== undefined) {
+      assertAssignableRoleCodes(input.roleCodes);
+    }
     await this.repository.withTransaction(async (repository) => {
       await repository.updateEmployee(employeeId, input);
       if (input.roleCodes !== undefined) {
@@ -245,14 +263,20 @@ export class IdentityService {
     ) {
       throw new Error("DEPARTMENT_PARENT_CYCLE");
     }
-    if (input.parentDepartmentId !== undefined && input.parentDepartmentId !== null) {
+    if (
+      input.parentDepartmentId !== undefined &&
+      input.parentDepartmentId !== null
+    ) {
       const departments = await this.repository.listDepartments();
       const children = new Set<string>();
       const queue = [departmentId];
       while (queue.length > 0) {
         const current = queue.pop()!;
         for (const department of departments) {
-          if (department.parentDepartmentId === current && !children.has(department.departmentId)) {
+          if (
+            department.parentDepartmentId === current &&
+            !children.has(department.departmentId)
+          ) {
             children.add(department.departmentId);
             queue.push(department.departmentId);
           }
@@ -297,6 +321,7 @@ export class IdentityService {
     employeeId: EmployeeId,
     roleCodes: readonly string[],
   ): Promise<void> {
+    assertAssignableRoleCodes(roleCodes);
     await this.repository.withTransaction(async (repository) => {
       await repository.setEmployeeRoles(employeeId, roleCodes);
       await repository.recordAudit({
@@ -467,7 +492,8 @@ export class IdentityService {
     const roleCodes = input.roleCodes?.length
       ? [...new Set(input.roleCodes)]
       : ["employee"];
-    const availableRoles = await this.repository.listRoles?.() ?? [];
+    assertAssignableRoleCodes(roleCodes);
+    const availableRoles = (await this.repository.listRoles?.()) ?? [];
     for (const roleCode of roleCodes) {
       if (!availableRoles.some((role) => role.roleCode === roleCode)) {
         throw new Error("ROLE_NOT_FOUND");
@@ -495,7 +521,10 @@ export class IdentityService {
     });
   }
 
-  async archiveEmployee(actor: ActorContext, employeeId: EmployeeId): Promise<void> {
+  async archiveEmployee(
+    actor: ActorContext,
+    employeeId: EmployeeId,
+  ): Promise<void> {
     await this.repository.withTransaction(async (repository) => {
       await repository.updateEmployee(employeeId, { status: "archived" });
       await repository.revokeSessions(employeeId, "employee_archived");
@@ -572,11 +601,14 @@ export class IdentityService {
     return role;
   }
 
-  async deleteRoleIfUnused(actor: ActorContext, roleCode: string): Promise<void> {
+  async deleteRoleIfUnused(
+    actor: ActorContext,
+    roleCode: string,
+  ): Promise<void> {
     const role = await this.repository.findRole?.(roleCode);
     if (role === undefined || role === null) throw new Error("ROLE_NOT_FOUND");
     if (role.isSystem) throw new Error("SYSTEM_ROLE_CANNOT_BE_DELETED");
-    const members = await this.repository.countRoleMembers?.(roleCode) ?? 0;
+    const members = (await this.repository.countRoleMembers?.(roleCode)) ?? 0;
     if (members > 0) throw new Error("ROLE_NOT_EMPTY");
     if (this.repository.deleteRole === undefined) {
       throw new Error("ROLE_REPOSITORY_UNAVAILABLE");
@@ -601,7 +633,8 @@ export class IdentityService {
     input: { roleCode: string; name: string },
   ): Promise<void> {
     const source = await this.repository.findRole?.(sourceRoleCode);
-    if (source === undefined || source === null) throw new Error("ROLE_NOT_FOUND");
+    if (source === undefined || source === null)
+      throw new Error("ROLE_NOT_FOUND");
     const existing = await this.repository.findRole?.(input.roleCode);
     if (existing !== undefined && existing !== null) {
       throw new Error("ROLE_ALREADY_EXISTS");
@@ -684,9 +717,11 @@ export class IdentityService {
       return { syncRunId };
     } catch (error) {
       if (this.repository.updateSyncRunStatus !== undefined) {
-        await this.repository.updateSyncRunStatus(syncRunId, "failed", {
-          error: error instanceof Error ? error.message : "LOCAL_SYNC_FAILED",
-        }).catch(() => undefined);
+        await this.repository
+          .updateSyncRunStatus(syncRunId, "failed", {
+            error: error instanceof Error ? error.message : "LOCAL_SYNC_FAILED",
+          })
+          .catch(() => undefined);
       }
       throw error;
     }
@@ -694,14 +729,20 @@ export class IdentityService {
 
   async retryLocalSync(syncRunId: string) {
     const run = await this.repository.findSyncRun?.(syncRunId);
-    if (run === undefined || run === null) throw new Error("SYNC_RUN_NOT_FOUND");
+    if (run === undefined || run === null)
+      throw new Error("SYNC_RUN_NOT_FOUND");
     return this.runLocalSync(run.mode as DingTalkSyncMode);
   }
 
   async cancelSyncRun(syncRunId: string): Promise<void> {
     const run = await this.repository.findSyncRun?.(syncRunId);
-    if (run === undefined || run === null) throw new Error("SYNC_RUN_NOT_FOUND");
-    if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+    if (run === undefined || run === null)
+      throw new Error("SYNC_RUN_NOT_FOUND");
+    if (
+      run.status === "completed" ||
+      run.status === "failed" ||
+      run.status === "cancelled"
+    ) {
       throw new Error("SYNC_RUN_NOT_CANCELLABLE");
     }
     await this.repository.updateSyncRunStatus?.(syncRunId, "cancelled", {
@@ -711,7 +752,7 @@ export class IdentityService {
 
   async previewEmployeeImport(rows: readonly Record<string, string>[]) {
     const departments = await this.repository.listDepartments();
-    const roles = await this.repository.listRoles?.() ?? [];
+    const roles = (await this.repository.listRoles?.()) ?? [];
     const departmentLookup = buildDepartmentLookup(departments);
     const roleLookup = buildRoleLookup(roles);
     const normalized: Array<{
@@ -749,11 +790,11 @@ export class IdentityService {
 
     const preview = await Promise.all(
       normalized.map(async (incoming) => {
-        const existing = await this.repository.findEmployee(incoming.employeeId);
-        const conflicts: Record<
-          string,
-          { current: string; incoming: string }
-        > = {};
+        const existing = await this.repository.findEmployee(
+          incoming.employeeId,
+        );
+        const conflicts: Record<string, { current: string; incoming: string }> =
+          {};
         if (existing !== null) {
           compareIfDifferent(
             conflicts,
@@ -767,7 +808,9 @@ export class IdentityService {
             existing.primaryDepartmentId,
             incoming.primaryDepartmentId,
           );
-          const existingRoles = [...(await this.repository.listEmployeeRoles(incoming.employeeId))]
+          const existingRoles = [
+            ...(await this.repository.listEmployeeRoles(incoming.employeeId)),
+          ]
             .map((role) => role.roleCode)
             .sort();
           compareIfDifferent(
@@ -827,6 +870,7 @@ export class IdentityService {
         const roleCodes = row.roleCodes?.length
           ? [...new Set(row.roleCodes)]
           : ["employee"];
+        assertAssignableRoleCodes(roleCodes);
         if (existing === null) {
           if (!row.password) throw new Error("PASSWORD_REQUIRED");
           const passwordHash = await this.passwords.hashPassword(row.password);
@@ -858,8 +902,13 @@ export class IdentityService {
             });
             await repository.setEmployeeRoles(row.employeeId, roleCodes);
             if (row.password) {
-              const passwordHash = await this.passwords.hashPassword(row.password);
-              await repository.updateEmployeePassword(row.employeeId, passwordHash);
+              const passwordHash = await this.passwords.hashPassword(
+                row.password,
+              );
+              await repository.updateEmployeePassword(
+                row.employeeId,
+                passwordHash,
+              );
             }
             await repository.recordAudit({
               actorEmployeeId: actor.employeeId,
@@ -884,7 +933,9 @@ export class IdentityService {
   async previewDepartmentImport(rows: readonly Record<string, string>[]) {
     const departments = await this.repository.listDepartments();
     const employees = await this.repository.listEmployees();
-    const employeeIds = new Set(employees.map((employee) => employee.employeeId));
+    const employeeIds = new Set(
+      employees.map((employee) => employee.employeeId),
+    );
     const departmentLookup = buildDepartmentLookup(departments);
     const preview = [];
     const errors: string[] = [];
@@ -909,10 +960,8 @@ export class IdentityService {
       const existing = departments.find(
         (department) => department.departmentId === departmentId,
       );
-      const conflicts: Record<
-        string,
-        { current: string; incoming: string }
-      > = {};
+      const conflicts: Record<string, { current: string; incoming: string }> =
+        {};
       if (existing) {
         compareIfDifferent(conflicts, "name", existing.name, name);
         compareIfDifferent(
@@ -1402,11 +1451,7 @@ function resolveDepartment(
 ): string | null {
   const normalized = value?.trim() ?? "";
   if (normalized.length === 0) return null;
-  return (
-    lookup.byId.get(normalized) ??
-    lookup.byName.get(normalized) ??
-    null
-  );
+  return lookup.byId.get(normalized) ?? lookup.byName.get(normalized) ?? null;
 }
 
 function normalizeEmployeeStatus(
@@ -1434,7 +1479,9 @@ function normalizeRoleCodes(
     .filter(Boolean);
   return [
     ...new Set(
-      parts.map((part) => lookup.byCode.get(part) ?? lookup.byName.get(part) ?? part),
+      parts.map(
+        (part) => lookup.byCode.get(part) ?? lookup.byName.get(part) ?? part,
+      ),
     ),
   ];
 }
