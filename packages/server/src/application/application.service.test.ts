@@ -1688,6 +1688,39 @@ describe("ApplicationService", () => {
     expect(repository.events).not.toContain("application.published");
   });
 
+  it("exempts legacy applications without catalog metadata from the target gate", async () => {
+    // 有意的历史兼容豁免（非漏洞）：typeKnown === false 仅覆盖缺少
+    // application_catalog_metadata 的存量应用；新应用创建即写类型
+    // （upsertCatalogMetadata / registerToCatalog 以 web_app 兜底）必受
+    // 目标门禁约束。未知类型分支仍要求四个渠道全部启用（比已知类型更严），
+    // 只是不额外要求 mini_program target。
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "存量应用（无 catalog metadata）",
+      summary: "历史兼容豁免",
+    });
+    // 刻意不写 catalogTypes：模拟 0037 迁移前的存量数据。
+    const version = await createVersionFor(
+      service,
+      repository,
+      application.applicationId,
+      "1.0.0",
+    );
+    // 四个渠道全部启用，mini_program 无 target → 仍应通过门禁自动上架。
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const result = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(result.status).toBe("published");
+    expect(repository.events).toContain("application.published");
+  });
+
   it("auto-publishes a mini_program application with a qr target configured", async () => {
     const qrPng = await readFile(
       new URL("./fixtures/miniapp-qr-wechat.png", import.meta.url),

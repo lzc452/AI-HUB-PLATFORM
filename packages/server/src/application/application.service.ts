@@ -790,10 +790,18 @@ export class ApplicationService {
       requiredChannelsByType[applicationType] !== undefined
         ? requiredChannelsByType[applicationType]
         : requiredDeliveryChannels;
-    // 目标完整性门禁仅在应用类型已知时生效（类型未知回退到历史渠道检查）：
-    // 类型已知时按类型要求的渠道校验，mini_program 渠道除启用外还必须有
-    // ≥1 个 miniprogram 目标且二维码资产存在（规格 P1-11，二维码内容在
-    // configureDelivery 保存时已校验）。
+    // 目标完整性门禁（规格 P1-11）：类型已知时按类型要求的渠道校验，
+    // mini_program 渠道除启用外还必须有 ≥1 个 miniprogram 目标且二维码
+    // 资产存在（二维码内容在 configureDelivery 保存时已校验）。
+    //
+    // typeKnown === false（application_catalog_metadata 缺失）豁免目标
+    // 校验——这是**有意的历史兼容决策，不是安全漏洞**：
+    // - 新应用创建即写类型（upsertCatalogMetadata / registerToCatalog 均以
+    //   "web_app" 兜底），因此所有新应用必受目标门禁约束；
+    // - 仅 0037 迁移之前或从未走草稿/目录注册路径的存量应用可能缺 metadata，
+    //   此时按历史语义只查渠道启用（fail-closed 方向：未知类型回退为
+    //   requiredDeliveryChannels——要求四个渠道全部启用，比已知类型
+    //   （仅类型对应渠道）更严，绝不比已知类型宽松；只是不额外要求 target）。
     const typeKnown = applicationType !== null;
     for (const channel of requiredChannels) {
       const delivery = deliveries.find(
