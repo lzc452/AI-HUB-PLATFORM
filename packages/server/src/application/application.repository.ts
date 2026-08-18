@@ -1,5 +1,5 @@
 import type { DatabaseSchema } from "@ai-hub/database";
-import type { Kysely, Selectable } from "kysely";
+import { sql, type Kysely, type Selectable } from "kysely";
 import { randomUUID } from "node:crypto";
 import type {
   ApplicationRecord,
@@ -630,7 +630,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
   }
 
   async createVersion(
-    input: Omit<ApplicationVersionRecord, "createdAt">,
+    input: Omit<ApplicationVersionRecord, "createdAt" | "signed">,
   ): Promise<ApplicationVersionRecord> {
     const row = await this.db
       .insertInto("application_versions")
@@ -656,6 +656,7 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     const row = await this.db
       .selectFrom("application_versions")
       .selectAll()
+      .select(this.artifactSignedSubquery().as("artifactSigned"))
       .where("application_version_id", "=", applicationVersionId)
       .executeTakeFirst();
     return row === undefined ? null : this.mapVersion(row);
@@ -667,10 +668,33 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     const rows = await this.db
       .selectFrom("application_versions")
       .selectAll()
+      .select(this.artifactSignedSubquery().as("artifactSigned"))
       .where("application_id", "=", applicationId)
       .orderBy("created_at", "desc")
       .execute();
     return rows.map((row) => this.mapVersion(row));
+  }
+
+  /**
+   * 版本制品 signed 状态的标量子查询（规格 §5.5）：从关联已验证 upload
+   * 记录读取，匹配条件与 findVerifiedArtifact 一致（空字符串签名等同 NULL）。
+   * 无制品（草稿版本）或查不到关联上传时为 null。
+   */
+  private artifactSignedSubquery() {
+    return sql<boolean | null>`
+      (
+        select u.signed
+        from application_artifact_uploads u
+        where u.application_id = application_versions.application_id
+          and u.object_key = application_versions.artifact_key
+          and u.sha256 = application_versions.artifact_sha256
+          and u.signature is not distinct from nullif(application_versions.artifact_signature, '')
+          and u.upload_status = 'completed'
+          and u.scan_status = 'passed'
+          and u.completed_at is not null
+        order by u.updated_at desc
+        limit 1
+      )`;
   }
 
   async createArtifactUpload(
@@ -1537,7 +1561,11 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     } satisfies ApplicationRecord;
   }
 
-  private mapVersion(row: Selectable<DatabaseSchema["application_versions"]>) {
+  private mapVersion(
+    row: Selectable<DatabaseSchema["application_versions"]> & {
+      artifactSigned?: boolean | null;
+    },
+  ): ApplicationVersionRecord {
     return {
       applicationVersionId: row.application_version_id,
       applicationId: row.application_id,
@@ -1546,6 +1574,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       artifactKey: row.artifact_key,
       artifactSha256: row.artifact_sha256,
       artifactSignature: row.artifact_signature,
+      // 仅 findVersion/listVersions 通过 artifactSignedSubquery 携带该值；
+      // createVersion 等未查询关联 upload 的路径按「未知」处理为 null。
+      signed: row.artifactSigned ?? null,
       scanStatus: row.scan_status,
       createdByEmployeeId: row.created_by_employee_id,
       createdAt: row.created_at,

@@ -219,17 +219,56 @@ class MemoryApplicationRepository implements ApplicationRepository {
   async getApplicationType(applicationId: string) {
     return this.catalogTypes.get(applicationId) ?? null;
   }
-  async createVersion(input: Omit<ApplicationVersionRecord, "createdAt">) {
-    const version = { ...input, createdAt: new Date() };
+  async createVersion(
+    input: Omit<ApplicationVersionRecord, "createdAt" | "signed">,
+  ) {
+    const version: ApplicationVersionRecord = {
+      ...input,
+      signed: this.artifactSignedFor(input),
+      createdAt: new Date(),
+    };
     this.versions.set(version.applicationVersionId, version);
     return version;
   }
   async findVersion(id: string) {
-    return this.versions.get(id) ?? null;
+    const version = this.versions.get(id) ?? null;
+    return version === null
+      ? null
+      : { ...version, signed: this.artifactSignedFor(version) };
   }
   async listVersions(applicationId: string) {
-    return [...this.versions.values()].filter(
-      (version) => version.applicationId === applicationId,
+    return [...this.versions.values()]
+      .filter((version) => version.applicationId === applicationId)
+      .map((version) => ({
+        ...version,
+        signed: this.artifactSignedFor(version),
+      }));
+  }
+
+  /** 与生产 artifactSignedSubquery 一致的关联 upload signed 推导（含空字符串签名等同 NULL）。 */
+  private artifactSignedFor(input: {
+    applicationId: string;
+    artifactKey: string | null;
+    artifactSha256: string | null;
+    artifactSignature: string | null;
+  }): boolean | null {
+    if (input.artifactKey === null || input.artifactSha256 === null)
+      return null;
+    const signature =
+      input.artifactSignature === "" ? null : input.artifactSignature;
+    const upload = [...this.uploads.values()].find(
+      (candidate) =>
+        candidate.applicationId === input.applicationId &&
+        candidate.objectKey === input.artifactKey &&
+        candidate.sha256 === input.artifactSha256 &&
+        candidate.signature === signature &&
+        candidate.uploadStatus === "completed" &&
+        candidate.scanStatus === "passed",
+    );
+    if (upload === undefined) return null;
+    return (
+      upload.signed ??
+      (upload.signature !== null && upload.signature.length > 0)
     );
   }
   async createArtifactUpload(
@@ -1012,6 +1051,65 @@ describe("ApplicationService", () => {
         acceptUnsigned: true,
       }),
     ).resolves.toBeDefined();
+  });
+
+  it("carries the artifact signed status on version list and workspace queries", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    registerVerifiedUpload(repository, application.applicationId, {
+      ...versionInput,
+      artifactSignature: null,
+      signed: false,
+    });
+    const unsignedVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      { ...versionInput, artifactSignature: null, acceptUnsigned: true },
+    );
+    registerVerifiedUpload(repository, application.applicationId, {
+      ...versionInput,
+      version: "2.0.0",
+      changelog: "Signed release",
+      artifactSignature: "signature-2",
+    });
+    const signedVersion = await service.createVersion(
+      owner,
+      application.applicationId,
+      {
+        ...versionInput,
+        version: "2.0.0",
+        changelog: "Signed release",
+        artifactSignature: "signature-2",
+      },
+    );
+
+    const versions = await service.listVersions(application.applicationId);
+    expect(
+      versions
+        .map(({ version, signed }) => ({ version, signed }))
+        .sort((a, b) => a.version.localeCompare(b.version)),
+    ).toEqual([
+      { version: "1.0.0", signed: false },
+      { version: "2.0.0", signed: true },
+    ]);
+    const workspace = await service.getWorkspace(application.applicationId);
+    expect(
+      workspace.versions.find(
+        (v) => v.applicationVersionId === unsignedVersion.applicationVersionId,
+      )?.signed,
+    ).toBe(false);
+    expect(
+      workspace.versions.find(
+        (v) => v.applicationVersionId === signedVersion.applicationVersionId,
+      )?.signed,
+    ).toBe(true);
+    // 未签名版本的 submitted review 仍受 acceptUnsigned 门禁保护（前端确认后携带确认提交）。
+    await expect(
+      service.submitForReview(owner, unsignedVersion.applicationVersionId),
+    ).rejects.toThrow("UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION");
   });
 
   it("creates and claims a review queue item with an SLA notification", async () => {

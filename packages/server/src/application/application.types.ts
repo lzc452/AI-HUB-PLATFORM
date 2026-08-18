@@ -64,6 +64,9 @@ export interface ApplicationVersionRecord {
   artifactKey: string | null;
   artifactSha256: string | null;
   artifactSignature: string | null;
+  /** 制品是否已签名（源自关联已验证 upload 记录，匹配条件与
+   *  findVerifiedArtifact 一致；无制品或查不到关联上传时为 null）。 */
+  signed: boolean | null;
   scanStatus: ApplicationVersionScanStatus;
   createdByEmployeeId: string;
   createdAt: Date;
@@ -289,7 +292,7 @@ export interface ApplicationRepository {
   ): Promise<ApplicationAdminListResult>;
   getAdminKpis?(actor: ActorContext): Promise<ApplicationAdminKpis>;
   createVersion(
-    input: Omit<ApplicationVersionRecord, "createdAt">,
+    input: Omit<ApplicationVersionRecord, "createdAt" | "signed">,
   ): Promise<ApplicationVersionRecord>;
   findVersion(
     applicationVersionId: string,

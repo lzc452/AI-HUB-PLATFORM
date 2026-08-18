@@ -462,6 +462,15 @@ export class ApplicationVersionDto {
   artifactSignature!: string;
 
   @ApiProperty({
+    type: Boolean,
+    nullable: true,
+    description:
+      "制品是否已签名（源自关联已验证 upload 记录；无制品或查不到关联上传时为 null）",
+    example: true,
+  })
+  signed!: boolean | null;
+
+  @ApiProperty({
     type: String,
     description: "扫描状态",
     enum: ["pending", "passed", "failed"],
@@ -1157,12 +1166,7 @@ const APPLICATION_STATUSES = [
 
 const APPLICATION_MODES = ["all", "review", "owned"] as const;
 
-const DELIVERY_CHANNELS = [
-  "web",
-  "desktop",
-  "mobile",
-  "mini_program",
-] as const;
+const DELIVERY_CHANNELS = ["web", "desktop", "mobile", "mini_program"] as const;
 
 /** 应用管理列表查询参数。 */
 export class ListApplicationsAdminQueryDto extends PaginationQueryDto {

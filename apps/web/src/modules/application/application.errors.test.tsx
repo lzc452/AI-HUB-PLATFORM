@@ -21,6 +21,24 @@ describe("application errors adapter", () => {
     expect(toApplicationErrorMessage(error)).toBe(error);
   });
 
+  it("将未签名制品确认错误转换为可操作提示", () => {
+    expect(
+      toApplicationErrorMessage(
+        new ApiError(
+          400,
+          "UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION",
+          undefined,
+          "trace-unsigned",
+        ),
+      ),
+    ).toBe("制品未签名，请勾选确认接受风险后再操作（追踪 ID：trace-unsigned）");
+    expect(
+      formatSubmitError(
+        new ApiError(400, "UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION"),
+      ),
+    ).toBe("制品未签名，请勾选确认接受风险后再操作");
+  });
+
   it("为恶意文件扫描失败提供可操作提示", () => {
     expect(getArtifactUploadErrorMessage("MALWARE_DETECTED")).toBe(
       "检测到恶意文件，请更换制品后重试",

@@ -1,6 +1,14 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { Modal, message } from "antd";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   ApplicationRecord,
@@ -31,6 +39,7 @@ const hoisted = vi.hoisted(() => {
     createdAt: "2026-08-12T08:00:00.000Z",
     createdByEmployeeId: "E0001",
     scanStatus: "passed",
+    signed: true,
     version: "2.0.0",
   };
   const deliveries: DeliveryRecord[] = [
@@ -158,6 +167,16 @@ function renderPage() {
   );
 }
 
+/** 取当前最新的确认弹窗（Modal.confirm 挂在 body portal，用例间可能有残留节点）。 */
+function latestDialog(): HTMLElement {
+  const dialogs = screen.getAllByRole("dialog");
+  const dialog = dialogs[dialogs.length - 1];
+  if (!dialog) {
+    throw new Error("未找到确认弹窗");
+  }
+  return dialog;
+}
+
 describe("ApplicationDeliveryPage", () => {
   beforeEach(() => {
     hoisted.configure.mockClear();
@@ -167,6 +186,13 @@ describe("ApplicationDeliveryPage", () => {
       error: null,
       isError: false,
       isPending: false,
+    });
+  });
+
+  afterEach(() => {
+    act(() => {
+      Modal.destroyAll();
+      message.destroy();
     });
   });
 
@@ -222,7 +248,7 @@ describe("ApplicationDeliveryPage", () => {
     );
   });
 
-  it("通过唯一真实入口提交最新已校验版本审核", async () => {
+  it("已签名版本通过唯一真实入口直接提交审核，不弹确认框", async () => {
     renderPage();
 
     const submitButtons = await screen.findAllByRole("button", {
@@ -231,7 +257,86 @@ describe("ApplicationDeliveryPage", () => {
     expect(submitButtons).toHaveLength(1);
     fireEvent.click(submitButtons[0]!);
 
-    expect(hoisted.submitReview).toHaveBeenCalledWith("version-latest");
+    expect(hoisted.submitReview).toHaveBeenCalledWith({
+      applicationVersionId: "version-latest",
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("未签名版本提交审核前弹出风险确认，未勾选时确认按钮禁用", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        versions: [{ ...hoisted.latestVersion, signed: false }],
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    vi.useFakeTimers();
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "提交审核" }));
+    // antd Modal.confirm 通过 setTimeout 异步挂载确认框，推进虚拟时钟使其渲染。
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    const dialog = latestDialog();
+    expect(within(dialog).getByText("该制品未签名")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("我已知晓该制品未签名并接受风险"),
+    ).toBeInTheDocument();
+    // 未勾选确认前确认按钮禁用，无法提交。
+    const confirmButton = within(dialog).getByRole("button", {
+      name: "确认提交",
+    });
+    expect(confirmButton).toBeDisabled();
+    expect(hoisted.submitReview).not.toHaveBeenCalled();
+
+    // 勾选确认后经 modal.update 启用确认按钮，提交时携带 acceptUnsigned=true。
+    fireEvent.click(
+      within(dialog).getByRole("checkbox", {
+        name: "我已知晓该制品未签名并接受风险",
+      }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    expect(
+      within(latestDialog()).getByRole("button", { name: "确认提交" }),
+    ).toBeEnabled();
+    fireEvent.click(
+      within(latestDialog()).getByRole("button", { name: "确认提交" }),
+    );
+    expect(hoisted.submitReview).toHaveBeenCalledWith({
+      applicationVersionId: "version-latest",
+      acceptUnsigned: true,
+    });
+  });
+
+  it("未签名版本确认弹窗取消时中止提交", async () => {
+    hoisted.useApplicationWorkspace.mockReturnValue({
+      data: {
+        ...hoisted.workspace,
+        versions: [{ ...hoisted.latestVersion, signed: false }],
+      },
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    vi.useFakeTimers();
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "提交审核" }));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    // antd 对两个汉字的按钮自动插入空格，按钮可访问名称实为「取 消」。
+    fireEvent.click(
+      within(latestDialog()).getByRole("button", { name: /取\s*消/ }),
+    );
+
+    expect(hoisted.submitReview).not.toHaveBeenCalled();
   });
 
   it("最新版本未通过扫描时禁止提交审核", async () => {

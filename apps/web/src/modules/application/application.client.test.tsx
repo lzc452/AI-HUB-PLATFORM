@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setSession } from "../auth";
-import { uploadArtifactContent } from "./application.client";
+import {
+  submitApplicationReview,
+  uploadArtifactContent,
+} from "./application.client";
 
 class XMLHttpRequestStub {
   readonly headers = new Headers();
@@ -59,5 +62,35 @@ describe("uploadArtifactContent", () => {
     expect(request.headers.get("x-request-nonce")).not.toBeNull();
     expect(request.sentContent).toBe(file);
     expect(result.uploadId).toBe("upload-1");
+  });
+});
+
+describe("submitApplicationReview", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn(async () => Response.json({ applicationId: "app-1" }));
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  it("确认接受未签名风险时携带 acceptUnsigned 请求体", async () => {
+    await submitApplicationReview("version-1", { acceptUnsigned: true });
+
+    expect(String(fetchMock.mock.calls[0]![0])).toContain(
+      "/internal/applications/versions/version-1/submit-review",
+    );
+    const options = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(options.method).toBe("POST");
+    expect(JSON.parse(options.body as string)).toEqual({
+      acceptUnsigned: true,
+    });
+  });
+
+  it("未确认时不携带请求体", async () => {
+    await submitApplicationReview("version-1");
+
+    const options = fetchMock.mock.calls[0]![1] as RequestInit;
+    expect(options.method).toBe("POST");
+    expect(options.body).toBeUndefined();
   });
 });

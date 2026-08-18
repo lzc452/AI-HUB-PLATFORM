@@ -240,8 +240,16 @@ export function useConfigureDelivery(applicationId: string | undefined) {
 export function useSubmitApplicationReview() {
   const invalidateCaches = useInvalidateApplicationCaches();
   return useMutation({
-    mutationFn: (applicationVersionId: string) =>
-      submitApplicationReview(applicationVersionId),
+    mutationFn: (input: {
+      applicationVersionId: string;
+      /** 制品未签名（signed=false）时，提交人已确认接受风险（规格 §5.5）。 */
+      acceptUnsigned?: boolean;
+    }) =>
+      input.acceptUnsigned === true
+        ? submitApplicationReview(input.applicationVersionId, {
+            acceptUnsigned: true,
+          })
+        : submitApplicationReview(input.applicationVersionId),
     onError: (error) =>
       showErrorMessage(toApplicationErrorMessage(error), "提交版本审核失败"),
     onSuccess: async () => {

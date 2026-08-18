@@ -10,6 +10,7 @@ import {
   Empty,
   Input,
   message,
+  Modal,
   Select,
   Spin,
   Switch,
@@ -167,6 +168,20 @@ export default function ApplicationDeliveryPage() {
     }
   };
 
+  const handleSubmitReview = () => {
+    if (latestVersion === undefined) return;
+    if (latestVersion.signed === false) {
+      confirmUnsignedReviewSubmission(
+        latestVersion.applicationVersionId,
+        (input) => submitReview.mutate(input),
+      );
+      return;
+    }
+    submitReview.mutate({
+      applicationVersionId: latestVersion.applicationVersionId,
+    });
+  };
+
   return (
     <ApplicationAdminPage
       description="配置四个独立交付渠道并提交最新版本审核。"
@@ -242,11 +257,7 @@ export default function ApplicationDeliveryPage() {
                   }
                   loading={submitReview.isPending}
                   type="primary"
-                  onClick={() => {
-                    if (latestVersion !== undefined) {
-                      submitReview.mutate(latestVersion.applicationVersionId);
-                    }
-                  }}
+                  onClick={() => handleSubmitReview()}
                 >
                   提交审核
                 </Button>
@@ -333,6 +344,60 @@ function getReviewReadiness(
     return { ready: false, message: "当前应用状态不允许提交审核" };
   }
   return { ready: true, message: "最新版本已通过制品校验，可以提交审核" };
+}
+
+/**
+ * 未签名制品（signed=false）提交审核前的风险确认（规格 §5.5）：
+ * 确认按钮在勾选「我已知晓该制品未签名并接受风险」前保持禁用，
+ * 勾选后经 modal.update 启用，确认提交时携带 acceptUnsigned=true。
+ */
+function confirmUnsignedReviewSubmission(
+  applicationVersionId: string,
+  submit: (input: {
+    applicationVersionId: string;
+    acceptUnsigned?: boolean;
+  }) => void,
+) {
+  const modal = Modal.confirm({
+    title: "提交未签名制品",
+    content: (
+      <UnsignedRiskConfirmContent
+        onAcceptChange={(accepted) => {
+          modal.update({ okButtonProps: { disabled: !accepted } });
+        }}
+      />
+    ),
+    okButtonProps: { disabled: true },
+    okText: "确认提交",
+    cancelText: "取消",
+    onOk: () => {
+      submit({ applicationVersionId, acceptUnsigned: true });
+    },
+  });
+}
+
+/** 未签名制品风险确认内容：勾选后回调启用确认按钮。 */
+function UnsignedRiskConfirmContent({
+  onAcceptChange,
+}: {
+  onAcceptChange: (accepted: boolean) => void;
+}) {
+  return (
+    <>
+      <Alert
+        showIcon
+        type="warning"
+        title="该制品未签名"
+        description="制品未经数字签名校验，审核时将显著标记该风险。请确认来源可信后再提交审核。"
+      />
+      <Checkbox
+        className="mt-3"
+        onChange={(event) => onAcceptChange(event.target.checked)}
+      >
+        我已知晓该制品未签名并接受风险
+      </Checkbox>
+    </>
+  );
 }
 
 function DeliveryEditor({

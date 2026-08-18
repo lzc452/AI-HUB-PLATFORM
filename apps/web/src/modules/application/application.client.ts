@@ -26,6 +26,8 @@ export interface ApplicationVersionRecord {
   artifactKey: string;
   artifactSha256: string;
   artifactSignature: string | null;
+  /** 制品是否已签名（源自后端关联 upload 记录；无制品或未知时为 null）。 */
+  signed: boolean | null;
   scanStatus: "pending" | "passed" | "failed";
   createdByEmployeeId: string;
   createdAt: string;
@@ -268,10 +270,17 @@ export function createApplication(input: {
 
 export function submitApplicationReview(
   applicationVersionId: string,
+  options?: { acceptUnsigned?: boolean },
 ): Promise<ApplicationRecord> {
   return apiFetch<ApplicationRecord>(
     `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/submit-review`,
-    { method: "POST" },
+    {
+      method: "POST",
+      // 未签名制品需显式确认接受风险后携带 acceptUnsigned（规格 §5.5）。
+      ...(options?.acceptUnsigned === true
+        ? { body: JSON.stringify({ acceptUnsigned: true }) }
+        : {}),
+    },
   );
 }
 
