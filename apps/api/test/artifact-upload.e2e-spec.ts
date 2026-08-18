@@ -417,6 +417,8 @@ describe("artifact upload API", () => {
     expect(completed.body.uploadStatus).toBe("completed");
     expect(completed.body.scanStatus).toBe("passed");
     expect(completed.body.signed).toBe(false);
+    // 未签名完成落 NULL（与 worker finalize 语义一致），门禁可达。
+    expect(completed.body.signature).toBeNull();
   });
 
   it("fails closed when verification is unavailable", async () => {

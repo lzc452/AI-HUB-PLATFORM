@@ -251,7 +251,9 @@ export class UnifiedUploadController {
       }
     }
 
-    // artifact kind：复用签名校验管线。
+    // artifact kind：复用签名校验管线。未签名（空串/缺省）以 signed=false 完成，
+    // 与 worker finalize 语义一致（signature 落 NULL），保证 createVersion /
+    // submitForReview 的 acceptUnsigned 门禁在该路径下同样生效（规格 §5.5）。
     const signature = body.signature ?? "";
     const result = await this.pipeline.verifyStoredArtifact({
       artifactKey: upload.objectKey,
@@ -270,7 +272,8 @@ export class UnifiedUploadController {
     const updated = await this.repository.updateArtifactUpload(uploadId, {
       uploadStatus: "completed",
       scanStatus: "passed",
-      signature,
+      signature: signature === "" ? null : signature,
+      signed: signature.length > 0,
       completedAt: new Date(),
       objectKey: finalKey,
     });

@@ -210,11 +210,12 @@ export class ArtifactUploadController {
       const finalObjectKey = `applications/${applicationId}/artifacts/${uploadId}`;
       await this.storage.copy(upload.objectKey, finalObjectKey);
       // 同步 pipeline 完成路径（测试替身）：显式写入 signed，由签名推导，
-      // 避免绕过 finalizeArtifactVerification 时未签名制品被默认标记为已签名。
+      // 避免绕过 finalizeArtifactVerification 时未签名制品被默认标记为已签名；
+      // 未签名（空串）落 NULL，与 worker finalize 语义一致，门禁可达。
       const completed = await this.repository.updateArtifactUpload(uploadId, {
         uploadStatus: "completed",
         scanStatus: "passed",
-        signature: body.signature,
+        signature: body.signature === "" ? null : body.signature,
         signed: body.signature.length > 0,
         objectKey: finalObjectKey,
         completedAt: new Date(),
