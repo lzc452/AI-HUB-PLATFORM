@@ -107,16 +107,21 @@ export class AnalyticsDashboardService {
         }
       }
       const allowed = new Set(metrics);
-      const snapshots = (await repository.readSnapshotCounts())
-        .filter((snapshot) => allowed.has(snapshot.metricKey))
-        .map((snapshot) => ({
-          metricKey: snapshot.metricKey,
-          metricVersion: 1,
-          day: to,
-          audienceScopeKey: "platform:snapshot",
-          value: snapshot.value,
-          sourceEventCount: 0,
-        }));
+      // demand_value 的指标（demand.converted_count 等）由审计事件按日派生，
+      // 与 readSnapshotCounts 的当前快照同 key，若合并会产生重复行导致 KPI 虚增。
+      const snapshots =
+        dashboardKey === "demand_value"
+          ? []
+          : (await repository.readSnapshotCounts())
+              .filter((snapshot) => allowed.has(snapshot.metricKey))
+              .map((snapshot) => ({
+                metricKey: snapshot.metricKey,
+                metricVersion: 1,
+                day: to,
+                audienceScopeKey: "platform:snapshot",
+                value: snapshot.value,
+                sourceEventCount: 0,
+              }));
       const dashboardResult = {
         dashboardKey,
         from,

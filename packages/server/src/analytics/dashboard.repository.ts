@@ -105,12 +105,12 @@ export class KyselyAnalyticsDashboardRepository
       .select([
         utcDaySql("a").as("day"),
         demandScopeSql.as("scope"),
-        sql<number>`round(avg(d.priority_score)::numeric, 2)::float8`.as(
+        sql<number>`round(avg((a.details->>'score')::numeric), 2)::float8`.as(
           "value",
         ),
       ])
       .where("a.event_type", "=", "demand.priority.updated")
-      .where("d.priority_score", "is not", null)
+      .where(sql`a.details->>'score'`, "is not", null)
       .where("a.created_at", ">=", from)
       .where("a.created_at", "<", to)
       .groupBy(["day", "scope"])

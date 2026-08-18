@@ -162,6 +162,39 @@ describe("AnalyticsDashboardService", () => {
     expect(derivedCalls).toEqual(["demand_value"]);
   });
 
+  it("does not merge snapshot rows into the demand_value dashboard (no duplicated converted_count)", async () => {
+    const repo = repository({
+      readDemandValueAggregates: async () => [
+        {
+          metricKey: "demand.converted_count",
+          day: "2026-08-03",
+          audienceScopeKey: "all",
+          value: 2,
+          sourceEventCount: 2,
+        },
+      ],
+      readSnapshotCounts: async () => [
+        { metricKey: "demand.converted_count", value: 99 },
+      ],
+    });
+
+    const result = await new AnalyticsDashboardService(repo).read(
+      actor([
+        PERMISSIONS.ANALYTICS_INNOVATION_READ,
+        PERMISSIONS.ANALYTICS_SCOPE_ALL,
+      ]),
+      "demand_value",
+      "2026-08-03",
+      "2026-08-04",
+    );
+
+    const converted = result.metrics.filter(
+      (metric) => metric.metricKey === "demand.converted_count",
+    );
+    expect(converted).toHaveLength(1);
+    expect(converted[0]?.value).toBe(2);
+  });
+
   it("forbids the demand_value dashboard without demand analytics permission", async () => {
     await expect(
       new AnalyticsDashboardService(repository()).read(
