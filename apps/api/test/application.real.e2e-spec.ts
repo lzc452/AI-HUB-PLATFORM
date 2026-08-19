@@ -749,7 +749,7 @@ describe("real application lifecycle API", () => {
       manualAssetId: null,
       examplesHtml: "<p>示例</p>",
       examplesAssetId: null,
-      faq: [],
+      faq: [{ question: "如何重置密码？", answer: "联系管理员" }],
       audience: [
         {
           audienceType: "department",
