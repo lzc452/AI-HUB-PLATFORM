@@ -24,6 +24,8 @@ const {
   recommendedState,
   reportMutateAsync,
   resolveDelivery,
+  riskState,
+  saveRiskMutateAsync,
 } = vi.hoisted(() => {
   const catalogEntryState = {
     data: undefined as CatalogEntry | undefined,
@@ -31,6 +33,11 @@ const {
     isError: false,
     isPending: true,
   };
+  const riskState = {
+    data: undefined as { riskDescription: string } | undefined,
+    isPending: false,
+  };
+  const saveRiskMutateAsync = vi.fn();
   const recommendedState = {
     data: {
       items: [
@@ -127,6 +134,8 @@ const {
     recommendedState,
     reportMutateAsync: vi.fn(),
     resolveDelivery: vi.fn(),
+    riskState,
+    saveRiskMutateAsync,
   };
 });
 
@@ -134,10 +143,10 @@ vi.mock("../../modules/marketplace/useCatalog", () => ({
   useCatalogEntry: () => catalogEntryState,
   useCatalogSearch: () => recommendedState,
   useVersions: () => ({ data: [], isPending: false }),
-  useRiskDescription: () => ({ data: undefined, isPending: false }),
+  useRiskDescription: () => riskState,
   useSaveRiskDescription: () => ({
     isPending: false,
-    mutate: vi.fn(),
+    mutateAsync: saveRiskMutateAsync,
   }),
 }));
 
@@ -236,6 +245,9 @@ describe("MarketplaceDetailPage", () => {
     downloadDeliveryAsset.mockReset();
     reportMutateAsync.mockReset();
     rateMutate.mockReset();
+    riskState.data = undefined;
+    riskState.isPending = false;
+    saveRiskMutateAsync.mockReset();
     // Modal.info 等静态方法挂载在独立 React root，cleanup 不会卸载，需显式销毁。
     Modal.destroyAll();
     globalThis.window.history.pushState({}, "", "/marketplace/app-ocr");
@@ -331,6 +343,85 @@ describe("MarketplaceDetailPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "描述" }));
     expect(await screen.findByText("详细介绍")).toBeInTheDocument();
     expect(globalThis.window.location.search).not.toContain("tab=");
+  });
+
+  it("非所有者（canEditRisk=false）不显示风险说明编辑按钮", async () => {
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "风险说明" }));
+
+    expect(await screen.findByText("暂无风险说明")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "编辑" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("所有者可编辑风险说明：预填现有内容、trim 后保存、成功后退出编辑态并提示", async () => {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      capabilities: {
+        ...mockEntry().capabilities!,
+        canEditRisk: true,
+      },
+    };
+    riskState.data = { riskDescription: "旧风险说明" };
+    saveRiskMutateAsync.mockResolvedValue({
+      riskDescription: "新风险说明",
+    });
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "风险说明" }));
+
+    const editButton = await screen.findByRole("button", { name: "编辑" });
+    expect(screen.getByText("旧风险说明")).toBeInTheDocument();
+    fireEvent.click(editButton);
+
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveValue("旧风险说明");
+    fireEvent.change(textarea, { target: { value: " 新风险说明 " } });
+    fireEvent.click(screen.getByRole("button", { name: /保\s*存/ }));
+
+    await waitFor(() =>
+      expect(saveRiskMutateAsync).toHaveBeenCalledWith("新风险说明"),
+    );
+    // 保存成功后退出编辑态，编辑按钮重新可见。
+    expect(
+      await screen.findByRole("button", { name: "编辑" }),
+    ).toBeInTheDocument();
+  });
+
+  it("风险说明保存失败时编辑区保持打开、草稿保留并提示错误", async () => {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      capabilities: {
+        ...mockEntry().capabilities!,
+        canEditRisk: true,
+      },
+    };
+    riskState.data = { riskDescription: "旧风险说明" };
+    saveRiskMutateAsync.mockRejectedValue(new Error("服务暂不可用"));
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "风险说明" }));
+    fireEvent.click(await screen.findByRole("button", { name: "编辑" }));
+
+    const textarea = screen.getByRole("textbox");
+    fireEvent.change(textarea, { target: { value: "新风险说明" } });
+    fireEvent.click(screen.getByRole("button", { name: /保\s*存/ }));
+
+    // 错误提示由 useSaveRiskDescription 处理；编辑区保持打开、草稿未丢失，可修改重试。
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /保\s*存/ }),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("textbox")).toHaveValue("新风险说明");
+    expect(
+      screen.queryByRole("button", { name: "编辑" }),
+    ).not.toBeInTheDocument();
   });
 
   it("lists related applications excluding the current entry", async () => {

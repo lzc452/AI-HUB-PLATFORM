@@ -13,7 +13,7 @@ export interface MarketplaceDetailRiskProps {
   risk: RiskDescription | undefined;
   isPending: boolean;
   isOwner: boolean;
-  onSave: (description: string) => void;
+  onSave: (description: string) => Promise<void>;
   savePending: boolean;
 }
 
@@ -33,9 +33,14 @@ export function MarketplaceDetailRisk({
     setEditing(true);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (draft.trim().length === 0) return;
-    onSave(draft.trim());
+    try {
+      await onSave(draft.trim());
+    } catch {
+      // 失败时错误提示由 useSaveRiskDescription 处理，编辑区保持打开便于修改重试。
+      return;
+    }
     setEditing(false);
   }
 

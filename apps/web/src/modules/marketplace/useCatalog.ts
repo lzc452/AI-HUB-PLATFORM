@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import {
   getCatalogEntry,
   getRiskDescription,
@@ -45,10 +46,12 @@ export function useSaveRiskDescription(applicationId: string | undefined) {
   return useMutation({
     mutationFn: (riskDescription: string) =>
       saveRiskDescription(applicationId as string, riskDescription),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onError: (error) => showErrorMessage(error, "保存风险说明失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
         queryKey: ["catalog", "risk", applicationId],
       });
+      showSuccessMessage("风险说明已保存");
     },
   });
 }

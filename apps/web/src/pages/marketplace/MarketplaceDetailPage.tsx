@@ -301,10 +301,12 @@ export default function MarketplaceDetailPage() {
               )}
               {tab.key === "risk" && (
                 <MarketplaceDetailRisk
-                  isOwner={false}
+                  isOwner={data.capabilities?.canEditRisk ?? false}
                   isPending={risk.isPending}
                   risk={risk.data}
-                  onSave={(desc) => saveRisk.mutate(desc)}
+                  onSave={(desc) =>
+                    saveRisk.mutateAsync(desc).then(() => undefined)
+                  }
                   savePending={saveRisk.isPending}
                 />
               )}
