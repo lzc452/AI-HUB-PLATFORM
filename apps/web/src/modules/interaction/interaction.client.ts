@@ -73,6 +73,21 @@ export function restoreComment(
   );
 }
 
+/** 举报评论（含官方回复）。后端 DTO 仅接受 reason 字段。 */
+export function reportComment(
+  applicationId: string,
+  commentId: string,
+  input: { reason: string },
+): Promise<unknown> {
+  return apiFetch<unknown>(
+    `${interactionsPath(applicationId)}/comments/${encodeURIComponent(commentId)}/reports`,
+    {
+      body: JSON.stringify({ reason: input.reason }),
+      method: "POST",
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // 评论（普通员工根评论 / 官方回复）与应用反馈
 // ---------------------------------------------------------------------------

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { Modal } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +21,7 @@ const {
   downloadDeliveryAsset,
   feedbackMutate,
   recommendedState,
+  reportMutateAsync,
   resolveDelivery,
 } = vi.hoisted(() => {
   const catalogEntryState = {
@@ -110,6 +117,7 @@ const {
     downloadDeliveryAsset: vi.fn(),
     feedbackMutate,
     recommendedState,
+    reportMutateAsync: vi.fn(),
     resolveDelivery: vi.fn(),
   };
 });
@@ -159,6 +167,10 @@ vi.mock("../../modules/interaction/useInteraction", () => ({
     mutateAsync: commentMutateAsync,
   }),
   useCreateFeedback: () => ({ isPending: false, mutateAsync: vi.fn() }),
+  useReportComment: () => ({
+    isPending: false,
+    mutateAsync: reportMutateAsync,
+  }),
   useMyFeedback: () => ({ data: [], isPending: false }),
   useApplicationFeedback: () => ({
     data: applicationFeedbackState.data,
@@ -214,6 +226,7 @@ describe("MarketplaceDetailPage", () => {
     catalogEntryState.isPending = false;
     resolveDelivery.mockReset();
     downloadDeliveryAsset.mockReset();
+    reportMutateAsync.mockReset();
     // Modal.info 等静态方法挂载在独立 React root，cleanup 不会卸载，需显式销毁。
     Modal.destroyAll();
     globalThis.window.history.pushState({}, "", "/marketplace/app-ocr");
@@ -422,6 +435,60 @@ describe("MarketplaceDetailPage", () => {
       parentCommentId: "comment-1",
       body: "该能力已在规划中",
     });
+  });
+
+  it("员工可举报评论与官方回复", async () => {
+    commentsState.data = {
+      items: [
+        {
+          applicationId: "app-ocr",
+          applicationVersionId: "ver-1",
+          authorEmployeeId: "E200",
+          body: "希望支持批量识别",
+          commentId: "comment-1",
+          createdAt: "2026-08-15T10:00:00.000Z",
+          displayAnonymously: false,
+          hiddenAt: null,
+          parentCommentId: null,
+          updatedAt: "2026-08-15T10:00:00.000Z",
+        },
+        {
+          applicationId: "app-ocr",
+          applicationVersionId: "ver-1",
+          authorEmployeeId: "E100",
+          body: "该能力已在规划中",
+          commentId: "reply-1",
+          createdAt: "2026-08-15T10:00:00.000Z",
+          displayAnonymously: false,
+          hiddenAt: null,
+          parentCommentId: "comment-1",
+          updatedAt: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+      total: 2,
+    };
+    reportMutateAsync.mockResolvedValue({ reportId: "report-1" });
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "评价管理" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "举报 reply-1" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(
+      within(dialog).getByLabelText("举报原因"),
+      { target: { value: "官方回复涉嫌攻击" } },
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "提交举报" }));
+
+    await waitFor(() =>
+      expect(reportMutateAsync).toHaveBeenCalledWith({
+        commentId: "reply-1",
+        reason: "官方回复涉嫌攻击",
+      }),
+    );
   });
 
   it("所有者可在反馈管理中处理员工反馈", async () => {

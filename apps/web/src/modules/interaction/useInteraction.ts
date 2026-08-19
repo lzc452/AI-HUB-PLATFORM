@@ -15,6 +15,7 @@ import {
   listMyFeedback,
   listRatings,
   rateApplication,
+  reportComment,
   restoreComment,
   toggleLike,
   updateFeedbackStatus,
@@ -153,6 +154,17 @@ export function useHideComment(applicationId: string | undefined) {
       });
       showSuccessMessage("评论已隐藏");
     },
+  });
+}
+
+export function useReportComment(applicationId: string | undefined) {
+  return useMutation({
+    mutationFn: (input: { commentId: string; reason: string }) =>
+      reportComment(applicationId as string, input.commentId, {
+        reason: input.reason,
+      }),
+    onError: (error) => showErrorMessage(error, "举报提交失败"),
+    onSuccess: () => showSuccessMessage("举报已提交，感谢反馈"),
   });
 }
 

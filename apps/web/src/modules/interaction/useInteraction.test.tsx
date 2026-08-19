@@ -4,9 +4,10 @@ import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../shared/api/client";
-import { useToggleLike } from "./useInteraction";
+import { useReportComment, useToggleLike } from "./useInteraction";
 
 const hoisted = vi.hoisted(() => ({
+  reportComment: vi.fn(),
   showErrorMessage: vi.fn(),
   showSuccessMessage: vi.fn(),
   toggleLike: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock("./interaction.client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./interaction.client")>();
   return {
     ...actual,
+    reportComment: hoisted.reportComment,
     toggleLike: hoisted.toggleLike,
   };
 });
@@ -80,6 +82,59 @@ function createQueryClient() {
     },
   });
 }
+
+describe("useReportComment", () => {
+  beforeEach(() => {
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+    hoisted.reportComment.mockReset();
+  });
+
+  it("提交成功后提示“举报已提交，感谢反馈”", async () => {
+    hoisted.reportComment.mockResolvedValue({ reportId: "report-1" });
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useReportComment("app-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        commentId: "comment-1",
+        reason: "包含不当内容",
+      });
+    });
+
+    expect(hoisted.reportComment).toHaveBeenCalledWith("app-1", "comment-1", {
+      reason: "包含不当内容",
+    });
+    await waitFor(() =>
+      expect(hoisted.showSuccessMessage).toHaveBeenCalledWith(
+        "举报已提交，感谢反馈",
+      ),
+    );
+  });
+
+  it("失败时提示“举报提交失败”", async () => {
+    hoisted.reportComment.mockRejectedValue(
+      new ApiError(400, "COMMENT_NOT_FOUND", "评论不存在"),
+    );
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useReportComment("app-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ commentId: "comment-1", reason: "x" }),
+      ).rejects.toBeInstanceOf(ApiError);
+    });
+
+    expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
+      expect.any(ApiError),
+      "举报提交失败",
+    );
+  });
+});
 
 describe("useToggleLike", () => {
   beforeEach(() => {

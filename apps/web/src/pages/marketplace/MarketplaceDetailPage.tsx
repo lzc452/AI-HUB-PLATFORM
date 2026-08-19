@@ -45,6 +45,7 @@ import {
   useMyFeedback,
   useRateApplication,
   useRatings,
+  useReportComment,
   useRestoreComment,
   useToggleLike,
   useUpdateFeedbackStatus,
@@ -121,6 +122,9 @@ export default function MarketplaceDetailPage() {
     activeTab === "reviews" ? applicationId : undefined,
   );
   const restoreComment = useRestoreComment(
+    activeTab === "reviews" ? applicationId : undefined,
+  );
+  const reportComment = useReportComment(
     activeTab === "reviews" ? applicationId : undefined,
   );
   const createComment = useCreateComment(
@@ -275,6 +279,7 @@ export default function MarketplaceDetailPage() {
                   onRestoreComment={(id) => restoreComment.mutate(id)}
                   onRatingsPageChange={setRatingsPage}
                   ratings={ratings.data}
+                  reportComment={reportComment}
                   ratingsPage={ratingsPage}
                   ratingsPending={ratings.isPending}
                   updateFeedback={updateFeedback}

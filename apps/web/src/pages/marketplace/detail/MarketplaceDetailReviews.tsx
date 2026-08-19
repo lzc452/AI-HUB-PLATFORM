@@ -11,6 +11,7 @@ import {
   Empty,
   Form,
   Input,
+  Modal,
   Pagination,
   Radio,
   Select,
@@ -70,6 +71,7 @@ function CommentThread({
   comment,
   isModerator,
   onHide,
+  onReport,
   onReplyCancel,
   onReplyChange,
   onReplyStart,
@@ -84,6 +86,7 @@ function CommentThread({
   comment: CommentOutput;
   isModerator: boolean;
   onHide: (id: string) => void;
+  onReport: (id: string) => void;
   onReplyCancel: () => void;
   onReplyChange: (value: string) => void;
   onReplyStart: (id: string) => void;
@@ -118,21 +121,31 @@ function CommentThread({
               </Tag>
             )}
           </div>
-          {isModerator && (
+          <div className="flex shrink-0 items-center gap-1">
             <Button
-              danger={!isHidden}
-              icon={isHidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-              onClick={() =>
-                isHidden
-                  ? onRestore(comment.commentId)
-                  : onHide(comment.commentId)
-              }
+              aria-label={`举报 ${comment.commentId}`}
+              onClick={() => onReport(comment.commentId)}
               size="small"
               type="link"
             >
-              {isHidden ? "恢复" : "隐藏"}
+              举报
             </Button>
-          )}
+            {isModerator && (
+              <Button
+                danger={!isHidden}
+                icon={isHidden ? <EyeOutlined /> : <EyeInvisibleOutlined />}
+                onClick={() =>
+                  isHidden
+                    ? onRestore(comment.commentId)
+                    : onHide(comment.commentId)
+                }
+                size="small"
+                type="link"
+              >
+                {isHidden ? "恢复" : "隐藏"}
+              </Button>
+            )}
+          </div>
         </div>
         <p
           className={`!mb-0 text-sm leading-relaxed ${
@@ -204,27 +217,37 @@ function CommentThread({
                     </Tag>
                   )}
                 </div>
-                {isModerator && (
+                <div className="flex shrink-0 items-center gap-1">
                   <Button
-                    danger={!reply.hiddenAt}
-                    icon={
-                      reply.hiddenAt ? (
-                        <EyeOutlined />
-                      ) : (
-                        <EyeInvisibleOutlined />
-                      )
-                    }
-                    onClick={() =>
-                      reply.hiddenAt
-                        ? onRestore(reply.commentId)
-                        : onHide(reply.commentId)
-                    }
+                    aria-label={`举报 ${reply.commentId}`}
+                    onClick={() => onReport(reply.commentId)}
                     size="small"
                     type="link"
                   >
-                    {reply.hiddenAt ? "恢复" : "隐藏"}
+                    举报
                   </Button>
-                )}
+                  {isModerator && (
+                    <Button
+                      danger={!reply.hiddenAt}
+                      icon={
+                        reply.hiddenAt ? (
+                          <EyeOutlined />
+                        ) : (
+                          <EyeInvisibleOutlined />
+                        )
+                      }
+                      onClick={() =>
+                        reply.hiddenAt
+                          ? onRestore(reply.commentId)
+                          : onHide(reply.commentId)
+                      }
+                      size="small"
+                      type="link"
+                    >
+                      {reply.hiddenAt ? "恢复" : "隐藏"}
+                    </Button>
+                  )}
+                </div>
               </div>
               <p
                 className={`!mb-0 text-sm ${
@@ -332,6 +355,11 @@ export interface MarketplaceDetailReviewsProps {
   isModerator: boolean;
   onHideComment: (commentId: string) => void;
   onRestoreComment: (commentId: string) => void;
+  reportComment: UseMutationResult<
+    unknown,
+    unknown,
+    { commentId: string; reason: string }
+  >;
   createComment: UseMutationResult<
     CommentOutputExt,
     unknown,
@@ -365,6 +393,7 @@ export function MarketplaceDetailReviews({
   isModerator,
   onHideComment,
   onRestoreComment,
+  reportComment,
   createComment,
   createFeedback,
   myFeedback,
@@ -377,6 +406,8 @@ export function MarketplaceDetailReviews({
     type: FeedbackRecord["type"];
     body: string;
   }>();
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [reportForm] = Form.useForm<{ reason: string }>();
 
   const ratingsPageSize = 10;
   const commentsPageSize = 10;
@@ -417,6 +448,27 @@ export function MarketplaceDetailReviews({
     });
     setReplyTargetId(null);
     setReplyDraft("");
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportTargetId) return;
+    try {
+      const values = await reportForm.validateFields();
+      // 失败时错误提示由 useReportComment 处理，弹窗保持打开便于修改重试。
+      await reportComment.mutateAsync({
+        commentId: reportTargetId,
+        reason: values.reason.trim(),
+      });
+    } catch {
+      return;
+    }
+    setReportTargetId(null);
+    reportForm.resetFields();
+  };
+
+  const closeReportModal = () => {
+    setReportTargetId(null);
+    reportForm.resetFields();
   };
 
   return (
@@ -522,6 +574,7 @@ export function MarketplaceDetailReviews({
                   isModerator={isModerator}
                   key={root.commentId}
                   onHide={onHideComment}
+                  onReport={setReportTargetId}
                   onReplyCancel={() => {
                     setReplyTargetId(null);
                     setReplyDraft("");
@@ -656,6 +709,37 @@ export function MarketplaceDetailReviews({
           </div>
         ) : null}
       </section>
+
+      {/* 评论举报弹窗 */}
+      <Modal
+        cancelText="取消"
+        confirmLoading={reportComment.isPending}
+        okText="提交举报"
+        onCancel={closeReportModal}
+        onOk={() => void handleSubmitReport()}
+        open={reportTargetId !== null}
+        title="举报评论"
+      >
+        <Form
+          form={reportForm}
+          layout="vertical"
+          name="report-comment"
+        >
+          <Form.Item
+            label="举报原因"
+            name="reason"
+            rules={[{ required: true, message: "请填写举报原因" }]}
+          >
+            <Input.TextArea
+              autoFocus
+              maxLength={500}
+              placeholder="请描述举报原因，例如：包含不当内容、恶意攻击等…"
+              rows={4}
+              showCount
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

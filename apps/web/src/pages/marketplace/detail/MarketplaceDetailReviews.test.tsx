@@ -1,0 +1,208 @@
+import type { CommentOutput } from "@ai-hub/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import type { PropsWithChildren } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { useReportComment } from "../../../modules/interaction/useInteraction";
+import { ApiError } from "../../../shared/api/client";
+import { MarketplaceDetailReviews } from "./MarketplaceDetailReviews";
+
+const hoisted = vi.hoisted(() => ({
+  reportComment: vi.fn(),
+  showErrorMessage: vi.fn(),
+  showSuccessMessage: vi.fn(),
+}));
+
+vi.mock(
+  "../../../modules/interaction/interaction.client",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("../../../modules/interaction/interaction.client")
+      >();
+    return { ...actual, reportComment: hoisted.reportComment };
+  },
+);
+
+vi.mock("../../../shared/ui/message", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../shared/ui/message")>();
+  return {
+    ...actual,
+    showErrorMessage: hoisted.showErrorMessage,
+    showSuccessMessage: hoisted.showSuccessMessage,
+  };
+});
+
+const rootComment: CommentOutput = {
+  applicationId: "app-1",
+  applicationVersionId: "ver-1",
+  authorEmployeeId: "E100",
+  body: "希望支持批量识别",
+  commentId: "comment-1",
+  createdAt: "2026-08-15T10:00:00.000Z",
+  displayAnonymously: false,
+  hiddenAt: null,
+  parentCommentId: null,
+  updatedAt: "2026-08-15T10:00:00.000Z",
+};
+
+const officialReply: CommentOutput = {
+  ...rootComment,
+  authorEmployeeId: "E200",
+  body: "该能力已在规划中",
+  commentId: "reply-1",
+  parentCommentId: "comment-1",
+};
+
+function stubMutation<T>(): T {
+  return {
+    isPending: false,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(async () => undefined),
+  } as unknown as T;
+}
+
+/** 用真实 useReportComment 接线组件，便于在组件测试中验证成功/错误提示。 */
+function ReviewsHarness() {
+  const reportComment = useReportComment("app-1");
+  return (
+    <MarketplaceDetailReviews
+      applicationFeedback={[]}
+      canReplyOfficial={false}
+      comments={{ items: [rootComment, officialReply], total: 2 }}
+      commentsPage={1}
+      commentsPending={false}
+      createComment={stubMutation()}
+      createFeedback={stubMutation()}
+      isModerator={false}
+      myFeedback={[]}
+      onCommentsPageChange={() => undefined}
+      onHideComment={() => undefined}
+      onRestoreComment={() => undefined}
+      onRatingsPageChange={() => undefined}
+      ratings={{ items: [], total: 0 }}
+      ratingsPage={1}
+      ratingsPending={false}
+      reportComment={reportComment}
+      updateFeedback={stubMutation()}
+    />
+  );
+}
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: { retry: false },
+    },
+  });
+  return function Wrapper({ children }: PropsWithChildren) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  };
+}
+
+function renderReviews() {
+  return render(<ReviewsHarness />, { wrapper: createWrapper() });
+}
+
+describe("MarketplaceDetailReviews 评论举报", () => {
+  beforeEach(() => {
+    hoisted.reportComment.mockReset();
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+  });
+
+  it("每条评论与官方回复都有举报入口", () => {
+    renderReviews();
+
+    expect(
+      screen.getByRole("button", { name: "举报 comment-1" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "举报 reply-1" }),
+    ).toBeInTheDocument();
+  });
+
+  it("举报原因为空时不提交并提示校验错误", async () => {
+    renderReviews();
+    fireEvent.click(screen.getByRole("button", { name: "举报 comment-1" }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "提交举报" }),
+    );
+
+    expect(await within(dialog).findByText("请填写举报原因")).toBeInTheDocument();
+    expect(hoisted.reportComment).not.toHaveBeenCalled();
+  });
+
+  it("填写原因提交后调用 reportComment、提示成功并关闭弹窗", async () => {
+    hoisted.reportComment.mockResolvedValue({ reportId: "report-1" });
+    renderReviews();
+    fireEvent.click(screen.getByRole("button", { name: "举报 comment-1" }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("举报原因"), {
+      target: { value: "包含不当内容" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "提交举报" }),
+    );
+
+    await waitFor(() =>
+      expect(hoisted.reportComment).toHaveBeenCalledWith("app-1", "comment-1", {
+        reason: "包含不当内容",
+      }),
+    );
+    await waitFor(() =>
+      expect(hoisted.showSuccessMessage).toHaveBeenCalledWith(
+        "举报已提交，感谢反馈",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("提交失败时提示错误且弹窗保留原内容供重试", async () => {
+    hoisted.reportComment.mockRejectedValue(
+      new ApiError(400, "COMMENT_NOT_FOUND", "评论不存在"),
+    );
+    renderReviews();
+    fireEvent.click(screen.getByRole("button", { name: "举报 reply-1" }));
+
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("举报原因"), {
+      target: { value: "官方回复涉嫌攻击" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "提交举报" }),
+    );
+
+    await waitFor(() =>
+      expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
+        expect.any(ApiError),
+        "举报提交失败",
+      ),
+    );
+    expect(hoisted.reportComment).toHaveBeenCalledWith("app-1", "reply-1", {
+      reason: "官方回复涉嫌攻击",
+    });
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("dialog")).getByDisplayValue("官方回复涉嫌攻击"),
+    ).toBeInTheDocument();
+  });
+});
