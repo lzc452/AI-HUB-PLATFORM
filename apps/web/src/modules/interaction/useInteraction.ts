@@ -108,8 +108,12 @@ export function useToggleLike(applicationId: string | undefined) {
 export function useRateApplication(applicationId: string | undefined) {
   const invalidateCatalog = useInvalidateCatalog();
   return useMutation({
-    mutationFn: (stars: number) =>
-      rateApplication(applicationId as string, stars),
+    mutationFn: (input: { stars: number; displayAnonymously?: boolean }) =>
+      rateApplication(
+        applicationId as string,
+        input.stars,
+        input.displayAnonymously ?? false,
+      ),
     onError: (error) => showErrorMessage(error, "评分操作失败"),
     onSuccess: async () => {
       await invalidateCatalog();
@@ -186,8 +190,11 @@ export function useRestoreComment(applicationId: string | undefined) {
 export function useCreateComment(applicationId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { parentCommentId?: string | null; body: string }) =>
-      createComment(applicationId as string, input),
+    mutationFn: (input: {
+      parentCommentId?: string | null;
+      body: string;
+      displayAnonymously?: boolean;
+    }) => createComment(applicationId as string, input),
     onError: (error) => showErrorMessage(error, "发表评论失败"),
     onSuccess: () => {
       queryClient.invalidateQueries({

@@ -238,7 +238,9 @@ export default function MarketplaceDetailPage() {
         likedByMe={data.likedByMe}
         myRating={data.myRating}
         onLike={() => toggleLike.mutate()}
-        onRate={(stars) => rateApplication.mutate(stars)}
+        onRate={(stars, displayAnonymously) =>
+          rateApplication.mutate({ stars, displayAnonymously })
+        }
         onResolve={(channel) => void handleResolve(channel)}
         ratingDisabled={Boolean(!applicationId || rateApplication.isPending)}
         ratingPending={rateApplication.isPending}

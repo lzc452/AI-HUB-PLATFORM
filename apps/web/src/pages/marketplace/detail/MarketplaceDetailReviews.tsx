@@ -16,6 +16,7 @@ import {
   Radio,
   Select,
   Skeleton,
+  Switch,
   Tag,
   Typography,
 } from "antd";
@@ -397,7 +398,11 @@ export interface MarketplaceDetailReviewsProps {
   createComment: UseMutationResult<
     CommentOutputExt,
     unknown,
-    { parentCommentId?: string | null; body: string }
+    {
+      parentCommentId?: string | null;
+      body: string;
+      displayAnonymously?: boolean;
+    }
   >;
   createFeedback: UseMutationResult<
     FeedbackRecord,
@@ -433,7 +438,10 @@ export function MarketplaceDetailReviews({
   myFeedback,
   updateFeedback,
 }: MarketplaceDetailReviewsProps) {
-  const [commentForm] = Form.useForm<{ body: string }>();
+  const [commentForm] = Form.useForm<{
+    body: string;
+    displayAnonymously?: boolean;
+  }>();
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
   const [feedbackForm] = Form.useForm<{
@@ -461,7 +469,10 @@ export function MarketplaceDetailReviews({
   const handleSubmitComment = async () => {
     const values = await commentForm.validateFields();
     if (!values.body.trim()) return;
-    await createComment.mutateAsync({ body: values.body.trim() });
+    await createComment.mutateAsync({
+      body: values.body.trim(),
+      displayAnonymously: values.displayAnonymously ?? false,
+    });
     commentForm.resetFields();
   };
 
@@ -524,7 +535,20 @@ export function MarketplaceDetailReviews({
               rows={3}
             />
           </Form.Item>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <Form.Item
+                initialValue={false}
+                name="displayAnonymously"
+                noStyle
+                valuePropName="checked"
+              >
+                <Switch size="small" />
+              </Form.Item>
+              <Text type="secondary" className="!text-xs">
+                匿名展示不影响后台审计
+              </Text>
+            </label>
             <Button
               loading={createComment.isPending}
               onClick={() => void handleSubmitComment()}

@@ -20,9 +20,10 @@ export function toggleLike(applicationId: string): Promise<unknown> {
 export function rateApplication(
   applicationId: string,
   stars: number,
+  displayAnonymously = false,
 ): Promise<unknown> {
   return apiFetch<unknown>(`${interactionsPath(applicationId)}/rating`, {
-    body: JSON.stringify({ stars }),
+    body: JSON.stringify({ stars, displayAnonymously }),
     method: "POST",
   });
 }
@@ -99,7 +100,11 @@ export interface CommentOutputExt extends CommentOutput {
 /** 发表评论：parentCommentId 为空创建根评论；提供时为官方回复（需 owner/maintainer）。 */
 export function createComment(
   applicationId: string,
-  input: { parentCommentId?: string | null; body: string },
+  input: {
+    parentCommentId?: string | null;
+    body: string;
+    displayAnonymously?: boolean;
+  },
 ): Promise<CommentOutputExt> {
   return apiFetch<CommentOutputExt>(
     `${interactionsPath(applicationId)}/comments`,
@@ -107,6 +112,7 @@ export function createComment(
       body: JSON.stringify({
         parentCommentId: input.parentCommentId ?? null,
         body: input.body,
+        displayAnonymously: input.displayAnonymously ?? false,
       }),
       method: "POST",
     },

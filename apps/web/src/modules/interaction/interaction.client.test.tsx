@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { reportComment } from "./interaction.client";
+import {
+  createComment,
+  rateApplication,
+  reportComment,
+} from "./interaction.client";
 
 describe("reportComment", () => {
   beforeEach(() => {
@@ -43,5 +47,88 @@ describe("reportComment", () => {
     await expect(
       reportComment("app-1", "missing", { reason: "不当内容" }),
     ).rejects.toMatchObject({ status: 404, code: "UNKNOWN" });
+  });
+});
+
+describe("rateApplication", () => {
+  beforeEach(() => {
+    vi.mocked(globalThis.fetch).mockClear();
+  });
+
+  it("默认提交实名评分（displayAnonymously: false）", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(Response.json({ ratingId: "rating-1" }));
+
+    await rateApplication("app-1", 4);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/internal/applications/app-1/interactions/rating",
+      expect.objectContaining({
+        body: JSON.stringify({ stars: 4, displayAnonymously: false }),
+        method: "POST",
+      }),
+    );
+  });
+
+  it("传入 displayAnonymously: true 时提交匿名评分", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(Response.json({ ratingId: "rating-1" }));
+
+    await rateApplication("app-1", 5, true);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/internal/applications/app-1/interactions/rating",
+      expect.objectContaining({
+        body: JSON.stringify({ stars: 5, displayAnonymously: true }),
+        method: "POST",
+      }),
+    );
+  });
+});
+
+describe("createComment", () => {
+  beforeEach(() => {
+    vi.mocked(globalThis.fetch).mockClear();
+  });
+
+  it("默认提交实名评论（displayAnonymously: false）", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(Response.json({ commentId: "comment-1" }));
+
+    await createComment("app-1", { body: "很好用" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/internal/applications/app-1/interactions/comments",
+      expect.objectContaining({
+        body: JSON.stringify({
+          parentCommentId: null,
+          body: "很好用",
+          displayAnonymously: false,
+        }),
+        method: "POST",
+      }),
+    );
+  });
+
+  it("传入 displayAnonymously: true 时提交匿名评论", async () => {
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockResolvedValueOnce(Response.json({ commentId: "comment-2" }));
+
+    await createComment("app-1", {
+      body: "匿名反馈",
+      displayAnonymously: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/internal/applications/app-1/interactions/comments",
+      expect.objectContaining({
+        body: JSON.stringify({
+          parentCommentId: null,
+          body: "匿名反馈",
+          displayAnonymously: true,
+        }),
+        method: "POST",
+      }),
+    );
   });
 });

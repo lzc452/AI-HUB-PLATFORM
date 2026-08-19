@@ -1,6 +1,7 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeFilled, LikeOutlined, StarFilled } from "@ant-design/icons";
-import { Button, Dropdown, Rate, Tag, Typography } from "antd";
+import { Button, Dropdown, Rate, Switch, Tag, Typography } from "antd";
+import { useState } from "react";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import type { DeliveryChannel } from "../../../modules/marketplace/marketplace.client";
@@ -20,7 +21,7 @@ const { Text, Title } = Typography;
 export interface MarketplaceDetailHeaderProps {
   entry: CatalogEntry;
   onLike: () => void;
-  onRate: (stars: number) => void;
+  onRate: (stars: number, displayAnonymously: boolean) => void;
   onResolve: (channel: DeliveryChannel) => void;
   resolving: boolean;
   ratingDisabled: boolean;
@@ -45,6 +46,7 @@ export function MarketplaceDetailHeader({
   ratingPending,
   myRating = 0,
 }: MarketplaceDetailHeaderProps) {
+  const [anonymousRating, setAnonymousRating] = useState(false);
   const departments = useDepartments();
   const departmentName = departments.data?.find(
     (item) => item.departmentId === entry.departmentId,
@@ -150,9 +152,17 @@ export function MarketplaceDetailHeader({
               <Rate
                 aria-label="为应用评分"
                 disabled={ratingDisabled}
-                onChange={(stars) => onRate(stars)}
+                onChange={(stars) => onRate(stars, anonymousRating)}
                 value={ratingPending ? 0 : (myRating ?? 0)}
               />
+              <label className="inline-flex cursor-pointer items-center gap-1">
+                <Switch
+                  checked={anonymousRating}
+                  onChange={setAnonymousRating}
+                  size="small"
+                />
+                <span className="text-xs text-[#8c8c8c]">匿名评分</span>
+              </label>
             </span>
           </section>
 

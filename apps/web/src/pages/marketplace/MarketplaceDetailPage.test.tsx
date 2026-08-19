@@ -20,6 +20,7 @@ const {
   commentsState,
   downloadDeliveryAsset,
   feedbackMutate,
+  rateMutate,
   recommendedState,
   reportMutateAsync,
   resolveDelivery,
@@ -122,6 +123,7 @@ const {
     commentsState,
     downloadDeliveryAsset: vi.fn(),
     feedbackMutate,
+    rateMutate: vi.fn(),
     recommendedState,
     reportMutateAsync: vi.fn(),
     resolveDelivery: vi.fn(),
@@ -157,7 +159,7 @@ vi.mock("../../modules/interaction/useInteraction", () => ({
   useRateApplication: () => ({
     isError: false,
     isPending: false,
-    mutate: vi.fn(),
+    mutate: rateMutate,
   }),
   useToggleLike: () => ({
     isError: false,
@@ -233,6 +235,7 @@ describe("MarketplaceDetailPage", () => {
     resolveDelivery.mockReset();
     downloadDeliveryAsset.mockReset();
     reportMutateAsync.mockReset();
+    rateMutate.mockReset();
     // Modal.info 等静态方法挂载在独立 React root，cleanup 不会卸载，需显式销毁。
     Modal.destroyAll();
     globalThis.window.history.pushState({}, "", "/marketplace/app-ocr");
@@ -369,6 +372,34 @@ describe("MarketplaceDetailPage", () => {
 
     await screen.findByRole("heading", { name: "OCR 票据识别" });
     expect(container.querySelectorAll(".ant-rate-star-full").length).toBe(0);
+  });
+
+  it("评分提交默认实名（displayAnonymously: false）", async () => {
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    const rate = screen.getByLabelText("为应用评分");
+    fireEvent.click(within(rate).getAllByRole("radio")[3]!);
+
+    expect(rateMutate).toHaveBeenCalledWith({
+      stars: 4,
+      displayAnonymously: false,
+    });
+  });
+
+  it("开启匿名评分开关后评分提交携带 displayAnonymously: true", async () => {
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    expect(screen.getByText("匿名评分")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("switch"));
+    const rate = screen.getByLabelText("为应用评分");
+    fireEvent.click(within(rate).getAllByRole("radio")[4]!);
+
+    expect(rateMutate).toHaveBeenCalledWith({
+      stars: 5,
+      displayAnonymously: true,
+    });
   });
 
   it("已点赞时按钮高亮为“已赞”主题样式", async () => {

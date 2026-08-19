@@ -1,5 +1,9 @@
 import type { CommentOutput, RatingOutput } from "@ai-hub/contracts";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  type UseMutationResult,
+} from "@tanstack/react-query";
 import {
   fireEvent,
   render,
@@ -10,6 +14,7 @@ import {
 import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CommentOutputExt } from "../../../modules/interaction/interaction.client";
 import { useReportComment } from "../../../modules/interaction/useInteraction";
 import { ApiError } from "../../../shared/api/client";
 import { MarketplaceDetailReviews } from "./MarketplaceDetailReviews";
@@ -102,13 +107,25 @@ function stubMutation<T>(): T {
   } as unknown as T;
 }
 
+type CreateCommentMutation = UseMutationResult<
+  CommentOutputExt,
+  unknown,
+  {
+    parentCommentId?: string | null;
+    body: string;
+    displayAnonymously?: boolean;
+  }
+>;
+
 /** 用真实 useReportComment 接线组件，便于在组件测试中验证成功/错误提示。 */
 function ReviewsHarness({
   comments = [rootComment, officialReply],
   ratings = [],
+  createCommentMutation = stubMutation<CreateCommentMutation>(),
 }: {
   comments?: readonly CommentOutput[];
   ratings?: readonly RatingOutput[];
+  createCommentMutation?: CreateCommentMutation;
 } = {}) {
   const reportComment = useReportComment("app-1");
   return (
@@ -118,7 +135,7 @@ function ReviewsHarness({
       comments={{ items: comments, total: comments.length }}
       commentsPage={1}
       commentsPending={false}
-      createComment={stubMutation()}
+      createComment={createCommentMutation}
       createFeedback={stubMutation()}
       isModerator={false}
       myFeedback={[]}
@@ -152,6 +169,7 @@ function createWrapper() {
 function renderReviews(options?: {
   comments?: readonly CommentOutput[];
   ratings?: readonly RatingOutput[];
+  createCommentMutation?: CreateCommentMutation;
 }) {
   return render(<ReviewsHarness {...options} />, { wrapper: createWrapper() });
 }
@@ -277,5 +295,85 @@ describe("MarketplaceDetailReviews 停用员工作者显示", () => {
 
     expect(screen.getByText("E300")).toBeInTheDocument();
     expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
+  });
+});
+
+describe("MarketplaceDetailReviews 匿名展示选项", () => {
+  it("默认发表实名评论（displayAnonymously: false）", async () => {
+    const createCommentMutateAsync = vi.fn(async () => ({}));
+    renderReviews({
+      createCommentMutation: {
+        isPending: false,
+        mutate: vi.fn(),
+        mutateAsync: createCommentMutateAsync,
+      } as unknown as CreateCommentMutation,
+    });
+
+    fireEvent.change(
+      screen.getByPlaceholderText("分享你的使用体验或提出问题…"),
+      {
+        target: { value: "很好用" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "发表评论" }));
+
+    await waitFor(() =>
+      expect(createCommentMutateAsync).toHaveBeenCalledWith({
+        body: "很好用",
+        displayAnonymously: false,
+      }),
+    );
+  });
+
+  it("开启匿名展示后发表匿名评论（displayAnonymously: true）", async () => {
+    const createCommentMutateAsync = vi.fn(async () => ({}));
+    renderReviews({
+      createCommentMutation: {
+        isPending: false,
+        mutate: vi.fn(),
+        mutateAsync: createCommentMutateAsync,
+      } as unknown as CreateCommentMutation,
+    });
+
+    fireEvent.click(screen.getByRole("switch"));
+    fireEvent.change(
+      screen.getByPlaceholderText("分享你的使用体验或提出问题…"),
+      {
+        target: { value: "匿名反馈" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "发表评论" }));
+
+    await waitFor(() =>
+      expect(createCommentMutateAsync).toHaveBeenCalledWith({
+        body: "匿名反馈",
+        displayAnonymously: true,
+      }),
+    );
+    expect(screen.getByText("匿名展示不影响后台审计")).toBeInTheDocument();
+  });
+
+  it("提交后匿名开关重置为实名", async () => {
+    const createCommentMutateAsync = vi.fn(async () => ({}));
+    renderReviews({
+      createCommentMutation: {
+        isPending: false,
+        mutate: vi.fn(),
+        mutateAsync: createCommentMutateAsync,
+      } as unknown as CreateCommentMutation,
+    });
+
+    const anonymousSwitch = screen.getByRole("switch");
+    fireEvent.click(anonymousSwitch);
+    fireEvent.change(
+      screen.getByPlaceholderText("分享你的使用体验或提出问题…"),
+      {
+        target: { value: "匿名反馈" },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "发表评论" }));
+    await waitFor(() => expect(createCommentMutateAsync).toHaveBeenCalled());
+
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
   });
 });
