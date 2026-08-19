@@ -82,6 +82,12 @@ const {
         applicationId: string;
         applicationVersionId: string;
         authorEmployeeId: string;
+        authorStatus:
+          | "pending_binding"
+          | "active"
+          | "disabled"
+          | "archived"
+          | null;
         body: string;
         commentId: string;
         createdAt: string;
@@ -407,6 +413,7 @@ describe("MarketplaceDetailPage", () => {
           applicationId: "app-ocr",
           applicationVersionId: "ver-1",
           authorEmployeeId: "E200",
+          authorStatus: "active",
           body: "希望支持批量识别",
           commentId: "comment-1",
           createdAt: "2026-08-15T10:00:00.000Z",
@@ -444,6 +451,7 @@ describe("MarketplaceDetailPage", () => {
           applicationId: "app-ocr",
           applicationVersionId: "ver-1",
           authorEmployeeId: "E200",
+          authorStatus: "active",
           body: "希望支持批量识别",
           commentId: "comment-1",
           createdAt: "2026-08-15T10:00:00.000Z",
@@ -456,6 +464,7 @@ describe("MarketplaceDetailPage", () => {
           applicationId: "app-ocr",
           applicationVersionId: "ver-1",
           authorEmployeeId: "E100",
+          authorStatus: "active",
           body: "该能力已在规划中",
           commentId: "reply-1",
           createdAt: "2026-08-15T10:00:00.000Z",
@@ -477,10 +486,9 @@ describe("MarketplaceDetailPage", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    fireEvent.change(
-      within(dialog).getByLabelText("举报原因"),
-      { target: { value: "官方回复涉嫌攻击" } },
-    );
+    fireEvent.change(within(dialog).getByLabelText("举报原因"), {
+      target: { value: "官方回复涉嫌攻击" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "提交举报" }));
 
     await waitFor(() =>
@@ -588,5 +596,34 @@ describe("MarketplaceDetailPage", () => {
       await screen.findByText("二维码图片加载失败，请稍后重试"),
     ).toBeInTheDocument();
     expect(screen.queryByAltText("小程序二维码")).not.toBeInTheDocument();
+  });
+
+  it("停用员工评论以已停用用户标签展示且不暴露工号", async () => {
+    commentsState.data = {
+      items: [
+        {
+          applicationId: "app-ocr",
+          applicationVersionId: "ver-1",
+          authorEmployeeId: "E200",
+          authorStatus: "disabled",
+          body: "停用员工的历史评论",
+          commentId: "comment-1",
+          createdAt: "2026-08-15T10:00:00.000Z",
+          displayAnonymously: false,
+          hiddenAt: null,
+          parentCommentId: null,
+          updatedAt: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+      total: 1,
+    };
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "评价管理" }));
+
+    expect(await screen.findByText("已停用用户")).toBeInTheDocument();
+    expect(screen.queryByText("E200")).not.toBeInTheDocument();
+    expect(screen.getByText("停用员工的历史评论")).toBeInTheDocument();
   });
 });

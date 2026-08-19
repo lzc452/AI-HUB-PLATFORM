@@ -36,6 +36,30 @@ function formatDate(iso: string): string {
   });
 }
 
+/**
+ * 作者展示（规格 §5.7）：匿名评论保持"匿名用户"（匿名身份不暴露，即使作者已停用）；
+ * 实名评论作者为停用/归档员工时显示"已停用用户"灰标签，不暴露工号。
+ */
+function AuthorDisplay({
+  authorStatus,
+  displayAnonymously,
+  employeeId,
+}: {
+  authorStatus: CommentOutput["authorStatus"];
+  displayAnonymously: boolean;
+  employeeId: string;
+}) {
+  if (displayAnonymously) return <span>匿名用户</span>;
+  if (authorStatus === "disabled" || authorStatus === "archived") {
+    return (
+      <Tag className="!mr-0" color="default">
+        已停用用户
+      </Tag>
+    );
+  }
+  return <span>{employeeId}</span>;
+}
+
 function RatingCard({ rating }: { rating: RatingOutput }) {
   return (
     <div className="rounded-xl border border-[#f0f0f0] bg-[#fafafa] p-4">
@@ -60,7 +84,11 @@ function RatingCard({ rating }: { rating: RatingOutput }) {
       )}
       <div className="mt-2 flex items-center gap-1 text-xs text-[#8c8c8c]">
         <UserOutlined />
-        {rating.displayAnonymously ? "匿名用户" : rating.employeeId}
+        <AuthorDisplay
+          authorStatus={rating.authorStatus}
+          displayAnonymously={rating.displayAnonymously}
+          employeeId={rating.employeeId}
+        />
       </div>
     </div>
   );
@@ -112,7 +140,11 @@ function CommentThread({
         <div className="mb-1 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs text-[#8c8c8c]">
             <UserOutlined />
-            {comment.displayAnonymously ? "匿名用户" : comment.authorEmployeeId}
+            <AuthorDisplay
+              authorStatus={comment.authorStatus}
+              displayAnonymously={comment.displayAnonymously}
+              employeeId={comment.authorEmployeeId}
+            />
             <span>·</span>
             <span>{formatDate(comment.createdAt)}</span>
             {isHidden && (
@@ -204,9 +236,11 @@ function CommentThread({
               <div className="mb-1 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs text-[#8c8c8c]">
                   <UserOutlined />
-                  {reply.displayAnonymously
-                    ? "匿名用户"
-                    : reply.authorEmployeeId}
+                  <AuthorDisplay
+                    authorStatus={reply.authorStatus}
+                    displayAnonymously={reply.displayAnonymously}
+                    employeeId={reply.authorEmployeeId}
+                  />
                   <span>·</span>
                   <Tag className="!mr-0" color="blue">
                     官方回复
@@ -720,11 +754,7 @@ export function MarketplaceDetailReviews({
         open={reportTargetId !== null}
         title="举报评论"
       >
-        <Form
-          form={reportForm}
-          layout="vertical"
-          name="report-comment"
-        >
+        <Form form={reportForm} layout="vertical" name="report-comment">
           <Form.Item
             label="举报原因"
             name="reason"

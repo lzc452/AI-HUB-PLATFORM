@@ -5,6 +5,7 @@ import type { CatalogVisibilityPort } from "../catalog/catalog-visibility.policy
 import type { CatalogEntry } from "../catalog/catalog.types.js";
 import type {
   CommentRecord,
+  EmployeeStatus,
   InteractionRepository,
   RatingRecord,
   ReportRecord,
@@ -37,6 +38,15 @@ class MemoryInteractionRepository implements InteractionRepository {
   reports: ReportRecord[] = [];
   audits: string[] = [];
   nextId = 1;
+
+  /** employeeId -> 员工账号状态；未收录的员工视为 active。 */
+  constructor(
+    private readonly statuses: Readonly<Record<string, EmployeeStatus>> = {},
+  ) {}
+
+  private authorStatusOf(employeeId: string): EmployeeStatus | null {
+    return this.statuses[employeeId] ?? "active";
+  }
 
   async withTransaction<T>(
     operation: (repository: InteractionRepository) => Promise<T>,
@@ -73,7 +83,10 @@ class MemoryInteractionRepository implements InteractionRepository {
     this.liked.delete(`${applicationId}:${employeeId}`);
   }
   async upsertRating(
-    input: Omit<RatingRecord, "ratingId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      RatingRecord,
+      "ratingId" | "createdAt" | "updatedAt" | "authorStatus"
+    >,
   ) {
     const current = this.ratings.find(
       (rating) =>
@@ -84,6 +97,7 @@ class MemoryInteractionRepository implements InteractionRepository {
       ...(current ?? {}),
       ...input,
       ratingId: current?.ratingId ?? `rating-${this.nextId++}`,
+      authorStatus: this.authorStatusOf(input.employeeId),
       createdAt: current?.createdAt ?? new Date(),
       updatedAt: new Date(),
     } as RatingRecord;
@@ -97,11 +111,15 @@ class MemoryInteractionRepository implements InteractionRepository {
     );
   }
   async createComment(
-    input: Omit<CommentRecord, "commentId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      CommentRecord,
+      "commentId" | "createdAt" | "updatedAt" | "authorStatus"
+    >,
   ) {
     const comment = {
       ...input,
       commentId: `comment-${this.nextId++}`,
+      authorStatus: this.authorStatusOf(input.authorEmployeeId),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -573,5 +591,110 @@ describe("InteractionService", () => {
       body: "official",
     });
     expect(official.commentKind).toBe("official");
+  });
+
+  it("returns authorStatus on comments: disabled/archived authors marked, active authors not", async () => {
+    const repository = new MemoryInteractionRepository({
+      E100: "disabled",
+      E101: "archived",
+    });
+    await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E100",
+      body: "停用员工评论",
+      displayAnonymously: false,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E101",
+      body: "归档员工评论",
+      displayAnonymously: false,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E300",
+      body: "正常员工评论",
+      displayAnonymously: false,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
+
+    const { items } = await service.listComments(employee, "app-1", 1, 20);
+
+    expect(items.find((c) => c.authorEmployeeId === "E100")?.authorStatus).toBe(
+      "disabled",
+    );
+    expect(items.find((c) => c.authorEmployeeId === "E101")?.authorStatus).toBe(
+      "archived",
+    );
+    expect(items.find((c) => c.authorEmployeeId === "E300")?.authorStatus).toBe(
+      "active",
+    );
+  });
+
+  it("keeps authorStatus on anonymous comments; exposing the disabled marker is the frontend's decision", async () => {
+    const repository = new MemoryInteractionRepository({ E100: "disabled" });
+    await repository.createComment({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      parentCommentId: null,
+      authorEmployeeId: "E100",
+      body: "匿名停用员工评论",
+      displayAnonymously: true,
+      commentKind: "user",
+      hiddenAt: null,
+    });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
+
+    const { items } = await service.listComments(employee, "app-1", 1, 20);
+
+    expect(items[0]).toMatchObject({
+      authorEmployeeId: "E100",
+      displayAnonymously: true,
+      authorStatus: "disabled",
+    });
+  });
+
+  it("returns authorStatus on ratings: archived author marked", async () => {
+    const repository = new MemoryInteractionRepository({ E200: "archived" });
+    await repository.upsertRating({
+      applicationId: "app-1",
+      applicationVersionId: "version-1",
+      employeeId: "E200",
+      stars: 4,
+      body: "停用员工评分",
+      displayAnonymously: false,
+    });
+    const service = new InteractionService(
+      repository,
+      { authorize: allowAll },
+      visibleCatalog,
+    );
+
+    const { items } = await service.listRatings(employee, "app-1", 1, 20);
+
+    expect(items[0]).toMatchObject({
+      employeeId: "E200",
+      authorStatus: "archived",
+    });
   });
 });

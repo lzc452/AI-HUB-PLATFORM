@@ -1,5 +1,12 @@
 import type { ActorContext, AuthorizationDecision } from "@ai-hub/contracts";
 
+/** 员工账号状态（与 employees.status 一致）。 */
+export type EmployeeStatus =
+  | "pending_binding"
+  | "active"
+  | "disabled"
+  | "archived";
+
 export interface ApplicationTeamRecord {
   applicationId: string;
   ownerEmployeeId: string;
@@ -14,6 +21,8 @@ export interface RatingRecord {
   stars: number;
   body: string | null;
   displayAnonymously: boolean;
+  /** 评分员工状态（disabled/archived 视为已停用）；员工行缺失时为 null。 */
+  authorStatus: EmployeeStatus | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +37,8 @@ export interface CommentRecord {
   displayAnonymously: boolean;
   commentKind: "user" | "official";
   hiddenAt: Date | null;
+  /** 评论作者状态（disabled/archived 视为已停用）；员工行缺失时为 null。 */
+  authorStatus: EmployeeStatus | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,11 +86,17 @@ export interface InteractionRepository {
   addLike(applicationId: string, employeeId: string): Promise<string>;
   removeLike(applicationId: string, employeeId: string): Promise<void>;
   upsertRating(
-    input: Omit<RatingRecord, "ratingId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      RatingRecord,
+      "ratingId" | "createdAt" | "updatedAt" | "authorStatus"
+    >,
   ): Promise<RatingRecord>;
   findComment(commentId: string): Promise<CommentRecord | null>;
   createComment(
-    input: Omit<CommentRecord, "commentId" | "createdAt" | "updatedAt">,
+    input: Omit<
+      CommentRecord,
+      "commentId" | "createdAt" | "updatedAt" | "authorStatus"
+    >,
   ): Promise<CommentRecord>;
   createReport(
     input: Omit<ReportRecord, "reportId" | "createdAt">,

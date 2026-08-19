@@ -1,4 +1,4 @@
-import type { CommentOutput } from "@ai-hub/contracts";
+import type { CommentOutput, RatingOutput } from "@ai-hub/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   fireEvent,
@@ -45,6 +45,7 @@ const rootComment: CommentOutput = {
   applicationId: "app-1",
   applicationVersionId: "ver-1",
   authorEmployeeId: "E100",
+  authorStatus: "active",
   body: "希望支持批量识别",
   commentId: "comment-1",
   createdAt: "2026-08-15T10:00:00.000Z",
@@ -62,6 +63,37 @@ const officialReply: CommentOutput = {
   parentCommentId: "comment-1",
 };
 
+const disabledAuthorComment: CommentOutput = {
+  ...rootComment,
+  authorStatus: "disabled",
+  body: "停用员工评论",
+  commentId: "comment-disabled",
+};
+
+const anonymousDisabledAuthorComment: CommentOutput = {
+  ...rootComment,
+  authorStatus: "disabled",
+  displayAnonymously: true,
+  body: "匿名停用员工评论",
+  commentId: "comment-anon-disabled",
+};
+
+function ratingFixture(overrides: Partial<RatingOutput> = {}): RatingOutput {
+  return {
+    applicationId: "app-1",
+    applicationVersionId: "ver-1",
+    authorStatus: "active",
+    body: null,
+    createdAt: "2026-08-15T10:00:00.000Z",
+    displayAnonymously: false,
+    employeeId: "E300",
+    ratingId: "rating-1",
+    stars: 4,
+    updatedAt: "2026-08-15T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function stubMutation<T>(): T {
   return {
     isPending: false,
@@ -71,13 +103,19 @@ function stubMutation<T>(): T {
 }
 
 /** 用真实 useReportComment 接线组件，便于在组件测试中验证成功/错误提示。 */
-function ReviewsHarness() {
+function ReviewsHarness({
+  comments = [rootComment, officialReply],
+  ratings = [],
+}: {
+  comments?: readonly CommentOutput[];
+  ratings?: readonly RatingOutput[];
+} = {}) {
   const reportComment = useReportComment("app-1");
   return (
     <MarketplaceDetailReviews
       applicationFeedback={[]}
       canReplyOfficial={false}
-      comments={{ items: [rootComment, officialReply], total: 2 }}
+      comments={{ items: comments, total: comments.length }}
       commentsPage={1}
       commentsPending={false}
       createComment={stubMutation()}
@@ -88,7 +126,7 @@ function ReviewsHarness() {
       onHideComment={() => undefined}
       onRestoreComment={() => undefined}
       onRatingsPageChange={() => undefined}
-      ratings={{ items: [], total: 0 }}
+      ratings={{ items: ratings, total: ratings.length }}
       ratingsPage={1}
       ratingsPending={false}
       reportComment={reportComment}
@@ -106,15 +144,16 @@ function createWrapper() {
   });
   return function Wrapper({ children }: PropsWithChildren) {
     return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   };
 }
 
-function renderReviews() {
-  return render(<ReviewsHarness />, { wrapper: createWrapper() });
+function renderReviews(options?: {
+  comments?: readonly CommentOutput[];
+  ratings?: readonly RatingOutput[];
+}) {
+  return render(<ReviewsHarness {...options} />, { wrapper: createWrapper() });
 }
 
 describe("MarketplaceDetailReviews 评论举报", () => {
@@ -140,11 +179,11 @@ describe("MarketplaceDetailReviews 评论举报", () => {
     fireEvent.click(screen.getByRole("button", { name: "举报 comment-1" }));
 
     const dialog = await screen.findByRole("dialog");
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "提交举报" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "提交举报" }));
 
-    expect(await within(dialog).findByText("请填写举报原因")).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText("请填写举报原因"),
+    ).toBeInTheDocument();
     expect(hoisted.reportComment).not.toHaveBeenCalled();
   });
 
@@ -157,9 +196,7 @@ describe("MarketplaceDetailReviews 评论举报", () => {
     fireEvent.change(within(dialog).getByLabelText("举报原因"), {
       target: { value: "包含不当内容" },
     });
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "提交举报" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "提交举报" }));
 
     await waitFor(() =>
       expect(hoisted.reportComment).toHaveBeenCalledWith("app-1", "comment-1", {
@@ -187,9 +224,7 @@ describe("MarketplaceDetailReviews 评论举报", () => {
     fireEvent.change(within(dialog).getByLabelText("举报原因"), {
       target: { value: "官方回复涉嫌攻击" },
     });
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "提交举报" }),
-    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "提交举报" }));
 
     await waitFor(() =>
       expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
@@ -204,5 +239,43 @@ describe("MarketplaceDetailReviews 评论举报", () => {
     expect(
       within(screen.getByRole("dialog")).getByDisplayValue("官方回复涉嫌攻击"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("MarketplaceDetailReviews 停用员工作者显示", () => {
+  it("实名评论作者为停用员工时显示已停用用户标签且不显示工号", () => {
+    renderReviews({ comments: [disabledAuthorComment] });
+
+    expect(screen.getByText("已停用用户")).toBeInTheDocument();
+    expect(screen.queryByText("E100")).not.toBeInTheDocument();
+  });
+
+  it("停用员工 + 匿名评论保持匿名用户展示，不显示停用标记", () => {
+    renderReviews({ comments: [anonymousDisabledAuthorComment] });
+
+    expect(screen.getByText("匿名用户")).toBeInTheDocument();
+    expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
+    expect(screen.queryByText("E100")).not.toBeInTheDocument();
+  });
+
+  it("正常作者显示工号", () => {
+    renderReviews({ comments: [rootComment] });
+
+    expect(screen.getByText("E100")).toBeInTheDocument();
+    expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
+  });
+
+  it("评分作者为停用员工时显示已停用用户标签且不显示工号", () => {
+    renderReviews({ ratings: [ratingFixture({ authorStatus: "disabled" })] });
+
+    expect(screen.getByText("已停用用户")).toBeInTheDocument();
+    expect(screen.queryByText("E300")).not.toBeInTheDocument();
+  });
+
+  it("评分正常作者显示工号", () => {
+    renderReviews({ ratings: [ratingFixture()] });
+
+    expect(screen.getByText("E300")).toBeInTheDocument();
+    expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
   });
 });

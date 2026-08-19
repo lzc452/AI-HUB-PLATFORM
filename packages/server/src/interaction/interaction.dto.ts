@@ -114,6 +114,13 @@ export class RatingRecordDto {
   @ApiProperty({ type: Boolean, description: "是否匿名展示", example: false })
   displayAnonymously!: boolean;
 
+  @ApiPropertyOptional({
+    description: "评分员工账号状态（disabled/archived 视为已停用）",
+    enum: ["pending_binding", "active", "disabled", "archived"],
+    nullable: true,
+  })
+  authorStatus?: "pending_binding" | "active" | "disabled" | "archived" | null;
+
   @ApiProperty({
     description: "创建时间（ISO 8601）",
     type: String,
@@ -163,6 +170,13 @@ export class CommentRecordDto {
 
   @ApiProperty({ type: Boolean, description: "是否匿名展示", example: false })
   displayAnonymously!: boolean;
+
+  @ApiPropertyOptional({
+    description: "作者员工账号状态（disabled/archived 视为已停用）",
+    enum: ["pending_binding", "active", "disabled", "archived"],
+    nullable: true,
+  })
+  authorStatus?: "pending_binding" | "active" | "disabled" | "archived" | null;
 
   @ApiPropertyOptional({
     description: "评论类型：user=普通评论，official=官方回复",

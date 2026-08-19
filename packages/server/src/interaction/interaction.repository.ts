@@ -4,6 +4,7 @@ import { type Kysely, type Selectable } from "kysely";
 import type {
   ApplicationTeamRecord,
   CommentRecord,
+  EmployeeStatus,
   RatingRecord,
   ReportRecord,
 } from "./interaction.types.js";
@@ -120,7 +121,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
       )
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.mapRating(row);
+    return this.mapRating(row, await this.employeeStatusOf(row.employee_id));
   }
 
   async findComment(commentId: string): Promise<CommentRecord | null> {
@@ -129,7 +130,11 @@ export class KyselyInteractionRepository implements InteractionRepository {
       .selectAll()
       .where("comment_id", "=", commentId)
       .executeTakeFirst();
-    return row === undefined ? null : this.mapComment(row);
+    if (row === undefined) return null;
+    return this.mapComment(
+      row,
+      await this.employeeStatusOf(row.author_employee_id),
+    );
   }
 
   async createComment(
@@ -149,7 +154,10 @@ export class KyselyInteractionRepository implements InteractionRepository {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.mapComment(row);
+    return this.mapComment(
+      row,
+      await this.employeeStatusOf(row.author_employee_id),
+    );
   }
 
   async createReport(
@@ -205,7 +213,23 @@ export class KyselyInteractionRepository implements InteractionRepository {
   }): Promise<{ items: readonly RatingRecord[]; total: number }> {
     const baseQuery = this.db
       .selectFrom("application_ratings")
-      .selectAll()
+      .leftJoin(
+        "employees",
+        "employees.employee_id",
+        "application_ratings.employee_id",
+      )
+      .select([
+        "application_ratings.rating_id",
+        "application_ratings.application_id",
+        "application_ratings.application_version_id",
+        "application_ratings.employee_id",
+        "application_ratings.stars",
+        "application_ratings.body",
+        "application_ratings.display_anonymously",
+        "application_ratings.created_at",
+        "application_ratings.updated_at",
+        "employees.status as author_status",
+      ])
       .where("application_id", "=", input.applicationId);
 
     const countResult = await this.db
@@ -217,11 +241,11 @@ export class KyselyInteractionRepository implements InteractionRepository {
     const rows = await baseQuery
       .offset((input.page - 1) * input.pageSize)
       .limit(input.pageSize)
-      .orderBy("created_at", "desc")
+      .orderBy("application_ratings.created_at", "desc")
       .execute();
 
     return {
-      items: rows.map((r) => this.mapRating(r)),
+      items: rows.map((r) => this.mapRating(r, r.author_status)),
       total: countResult.total,
     };
   }
@@ -231,9 +255,29 @@ export class KyselyInteractionRepository implements InteractionRepository {
     page: number;
     pageSize: number;
   }): Promise<{ items: readonly CommentRecord[]; total: number }> {
+    const commentColumns = [
+      "application_comments.comment_id",
+      "application_comments.application_id",
+      "application_comments.application_version_id",
+      "application_comments.parent_comment_id",
+      "application_comments.author_employee_id",
+      "application_comments.body",
+      "application_comments.display_anonymously",
+      "application_comments.comment_kind",
+      "application_comments.hidden_at",
+      "application_comments.created_at",
+      "application_comments.updated_at",
+      "employees.status as author_status",
+    ] as const;
+
     const baseQuery = this.db
       .selectFrom("application_comments")
-      .selectAll()
+      .leftJoin(
+        "employees",
+        "employees.employee_id",
+        "application_comments.author_employee_id",
+      )
+      .select(commentColumns)
       .where("application_id", "=", input.applicationId)
       .where("parent_comment_id", "is", null);
 
@@ -247,22 +291,33 @@ export class KyselyInteractionRepository implements InteractionRepository {
     const rootRows = await baseQuery
       .offset((input.page - 1) * input.pageSize)
       .limit(input.pageSize)
-      .orderBy("created_at", "desc")
+      .orderBy("application_comments.created_at", "desc")
       .execute();
 
-    const rootComments = rootRows.map((r) => this.mapComment(r));
+    const rootComments = rootRows.map((r) =>
+      this.mapComment(r, r.author_status),
+    );
 
     const rootIds = rootComments.map((c) => c.commentId);
-    let replyRows: Selectable<DatabaseSchema["application_comments"]>[] = [];
+    let replyRows: Array<
+      Selectable<DatabaseSchema["application_comments"]> & {
+        author_status: EmployeeStatus | null;
+      }
+    > = [];
     if (rootIds.length > 0) {
       replyRows = await this.db
         .selectFrom("application_comments")
-        .selectAll()
+        .leftJoin(
+          "employees",
+          "employees.employee_id",
+          "application_comments.author_employee_id",
+        )
+        .select(commentColumns)
         .where("parent_comment_id", "in", rootIds)
-        .orderBy("created_at", "asc")
+        .orderBy("application_comments.created_at", "asc")
         .execute();
     }
-    const replies = replyRows.map((r) => this.mapComment(r));
+    const replies = replyRows.map((r) => this.mapComment(r, r.author_status));
 
     return {
       items: [...rootComments, ...replies],
@@ -277,7 +332,10 @@ export class KyselyInteractionRepository implements InteractionRepository {
       .where("comment_id", "=", commentId)
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.mapComment(row);
+    return this.mapComment(
+      row,
+      await this.employeeStatusOf(row.author_employee_id),
+    );
   }
 
   async restoreComment(commentId: string): Promise<CommentRecord> {
@@ -287,7 +345,10 @@ export class KyselyInteractionRepository implements InteractionRepository {
       .where("comment_id", "=", commentId)
       .returningAll()
       .executeTakeFirstOrThrow();
-    return this.mapComment(row);
+    return this.mapComment(
+      row,
+      await this.employeeStatusOf(row.author_employee_id),
+    );
   }
 
   async recordAudit(input: {
@@ -337,6 +398,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
 
   private mapRating(
     row: Selectable<DatabaseSchema["application_ratings"]>,
+    authorStatus: EmployeeStatus | null = null,
   ): RatingRecord {
     return {
       ratingId: row.rating_id,
@@ -346,6 +408,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
       stars: row.stars,
       body: row.body,
       displayAnonymously: row.display_anonymously,
+      authorStatus,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -353,6 +416,7 @@ export class KyselyInteractionRepository implements InteractionRepository {
 
   private mapComment(
     row: Selectable<DatabaseSchema["application_comments"]>,
+    authorStatus: EmployeeStatus | null = null,
   ): CommentRecord {
     return {
       commentId: row.comment_id,
@@ -364,9 +428,22 @@ export class KyselyInteractionRepository implements InteractionRepository {
       displayAnonymously: row.display_anonymously,
       commentKind: row.comment_kind,
       hiddenAt: row.hidden_at,
+      authorStatus,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
+  }
+
+  /** 员工账号状态（disabled/archived 视为已停用）；员工行缺失时为 null。 */
+  private async employeeStatusOf(
+    employeeId: string,
+  ): Promise<EmployeeStatus | null> {
+    const row = await this.db
+      .selectFrom("employees")
+      .select("status")
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row?.status ?? null;
   }
 
   private mapReport(
