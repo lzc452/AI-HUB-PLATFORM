@@ -1,7 +1,7 @@
 import type { ActorContext } from "@ai-hub/contracts";
 import type { DeliveryChannel } from "../application/application.types.js";
 
-export type CatalogSort = "recommended" | "latest" | "popular";
+export type CatalogSort = "recommended" | "latest" | "popular" | "rating";
 export type TrustLabel =
   | "experimental"
   | "verified"

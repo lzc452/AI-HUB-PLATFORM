@@ -88,7 +88,7 @@ export class CatalogController {
     name: "sort",
     description: "排序方式",
     required: false,
-    enum: ["recommended", "latest", "popular"],
+    enum: ["recommended", "latest", "popular", "rating"],
   })
   @ApiQuery({
     name: "page",

@@ -29,14 +29,12 @@ export default function MarketplacePage() {
     setPage(1);
   }, [query, sortMode, categoryId, channel, departmentId, tagIds]);
 
-  const serverSort = sortMode === "rating" ? "popular" : sortMode;
-
   const { data, error, isError, isPending } = useCatalogSearch({
     categoryId,
     page,
     pageSize: PAGE_SIZE,
     query,
-    sort: serverSort,
+    sort: sortMode,
   });
   const departments = useDepartments();
 
@@ -72,13 +70,6 @@ export default function MarketplacePage() {
     }
     return list;
   }, [channel, data, departmentId, tagIds]);
-
-  const sortedItems = useMemo(() => {
-    if (sortMode !== "rating") return filteredItems;
-    return [...filteredItems].sort(
-      (a, b) => (b.ratingAverage ?? 0) - (a.ratingAverage ?? 0),
-    );
-  }, [filteredItems, sortMode]);
 
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -159,11 +150,11 @@ export default function MarketplacePage() {
                 cause={error}
                 title="应用列表加载失败"
               />
-              {data && sortedItems.length === 0 ? (
+              {data && filteredItems.length === 0 ? (
                 <EmptyBlock description="没有符合条件的已发布应用" />
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {sortedItems.map((entry) => (
+                {filteredItems.map((entry) => (
                   <AppCard
                     departmentName={departmentNames.get(entry.departmentId)}
                     entry={entry}

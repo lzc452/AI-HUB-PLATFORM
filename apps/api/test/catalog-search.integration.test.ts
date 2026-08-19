@@ -264,4 +264,134 @@ describe("catalog search ranking (pg_trgm)", () => {
       "智能报销平台",
     ]);
   });
+
+  it("sort=rating 按平均评分降序、无评分排最后且跨页排序稳定", async () => {
+    await db
+      .insertInto("catalog_categories")
+      .values({
+        category_id: "ratings-cat",
+        name: "评分排序测试",
+        sort_order: 3,
+        enabled: true,
+      })
+      .execute();
+    // g1 需要第二条评分（E101）得到 4.5 均值，先建员工。
+    await db
+      .insertInto("employees")
+      .values({
+        employee_id: "E101",
+        display_name: "评分用户",
+        status: "active",
+        primary_department_id: "dept-rnd",
+        password_hash: null,
+        password_reset_required: false,
+      })
+      .execute();
+    // f1 5 星、f3 4.5 星（4+5 两条）、f5 3 星、f7 1 星、f9 无评分（NULL 排最后）。
+    const rated: ReadonlyArray<{
+      id: string;
+      versionId: string;
+      name: string;
+      stars: readonly number[];
+    }> = [
+      {
+        id: "00000000-0000-0000-0000-0000000000f1",
+        versionId: "00000000-0000-0000-0000-0000000000f2",
+        name: "评分五",
+        stars: [5],
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f3",
+        versionId: "00000000-0000-0000-0000-0000000000f4",
+        name: "评分四半",
+        stars: [4, 5],
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f5",
+        versionId: "00000000-0000-0000-0000-0000000000f6",
+        name: "评分三",
+        stars: [3],
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f7",
+        versionId: "00000000-0000-0000-0000-0000000000f8",
+        name: "评分一",
+        stars: [1],
+      },
+      {
+        id: "00000000-0000-0000-0000-0000000000f9",
+        versionId: "00000000-0000-0000-0000-0000000000fa",
+        name: "未评分",
+        stars: [],
+      },
+    ];
+    for (const app of rated) {
+      await seedApplication(db, {
+        applicationId: app.id,
+        versionId: app.versionId,
+        name: app.name,
+        summary: app.name,
+        searchName: app.name,
+        searchSummary: app.name,
+        searchPinyin: "px",
+        searchInitials: "px",
+        categoryId: "ratings-cat",
+      });
+      for (const [employee, stars] of app.stars.entries()) {
+        await db
+          .insertInto("application_ratings")
+          .values({
+            application_id: app.id,
+            application_version_id: app.versionId,
+            employee_id: employee === 0 ? "E100" : "E101",
+            stars,
+            body: null,
+            display_anonymously: false,
+          })
+          .execute();
+      }
+    }
+
+    const repository = new KyselyCatalogRepository(db);
+    const all = await repository.listVisiblePage({
+      actor,
+      categoryId: "ratings-cat",
+      sort: "rating",
+      page: 1,
+      pageSize: 10,
+    });
+    expect(all.total).toBe(5);
+    expect(all.items.map((item) => item.name)).toEqual([
+      "评分五",
+      "评分四半",
+      "评分三",
+      "评分一",
+      "未评分",
+    ]);
+    expect(all.items.map((item) => item.ratingAverage)).toEqual([
+      5,
+      4.5,
+      3,
+      1,
+      null,
+    ]);
+
+    // 跨页拼接顺序与单页一致 —— 排序发生在服务端，而非页内重排。
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
+        repository.listVisiblePage({
+          actor,
+          categoryId: "ratings-cat",
+          sort: "rating",
+          page,
+          pageSize: 2,
+        }),
+      ),
+    );
+    expect(pages.map((page) => page.items.map((item) => item.name))).toEqual([
+      ["评分五", "评分四半"],
+      ["评分三", "评分一"],
+      ["未评分"],
+    ]);
+  });
 });

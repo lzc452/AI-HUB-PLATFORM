@@ -1,6 +1,6 @@
 import type { DeliveryChannel } from "./application.js";
 
-export type CatalogSort = "recommended" | "latest" | "popular";
+export type CatalogSort = "recommended" | "latest" | "popular" | "rating";
 export type TrustLabel =
   | "experimental"
   | "verified"

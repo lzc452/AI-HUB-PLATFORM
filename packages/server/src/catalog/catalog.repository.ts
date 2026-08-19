@@ -222,6 +222,10 @@ export class KyselyCatalogRepository implements CatalogRepository {
       query = query.orderBy("metadata.recommendation_rank", "desc");
     } else if (input.sort === "popular") {
       query = query.orderBy("likeCount", "desc");
+    } else if (input.sort === "rating") {
+      // 平均评分降序；无评分（NULL）排最后，避免未评分应用抢占评分榜。
+      // 引用 SELECT 中的 ratingAverage 别名（含标量子查询），避免重复计算。
+      query = query.orderBy("ratingAverage", (ob) => ob.desc().nullsLast());
     } else {
       query = query.orderBy("application.updated_at", "desc");
     }

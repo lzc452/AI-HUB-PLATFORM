@@ -248,9 +248,9 @@ export class ListCatalogQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     type: String,
     description: "排序方式",
-    enum: ["recommended", "latest", "popular"],
+    enum: ["recommended", "latest", "popular", "rating"],
   })
   @IsOptional()
-  @IsIn(["recommended", "latest", "popular"])
-  sort?: "recommended" | "latest" | "popular";
+  @IsIn(["recommended", "latest", "popular", "rating"])
+  sort?: "recommended" | "latest" | "popular" | "rating";
 }
