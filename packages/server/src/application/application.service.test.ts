@@ -6,7 +6,10 @@ import type {
   BehaviorEventInput,
   DeliveryTarget,
 } from "@ai-hub/contracts";
-import { ApplicationService } from "./application.service.js";
+import {
+  ApplicationService,
+  DraftValidationError,
+} from "./application.service.js";
 import { CLAIM_HOLD_MS } from "../system/outbox/sla-reminder.worker.js";
 import {
   PERMISSIVE_WEB_TARGET_POLICY,
@@ -795,7 +798,7 @@ function completeDraft(): import("@ai-hub/contracts").ApplicationDraft {
     manualAssetId: null,
     examplesHtml: "<p>示例</p>",
     examplesAssetId: null,
-    faq: [],
+    faq: [{ question: "如何重置密码？", answer: "联系管理员" }],
     audience: [
       {
         audienceType: "all",
@@ -2967,6 +2970,50 @@ describe("ApplicationService", () => {
     await expect(
       service.submitDraft(owner, application.applicationId),
     ).rejects.toThrow("DRAFT_VALIDATION_FAILED");
+  });
+
+  it("rejects a draft without faq entries（规格 §5.4 常见问题必填）", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      faq: [],
+    });
+
+    const error = await service
+      .submitDraft(owner, application.applicationId)
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(DraftValidationError);
+    expect(
+      (error as DraftValidationError).issues.some(
+        (issue) => issue.code === "DRAFT_FAQ_REQUIRED",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a faq entry missing question or answer", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      faq: [{ question: "", answer: "联系管理员" }],
+    });
+
+    const error = await service
+      .submitDraft(owner, application.applicationId)
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(DraftValidationError);
+    expect(
+      (error as DraftValidationError).issues.some(
+        (issue) => issue.code === "DRAFT_FAQ_REQUIRED",
+      ),
+    ).toBe(true);
   });
 
   it("auto-publishes a draft-submitted web app on approval", async () => {

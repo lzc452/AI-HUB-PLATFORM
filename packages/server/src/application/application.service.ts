@@ -1685,6 +1685,23 @@ export function validateDraftCompleteness(
     fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件");
   }
 
+  // 规格 §5.4：常见问题必填，且每条须同时包含问题与答案（fail-closed：
+  // 非字符串/空串均拒绝，防止绕过前端直接调提交接口）。
+  if (
+    !Array.isArray(draft.faq) ||
+    draft.faq.length === 0 ||
+    draft.faq.some(
+      (entry) =>
+        entry === null ||
+        typeof entry.question !== "string" ||
+        entry.question.trim().length === 0 ||
+        typeof entry.answer !== "string" ||
+        entry.answer.trim().length === 0,
+    )
+  ) {
+    fail("DRAFT_FAQ_REQUIRED", "请至少填写一条常见问题（含问题与答案）");
+  }
+
   if (!Array.isArray(draft.audience) || draft.audience.length === 0) {
     fail("DRAFT_AUDIENCE_REQUIRED", "受众规则至少一条");
   }
