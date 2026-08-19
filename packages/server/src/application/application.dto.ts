@@ -503,6 +503,8 @@ export class VersionSnapshotDto {
 
   @ApiProperty({
     description: "版本提交时的完整草稿内容（ApplicationDraft 顶层字段）",
+    type: Object,
+    additionalProperties: true,
   })
   payload!: Record<string, unknown>;
 }
@@ -512,10 +514,18 @@ export class VersionDiffChangeDto {
   @ApiProperty({ type: String, description: "字段名" })
   field!: string;
 
-  @ApiProperty({ description: "from 版本的值" })
+  @ApiProperty({
+    description: "from 版本的值",
+    type: Object,
+    additionalProperties: true,
+  })
   from!: unknown;
 
-  @ApiProperty({ description: "to 版本的值" })
+  @ApiProperty({
+    description: "to 版本的值",
+    type: Object,
+    additionalProperties: true,
+  })
   to!: unknown;
 }
 
@@ -524,7 +534,11 @@ export class VersionDiffEntryDto {
   @ApiProperty({ type: String, description: "字段名" })
   field!: string;
 
-  @ApiProperty({ description: "字段值" })
+  @ApiProperty({
+    description: "字段值",
+    type: Object,
+    additionalProperties: true,
+  })
   value!: unknown;
 }
 
