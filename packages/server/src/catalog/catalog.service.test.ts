@@ -91,6 +91,15 @@ class MemoryCatalogRepository implements CatalogRepository {
       storageKey: string;
       mimeType: string;
     } | null = null,
+    private readonly delivery: {
+      deliveryId: string;
+      entryUrl: string;
+      enabled: boolean;
+    } = {
+      deliveryId: "delivery-1",
+      entryUrl: "https://app.company.com",
+      enabled: true,
+    },
   ) {}
 
   async listVisible(
@@ -137,11 +146,7 @@ class MemoryCatalogRepository implements CatalogRepository {
     entryUrl: string;
     enabled: boolean;
   } | null> {
-    return {
-      deliveryId: "delivery-1",
-      entryUrl: "https://app.company.com",
-      enabled: true,
-    };
+    return this.delivery;
   }
 
   async findDeliveryAssetStorageKey(): Promise<string | null> {
@@ -301,6 +306,113 @@ describe("CatalogService", () => {
     ).resolves.toEqual({
       kind: "qr",
       payload: "https://app.company.com",
+    });
+  });
+
+  it("resolveDelivery web 渠道返回合法 entryUrl 跳转", async () => {
+    const service = new CatalogService(new MemoryCatalogRepository(entries));
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "web"),
+    ).resolves.toEqual({
+      kind: "web_redirect",
+      url: "https://app.company.com",
+    });
+  });
+
+  it("resolveDelivery web 渠道拒绝空 entryUrl", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "web"),
+    ).rejects.toThrow("WEB_DELIVERY_URL_MISSING");
+  });
+
+  it("resolveDelivery web 渠道拒绝纯空白 entryUrl", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "   ",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "web"),
+    ).rejects.toThrow("WEB_DELIVERY_URL_MISSING");
+  });
+
+  it("resolveDelivery web 渠道拒绝非 http(s) 的 entryUrl", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "javascript:alert(1)",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "web"),
+    ).rejects.toThrow("WEB_DELIVERY_URL_MISSING");
+  });
+
+  it("resolveDelivery web 渠道拒绝无法解析的 entryUrl", async () => {
+    const service = new CatalogService(
+      new MemoryCatalogRepository(entries, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "not a url",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "web"),
+    ).rejects.toThrow("WEB_DELIVERY_URL_MISSING");
+  });
+
+  it("resolveDelivery 桌面渠道无资产且 entryUrl 非法时回退 unavailable 而非 web_redirect", async () => {
+    const desktopEntry = [
+      { ...entries[0]!, deliveryChannels: ["desktop"] as const },
+    ];
+    const service = new CatalogService(
+      new MemoryCatalogRepository(desktopEntry, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "not-a-url",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "desktop"),
+    ).resolves.toEqual({
+      kind: "unavailable",
+      reason: "该渠道暂未配置可下载安装包",
+    });
+  });
+
+  it("resolveDelivery 桌面渠道无资产但 entryUrl 合法时回退 web_redirect", async () => {
+    const desktopEntry = [
+      { ...entries[0]!, deliveryChannels: ["desktop"] as const },
+    ];
+    const service = new CatalogService(
+      new MemoryCatalogRepository(desktopEntry, null, {
+        deliveryId: "delivery-1",
+        entryUrl: "https://app.company.com",
+        enabled: true,
+      }),
+    );
+
+    await expect(
+      service.resolveDelivery(employee, "app-platform", "desktop"),
+    ).resolves.toEqual({
+      kind: "web_redirect",
+      url: "https://app.company.com",
     });
   });
 

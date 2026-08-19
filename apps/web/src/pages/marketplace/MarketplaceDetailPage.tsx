@@ -97,6 +97,8 @@ export default function MarketplaceDetailPage() {
   const [commentsPage, setCommentsPage] = useState(1);
   const [ratingsPage, setRatingsPage] = useState(1);
   const [resolving, setResolving] = useState(false);
+  // web 交付入口 URL 缺失/非法（WEB_DELIVERY_URL_MISSING）时禁用"立即使用"。
+  const [deliveryUrlMissing, setDeliveryUrlMissing] = useState(false);
 
   // Tab-specific data hooks — only fetch when tab is active
   const versions = useVersions(
@@ -182,7 +184,16 @@ export default function MarketplaceDetailPage() {
         message.warning(result.reason);
       }
     } catch (cause) {
-      message.error(cause instanceof Error ? cause.message : "交付解析失败");
+      if (
+        cause instanceof ApiError &&
+        cause.code === "WEB_DELIVERY_URL_MISSING"
+      ) {
+        // 交付地址未配置/非法：禁用入口并提示，避免打开空白页。
+        setDeliveryUrlMissing(true);
+        message.error("交付地址未配置");
+      } else {
+        message.error(cause instanceof Error ? cause.message : "交付解析失败");
+      }
     } finally {
       setResolving(false);
     }
@@ -241,6 +252,7 @@ export default function MarketplaceDetailPage() {
         onRate={(stars, displayAnonymously) =>
           rateApplication.mutate({ stars, displayAnonymously })
         }
+        deliveryUrlMissing={deliveryUrlMissing}
         onResolve={(channel) => void handleResolve(channel)}
         ratingDisabled={Boolean(!applicationId || rateApplication.isPending)}
         ratingPending={rateApplication.isPending}

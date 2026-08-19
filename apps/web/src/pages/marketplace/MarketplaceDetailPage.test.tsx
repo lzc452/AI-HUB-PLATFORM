@@ -267,6 +267,28 @@ describe("MarketplaceDetailPage", () => {
     fireEvent.click(clickableItem!);
   }
 
+  /** 打开"立即使用"下拉并点击"Web应用"菜单项，触发 web 交付解析。 */
+  async function resolveWebChannel() {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      deliveryChannels: ["web"],
+    };
+    render(<App />);
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(
+      screen.getByRole("button", { name: "立即使用（Web应用）" }),
+    );
+    // 菜单项 <li role="menuitem"> 内还包了一层承载 onClick 的 <span role="menuitem">，
+    // 点击内层 span 才会触发 onResolve。
+    const menuItems = await screen.findAllByRole("menuitem", {
+      name: "Web应用",
+    });
+    const clickableItem = menuItems.find(
+      (element) => element.tagName === "SPAN",
+    );
+    fireEvent.click(clickableItem!);
+  }
+
   it("renders the application header and description sections", async () => {
     render(<App />);
 
@@ -627,6 +649,80 @@ describe("MarketplaceDetailPage", () => {
       await screen.findByText("二维码图片加载失败，请稍后重试"),
     ).toBeInTheDocument();
     expect(screen.queryByAltText("小程序二维码")).not.toBeInTheDocument();
+  });
+
+  it("web 交付解析成功时打开新窗口跳转", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    try {
+      resolveDelivery.mockResolvedValue({
+        kind: "web_redirect",
+        url: "https://app.company.com",
+      });
+      await resolveWebChannel();
+
+      await waitFor(() =>
+        expect(openSpy).toHaveBeenCalledWith(
+          "https://app.company.com",
+          "_blank",
+          "noopener,noreferrer",
+        ),
+      );
+    } finally {
+      openSpy.mockRestore();
+    }
+  });
+
+  it("web 交付 URL 缺失时禁用立即使用并提示交付地址未配置", async () => {
+    resolveDelivery.mockRejectedValue(
+      new ApiError(400, "WEB_DELIVERY_URL_MISSING"),
+    );
+    await resolveWebChannel();
+
+    // 按钮被禁用，不再打开空白页。
+    const button = await waitFor(() =>
+      screen.getByRole("button", { name: "立即使用（Web应用）" }),
+    );
+    expect(button).toBeDisabled();
+
+    // 悬停显示"交付地址未配置"tooltip。
+    fireEvent.mouseEnter(button);
+    const tooltip = await screen.findByRole("tooltip");
+    expect(within(tooltip).getByText("交付地址未配置")).toBeInTheDocument();
+  });
+
+  it("相关推荐 web 交付 URL 缺失时禁用对应立即使用按钮", async () => {
+    const originalItem = recommendedState.data.items[0]!;
+    recommendedState.data.items[0] = {
+      ...originalItem,
+      capabilities: {
+        canResolveDelivery: true,
+        canLike: true,
+        canRate: true,
+        canComment: true,
+        canSubmitFeedback: true,
+        canModerateComments: false,
+        canEditRisk: false,
+      },
+    } as (typeof recommendedState.data.items)[number];
+    resolveDelivery.mockRejectedValue(
+      new ApiError(400, "WEB_DELIVERY_URL_MISSING"),
+    );
+    try {
+      render(<App />);
+      await screen.findByRole("heading", { name: "OCR 票据识别" });
+
+      const relatedItem = screen
+        .getByRole("link", { name: "查看应用 发票识别助手" })
+        .closest("article")!;
+      const button = within(relatedItem).getByRole("button", {
+        name: "立即使用",
+      });
+      fireEvent.click(button);
+
+      await waitFor(() => expect(button).toBeDisabled());
+    } finally {
+      recommendedState.data.items[0] = originalItem;
+    }
   });
 
   it("停用员工评论以已停用用户标签展示且不暴露工号", async () => {

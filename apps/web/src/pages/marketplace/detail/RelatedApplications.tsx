@@ -1,5 +1,5 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
-import { LikeOutlined, StarFilled, RightOutlined} from "@ant-design/icons";
+import { LikeOutlined, StarFilled, RightOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -12,6 +12,7 @@ import {
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { ApiError } from "../../../shared/api/client";
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import {
   downloadDeliveryAsset,
@@ -38,13 +39,17 @@ interface RelatedAppItemProps {
 
 function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
   const [isPending, setIsPending] = useState(false);
+  // web 交付入口 URL 缺失/非法（WEB_DELIVERY_URL_MISSING）时禁用"立即使用"。
+  const [urlMissing, setUrlMissing] = useState(false);
   const deliveryChannel = entry.deliveryChannels[0] as
     | DeliveryChannel
     | undefined;
   const canResolveDelivery = entry.capabilities?.canResolveDelivery ?? false;
 
   const handleUse = async () => {
-    if (!deliveryChannel || !canResolveDelivery || isPending) return;
+    if (!deliveryChannel || !canResolveDelivery || isPending || urlMissing) {
+      return;
+    }
     setIsPending(true);
     try {
       const result = await resolveDelivery(
@@ -70,7 +75,16 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
         message.warning(result.reason);
       }
     } catch (error) {
-      message.error(error instanceof Error ? error.message : "交付解析失败");
+      if (
+        error instanceof ApiError &&
+        error.code === "WEB_DELIVERY_URL_MISSING"
+      ) {
+        // 交付地址未配置/非法：禁用入口并提示，避免打开空白页。
+        setUrlMissing(true);
+        message.error("交付地址未配置");
+      } else {
+        message.error(error instanceof Error ? error.message : "交付解析失败");
+      }
     } finally {
       setIsPending(false);
     }
@@ -124,20 +138,25 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
       </Link>
       <Tooltip
         title={
-          canResolveDelivery
-            ? `使用${channelText[deliveryChannel ?? "web"]}`
-            : "当前角色无权交付或应用尚未配置可用渠道"
+          urlMissing
+            ? "交付地址未配置"
+            : canResolveDelivery
+              ? `使用${channelText[deliveryChannel ?? "web"]}`
+              : "当前角色无权交付或应用尚未配置可用渠道"
         }
       >
-        <Button
-          disabled={!deliveryChannel || !canResolveDelivery}
-          loading={isPending}
-          onClick={handleUse}
-          size="small"
-          type="primary"
-        >
-          立即使用
-        </Button>
+        {/* 禁用按钮不触发鼠标事件，包一层 span 让 Tooltip 在真实浏览器中可用。 */}
+        <span>
+          <Button
+            disabled={!deliveryChannel || !canResolveDelivery || urlMissing}
+            loading={isPending}
+            onClick={handleUse}
+            size="small"
+            type="primary"
+          >
+            立即使用
+          </Button>
+        </span>
       </Tooltip>
     </article>
   );

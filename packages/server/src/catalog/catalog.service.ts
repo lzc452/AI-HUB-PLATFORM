@@ -13,6 +13,23 @@ import {
   type CatalogVisibilityPort,
 } from "./catalog-visibility.policy.js";
 
+/**
+ * 轻量校验 web 交付入口 URL：非空、http(s) 协议、可被 URL 解析。
+ * 完整白名单校验（协议/端口/主机名/DNS CIDR）在 configureDelivery 时已执行
+ * （T11），resolve 时无策略上下文，此处仅拦截空值与历史非法数据，避免
+ * 前端 window.open 打开空白页或执行非 http(s) 目标。
+ */
+function isUsableWebRedirectUrl(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || !/^https?:\/\//i.test(trimmed)) return false;
+  try {
+    const protocol = new URL(trimmed).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export class CatalogService {
   private readonly visibility: CatalogVisibilityPort;
 
@@ -134,6 +151,9 @@ export class CatalogService {
     }
 
     if (channel === "web") {
+      if (!isUsableWebRedirectUrl(delivery.entryUrl)) {
+        throw new Error("WEB_DELIVERY_URL_MISSING");
+      }
       return { kind: "web_redirect", url: delivery.entryUrl };
     }
     if (channel === "mini_program") {
@@ -160,7 +180,7 @@ export class CatalogService {
         fileName: null,
       };
     }
-    if (delivery.entryUrl.trim().length > 0) {
+    if (isUsableWebRedirectUrl(delivery.entryUrl)) {
       return { kind: "web_redirect", url: delivery.entryUrl };
     }
     return { kind: "unavailable", reason: "该渠道暂未配置可下载安装包" };

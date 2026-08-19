@@ -1,6 +1,6 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeFilled, LikeOutlined, StarFilled } from "@ant-design/icons";
-import { Button, Dropdown, Rate, Switch, Tag, Typography } from "antd";
+import { Button, Dropdown, Rate, Switch, Tag, Tooltip, Typography } from "antd";
 import { useState } from "react";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
@@ -27,6 +27,8 @@ export interface MarketplaceDetailHeaderProps {
   ratingDisabled: boolean;
   ratingPending: boolean;
   likePending: boolean;
+  /** web 交付入口 URL 缺失/非法（WEB_DELIVERY_URL_MISSING）时禁用"立即使用"。 */
+  deliveryUrlMissing?: boolean;
   /** 当前用户评分（1-5）；未评分时为 null/0。 */
   myRating?: number | null;
   /** 当前用户是否已点赞。 */
@@ -45,6 +47,7 @@ export function MarketplaceDetailHeader({
   ratingDisabled,
   ratingPending,
   myRating = 0,
+  deliveryUrlMissing = false,
 }: MarketplaceDetailHeaderProps) {
   const [anonymousRating, setAnonymousRating] = useState(false);
   const departments = useDepartments();
@@ -167,25 +170,37 @@ export function MarketplaceDetailHeader({
           </section>
 
           <div className="flex shrink-0 gap-2">
-            <Dropdown
-              menu={{
-                items: entry.deliveryChannels.map((channel) => ({
-                  key: channel,
-                  label: (
-                    <span onClick={() => onResolve(channel)} role="menuitem">
-                      {channelText[channel]}
-                    </span>
-                  ),
-                })),
-              }}
-              trigger={["click"]}
-            >
-              <Button loading={resolving} type="primary">
-                {primaryChannel !== undefined
-                  ? `立即使用（${channelText[primaryChannel]}）`
-                  : "立即使用"}
-              </Button>
-            </Dropdown>
+            {deliveryUrlMissing ? (
+              <Tooltip title="交付地址未配置">
+                <span>
+                  <Button disabled type="primary">
+                    {primaryChannel !== undefined
+                      ? `立即使用（${channelText[primaryChannel]}）`
+                      : "立即使用"}
+                  </Button>
+                </span>
+              </Tooltip>
+            ) : (
+              <Dropdown
+                menu={{
+                  items: entry.deliveryChannels.map((channel) => ({
+                    key: channel,
+                    label: (
+                      <span onClick={() => onResolve(channel)} role="menuitem">
+                        {channelText[channel]}
+                      </span>
+                    ),
+                  })),
+                }}
+                trigger={["click"]}
+              >
+                <Button loading={resolving} type="primary">
+                  {primaryChannel !== undefined
+                    ? `立即使用（${channelText[primaryChannel]}）`
+                    : "立即使用"}
+                </Button>
+              </Dropdown>
+            )}
             {/* <Tooltip title="收藏功能待接入">
               <Button
                 aria-label="收藏"
