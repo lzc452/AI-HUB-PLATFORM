@@ -118,15 +118,16 @@ describe("NotificationsPage", () => {
   it("renders notification list with titles and timestamps", () => {
     renderPage();
 
-    expect(
-      screen.getByRole("heading", { name: "站内通知" }),
-    ).toBeInTheDocument();
+    // 页面重构为 antd Tabs，无 h1 标题：断言「全部」页签
+    expect(screen.getByRole("tab", { name: "全部" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "未读" })).toBeInTheDocument();
     expect(
       screen.getByText("您的应用「OCR票据识别」审核已通过"),
     ).toBeInTheDocument();
+    // 该条消息同时作为标题与摘要渲染（fallback 分支），用 getAllByText 断言
     expect(
-      screen.getByText("应用「会议纪要总结」收到新的评价"),
-    ).toBeInTheDocument();
+      screen.getAllByText("应用「会议纪要总结」收到新的评价").length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText("系统扫描发现 1 个高风险附件")).toBeInTheDocument();
     expect(screen.getByText("共 3 条")).toBeInTheDocument();
   });

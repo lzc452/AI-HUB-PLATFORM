@@ -63,7 +63,7 @@ describe("authentication", () => {
 
     render(<App />);
 
-    fireEvent.change(await screen.findByLabelText("工号 / 邮箱"), {
+    fireEvent.change(await screen.findByLabelText("工号"), {
       target: { value: "E0001" },
     });
     fireEvent.change(screen.getByLabelText("密码"), {

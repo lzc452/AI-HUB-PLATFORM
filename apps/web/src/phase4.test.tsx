@@ -65,14 +65,17 @@ describe("Phase 4 market shell", () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole("link", { name: /站内通知/ }));
+    // 通知页重构为 antd Tabs：断言「全部」页签与空态
     expect(
-      await screen.findByRole("heading", { name: "站内通知" }),
+      await screen.findByRole("tab", { name: "全部" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "未读" })).toBeInTheDocument();
+    expect(screen.getByText("暂无通知")).toBeInTheDocument();
 
     globalThis.window.history.pushState({}, "", "/creator/app-platform");
     render(<App />);
-    expect(
-      await screen.findByRole("heading", { name: "创作者中心" }),
-    ).toBeInTheDocument();
+    // 创作者中心无 h1 标题：断言 KPI 指标卡（真实渲染元素）
+    expect(await screen.findByText("总发布应用")).toBeInTheDocument();
+    expect(screen.getByText("累计点赞")).toBeInTheDocument();
   });
 });

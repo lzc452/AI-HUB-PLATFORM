@@ -7,6 +7,14 @@ import { queryClient } from "../query-client";
 
 configure({ asyncUtilTimeout: 5000 });
 
+// jsdom 未实现 getComputedStyle 的伪元素参数（antd rc-table 测量滚动条时调用），
+// 忽略伪元素参数以保持 antd 组件在 jsdom 下可挂载。
+const originalGetComputedStyle = window.getComputedStyle.bind(window);
+Object.defineProperty(globalThis.window, "getComputedStyle", {
+  configurable: true,
+  value: (elt: Element) => originalGetComputedStyle(elt),
+});
+
 class ResizeObserverStub {
   disconnect() {}
   observe() {}
@@ -118,6 +126,60 @@ beforeEach(() => {
           pageSize: 10,
           total: 1,
         });
+      }
+      if (path.includes("/internal/identity/employees")) {
+        return Response.json([
+          {
+            employeeId: "E0001",
+            displayName: "张三",
+            status: "active",
+            primaryDepartmentId: "dept-1",
+            roleNames: ["普通员工", "超级管理员"],
+          },
+        ]);
+      }
+      if (path.includes("/internal/identity/departments")) {
+        return Response.json([
+          {
+            departmentId: "dept-1",
+            name: "研发部",
+            parentDepartmentId: null,
+            source: "local",
+          },
+        ]);
+      }
+      if (path.includes("/internal/identity/roles")) {
+        return Response.json([
+          {
+            roleId: "role-employee",
+            roleName: "普通员工",
+            roleType: "system",
+            scope: "platform",
+            memberCount: 1,
+            creator: null,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            roleId: "role-super-admin",
+            roleName: "超级管理员",
+            roleType: "system",
+            scope: "platform",
+            memberCount: 1,
+            creator: null,
+            status: "active",
+            updatedAt: new Date().toISOString(),
+          },
+        ]);
+      }
+      if (path.includes("/internal/identity/sync-runs")) {
+        return Response.json([]);
+      }
+      if (path.includes("/internal/identity/sync/config")) {
+        return Response.json(null);
+      }
+      if (path.includes("/internal/security/audit-logs")) {
+        return Response.json({ items: [], total: 0 });
       }
       return Response.json({}, { status: 404 });
     }),
