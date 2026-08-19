@@ -381,6 +381,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
           ),
           canEditRisk:
             row.ownerEmployeeId === actor.employeeId ||
+            row.maintainerEmployeeId === actor.employeeId ||
             hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE),
           canReplyOfficial:
             row.ownerEmployeeId === actor.employeeId ||
@@ -520,6 +521,24 @@ export class KyselyCatalogRepository implements CatalogRepository {
       .updateTable("application_catalog_metadata")
       .set({ risk_description: description })
       .where("application_id", "=", applicationId)
+      .execute();
+  }
+
+  async recordAudit(input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void> {
+    await this.db
+      .insertInto("application_audit_events")
+      .values({
+        application_id: input.applicationId,
+        application_version_id: null,
+        actor_employee_id: input.actorEmployeeId,
+        event_type: input.eventType,
+        details: input.details ?? {},
+      })
       .execute();
   }
 

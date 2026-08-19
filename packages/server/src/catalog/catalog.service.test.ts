@@ -83,8 +83,20 @@ const entries: CatalogEntry[] = [
   },
 ];
 
+type MemoryOwners = Record<
+  string,
+  { ownerEmployeeId: string; maintainerEmployeeId: string | null }
+>;
+
 class MemoryCatalogRepository implements CatalogRepository {
   recordedActions: string[] = [];
+  auditEvents: Array<{
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }> = [];
+  riskDescriptions: Record<string, string> = {};
   constructor(
     private readonly visibleEntries = entries,
     private readonly qrAsset: {
@@ -100,6 +112,7 @@ class MemoryCatalogRepository implements CatalogRepository {
       entryUrl: "https://app.company.com",
       enabled: true,
     },
+    private readonly owners: MemoryOwners = {},
   ) {}
 
   async listVisible(
@@ -167,8 +180,20 @@ class MemoryCatalogRepository implements CatalogRepository {
     return null;
   }
 
-  async upsertRiskDescription(): Promise<void> {
-    // no-op in memory repository
+  async upsertRiskDescription(
+    applicationId: string,
+    description: string,
+  ): Promise<void> {
+    this.riskDescriptions[applicationId] = description;
+  }
+
+  async recordAudit(input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void> {
+    this.auditEvents.push(input);
   }
 
   async listCategories() {
@@ -179,8 +204,8 @@ class MemoryCatalogRepository implements CatalogRepository {
     return [];
   }
 
-  async findApplicationOwner() {
-    return null;
+  async findApplicationOwner(applicationId: string) {
+    return this.owners[applicationId] ?? null;
   }
 }
 
@@ -460,5 +485,105 @@ describe("CatalogService", () => {
     await expect(
       withoutAsset.getQrAsset(employee, "delivery-1"),
     ).rejects.toThrow("CATALOG_DELIVERY_ASSET_NOT_FOUND");
+  });
+
+  describe("saveRiskDescription", () => {
+    const owners: MemoryOwners = {
+      "app-platform": { ownerEmployeeId: "E100", maintainerEmployeeId: null },
+      "app-finance": { ownerEmployeeId: "E100", maintainerEmployeeId: "E200" },
+    };
+
+    it("owner 可更新风险说明并写入审计事件（trim 后内容）", async () => {
+      const repository = new MemoryCatalogRepository(
+        entries,
+        null,
+        undefined,
+        owners,
+      );
+      const service = new CatalogService(repository);
+
+      await expect(
+        service.saveRiskDescription(employee, "app-platform", " 新的风险说明 "),
+      ).resolves.toBeUndefined();
+
+      expect(repository.riskDescriptions).toEqual({
+        "app-platform": "新的风险说明",
+      });
+      expect(repository.auditEvents).toEqual([
+        {
+          applicationId: "app-platform",
+          actorEmployeeId: "E100",
+          eventType: "catalog.risk_updated",
+          details: { riskDescription: "新的风险说明" },
+        },
+      ]);
+    });
+
+    it("maintainer 可更新风险说明", async () => {
+      const repository = new MemoryCatalogRepository(
+        entries,
+        null,
+        undefined,
+        owners,
+      );
+      const service = new CatalogService(repository);
+
+      await expect(
+        service.saveRiskDescription(
+          outsideEmployee,
+          "app-finance",
+          "维护人更新",
+        ),
+      ).resolves.toBeUndefined();
+      expect(repository.riskDescriptions).toEqual({
+        "app-finance": "维护人更新",
+      });
+    });
+
+    it("非 owner/maintainer 但具备 APPLICATION_MANAGE 权限的员工可更新风险说明", async () => {
+      const repository = new MemoryCatalogRepository(
+        entries,
+        null,
+        undefined,
+        owners,
+      );
+      const service = new CatalogService(repository);
+      const manageActor: ActorContext = {
+        ...outsideEmployee,
+        permissions: ["application.manage"],
+      };
+
+      await expect(
+        service.saveRiskDescription(manageActor, "app-finance", "管理员更新"),
+      ).resolves.toBeUndefined();
+    });
+
+    it("非 owner/maintainer 且无 APPLICATION_MANAGE 权限的员工被拒绝且无审计", async () => {
+      const repository = new MemoryCatalogRepository(entries, null, undefined, {
+        "app-finance": { ownerEmployeeId: "E100", maintainerEmployeeId: null },
+      });
+      const service = new CatalogService(repository);
+
+      await expect(
+        service.saveRiskDescription(outsideEmployee, "app-finance", "越权更新"),
+      ).rejects.toThrow("NOT_AUTHORIZED");
+      expect(repository.riskDescriptions).toEqual({});
+      expect(repository.auditEvents).toEqual([]);
+    });
+
+    it("空风险说明被拒绝且不写入审计", async () => {
+      const repository = new MemoryCatalogRepository(
+        entries,
+        null,
+        undefined,
+        owners,
+      );
+      const service = new CatalogService(repository);
+
+      await expect(
+        service.saveRiskDescription(employee, "app-platform", "   "),
+      ).rejects.toThrow("RISK_DESCRIPTION_REQUIRED");
+      expect(repository.auditEvents).toEqual([]);
+    });
   });
 });

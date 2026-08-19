@@ -1,4 +1,8 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import type {
   CatalogDeliveryAction,
   CatalogListResult,
@@ -246,10 +250,25 @@ export class CatalogService {
     if (!description || description.trim().length === 0) {
       throw new Error("RISK_DESCRIPTION_REQUIRED");
     }
-    await this.repository.upsertRiskDescription(
+    // 风险说明编辑是治理操作：仅应用 owner/maintainer 或具备
+    // APPLICATION_MANAGE 权限者可修改（与详情 capabilities.canEditRisk 对齐）。
+    const ownership = await this.repository.findApplicationOwner(applicationId);
+    if (
+      ownership === null ||
+      (ownership.ownerEmployeeId !== actor.employeeId &&
+        ownership.maintainerEmployeeId !== actor.employeeId &&
+        !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE))
+    ) {
+      throw new Error("NOT_AUTHORIZED");
+    }
+    const trimmed = description.trim();
+    await this.repository.upsertRiskDescription(applicationId, trimmed);
+    await this.repository.recordAudit({
       applicationId,
-      description.trim(),
-    );
+      actorEmployeeId: actor.employeeId,
+      eventType: "catalog.risk_updated",
+      details: { riskDescription: trimmed },
+    });
   }
 
   private async query(input: CatalogSearchInput): Promise<CatalogListResult> {

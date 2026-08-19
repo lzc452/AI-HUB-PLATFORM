@@ -120,6 +120,13 @@ export interface CatalogRepository {
     applicationId: string,
     description: string,
   ): Promise<void>;
+  /** 写入应用审计事件（与交互/需求模块同表 application_audit_events）。 */
+  recordAudit(input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void>;
 }
 
 /** 交付解析结果：不同渠道返回不同的可执行目标。
