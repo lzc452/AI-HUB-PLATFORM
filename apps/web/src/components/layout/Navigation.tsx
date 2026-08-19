@@ -2,10 +2,8 @@ import {
   AppstoreAddOutlined,
   AppstoreOutlined,
   BellOutlined,
-  CheckCircleOutlined,
   DashboardOutlined,
   ExperimentOutlined,
-  RobotOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from "@ant-design/icons";

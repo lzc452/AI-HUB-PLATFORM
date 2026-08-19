@@ -41,7 +41,7 @@ const RICH_TEXT_ALLOWED_ATTR = [
 // 以及相对路径与 HTML 实体；拒绝协议相对地址（//host）。负向先行断言 (?!//) 用于在
 // 正则层直接拒绝协议相对地址（DOMPurify 本版本无 allowProtocolRelative 选项）。
 const RICH_TEXT_ALLOWED_URI_REGEXP =
-  /^(?!\/\/)(?:(?:(?:https?|mailto|ftp|tel|file):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))|(?:&(?:#\d+|#x[a-f0-9]+|[a-z0-9]+);))/i;
+  /^(?!\/\/)(?:(?:(?:https?|mailto|ftp|tel|file):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))|(?:&(?:#\d+|#x[a-f0-9]+|[a-z0-9]+);))/i;
 
 // 锚点强制加 rel，与后端清洗策略一致（缓解反向标签页劫持与 referral 泄露）。
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
@@ -55,7 +55,9 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 // 故在此钩子里显式丢弃 href/src 上的 data: 与协议相对地址，确保净化结果严格收敛。
 DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
   if (data.attrName === "href" || data.attrName === "src") {
-    const value = String(data.attrValue ?? "").trim().toLowerCase();
+    const value = String(data.attrValue ?? "")
+      .trim()
+      .toLowerCase();
     if (value.startsWith("data:") || value.startsWith("//")) {
       data.keepAttr = false;
     }

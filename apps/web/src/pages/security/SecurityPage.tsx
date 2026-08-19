@@ -1,5 +1,5 @@
 import { DownloadOutlined } from "@ant-design/icons";
-import { Button, Tabs, Typography } from "antd";
+import { Button, Tabs } from "antd";
 import { useMemo, useState } from "react";
 
 import { EmptyBlock } from "../../components/common";

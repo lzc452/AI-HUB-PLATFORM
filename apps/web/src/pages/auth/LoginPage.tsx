@@ -21,29 +21,8 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-/** 钉钉小 Logo：蓝色圆形底 + 白色钉钉风格符号（内联 SVG） */
-function DingTalkLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="-mt-px"
-      fill="none"
-      height="18"
-      viewBox="0 0 18 18"
-      width="18"
-    >
-      <circle cx="9" cy="9" fill="#1677ff" r="9" />
-      <path
-        d="M13.1 7.2c.2-.5.3-1 .2-1.5-1.4.4-2.3.3-3.6-.2-1.9-.7-3.6-.2-4.2 1.3-.4 1 0 2.1.7 2.9l-.4 1.8 1.9-.9c1.7.6 3.8.3 4.7-.8.4-.5.6-1 .7-1.6-.4.5-1 .8-1.7 1l1.7-2z"
-        fill="#ffffff"
-      />
-    </svg>
-  );
-}
-
 export default function LoginPage() {
-  const { error, isLoading, login, startDingTalkLogin, completeDingTalkLogin } =
-    useAuth();
+  const { error, isLoading, login, completeDingTalkLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from =

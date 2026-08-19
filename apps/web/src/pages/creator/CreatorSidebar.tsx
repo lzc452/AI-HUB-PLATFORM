@@ -4,12 +4,10 @@ import {
   ExperimentOutlined,
   ReadOutlined,
   RightOutlined,
-  TrophyOutlined,
 } from "@ant-design/icons";
 import { Typography } from "antd";
 
 import {
-  creatorAchievements,
   developerResources,
   publishingSuggestions,
   type DeveloperResource,

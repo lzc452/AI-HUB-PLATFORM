@@ -2,7 +2,6 @@ import { Tabs } from "antd";
 import { useMemo, useState } from "react";
 
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
-import { OrganizationHeader } from "./components/OrganizationHeader";
 import { OrganizationStats } from "./components/OrganizationStats";
 import { DepartmentManagementTab } from "./components/departments/DepartmentManagementTab";
 import { DepartmentStats } from "./components/departments/DepartmentStats";
