@@ -148,7 +148,8 @@ export function useComments(
 
 /**
  * 评论列表键含 page/pageSize（见 useComments），失效时按当前页精确匹配，
- * 避免无差别重取全部页（分页下的新增/隐藏/恢复只影响当前页可见性）。
+ * 避免无差别重取全部页；同时失效第 1 页——新评论按时间倒序落在第 1 页，
+ * 第 2+ 页用户提交后翻回第 1 页即可即时看到自己的新评论。
  */
 export function useHideComment(
   applicationId: string | undefined,
@@ -164,6 +165,11 @@ export function useHideComment(
       queryClient.invalidateQueries({
         queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
+      if (page !== 1) {
+        queryClient.invalidateQueries({
+          queryKey: ["interactions", "comments", applicationId, 1, pageSize],
+        });
+      }
       showSuccessMessage("评论已隐藏");
     },
   });
@@ -194,15 +200,16 @@ export function useRestoreComment(
       queryClient.invalidateQueries({
         queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
+      if (page !== 1) {
+        queryClient.invalidateQueries({
+          queryKey: ["interactions", "comments", applicationId, 1, pageSize],
+        });
+      }
       showSuccessMessage("评论已恢复");
     },
   });
 }
 
-/**
- * 发表评论后按当前页失效评论列表，保证第 2+ 页用户在提交后能看到
- * 刷新后的当前页（新评论按时间倒序落在第 1 页，翻页后可查看）。
- */
 export function useCreateComment(
   applicationId: string | undefined,
   page: number = 1,
@@ -220,6 +227,11 @@ export function useCreateComment(
       queryClient.invalidateQueries({
         queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
+      if (page !== 1) {
+        queryClient.invalidateQueries({
+          queryKey: ["interactions", "comments", applicationId, 1, pageSize],
+        });
+      }
       showSuccessMessage("评论已发表");
     },
   });

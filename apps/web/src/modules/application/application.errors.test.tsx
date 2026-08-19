@@ -41,6 +41,35 @@ describe("application errors adapter", () => {
     ).toBe("请填写下架原因");
   });
 
+  it("映射 Web 交付地址白名单策略错误码（WEB_URL_* 家族）", () => {
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "WEB_URL_INVALID")),
+    ).toBe("交付地址无效");
+    expect(
+      toApplicationErrorMessage(
+        new ApiError(400, "WEB_URL_CREDENTIALS_FORBIDDEN"),
+      ),
+    ).toBe("交付地址禁止携带账号凭据");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "WEB_URL_HOST_NOT_ALLOWED")),
+    ).toBe("交付地址域名不在白名单内");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "WEB_URL_CIDR_NOT_ALLOWED")),
+    ).toBe("交付地址解析到的网段不在白名单内");
+  });
+
+  it("映射小程序二维码校验错误码（QR_* 家族）", () => {
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "QR_VALIDATION_UNAVAILABLE")),
+    ).toBe("二维码校验服务不可用，请稍后重试");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "QR_TARGET_FORMAT_INVALID")),
+    ).toBe("二维码目标格式无效");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "QR_DECODE_FAILED")),
+    ).toBe("二维码无法解析");
+  });
+
   it("交付渠道文案按类型门禁描述而非全部四个渠道", () => {
     expect(
       toApplicationErrorMessage(

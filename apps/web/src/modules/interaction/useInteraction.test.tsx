@@ -8,6 +8,7 @@ import {
   useCreateComment,
   useHideComment,
   useReportComment,
+  useRestoreComment,
   useToggleLike,
 } from "./useInteraction";
 
@@ -15,6 +16,7 @@ const hoisted = vi.hoisted(() => ({
   createComment: vi.fn(),
   hideComment: vi.fn(),
   reportComment: vi.fn(),
+  restoreComment: vi.fn(),
   showErrorMessage: vi.fn(),
   showSuccessMessage: vi.fn(),
   toggleLike: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock("./interaction.client", async (importOriginal) => {
     createComment: hoisted.createComment,
     hideComment: hoisted.hideComment,
     reportComment: hoisted.reportComment,
+    restoreComment: hoisted.restoreComment,
     toggleLike: hoisted.toggleLike,
   };
 });
@@ -242,7 +245,7 @@ describe("useCreateComment 分页感知刷新", () => {
     hoisted.createComment.mockReset();
   });
 
-  it("发表评论后按当前页精确失效评论列表查询（第 2 页）", async () => {
+  it("第 2 页发表评论后失效当前页与第 1 页，其他页不失效", async () => {
     hoisted.createComment.mockResolvedValue({ commentId: "comment-new" });
     const queryClient = createQueryClient();
     const spy = vi.spyOn(queryClient, "invalidateQueries");
@@ -254,15 +257,17 @@ describe("useCreateComment 分页感知刷新", () => {
       await result.current.mutateAsync({ body: "新评论" });
     });
 
-    expect(spy).toHaveBeenCalledWith({
-      queryKey: ["interactions", "comments", "app-1", 2, 10],
-    });
+    // 新评论按时间倒序落在第 1 页：当前页与第 1 页都刷新，第 3 页不刷新。
+    expect(spy.mock.calls.map((call) => call[0]!.queryKey)).toEqual([
+      ["interactions", "comments", "app-1", 2, 10],
+      ["interactions", "comments", "app-1", 1, 10],
+    ]);
     await waitFor(() =>
       expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("评论已发表"),
     );
   });
 
-  it("未指定页时默认失效第 1 页", async () => {
+  it("未指定页时默认仅失效第 1 页（不重复失效）", async () => {
     hoisted.createComment.mockResolvedValue({ commentId: "comment-new" });
     const queryClient = createQueryClient();
     const spy = vi.spyOn(queryClient, "invalidateQueries");
@@ -274,9 +279,9 @@ describe("useCreateComment 分页感知刷新", () => {
       await result.current.mutateAsync({ body: "新评论" });
     });
 
-    expect(spy).toHaveBeenCalledWith({
-      queryKey: ["interactions", "comments", "app-1", 1, 20],
-    });
+    expect(spy.mock.calls.map((call) => call[0]!.queryKey)).toEqual([
+      ["interactions", "comments", "app-1", 1, 20],
+    ]);
   });
 });
 
@@ -287,7 +292,7 @@ describe("useHideComment 分页感知刷新", () => {
     hoisted.hideComment.mockReset();
   });
 
-  it("隐藏评论后按当前页精确失效评论列表查询", async () => {
+  it("第 2 页隐藏评论后失效当前页与第 1 页", async () => {
     hoisted.hideComment.mockResolvedValue({ commentId: "comment-1" });
     const queryClient = createQueryClient();
     const spy = vi.spyOn(queryClient, "invalidateQueries");
@@ -299,11 +304,41 @@ describe("useHideComment 分页感知刷新", () => {
       await result.current.mutateAsync("comment-1");
     });
 
-    expect(spy).toHaveBeenCalledWith({
-      queryKey: ["interactions", "comments", "app-1", 2, 10],
-    });
+    expect(spy.mock.calls.map((call) => call[0]!.queryKey)).toEqual([
+      ["interactions", "comments", "app-1", 2, 10],
+      ["interactions", "comments", "app-1", 1, 10],
+    ]);
     await waitFor(() =>
       expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("评论已隐藏"),
+    );
+  });
+});
+
+describe("useRestoreComment 分页感知刷新", () => {
+  beforeEach(() => {
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+    hoisted.restoreComment.mockReset();
+  });
+
+  it("第 2 页恢复评论后失效当前页与第 1 页", async () => {
+    hoisted.restoreComment.mockResolvedValue({ commentId: "comment-1" });
+    const queryClient = createQueryClient();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useRestoreComment("app-1", 2, 10), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync("comment-1");
+    });
+
+    expect(spy.mock.calls.map((call) => call[0]!.queryKey)).toEqual([
+      ["interactions", "comments", "app-1", 2, 10],
+      ["interactions", "comments", "app-1", 1, 10],
+    ]);
+    await waitFor(() =>
+      expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("评论已恢复"),
     );
   });
 });

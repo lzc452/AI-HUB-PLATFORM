@@ -21,6 +21,9 @@ const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   DRAFT_VALIDATION_FAILED: "草稿未通过提交校验",
   INVALID_APPLICATION_TRANSITION: "当前应用状态不允许执行此操作",
   OWNER_UNCHANGED: "责任人未发生变化",
+  QR_VALIDATION_UNAVAILABLE: "二维码校验服务不可用，请稍后重试",
+  QR_TARGET_FORMAT_INVALID: "二维码目标格式无效",
+  QR_DECODE_FAILED: "二维码无法解析",
   REVIEW_ALREADY_PENDING: "已有版本正在审核中，请等待审核结束",
   REVIEW_COMMENT_REQUIRED: "驳回时必须填写审核原因",
   REVIEW_NOT_PENDING: "没有待审核的版本",
@@ -37,6 +40,13 @@ const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   UPLOAD_EXPIRED: "上传会话已过期，请重新上传文件",
   VERSION_ALREADY_EXISTS: "该版本号已存在，请使用新的版本号",
   WEB_DELIVERY_URL_MISSING: "交付地址未配置，请先在编辑器中配置应用地址",
+  WEB_URL_INVALID: "交付地址无效",
+  WEB_URL_CREDENTIALS_FORBIDDEN: "交付地址禁止携带账号凭据",
+  WEB_URL_PROTOCOL_NOT_ALLOWED: "交付地址协议不允许",
+  WEB_URL_PORT_NOT_ALLOWED: "交付地址端口不允许",
+  WEB_URL_HOST_NOT_ALLOWED: "交付地址域名不在白名单内",
+  WEB_URL_DNS_FAILED: "交付地址域名解析失败",
+  WEB_URL_CIDR_NOT_ALLOWED: "交付地址解析到的网段不在白名单内",
   WITHDRAW_REASON_REQUIRED: "请填写下架原因",
 };
 
