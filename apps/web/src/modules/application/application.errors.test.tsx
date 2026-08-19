@@ -21,6 +21,34 @@ describe("application errors adapter", () => {
     expect(toApplicationErrorMessage(error)).toBe(error);
   });
 
+  it("补全交付目标/并发审核/Web 地址等缺失错误码映射", () => {
+    expect(
+      toApplicationErrorMessage(
+        new ApiError(400, "DELIVERY_TARGETS_INCOMPLETE", undefined, "trace-dt"),
+      ),
+    ).toBe("小程序渠道需配置已启用的交付目标（含二维码）（追踪 ID：trace-dt）");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "REVIEW_ALREADY_PENDING")),
+    ).toBe("已有版本正在审核中，请等待审核结束");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "WEB_DELIVERY_URL_MISSING")),
+    ).toBe("交付地址未配置，请先在编辑器中配置应用地址");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "SELF_REVIEW_FORBIDDEN")),
+    ).toBe("不能审核自己参与的应用");
+    expect(
+      toApplicationErrorMessage(new ApiError(400, "WITHDRAW_REASON_REQUIRED")),
+    ).toBe("请填写下架原因");
+  });
+
+  it("交付渠道文案按类型门禁描述而非全部四个渠道", () => {
+    expect(
+      toApplicationErrorMessage(
+        new ApiError(400, "DELIVERY_CHANNELS_INCOMPLETE"),
+      ),
+    ).toBe("请按应用类型配置对应交付渠道");
+  });
+
   it("将未签名制品确认错误转换为可操作提示", () => {
     expect(
       toApplicationErrorMessage(

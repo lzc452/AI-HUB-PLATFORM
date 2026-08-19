@@ -4,9 +4,16 @@ import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "../../shared/api/client";
-import { useReportComment, useToggleLike } from "./useInteraction";
+import {
+  useCreateComment,
+  useHideComment,
+  useReportComment,
+  useToggleLike,
+} from "./useInteraction";
 
 const hoisted = vi.hoisted(() => ({
+  createComment: vi.fn(),
+  hideComment: vi.fn(),
   reportComment: vi.fn(),
   showErrorMessage: vi.fn(),
   showSuccessMessage: vi.fn(),
@@ -17,6 +24,8 @@ vi.mock("./interaction.client", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./interaction.client")>();
   return {
     ...actual,
+    createComment: hoisted.createComment,
+    hideComment: hoisted.hideComment,
     reportComment: hoisted.reportComment,
     toggleLike: hoisted.toggleLike,
   };
@@ -222,6 +231,79 @@ describe("useToggleLike", () => {
     expect(hoisted.showErrorMessage).toHaveBeenCalledWith(
       expect.any(ApiError),
       "点赞操作失败",
+    );
+  });
+});
+
+describe("useCreateComment 分页感知刷新", () => {
+  beforeEach(() => {
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+    hoisted.createComment.mockReset();
+  });
+
+  it("发表评论后按当前页精确失效评论列表查询（第 2 页）", async () => {
+    hoisted.createComment.mockResolvedValue({ commentId: "comment-new" });
+    const queryClient = createQueryClient();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCreateComment("app-1", 2, 10), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ body: "新评论" });
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["interactions", "comments", "app-1", 2, 10],
+    });
+    await waitFor(() =>
+      expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("评论已发表"),
+    );
+  });
+
+  it("未指定页时默认失效第 1 页", async () => {
+    hoisted.createComment.mockResolvedValue({ commentId: "comment-new" });
+    const queryClient = createQueryClient();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCreateComment("app-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ body: "新评论" });
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["interactions", "comments", "app-1", 1, 20],
+    });
+  });
+});
+
+describe("useHideComment 分页感知刷新", () => {
+  beforeEach(() => {
+    hoisted.showErrorMessage.mockReset();
+    hoisted.showSuccessMessage.mockReset();
+    hoisted.hideComment.mockReset();
+  });
+
+  it("隐藏评论后按当前页精确失效评论列表查询", async () => {
+    hoisted.hideComment.mockResolvedValue({ commentId: "comment-1" });
+    const queryClient = createQueryClient();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useHideComment("app-1", 2, 10), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync("comment-1");
+    });
+
+    expect(spy).toHaveBeenCalledWith({
+      queryKey: ["interactions", "comments", "app-1", 2, 10],
+    });
+    await waitFor(() =>
+      expect(hoisted.showSuccessMessage).toHaveBeenCalledWith("评论已隐藏"),
     );
   });
 });

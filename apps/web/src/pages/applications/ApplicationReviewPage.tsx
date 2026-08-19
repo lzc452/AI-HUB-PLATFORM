@@ -42,6 +42,7 @@ import {
   useReviewQueue,
   useValidationChecks,
 } from "../../modules/application/useApplication";
+import { statusMeta } from "../../modules/application/application-status";
 import { useAuth } from "../../modules/auth/useAuth";
 import { MessageError, showWarningMessage } from "../../shared/ui/message";
 
@@ -429,6 +430,7 @@ function PreviewOverview({
   version: ApplicationVersionRecord | undefined;
 }) {
   // 预览内容使用设计稿中的中文间隔，保留信息层级。
+  const status = statusMeta(app?.status ?? "unknown");
 
   return (
     <div className="space-y-5 p-5">
@@ -439,7 +441,7 @@ function PreviewOverview({
             <h3 className="m-0 text-[20px] font-semibold">
               {app?.name ?? "未命名应用"}
             </h3>
-            <Tag color="blue">{app?.status ?? "unknown"}</Tag>
+            <Tag color={status.color}>{status.text}</Tag>
           </div>
           <div className="mt-2 flex flex-wrap gap-4 text-[13px] text-[#697386]">
             <span className="inline-flex items-center gap-1">
@@ -535,8 +537,7 @@ function PreviewOverview({
         </section>
       </div>
       <Text type="secondary">
-        提交版本：{version?.version ?? "未提供"} - 当前状态：
-        {app?.status ?? "unknown"}
+        提交版本：{version?.version ?? "未提供"} - 当前状态：{status.text}
       </Text>
     </div>
   );

@@ -120,17 +120,24 @@ export default function MarketplaceDetailPage() {
     commentsPage,
     10,
   );
+  // 评论变更失效按当前页匹配（useComments 键含 page/pageSize）。
   const hideComment = useHideComment(
     activeTab === "reviews" ? applicationId : undefined,
+    commentsPage,
+    10,
   );
   const restoreComment = useRestoreComment(
     activeTab === "reviews" ? applicationId : undefined,
+    commentsPage,
+    10,
   );
   const reportComment = useReportComment(
     activeTab === "reviews" ? applicationId : undefined,
   );
   const createComment = useCreateComment(
     activeTab === "reviews" ? applicationId : undefined,
+    commentsPage,
+    10,
   );
   const createFeedback = useCreateFeedback(applicationId);
   const myFeedback = useMyFeedback(

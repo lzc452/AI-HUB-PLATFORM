@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import type { AudienceRule } from "@ai-hub/contracts";
 
 import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
+import { statusMeta } from "../../modules/application/application-status";
 import {
   useApplication,
   useApplicationWorkspace,
@@ -130,7 +131,7 @@ export default function ApplicationDetailsPage() {
             </h3>
             <div className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
               {[
-                ["应用状态", application?.status ?? "unknown"],
+                ["应用状态", statusMeta(application?.status ?? "unknown").text],
                 ["安全扫描", version?.scanStatus ?? "unknown"],
                 ["SHA-256", version?.artifactSha256 ?? "未提供"],
                 ["签名", version?.artifactSignature ? "已签名" : "未提供"],
@@ -257,7 +258,7 @@ export default function ApplicationDetailsPage() {
             <div className="relative space-y-4 pl-5 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-[#cbd5e1]">
               {[
                 [
-                  application?.status ?? "unknown",
+                  statusMeta(application?.status ?? "unknown").text,
                   version?.createdAt ?? "",
                   "当前状态",
                   "#1677ff",

@@ -1,20 +1,43 @@
 import { ApiError } from "../../shared/api/client";
 
 const APPLICATION_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  APPLICATION_ACCESS_FORBIDDEN: "您无权访问该应用",
+  APPLICATION_DELETE_STATUS_INVALID: "当前状态不允许删除应用",
+  APPLICATION_MAINTAINER_REQUIRED: "仅应用负责人或维护人可执行此操作",
   APPLICATION_NOT_EDITABLE: "当前应用状态不允许编辑",
   APPLICATION_OWNER_REQUIRED: "仅应用负责人可以执行此操作",
+  APPLICATION_STATE_CONFLICT: "应用状态已变化，请刷新后重试",
+  APPLICATION_VERSION_MISMATCH: "版本信息不一致，请刷新后重试",
   ARTIFACT_NOT_VERIFIED: "版本制品尚未通过安全校验",
   ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE:
     "桌面端/移动端应用需先上传安装包（绑定制品）后才能提交审核",
-  DELIVERY_CHANNELS_INCOMPLETE: "发布前必须启用全部四个交付渠道",
+  DELIVERY_CHANNELS_INCOMPLETE: "请按应用类型配置对应交付渠道",
+  DELIVERY_TARGETS_INCOMPLETE: "小程序渠道需配置已启用的交付目标（含二维码）",
+  DELIVERY_TARGETS_NOT_ALLOWED: "该渠道不支持交付目标配置",
+  DELIVERY_TARGET_INVALID: "交付目标信息无效",
+  DELIVERY_TARGET_QR_REQUIRED: "小程序交付目标需上传二维码",
+  DELIVERY_TARGET_ASSET_NOT_FOUND: "交付目标引用的二维码资产不存在",
+  DRAFT_NOT_FOUND: "草稿不存在，请重新创建",
   DRAFT_VALIDATION_FAILED: "草稿未通过提交校验",
   INVALID_APPLICATION_TRANSITION: "当前应用状态不允许执行此操作",
+  OWNER_UNCHANGED: "责任人未发生变化",
+  REVIEW_ALREADY_PENDING: "已有版本正在审核中，请等待审核结束",
+  REVIEW_COMMENT_REQUIRED: "驳回时必须填写审核原因",
+  REVIEW_NOT_PENDING: "没有待审核的版本",
+  REVIEW_QUEUE_NOT_AVAILABLE: "该审核任务当前不可领取",
+  REVIEW_QUEUE_CLAIM_REQUIRED: "该操作需要先领取审核任务",
+  REVIEW_QUEUE_NOT_CLAIMED: "该审核任务尚未被领取",
+  REVIEW_TRANSFER_FORBIDDEN: "仅超级管理员可以转交审核任务",
+  ROLLBACK_TARGET_IS_CURRENT: "不能回滚到当前版本",
+  SELF_REVIEW_FORBIDDEN: "不能审核自己参与的应用",
   UNSIGNED_ARTIFACT_REQUIRES_CONFIRMATION:
     "制品未签名，请勾选确认接受风险后再操作",
   UPLOAD_ALREADY_COMPLETED: "该上传会话已经结束，请重新选择文件",
   UPLOAD_CONTENT_MISSING: "上传内容缺失，请重新上传文件",
   UPLOAD_EXPIRED: "上传会话已过期，请重新上传文件",
   VERSION_ALREADY_EXISTS: "该版本号已存在，请使用新的版本号",
+  WEB_DELIVERY_URL_MISSING: "交付地址未配置，请先在编辑器中配置应用地址",
+  WITHDRAW_REASON_REQUIRED: "请填写下架原因",
 };
 
 const ARTIFACT_UPLOAD_ERROR_MESSAGES: Readonly<Record<string, string>> = {

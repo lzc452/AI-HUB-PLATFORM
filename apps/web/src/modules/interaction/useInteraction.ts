@@ -146,7 +146,15 @@ export function useComments(
   });
 }
 
-export function useHideComment(applicationId: string | undefined) {
+/**
+ * 评论列表键含 page/pageSize（见 useComments），失效时按当前页精确匹配，
+ * 避免无差别重取全部页（分页下的新增/隐藏/恢复只影响当前页可见性）。
+ */
+export function useHideComment(
+  applicationId: string | undefined,
+  page: number = 1,
+  pageSize: number = 20,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) =>
@@ -154,7 +162,7 @@ export function useHideComment(applicationId: string | undefined) {
     onError: (error) => showErrorMessage(error, "隐藏评论失败"),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["interactions", "comments", applicationId],
+        queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
       showSuccessMessage("评论已隐藏");
     },
@@ -172,7 +180,11 @@ export function useReportComment(applicationId: string | undefined) {
   });
 }
 
-export function useRestoreComment(applicationId: string | undefined) {
+export function useRestoreComment(
+  applicationId: string | undefined,
+  page: number = 1,
+  pageSize: number = 20,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (commentId: string) =>
@@ -180,14 +192,22 @@ export function useRestoreComment(applicationId: string | undefined) {
     onError: (error) => showErrorMessage(error, "恢复评论失败"),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["interactions", "comments", applicationId],
+        queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
       showSuccessMessage("评论已恢复");
     },
   });
 }
 
-export function useCreateComment(applicationId: string | undefined) {
+/**
+ * 发表评论后按当前页失效评论列表，保证第 2+ 页用户在提交后能看到
+ * 刷新后的当前页（新评论按时间倒序落在第 1 页，翻页后可查看）。
+ */
+export function useCreateComment(
+  applicationId: string | undefined,
+  page: number = 1,
+  pageSize: number = 20,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: {
@@ -198,7 +218,7 @@ export function useCreateComment(applicationId: string | undefined) {
     onError: (error) => showErrorMessage(error, "发表评论失败"),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["interactions", "comments", applicationId],
+        queryKey: ["interactions", "comments", applicationId, page, pageSize],
       });
       showSuccessMessage("评论已发表");
     },

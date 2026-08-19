@@ -223,4 +223,13 @@ describe("ApplicationDetailsPage 受众标签", () => {
       expect(screen.getByText("由后端受众策略判定")).toBeInTheDocument();
     });
   });
+
+  it("应用状态显示中文而非原始枚举（published → 已发布）", async () => {
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("应用状态：")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("已发布").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("published")).not.toBeInTheDocument();
+  });
 });

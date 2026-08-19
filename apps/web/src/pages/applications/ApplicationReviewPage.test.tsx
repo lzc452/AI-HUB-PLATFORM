@@ -187,6 +187,13 @@ describe("ApplicationReviewPage", () => {
     expect(screen.getByText("暂无审核记录")).toBeInTheDocument();
   });
 
+  it("状态标签显示中文而非原始枚举（in_review → 审核中）", () => {
+    renderPage();
+
+    expect(screen.getAllByText("审核中").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("in_review")).not.toBeInTheDocument();
+  });
+
   it("shows the loading placeholder while queries are pending", () => {
     hoisted.useApplication.mockReturnValue({
       ...hoisted.settled,
