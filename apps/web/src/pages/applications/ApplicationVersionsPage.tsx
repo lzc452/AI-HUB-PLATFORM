@@ -17,13 +17,17 @@ import { ApiError } from "../../shared/api/client";
 import { MessageError } from "../../shared/ui/message";
 import { UploadVersionDrawer } from "./UploadVersionDrawer";
 
+/**
+ * scanStatus 是制品病毒扫描状态（pending/passed/failed），不是发布/审核状态，
+ * 中文标签必须反映「校验」语义，避免与「已发布/审核中」混淆。
+ */
 const scanStatusMeta: Record<
   ApplicationVersionRecord["scanStatus"],
   { color: string; label: string }
 > = {
   failed: { color: "error", label: "校验失败" },
-  passed: { color: "success", label: "已发布" },
-  pending: { color: "warning", label: "审核中" },
+  passed: { color: "success", label: "校验通过" },
+  pending: { color: "warning", label: "校验中" },
 };
 
 /** 快照顶层字段的中文标签（无映射时回退原字段名）。 */
@@ -188,7 +192,15 @@ export default function ApplicationVersionsPage() {
                   type="button"
                 >
                   <span
-                    className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-white ring-1 ${isCurrent ? "bg-[#1677ff] ring-[#1677ff]" : meta.color === "warning" ? "bg-[#f59e0b] ring-[#f59e0b]" : "bg-[#20b26b] ring-[#20b26b]"}`}
+                    className={`relative z-10 mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-white ring-1 ${
+                      isCurrent
+                        ? "bg-[#1677ff] ring-[#1677ff]"
+                        : meta.color === "warning"
+                          ? "bg-[#f59e0b] ring-[#f59e0b]"
+                          : meta.color === "error"
+                            ? "bg-[#f5222d] ring-[#f5222d]"
+                            : "bg-[#20b26b] ring-[#20b26b]"
+                    }`}
                   />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">

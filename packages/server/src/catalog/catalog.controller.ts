@@ -80,6 +80,11 @@ export class CatalogController {
   @ApiQuery({ name: "query", description: "搜索关键词", required: false })
   @ApiQuery({ name: "categoryId", description: "分类 ID", required: false })
   @ApiQuery({
+    name: "departmentId",
+    description: "所属部门 ID",
+    required: false,
+  })
+  @ApiQuery({
     name: "applicationType",
     description: "应用类型",
     required: false,
@@ -118,6 +123,9 @@ export class CatalogController {
       ...(query.categoryId === undefined
         ? {}
         : { categoryId: query.categoryId }),
+      ...(query.departmentId === undefined
+        ? {}
+        : { departmentId: query.departmentId }),
       ...(query.applicationType === undefined
         ? {}
         : { applicationType: query.applicationType }),

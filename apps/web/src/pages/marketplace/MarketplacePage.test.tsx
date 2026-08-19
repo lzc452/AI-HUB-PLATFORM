@@ -1,6 +1,6 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { App as AntApp } from "antd";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -100,5 +100,45 @@ describe("市场页评分最高排序", () => {
       "查看应用 低分应用",
       "查看应用 高分应用",
     ]);
+  });
+
+  it("选择部门后向服务端传 departmentId（不做页内过滤）", async () => {
+    mocks.useDepartments.mockReturnValue({
+      data: [{ departmentId: "dept-rnd", name: "研发部" }],
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    const departmentSelect = screen.getByLabelText("所属部门");
+    fireEvent.mouseDown(departmentSelect);
+    let option: HTMLElement | undefined;
+    await waitFor(() => {
+      const items = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".ant-select-item-option-content",
+        ),
+      );
+      option = items.find((item) => item.textContent === "研发部");
+      expect(option).toBeTruthy();
+    });
+    fireEvent.click(option!);
+
+    await waitFor(() => {
+      expect(mocks.useCatalogSearch).toHaveBeenCalledWith(
+        expect.objectContaining({ departmentId: "dept-rnd" }),
+      );
+    });
+  });
+
+  it("未选择部门时请求不带 departmentId，渲染全部条目", () => {
+    renderPage();
+    expect(mocks.useCatalogSearch).toHaveBeenCalledWith(
+      expect.not.objectContaining({ departmentId: expect.anything() }),
+    );
+    // 部门筛选不再做页内过滤：服务端返回的其他部门条目仍渲染。
+    const cards = screen.getAllByLabelText(/^查看应用 /);
+    expect(cards).toHaveLength(2);
   });
 });

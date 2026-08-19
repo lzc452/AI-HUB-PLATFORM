@@ -29,8 +29,10 @@ export default function MarketplacePage() {
     setPage(1);
   }, [query, sortMode, categoryId, channel, departmentId, tagIds]);
 
+  // 部门筛选由服务端过滤（与分页总数一致），不在此做页内过滤。
   const { data, error, isError, isPending } = useCatalogSearch({
     categoryId,
+    departmentId,
     page,
     pageSize: PAGE_SIZE,
     query,
@@ -65,11 +67,8 @@ export default function MarketplacePage() {
         tagIds.every((tagId) => entry.tagIds.includes(tagId)),
       );
     }
-    if (departmentId) {
-      list = list.filter((entry) => entry.departmentId === departmentId);
-    }
     return list;
-  }, [channel, data, departmentId, tagIds]);
+  }, [channel, data, tagIds]);
 
   const total = data?.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));

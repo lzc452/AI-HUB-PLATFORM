@@ -124,6 +124,11 @@ class MemoryCatalogRepository implements CatalogRepository {
           input.actor.departmentIds.includes(entry.departmentId) ||
           entry.applicationId === "app-public",
       )
+      .filter(
+        (entry) =>
+          input.departmentId === undefined ||
+          entry.departmentId === input.departmentId,
+      )
       .filter((entry) => {
         const query = input.query?.toLocaleLowerCase();
         if (query === undefined || query.length === 0) return true;
@@ -222,6 +227,37 @@ describe("CatalogService", () => {
       ],
       total: 2,
     });
+  });
+
+  it("departmentId 过滤透传：列表仅返回该部门条目且总数一致", async () => {
+    const service = new CatalogService(new MemoryCatalogRepository());
+
+    await expect(
+      service.list({
+        actor: employee,
+        departmentId: "dept-platform",
+        sort: "popular",
+        page: 1,
+        pageSize: 20,
+      }),
+    ).resolves.toMatchObject({
+      items: [
+        { applicationId: "app-platform" },
+        { applicationId: "app-miniprogram" },
+      ],
+      total: 2,
+    });
+
+    // 跨部门条目被过滤：分页总数与筛选结果一致（服务端过滤，非客户端过滤）。
+    await expect(
+      service.list({
+        actor: employee,
+        departmentId: "dept-finance",
+        sort: "popular",
+        page: 1,
+        pageSize: 20,
+      }),
+    ).resolves.toMatchObject({ items: [], total: 0 });
   });
 
   it("supports deterministic pinyin search without exposing other audiences", async () => {

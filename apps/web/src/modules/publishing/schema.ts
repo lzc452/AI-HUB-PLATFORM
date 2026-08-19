@@ -114,6 +114,9 @@ export const deliveryDraftItemSchema = z.object({
  * 草稿字段形状（不含提交期校验）。
  * 交付配置（deliveries）在向导内由应用类型自动派生，故在表单层为可选；
  * 后端提交时的完整性校验仍要求 deliveries 非空（见 applicationDraftSchema）。
+ * faq 为规格 §5.4 必填项：optional + refine 让缺失 faq 的旧草稿（undefined）
+ * 在回显时显示空列表可编辑，校验（下一步/提交）时按 min(1) 报错 ——
+ * 必填只在校验时生效。
  */
 const applicationDraftShape = z.object({
   name: z.string().min(1, "应用名称不能为空").max(160, "名称不能超过 160 字"),
@@ -137,7 +140,13 @@ const applicationDraftShape = z.object({
   manualAssetId: z.string().nullable().optional(),
   examplesHtml: z.string().nullable().optional(),
   examplesAssetId: z.string().nullable().optional(),
-  faq: z.array(faqEntrySchema).optional(),
+  faq: z
+    .array(faqEntrySchema)
+    .min(1, "至少填写一条常见问题")
+    .optional()
+    .refine((value) => value !== undefined && value.length > 0, {
+      message: "至少填写一条常见问题",
+    }),
   audience: z.array(audienceRuleSchema).min(1, "受众规则至少一条"),
   risk: aiRiskDeclarationSchema,
   deliveries: z.array(deliveryDraftItemSchema).optional(),
@@ -168,7 +177,13 @@ export const applicationDraftSchema = z
     manualAssetId: z.string().nullable().optional(),
     examplesHtml: z.string().nullable().optional(),
     examplesAssetId: z.string().nullable().optional(),
-    faq: z.array(faqEntrySchema).optional(),
+    faq: z
+      .array(faqEntrySchema)
+      .min(1, "至少填写一条常见问题")
+      .optional()
+      .refine((value) => value !== undefined && value.length > 0, {
+        message: "至少填写一条常见问题",
+      }),
     audience: z.array(audienceRuleSchema).min(1, "受众规则至少一条"),
     risk: aiRiskDeclarationSchema,
     deliveries: z.array(deliveryDraftItemSchema).min(1, "交付配置不能为空"),

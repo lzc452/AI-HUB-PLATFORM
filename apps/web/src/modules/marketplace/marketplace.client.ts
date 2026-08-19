@@ -18,6 +18,7 @@ export interface CatalogSearchParams {
   query: string;
   sort: CatalogSort;
   categoryId?: string | undefined;
+  departmentId?: string | undefined;
   page?: number | undefined;
   pageSize?: number | undefined;
 }
@@ -31,6 +32,9 @@ export function searchCatalog(
   }
   if (params.categoryId) {
     search.set("categoryId", params.categoryId);
+  }
+  if (params.departmentId) {
+    search.set("departmentId", params.departmentId);
   }
   search.set("sort", params.sort);
   if (params.page !== undefined) {

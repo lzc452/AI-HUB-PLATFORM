@@ -31,6 +31,7 @@ export const CopyOutlined = TestIcon;
 export const CustomerServiceFilled = TestIcon;
 export const DashboardOutlined = TestIcon;
 export const DatabaseFilled = TestIcon;
+export const DeleteOutlined = TestIcon;
 export const DeploymentUnitOutlined = TestIcon;
 export const DownOutlined = TestIcon;
 export const DownloadOutlined = TestIcon;

@@ -54,6 +54,7 @@ export interface CatalogSearchInput {
   actor: ActorContext;
   query?: string;
   categoryId?: string;
+  departmentId?: string;
   tagIds?: readonly string[];
   applicationType?: string;
   sort: CatalogSort;

@@ -132,6 +132,69 @@ describe("applicationDraftFormSchema（受众为多条规则数组）", () => {
     expect(result.success).toBe(false);
   });
 
+  it("faq 必填：空数组 / 缺失均被拒绝，至少一条通过", () => {
+    const base = {
+      ...applicationDraftDefaults,
+      name: "智能考勤助手",
+      manualHtml: "<p>手册</p>",
+      examplesHtml: "<p>示例</p>",
+      screenshotAssetIds: ["asset-1"],
+      summaryHtml: "<p>简介</p>",
+      departmentId: "dept-rnd",
+      risk: {
+        ...applicationDraftDefaults.risk,
+        modelProviders: ["local"],
+        inputRestrictionDisclaimer: "请勿输入敏感信息",
+      },
+      maintainerEmployeeIds: ["E100"],
+      categoryId: "cat-1",
+      version: "1.0.0",
+      changelog: "首次发布",
+      audience: [
+        {
+          audienceType: "all",
+          departmentId: null,
+          employeeId: null,
+          includeChildren: false,
+        },
+      ],
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://apps.example.com",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    };
+    // 空数组被 min(1) 拒绝。
+    const emptyResult = applicationDraftFormSchema.safeParse({
+      ...base,
+      faq: [],
+    });
+    expect(emptyResult.success).toBe(false);
+    if (!emptyResult.success) {
+      expect(
+        emptyResult.error.issues.some(
+          (issue) => issue.message === "至少填写一条常见问题",
+        ),
+      ).toBe(true);
+    }
+    // 缺失 faq（旧草稿）经 default([]) 后同样被 min(1) 拒绝。
+    const missingResult = applicationDraftFormSchema.safeParse({
+      ...base,
+      faq: undefined,
+    });
+    expect(missingResult.success).toBe(false);
+    // 至少一条问题/回答通过。
+    const filled = applicationDraftFormSchema.safeParse({
+      ...base,
+      faq: [{ question: "如何重置密码？", answer: "联系管理员" }],
+    });
+    expect(filled.success).toBe(true);
+  });
+
   it("完整表单携带多部门受众可整体通过（补全其余必填字段）", () => {
     const complete = {
       ...applicationDraftDefaults,
@@ -139,6 +202,7 @@ describe("applicationDraftFormSchema（受众为多条规则数组）", () => {
       manualHtml: "<p>手册</p>",
       examplesHtml: "<p>示例</p>",
       screenshotAssetIds: ["asset-1"],
+      faq: [{ question: "如何重置密码？", answer: "联系管理员" }],
       icon: {
         mode: "auto",
         backgroundColor: "#185FA5",

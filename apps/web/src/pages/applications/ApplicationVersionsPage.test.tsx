@@ -237,6 +237,47 @@ describe("ApplicationVersionsPage", () => {
     expect(screen.queryByText("ocr-app-2.4.1.apk (72.1 MB)")).toBeNull();
   });
 
+  it("scanStatus 以「校验」语义展示中文标签（非发布/审核状态）", async () => {
+    hoisted.useApplicationVersions.mockReturnValue({
+      data: [
+        { ...hoisted.versionNew, scanStatus: "passed" },
+        {
+          ...hoisted.versionOld,
+          scanStatus: "pending",
+          version: "1.1.0",
+          changelog: "等待制品扫描",
+        },
+        {
+          ...hoisted.versionOld,
+          scanStatus: "failed",
+          applicationVersionId: "version-bad",
+          version: "1.0.0",
+          changelog: "制品校验失败",
+        },
+      ],
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    renderPage();
+
+    expect(await screen.findByText("校验通过")).toBeTruthy();
+    expect(screen.getByText("校验中")).toBeTruthy();
+    expect(screen.getByText("校验失败")).toBeTruthy();
+    // 版本条目标签不再把扫描状态误标为发布 / 审核状态。
+    // （版本选择器下拉也含 "v1.1.0" 文本，用 strong 选择器限定时间轴条目标题。）
+    const pendingEntry = screen
+      .getByText("v1.1.0", { selector: "strong" })
+      .closest("button");
+    expect(pendingEntry?.textContent).toContain("校验中");
+    expect(pendingEntry?.textContent).not.toContain("审核中");
+    const failedEntry = screen
+      .getByText("v1.0.0", { selector: "strong" })
+      .closest("button");
+    expect(failedEntry?.textContent).toContain("校验失败");
+    expect(failedEntry?.textContent).not.toContain("已发布");
+  });
+
   it("enables and runs the real diff API for the two default versions", async () => {
     renderPage();
 

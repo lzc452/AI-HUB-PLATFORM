@@ -16,7 +16,11 @@ import {
   Upload,
 } from "antd";
 import type { UploadFile } from "antd";
-import { PlusOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import type { AudienceRule } from "@ai-hub/contracts";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
@@ -50,6 +54,29 @@ const APPLICATION_TYPE_LABELS: Record<string, string> = {
   desktop_app: "桌面端应用",
   mobile_app: "移动端应用",
   mini_program: "小程序",
+};
+
+const CHANNEL_LABELS: Record<string, string> = {
+  web: "Web 渠道",
+  desktop: "桌面端渠道",
+  mobile: "移动端渠道",
+  mini_program: "小程序渠道",
+};
+
+const DESKTOP_OS_LABELS: Record<string, string> = {
+  windows: "Windows",
+  macos: "macOS",
+};
+
+const MOBILE_PLATFORM_LABELS: Record<string, string> = {
+  android: "Android",
+  ios: "iOS",
+};
+
+const MINI_PROGRAM_LABELS: Record<string, string> = {
+  wechat: "微信",
+  dingtalk: "钉钉",
+  alipay: "支付宝",
 };
 
 const CHANNEL_BY_TYPE: Record<
@@ -435,8 +462,8 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
   );
 }
 
-/** 从 RHF 嵌套错误结构中提取第一条受众错误（数组级或规则级）。 */
-function firstAudienceError(error: unknown): { message?: string } | undefined {
+/** 从 RHF 嵌套错误结构中提取第一条错误（数组级或条目级；受众 / FAQ 共用）。 */
+function firstNestedError(error: unknown): { message?: string } | undefined {
   if (error === undefined || error === null) return undefined;
   const record = error as {
     message?: string;
@@ -447,14 +474,14 @@ function firstAudienceError(error: unknown): { message?: string } | undefined {
   }
   if (Array.isArray(error)) {
     for (const item of error) {
-      const found = firstAudienceError(item);
+      const found = firstNestedError(item);
       if (found !== undefined) return found;
     }
     return undefined;
   }
   for (const key of Object.keys(record)) {
     if (key === "ref" || key === "type" || key === "types") continue;
-    const found = firstAudienceError(record[key]);
+    const found = firstNestedError(record[key]);
     if (found !== undefined) return found;
   }
   return undefined;
@@ -491,7 +518,7 @@ export function AudienceField({ options }: { options: PublishingOptions }) {
           label="受众"
           required
           validateStatus={fieldState.error ? "error" : ""}
-          help={firstAudienceError(fieldState.error)?.message}
+          help={firstNestedError(fieldState.error)?.message}
         >
           <div
             style={{
@@ -559,6 +586,116 @@ export function AudienceField({ options }: { options: PublishingOptions }) {
                 style={{ width: 480 }}
               />
             </div>
+          </div>
+        </Form.Item>
+      )}
+    />
+  );
+}
+
+/**
+ * 常见问题（FAQ）编辑器：question / answer 两列 + 删除按钮，增删改直写
+ * 表单 `faq` 数组（每条 schema 校验 question/answer 非空）。
+ * 规格 §5.4 必填：schema 侧 min(1) 在校验（下一步/提交）时生效；
+ * 回显时缺省显示空列表可编辑（旧草稿无 faq 键 → 空数组）。
+ */
+export function FaqField() {
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const faq = useWatch({ control, name: "faq" }) as
+    | { question: string; answer: string }[]
+    | undefined;
+  const list = Array.isArray(faq) ? faq : [];
+
+  const commit = (next: { question: string; answer: string }[]) => {
+    setValue("faq", next, { shouldDirty: true, shouldValidate: true });
+    void trigger("faq");
+  };
+  const patch = (
+    index: number,
+    patchValue: Partial<{ question: string; answer: string }>,
+  ) =>
+    commit(
+      list.map((entry, i) =>
+        i === index ? { ...entry, ...patchValue } : entry,
+      ),
+    );
+  const add = () => commit([...list, { question: "", answer: "" }]);
+  const remove = (index: number) => commit(list.filter((_, i) => i !== index));
+
+  return (
+    <Controller
+      control={control}
+      name="faq"
+      render={({ fieldState }) => (
+        <Form.Item
+          label="常见问题（FAQ）"
+          required
+          validateStatus={fieldState.error ? "error" : ""}
+          help={firstNestedError(fieldState.error)?.message}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              maxWidth: 480,
+            }}
+          >
+            {list.map((entry, index) => (
+              <div
+                key={index}
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  alignItems: "flex-start",
+                  border: "1px solid #f0f0f0",
+                  borderRadius: 8,
+                  padding: 8,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    flex: 1,
+                  }}
+                >
+                  <Input
+                    aria-label={`问题 ${index + 1}`}
+                    placeholder="问题"
+                    value={entry.question}
+                    onChange={(event) =>
+                      patch(index, { question: event.target.value })
+                    }
+                  />
+                  <Input.TextArea
+                    aria-label={`回答 ${index + 1}`}
+                    autoSize={{ minRows: 2, maxRows: 6 }}
+                    placeholder="回答"
+                    value={entry.answer}
+                    onChange={(event) =>
+                      patch(index, { answer: event.target.value })
+                    }
+                  />
+                </div>
+                <Button
+                  aria-label={`删除问题 ${index + 1}`}
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  type="text"
+                  onClick={() => remove(index)}
+                />
+              </div>
+            ))}
+            <Button
+              icon={<PlusOutlined />}
+              onClick={add}
+              style={{ alignSelf: "flex-start" }}
+              type="dashed"
+            >
+              添加问题
+            </Button>
           </div>
         </Form.Item>
       )}
@@ -1020,6 +1157,7 @@ function ContentStep() {
           </Form.Item>
         )}
       />
+      <FaqField />
     </Form>
   );
 }
@@ -1139,6 +1277,34 @@ function labelOf(
   return options.find((o) => o.value === value)?.label ?? value ?? "—";
 }
 
+/** 预览：单条交付的交付目标（OS / 平台 / 小程序 AppId 与二维码）。 */
+function DeliveryTargetsPreview({
+  targets,
+}: {
+  targets: readonly TargetLike[] | undefined;
+}) {
+  if (!Array.isArray(targets) || targets.length === 0) return null;
+  const lines = targets.map((target) => {
+    if (target.kind === "desktop") {
+      return `桌面端：${DESKTOP_OS_LABELS[target.os ?? ""] ?? target.os ?? "—"}${target.arch ? `（${target.arch}）` : ""}`;
+    }
+    if (target.kind === "mobile") {
+      return `移动端：${MOBILE_PLATFORM_LABELS[target.platform ?? ""] ?? target.platform ?? "—"}${target.arch ? `（${target.arch}）` : ""}`;
+    }
+    return `小程序（${MINI_PROGRAM_LABELS[target.platform ?? ""] ?? target.platform ?? "—"}）：AppId：${target.appId || "—"}；二维码：${target.qrCodeAssetId ? "已上传" : "未上传"}${target.versionNote ? `；版本说明：${target.versionNote}` : ""}`;
+  });
+  return (
+    <>
+      <div style={{ marginTop: 4 }}>交付目标：</div>
+      {lines.map((line, index) => (
+        <div key={index} style={{ marginTop: 2 }}>
+          · {line}
+        </div>
+      ))}
+    </>
+  );
+}
+
 /** 预览步：纯展示所有字段，无输入。 */
 function PreviewStep({ options }: { options: PublishingOptions }) {
   const { watch } = useFormContext<FieldValues>();
@@ -1157,6 +1323,18 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
       ),
     }).join("、") || "—";
   const risk = draft.risk ?? {};
+  const deliveries = Array.isArray(draft.deliveries)
+    ? (draft.deliveries as Array<{
+        channel: string;
+        entryUrl?: string | null;
+        minClientVersion?: string | null;
+        enabled?: boolean;
+        targets?: TargetLike[];
+      }>)
+    : [];
+  const faq = Array.isArray(draft.faq)
+    ? (draft.faq as Array<{ question: string; answer: string }>)
+    : [];
 
   return (
     <Descriptions column={1} bordered size="small">
@@ -1195,6 +1373,25 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
       <Descriptions.Item label="交付配置">
         {APPLICATION_TYPE_LABELS[draft.applicationType] ??
           draft.applicationType}
+        {deliveries.length === 0 ? (
+          <div style={{ marginTop: 4, color: "#8a94a6" }}>—</div>
+        ) : (
+          deliveries.map((delivery, index) => (
+            <div key={index} style={{ marginTop: 6 }}>
+              <div>
+                {CHANNEL_LABELS[delivery.channel] ?? delivery.channel}
+                {delivery.enabled === false ? "（未启用）" : ""}
+              </div>
+              <div style={{ color: "#8a94a6", fontSize: 12 }}>
+                入口地址：{delivery.entryUrl || "—"}
+                {delivery.minClientVersion
+                  ? `；最低客户端版本：${delivery.minClientVersion}`
+                  : ""}
+              </div>
+              <DeliveryTargetsPreview targets={delivery.targets} />
+            </div>
+          ))
+        )}
       </Descriptions.Item>
       <Descriptions.Item label="受众">{audienceText}</Descriptions.Item>
       <Descriptions.Item label="应用图标">
@@ -1218,6 +1415,31 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
       <Descriptions.Item label="使用示例">
         <RichTextView html={draft.examplesHtml ?? ""} />
       </Descriptions.Item>
+      <Descriptions.Item label="常见问题（FAQ）">
+        {faq.length === 0 ? (
+          "—"
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+              maxWidth: 480,
+            }}
+          >
+            {faq.map((entry, index) => (
+              <div key={index}>
+                <div>
+                  <strong>
+                    Q{index + 1}：{entry.question || "—"}
+                  </strong>
+                </div>
+                <div style={{ color: "#596579" }}>A：{entry.answer || "—"}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Descriptions.Item>
       <Descriptions.Item label="AI 风险">
         处理敏感数据：{risk.handlesSensitiveData ? "是" : "否"}；发送至外部：
         {risk.sendsDataExternally ? "是" : "否"}；保存对话：
@@ -1225,6 +1447,14 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
         {risk.affectsHighRiskDecisions ? "是" : "否"}
         <br />
         模型提供方：{(risk.modelProviders ?? []).join("、") || "—"}
+        <br />
+        保留周期：{risk.retentionPeriod || "—"}
+        {risk.providerNote ? (
+          <>
+            <br />
+            提供方说明：{risk.providerNote}
+          </>
+        ) : null}
       </Descriptions.Item>
       <Descriptions.Item label="免责声明">
         {risk.inputRestrictionDisclaimer || "—"}
@@ -1266,7 +1496,7 @@ export function createWizardSteps(
     {
       key: "content",
       title: "内容",
-      fields: ["summaryHtml", "manualHtml", "examplesHtml"],
+      fields: ["summaryHtml", "manualHtml", "examplesHtml", "faq"],
       render: () => <ContentStep />,
     },
     {

@@ -195,6 +195,10 @@ export class KyselyCatalogRepository implements CatalogRepository {
     if (input.categoryId !== undefined) {
       query = query.where("metadata.category_id", "=", input.categoryId);
     }
+    // 部门筛选走应用所属部门列（与受众可见性正交：只看该部门发布的应用）。
+    if (input.departmentId !== undefined) {
+      query = query.where("application.department_id", "=", input.departmentId);
+    }
     if (input.applicationType !== undefined) {
       query = query.where(
         "metadata.application_type",

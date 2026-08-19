@@ -239,6 +239,12 @@ export class ListCatalogQueryDto extends PaginationQueryDto {
   @MaxLength(128)
   categoryId?: string;
 
+  @ApiPropertyOptional({ type: String, description: "所属部门 ID" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  departmentId?: string;
+
   @ApiPropertyOptional({ type: String, description: "应用类型" })
   @IsOptional()
   @IsString()
