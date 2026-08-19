@@ -39,9 +39,7 @@ const IMPORT_COLUMNS: ColumnsType<DepartmentImportPreviewRow> = [
     dataIndex: "departmentId",
     render: (value: string, row) => (
       <Typography.Text
-        {...(row.conflicts.departmentId
-          ? { type: "danger" as const }
-          : {})}
+        {...(row.conflicts.departmentId ? { type: "danger" as const } : {})}
       >
         {value}
       </Typography.Text>
@@ -118,7 +116,8 @@ export function DepartmentManagementTab() {
   );
   const [formState, setFormState] = useState<DepartmentFormState | null>(null);
   const [importOpen, setImportOpen] = useState(false);
-  const [membersDepartment, setMembersDepartment] = useState<DepartmentRow | null>(null);
+  const [membersDepartment, setMembersDepartment] =
+    useState<DepartmentRow | null>(null);
   const membersQuery = useDepartmentMembers(membersDepartment?.departmentId);
 
   const createDepartment = useCreateDepartment();

@@ -6,10 +6,12 @@ interface RequestLike {
 type NextLike = () => void;
 
 /** HttpOnly 会话 Cookie → 身份请求头的映射（与 PermissionGuard 的读取键保持一致）。 */
-const IDENTITY_COOKIE_HEADERS: Readonly<Record<string, string>> = Object.freeze({
-  aihub_eid: "x-employee-id",
-  aihub_sid: "x-session-id",
-});
+const IDENTITY_COOKIE_HEADERS: Readonly<Record<string, string>> = Object.freeze(
+  {
+    aihub_eid: "x-employee-id",
+    aihub_sid: "x-session-id",
+  },
+);
 
 /**
  * 将 HttpOnly 会话 Cookie（aihub_eid / aihub_sid）映射回身份请求头，

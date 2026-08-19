@@ -199,8 +199,16 @@ export function RoleTable({
           <Dropdown
             menu={{
               items: [
-                { key: "detail", label: "查看详情", onClick: () => onDetail(row) },
-                { key: "disable", label: "停用", onClick: () => onDisable(row) },
+                {
+                  key: "detail",
+                  label: "查看详情",
+                  onClick: () => onDetail(row),
+                },
+                {
+                  key: "disable",
+                  label: "停用",
+                  onClick: () => onDisable(row),
+                },
                 { key: "delete", label: "删除", onClick: () => onDelete(row) },
               ],
             }}

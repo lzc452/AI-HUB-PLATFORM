@@ -138,7 +138,11 @@ export function DepartmentTable({
             menu={{
               items: [
                 { key: "sync", label: "立即同步", onClick: () => onSync(row) },
-                { key: "disable", label: "停用", onClick: () => onDisable(row) },
+                {
+                  key: "disable",
+                  label: "停用",
+                  onClick: () => onDisable(row),
+                },
                 { key: "delete", label: "删除", onClick: () => onDelete(row) },
               ],
             }}

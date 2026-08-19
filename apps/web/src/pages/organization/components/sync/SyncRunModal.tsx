@@ -12,12 +12,7 @@ interface SyncRunModalProps {
   task: SyncTaskSummary | null;
 }
 
-export function SyncRunModal({
-  mode,
-  onClose,
-  open,
-  task,
-}: SyncRunModalProps) {
+export function SyncRunModal({ mode, onClose, open, task }: SyncRunModalProps) {
   const runQuery = useQuery({
     queryFn: () => getSyncRun(task!.taskId),
     queryKey: ["identity", "sync-run", task?.taskId],

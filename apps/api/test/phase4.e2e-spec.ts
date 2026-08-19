@@ -89,6 +89,15 @@ class ApiCatalogRepository implements CatalogRepository {
     this.recordedActions.push(input.actionType);
   }
 
+  async recordAudit(_input: {
+    applicationId: string;
+    actorEmployeeId: string;
+    eventType: string;
+    details?: unknown;
+  }): Promise<void> {
+    // 测试替身：审计写入由真实仓库覆盖，这里仅满足接口。
+  }
+
   async listCategories() {
     return [];
   }

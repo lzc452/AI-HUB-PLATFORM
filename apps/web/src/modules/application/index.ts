@@ -4,3 +4,5 @@ export {
   readLastViewedApplicationId,
   rememberLastViewedApplicationId,
 } from "./last-viewed";
+export { getAssetContent } from "./application.client";
+export { useAssetImage } from "./useApplication";

@@ -124,9 +124,7 @@ describe("前端权限与会话恢复", () => {
       '"employeeId":"E0001"',
     );
     expect(screen.getByRole("link", { name: /应用市场/ })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /应用管理/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /应用管理/ })).toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: /组织管理/ }),
     ).not.toBeInTheDocument();

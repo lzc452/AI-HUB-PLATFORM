@@ -113,9 +113,7 @@ describe("编辑回显", () => {
         fields: ["summaryHtml"],
         key: "content",
         title: "内容",
-        render: (form: {
-          control: import("react-hook-form").Control;
-        }) => (
+        render: (form: { control: import("react-hook-form").Control }) => (
           <Controller
             control={form.control}
             name="summaryHtml"

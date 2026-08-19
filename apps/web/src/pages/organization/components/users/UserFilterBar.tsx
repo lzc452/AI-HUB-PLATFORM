@@ -76,7 +76,9 @@ export function UserFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button onClick={onCreate} type="primary">新建用户</Button>
+        <Button onClick={onCreate} type="primary">
+          新建用户
+        </Button>
         <Button onClick={onBatchImport}>批量导入</Button>
         <Button
           danger

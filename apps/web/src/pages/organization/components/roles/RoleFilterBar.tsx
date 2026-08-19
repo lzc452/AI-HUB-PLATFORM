@@ -69,7 +69,9 @@ export function RoleFilterBar({
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button onClick={onCreate} type="primary">新建角色</Button>
+        <Button onClick={onCreate} type="primary">
+          新建角色
+        </Button>
         <Button onClick={onPermissionTemplate}>权限模板</Button>
         <Button
           danger

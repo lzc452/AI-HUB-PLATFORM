@@ -95,15 +95,27 @@ export function SyncTaskTable({
           <Button className="!px-0" onClick={() => onLogs(record)} type="link">
             查看日志
           </Button>
-          <Button className="!px-0" onClick={() => onDetail(record)} type="link">
+          <Button
+            className="!px-0"
+            onClick={() => onDetail(record)}
+            type="link"
+          >
             详情
           </Button>
           {record.status === "failed" ? (
-            <Button className="!px-0" onClick={() => onRetry(record)} type="link">
+            <Button
+              className="!px-0"
+              onClick={() => onRetry(record)}
+              type="link"
+            >
               重试
             </Button>
           ) : record.status === "pending" ? (
-            <Button className="!px-0" onClick={() => onCancel(record)} type="link">
+            <Button
+              className="!px-0"
+              onClick={() => onCancel(record)}
+              type="link"
+            >
               取消
             </Button>
           ) : null}

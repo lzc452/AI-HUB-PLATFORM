@@ -13,22 +13,24 @@ import {
  */
 describe("sanitizeRichText - 服务端白名单清洗", () => {
   it("剥离 <script> 并保留合法 <p>", () => {
-    const out = sanitizeRichText('<script>alert(1)</script><p>ok</p>');
+    const out = sanitizeRichText("<script>alert(1)</script><p>ok</p>");
     expect(out).not.toContain("<script");
     expect(out).toContain("<p>ok</p>");
   });
 
   it("剥离 javascript: / data: 协议的 href 与 src", () => {
-    expect(sanitizeRichText('<a href="javascript:alert(1)">x</a>')).not.toContain(
-      "javascript:",
-    );
-    expect(sanitizeRichText('<img src="data:image/svg+xml,PHN2Zz4=">')).not.toContain(
-      "data:",
-    );
+    expect(
+      sanitizeRichText('<a href="javascript:alert(1)">x</a>'),
+    ).not.toContain("javascript:");
+    expect(
+      sanitizeRichText('<img src="data:image/svg+xml,PHN2Zz4=">'),
+    ).not.toContain("data:");
   });
 
   it("强制锚点 rel 且移除危险事件处理器", () => {
-    const out = sanitizeRichText('<a href="https://e.com" onmouseover="x()">x</a>');
+    const out = sanitizeRichText(
+      '<a href="https://e.com" onmouseover="x()">x</a>',
+    );
     expect(out).toContain('rel="noopener noreferrer nofollow"');
     expect(out.toLowerCase()).not.toContain("onmouseover");
   });
@@ -76,14 +78,22 @@ describe("assertSafeRichText - 拒绝式校验", () => {
   });
 
   it("拒绝事件处理器", () => {
-    expect(() => assertSafeRichText('<img src="x" onerror="alert(1)">')).toThrow();
-    expect(() => assertSafeRichText("<div onclick=\"x()\">")).toThrow();
+    expect(() =>
+      assertSafeRichText('<img src="x" onerror="alert(1)">'),
+    ).toThrow();
+    expect(() => assertSafeRichText('<div onclick="x()">')).toThrow();
   });
 
   it("拒绝危险协议", () => {
-    expect(() => assertSafeRichText('<a href="javascript:alert(1)">x</a>')).toThrow();
-    expect(() => assertSafeRichText('<a href="vbscript:msgbox(1)">x</a>')).toThrow();
-    expect(() => assertSafeRichText('<img src="data:image/svg+xml,x">')).toThrow();
+    expect(() =>
+      assertSafeRichText('<a href="javascript:alert(1)">x</a>'),
+    ).toThrow();
+    expect(() =>
+      assertSafeRichText('<a href="vbscript:msgbox(1)">x</a>'),
+    ).toThrow();
+    expect(() =>
+      assertSafeRichText('<img src="data:image/svg+xml,x">'),
+    ).toThrow();
   });
 
   it("拒绝 HTML 注释", () => {

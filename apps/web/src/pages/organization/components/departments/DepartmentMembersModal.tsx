@@ -17,7 +17,13 @@ export function DepartmentMembersModal({
   onClose,
 }: DepartmentMembersModalProps) {
   return (
-    <Modal footer={null} onCancel={onClose} open={open} title={title} width={680}>
+    <Modal
+      footer={null}
+      onCancel={onClose}
+      open={open}
+      title={title}
+      width={680}
+    >
       <Table<EmployeeSummary>
         columns={[
           { dataIndex: "employeeId", title: "工号", width: 140 },

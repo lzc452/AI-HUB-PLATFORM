@@ -68,7 +68,9 @@ export function DepartmentFilterBar({
         value={value.source}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button onClick={onCreate} type="primary">新建部门</Button>
+        <Button onClick={onCreate} type="primary">
+          新建部门
+        </Button>
         <Button onClick={onBatchImport}>批量导入</Button>
         <Button onClick={onSync}>发起同步</Button>
       </div>

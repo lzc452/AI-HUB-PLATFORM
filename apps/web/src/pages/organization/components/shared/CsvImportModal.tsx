@@ -3,7 +3,10 @@ import { Alert, Button, Modal, Space, Table, Typography, Upload } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useState } from "react";
 
-import { showErrorMessage, showSuccessMessage } from "../../../../shared/ui/message";
+import {
+  showErrorMessage,
+  showSuccessMessage,
+} from "../../../../shared/ui/message";
 
 interface ImportPreview<T> {
   rows: T[];
@@ -120,9 +123,9 @@ export function CsvImportModal<T extends object>({
         {previewData !== null ? (
           <>
             <Typography.Text type="secondary">
-              共 {previewData.summary.total} 条，新增 {previewData.summary.create}{" "}
-              条，更新 {previewData.summary.update} 条，无效{" "}
-              {previewData.summary.invalid} 条
+              共 {previewData.summary.total} 条，新增{" "}
+              {previewData.summary.create} 条，更新 {previewData.summary.update}{" "}
+              条，无效 {previewData.summary.invalid} 条
             </Typography.Text>
             {previewData.errors.length > 0 ? (
               <Alert

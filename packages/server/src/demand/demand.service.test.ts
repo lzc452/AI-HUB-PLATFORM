@@ -598,7 +598,8 @@ describe("DemandService innovation-square interactions", () => {
       updatedAt: new Date(),
     };
     const audits: string[] = [];
-    const outboxCalls: Array<{ eventType: string; idempotencyKey?: string }> = [];
+    const outboxCalls: Array<{ eventType: string; idempotencyKey?: string }> =
+      [];
     const repository = {
       withTransaction: async <T>(
         operation: (repo: DemandRepository) => Promise<T>,

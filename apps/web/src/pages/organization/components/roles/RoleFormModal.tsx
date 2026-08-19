@@ -88,7 +88,12 @@ export function RoleFormModal({
               <Button key="cancel" onClick={onClose}>
                 取消
               </Button>,
-              <Button key="ok" loading={loading} onClick={handleOk} type="primary">
+              <Button
+                key="ok"
+                loading={loading}
+                onClick={handleOk}
+                type="primary"
+              >
                 提交
               </Button>,
             ]

@@ -12,13 +12,9 @@ function callBridge(
 ): Record<string, string | string[] | undefined> {
   const requestHeaders = makeRequest(headers);
   let called = false;
-  createIdentityCookieBridge()(
-    { headers: requestHeaders },
-    {},
-    () => {
-      called = true;
-    },
-  );
+  createIdentityCookieBridge()({ headers: requestHeaders }, {}, () => {
+    called = true;
+  });
   expect(called).toBe(true);
   return requestHeaders;
 }

@@ -124,9 +124,12 @@ export function updateRole(
 }
 
 export function disableRole(roleId: string): Promise<{ disabled: boolean }> {
-  return apiFetch(`/internal/identity/roles/${encodeURIComponent(roleId)}/disable`, {
-    method: "POST",
-  });
+  return apiFetch(
+    `/internal/identity/roles/${encodeURIComponent(roleId)}/disable`,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function deleteRole(roleId: string): Promise<{ deleted: boolean }> {
@@ -152,7 +155,9 @@ export interface RoleDetail extends IdentityRoleSummary {
 }
 
 export function listPermissionCatalog(): Promise<PermissionNode[]> {
-  return apiFetch<PermissionNode[]>("/internal/identity/roles/permission-catalog");
+  return apiFetch<PermissionNode[]>(
+    "/internal/identity/roles/permission-catalog",
+  );
 }
 
 export function listRoleTemplates(): Promise<RoleTemplate[]> {
@@ -306,7 +311,12 @@ export function applyEmployeeImport(
     password?: string | null;
     status?: "active" | "disabled" | "pending_binding";
   }>,
-): Promise<{ created: number; updated: number; failed: number; errors: string[] }> {
+): Promise<{
+  created: number;
+  updated: number;
+  failed: number;
+  errors: string[];
+}> {
   return apiFetch("/internal/identity/employees/imports", {
     method: "POST",
     body: JSON.stringify({ rows }),
@@ -412,7 +422,12 @@ export function applyDepartmentImport(
     managerEmployeeId?: string | null;
     status?: "active" | "disabled";
   }>,
-): Promise<{ created: number; updated: number; failed: number; errors: string[] }> {
+): Promise<{
+  created: number;
+  updated: number;
+  failed: number;
+  errors: string[];
+}> {
   return apiFetch("/internal/identity/departments/imports", {
     method: "POST",
     body: JSON.stringify({ rows }),
@@ -438,18 +453,14 @@ export function triggerSync(): Promise<{ syncRunId: string }> {
   return apiFetch("/internal/identity/sync/run", { method: "POST" });
 }
 
-export function retrySyncRun(
-  runId: string,
-): Promise<{ syncRunId: string }> {
+export function retrySyncRun(runId: string): Promise<{ syncRunId: string }> {
   return apiFetch(
     `/internal/identity/sync-runs/${encodeURIComponent(runId)}/retry`,
     { method: "POST" },
   );
 }
 
-export function cancelSyncRun(
-  runId: string,
-): Promise<{ cancelled: boolean }> {
+export function cancelSyncRun(runId: string): Promise<{ cancelled: boolean }> {
   return apiFetch(
     `/internal/identity/sync-runs/${encodeURIComponent(runId)}/cancel`,
     { method: "POST" },

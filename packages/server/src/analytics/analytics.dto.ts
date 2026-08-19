@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsObject, IsOptional, IsString, MaxLength } from "class-validator";
+import {
+  IsIn,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from "class-validator";
 
 const DASHBOARD_KEYS = [
   "platform",

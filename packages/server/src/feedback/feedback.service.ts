@@ -100,7 +100,10 @@ export class FeedbackService {
       resolution?: string;
     },
   ): Promise<FeedbackRecord> {
-    await this.visibility.requireVisibleOrManageable(actor, input.applicationId);
+    await this.visibility.requireVisibleOrManageable(
+      actor,
+      input.applicationId,
+    );
     const terminal = input.status === "resolved" || input.status === "closed";
     const resolution = input.resolution?.trim() ?? "";
     if (terminal && resolution.length === 0) {

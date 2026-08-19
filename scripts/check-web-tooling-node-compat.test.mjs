@@ -4,7 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 import semver from "semver";
 
-const minimumSupportedNodeVersion = "18.18.0";
+const minimumSupportedNodeVersion = "20.19.0";
 const workspaceDirectories = ["apps", "packages"];
 
 async function readJson(filePath) {
@@ -97,12 +97,12 @@ async function resolveInstalledPackage(
   );
 }
 
-test("direct third-party dependencies support the Node 18.18 platform baseline", async () => {
+test("direct third-party dependencies support the Node >18 platform baseline", async () => {
   const rootPackageJson = await readJson("package.json");
   const rootTsconfig = await readJson("tsconfig.base.json");
   const webTsconfig = await readJson("apps/web/tsconfig.json");
 
-  assert.equal(rootPackageJson.engines?.node, ">=18.18.0");
+  assert.equal(rootPackageJson.engines?.node, ">18.0.0");
   assert.equal(rootTsconfig.compilerOptions?.target, "ES2022");
   assert.ok(webTsconfig.compilerOptions?.lib?.includes("ES2022"));
   assert.ok(!webTsconfig.compilerOptions?.lib?.includes("ES2023"));
@@ -165,7 +165,7 @@ test("direct third-party dependencies support the Node 18.18 platform baseline",
   );
 });
 
-test("installed runtime dependency graph supports the Node 18.18 platform baseline", async () => {
+test("installed runtime dependency graph supports the Node >18 platform baseline", async () => {
   const packageJsonPaths = [
     "package.json",
     ...(

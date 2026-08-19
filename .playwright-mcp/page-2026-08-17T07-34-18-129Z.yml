@@ -1,43 +1,43 @@
 - generic [ref=e1]:
-  - generic [ref=e3]:
-    - generic [ref=e6]:
-      - generic [ref=e7]:
-        - img "AI应用共享平台" [ref=e8]
-        - generic [ref=e9]: AI应用共享平台
-      - generic [ref=e11]:
-        - heading "欢迎登录" [level=1] [ref=e12]
-        - alert [ref=e66]: 安全登录失败，请刷新页面后重试
-        - form "登录表单" [ref=e13]:
-          - generic [ref=e15]:
-            - generic "工号 / 邮箱" [ref=e17]
-            - generic [ref=e21]:
-              - img "user" [ref=e23]
-              - textbox "工号 / 邮箱" [ref=e26]:
-                - /placeholder: 请输入工号或邮箱
-                - text: test001
-          - generic [ref=e28]:
-            - generic "密码" [ref=e30]
-            - generic [ref=e34]:
-              - img "lock" [ref=e36]
-              - textbox "密码" [ref=e39]:
-                - /placeholder: 请输入密码
-                - text: test-password-123
-              - button "显示" [ref=e41] [cursor=pointer]:
-                - img "eye-invisible" [ref=e42]
-          - generic [ref=e46]:
-            - generic [ref=e47] [cursor=pointer]:
-              - checkbox "记住我" [checked] [ref=e49]
-              - generic [ref=e50]: 记住我
-            - link "忘记密码？" [ref=e51] [cursor=pointer]:
-              - /url: "#"
-          - button "登 录" [active] [ref=e52] [cursor=pointer]
-          - button "钉钉登录" [ref=e54] [cursor=pointer]
-          - paragraph [ref=e59]: 首次登录请绑定钉钉并设置本地密码 >
-    - contentinfo [ref=e62]:
-      - generic [ref=e63]: "--------"
-      - generic [ref=e64]: 企业内网访问 · 安全登录 · 支持账号密码与钉钉 SSO
-      - generic [ref=e65]: "--------"
-  - alert [ref=e67]:
-    - generic [ref=e68]:
-      - img "close-circle" [ref=e70]
-      - generic [ref=e73]: 登录失败：安全登录失败，请刷新页面后重试
+    - generic [ref=e3]:
+        - generic [ref=e6]:
+            - generic [ref=e7]:
+                - img "AI应用共享平台" [ref=e8]
+                - generic [ref=e9]: AI应用共享平台
+            - generic [ref=e11]:
+                - heading "欢迎登录" [level=1] [ref=e12]
+                - alert [ref=e66]: 安全登录失败，请刷新页面后重试
+                - form "登录表单" [ref=e13]:
+                    - generic [ref=e15]:
+                        - generic "工号 / 邮箱" [ref=e17]
+                        - generic [ref=e21]:
+                            - img "user" [ref=e23]
+                            - textbox "工号 / 邮箱" [ref=e26]:
+                                - /placeholder: 请输入工号或邮箱
+                                - text: test001
+                    - generic [ref=e28]:
+                        - generic "密码" [ref=e30]
+                        - generic [ref=e34]:
+                            - img "lock" [ref=e36]
+                            - textbox "密码" [ref=e39]:
+                                - /placeholder: 请输入密码
+                                - text: test-password-123
+                            - button "显示" [ref=e41] [cursor=pointer]:
+                                - img "eye-invisible" [ref=e42]
+                    - generic [ref=e46]:
+                        - generic [ref=e47] [cursor=pointer]:
+                            - checkbox "记住我" [checked] [ref=e49]
+                            - generic [ref=e50]: 记住我
+                        - link "忘记密码？" [ref=e51] [cursor=pointer]:
+                            - /url: "#"
+                    - button "登 录" [active] [ref=e52] [cursor=pointer]
+                    - button "钉钉登录" [ref=e54] [cursor=pointer]
+                    - paragraph [ref=e59]: 首次登录请绑定钉钉并设置本地密码 >
+        - contentinfo [ref=e62]:
+            - generic [ref=e63]: "--------"
+            - generic [ref=e64]: 企业内网访问 · 安全登录 · 支持账号密码与钉钉 SSO
+            - generic [ref=e65]: "--------"
+    - alert [ref=e67]:
+        - generic [ref=e68]:
+            - img "close-circle" [ref=e70]
+            - generic [ref=e73]: 登录失败：安全登录失败，请刷新页面后重试

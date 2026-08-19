@@ -23,7 +23,10 @@ describe("toProblemDetails - 中危-5 detail 回显转义", () => {
 
   it("保留属性/事件处理器字符的转义，避免 onerror 等被还原", () => {
     const exception = new HttpException(
-      { statusCode: HttpStatus.BAD_REQUEST, detail: '<a href="javascript:alert(1)">x</a>' },
+      {
+        statusCode: HttpStatus.BAD_REQUEST,
+        detail: '<a href="javascript:alert(1)">x</a>',
+      },
       HttpStatus.BAD_REQUEST,
     );
 
@@ -34,7 +37,10 @@ describe("toProblemDetails - 中危-5 detail 回显转义", () => {
   });
 
   it("无 detail 时回落到固定 title，不泄露内部信息", () => {
-    const exception = new HttpException({ statusCode: HttpStatus.BAD_REQUEST }, HttpStatus.BAD_REQUEST);
+    const exception = new HttpException(
+      { statusCode: HttpStatus.BAD_REQUEST },
+      HttpStatus.BAD_REQUEST,
+    );
 
     const problem = toProblemDetails(exception, "trace-3");
 

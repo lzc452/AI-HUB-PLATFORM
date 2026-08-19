@@ -93,14 +93,10 @@ export function RoleManagementTab() {
   }
 
   const initialPermissions =
-    formState?.mode === "create"
-      ? []
-      : roleDetail.data?.permissions ?? [];
+    formState?.mode === "create" ? [] : (roleDetail.data?.permissions ?? []);
 
   const copyName =
-    formState?.mode === "copy"
-      ? `${formState.row?.roleName ?? ""} 副本`
-      : "";
+    formState?.mode === "copy" ? `${formState.row?.roleName ?? ""} 副本` : "";
 
   const handleSubmit = async (values: {
     roleCode?: string;
@@ -110,9 +106,7 @@ export function RoleManagementTab() {
   }) => {
     if (formState?.mode === "create") {
       await createRole.mutateAsync({
-        ...(values.roleCode === undefined
-          ? {}
-          : { roleCode: values.roleCode }),
+        ...(values.roleCode === undefined ? {} : { roleCode: values.roleCode }),
         name: values.name,
         permissions: values.permissions,
       });
@@ -183,11 +177,11 @@ export function RoleManagementTab() {
       <RoleFormModal
         initialName={copyName}
         initialPermissions={initialPermissions}
-        loading={createRole.isPending || updateRole.isPending || copyRole.isPending}
+        loading={
+          createRole.isPending || updateRole.isPending || copyRole.isPending
+        }
         mode={
-          formState?.mode === "copy"
-            ? "create"
-            : formState?.mode ?? "create"
+          formState?.mode === "copy" ? "create" : (formState?.mode ?? "create")
         }
         onClose={() => setFormState(null)}
         onSubmit={handleSubmit}

@@ -76,9 +76,7 @@ export class SecurityController {
       ...(query.keyword === undefined ? {} : { keyword: query.keyword }),
       ...(query.module === undefined ? {} : { module: query.module }),
       ...(query.action === undefined ? {} : { action: query.action }),
-      ...(query.actor === undefined
-        ? {}
-        : { actorEmployeeId: query.actor }),
+      ...(query.actor === undefined ? {} : { actorEmployeeId: query.actor }),
       ...(resultValue === undefined ? {} : { result: resultValue }),
       ...(query.from === undefined ? {} : { from: query.from }),
       ...(query.to === undefined ? {} : { to: query.to }),

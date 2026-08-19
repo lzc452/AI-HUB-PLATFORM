@@ -66,7 +66,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-4 bg-white p-2 rounded-lg">
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
           activeKey={activeTab}
@@ -169,7 +168,7 @@ export default function NotificationsPage() {
       ) : null}
 
       {!isPending && total > 0 ? (
-       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <Text className="text-sm text-[#595959]">共 {total} 条</Text>
           <Pagination
             current={page}

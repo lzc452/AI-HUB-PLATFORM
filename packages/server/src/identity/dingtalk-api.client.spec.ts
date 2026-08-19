@@ -9,7 +9,8 @@ const assertPublicHttpTargetMock = vi.fn(async (rawUrl: string) => {
 });
 
 vi.mock("../system/security/ssrf-policy.js", () => ({
-  assertPublicHttpTarget: (rawUrl: string) => assertPublicHttpTargetMock(rawUrl),
+  assertPublicHttpTarget: (rawUrl: string) =>
+    assertPublicHttpTargetMock(rawUrl),
 }));
 
 import { DingTalkApiClient } from "./dingtalk-api.client.js";
@@ -32,13 +33,11 @@ afterEach(() => {
 describe("DingTalkApiClient - 中危-4 SSRF 防护接入", () => {
   it("exchangeCodeForToken 在发起请求前校验目标为公开地址", async () => {
     const client = new DingTalkApiClient("client-id", "client-secret");
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(JSON.stringify({ accessToken: "tok", expireIn: 7200 }), {
-          status: 200,
-        }) as unknown as Response,
-      );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ accessToken: "tok", expireIn: 7200 }), {
+        status: 200,
+      }) as unknown as Response,
+    );
 
     await client.exchangeCodeForToken("auth-code");
 
@@ -55,7 +54,9 @@ describe("DingTalkApiClient - 中危-4 SSRF 防护接入", () => {
 
     await client.getUserInfo("access-token");
 
-    expect(assertPublicHttpTargetMock).toHaveBeenCalledWith(DINGTALK_USERINFO_URL);
+    expect(assertPublicHttpTargetMock).toHaveBeenCalledWith(
+      DINGTALK_USERINFO_URL,
+    );
   });
 
   it("SSRF 校验拒绝时，出站调用失败而非访问私有目标", async () => {
@@ -77,6 +78,10 @@ describe("DingTalkApiClient - 中危-4 SSRF 防护接入", () => {
     mockFetchOnce({ accessToken: "tok", expireIn: 7200, refreshToken: "r" });
 
     const token = await client.exchangeCodeForToken("auth-code");
-    expect(token).toEqual({ accessToken: "tok", expiresIn: 7200, refreshToken: "r" });
+    expect(token).toEqual({
+      accessToken: "tok",
+      expiresIn: 7200,
+      refreshToken: "r",
+    });
   });
 });

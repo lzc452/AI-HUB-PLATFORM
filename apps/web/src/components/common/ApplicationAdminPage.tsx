@@ -1,12 +1,7 @@
 import { MoreOutlined } from "@ant-design/icons";
 import { Alert, Button, Modal, Select, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
-import {
-  NavLink,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import { PERMISSIONS } from "@ai-hub/contracts";
 
 import {
@@ -308,9 +303,7 @@ export function ApplicationAdminPage({
                 编辑
               </Button>
               <Button
-                disabled={
-                  application?.status !== "published" || !canPublish
-                }
+                disabled={application?.status !== "published" || !canPublish}
                 onClick={handleWithdraw}
                 title={
                   application?.status !== "published"
@@ -325,9 +318,7 @@ export function ApplicationAdminPage({
                 下架
               </Button>
               <Button
-                disabled={
-                  application?.status !== "withdrawn" || !canPublish
-                }
+                disabled={application?.status !== "withdrawn" || !canPublish}
                 onClick={handleArchive}
                 title={
                   application?.status !== "withdrawn"

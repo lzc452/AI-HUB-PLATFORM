@@ -1,6 +1,6 @@
 # AI Hub 平台
 
-AI Hub Platform 是一个 pnpm monorepo，包含 React Web 应用、NestJS API 和 NestJS outbox worker 三个可部署应用，以模块化单体架构共享多个包。支持的运行环境为 Node.js 18.18 或更高版本；Node.js 24.15.0 是仓库、CI 与容器镜像的基础版本。
+AI Hub Platform 是一个 pnpm monorepo，包含 React Web 应用、NestJS API 和 NestJS outbox worker 三个可部署应用，以模块化单体架构共享多个包。支持的运行环境为 Node.js >18；Node.js 24.15.0 是仓库、CI 与容器镜像的基础版本。
 
 ## 开发
 

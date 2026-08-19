@@ -76,7 +76,12 @@ export function DepartmentFormModal({
       title={isCreate ? "新建部门" : "编辑部门"}
       width={520}
     >
-      <Form form={form} labelCol={{ span: 6 }} preserve={false} wrapperCol={{ span: 17 }}>
+      <Form
+        form={form}
+        labelCol={{ span: 6 }}
+        preserve={false}
+        wrapperCol={{ span: 17 }}
+      >
         {!isCreate ? (
           <Form.Item label="部门 ID" name="departmentId">
             <Input disabled />

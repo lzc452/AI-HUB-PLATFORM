@@ -305,7 +305,6 @@ export default function InnovationSquarePage() {
     <div className="space-y-4">
       <section className="flex flex-col justify-between gap-4 rounded-xl border border-[#d6e4ff] bg-[#eaf4ff] p-4 sm:flex-row sm:items-center">
         <div>
-          
           <div className="flex items-baseline gap-2">
             <Typography.Title className="!mb-2 !mt-0" level={1}>
               创新广场
@@ -386,7 +385,10 @@ export default function InnovationSquarePage() {
         </div>
       </Card>
 
-      <section aria-labelledby="innovation-demand-list" className="space-y-4 mt-4">
+      <section
+        aria-labelledby="innovation-demand-list"
+        className="space-y-4 mt-4"
+      >
         {isPending ? (
           <div className="flex justify-center py-16">
             <Spin aria-label="需求列表加载中" />

@@ -340,7 +340,10 @@ export class KyselyIdentityRepository implements IdentityRepository {
   }
 
   async deleteRole(roleCode: string): Promise<void> {
-    await this.db.deleteFrom("roles").where("role_code", "=", roleCode).execute();
+    await this.db
+      .deleteFrom("roles")
+      .where("role_code", "=", roleCode)
+      .execute();
   }
 
   async copyRole(input: {

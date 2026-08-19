@@ -4,7 +4,7 @@
 
 ## 项目概览
 
-AI Hub Platform —— 面向企业 AI 应用共享平台的 pnpm monorepo。三个可部署应用（React SPA、NestJS API、NestJS outbox worker）以模块化单体架构共享多个包。Node.js 24.15.0 为基线版本，支持 Node.js ≥18.18。
+AI Hub Platform —— 面向企业 AI 应用共享平台的 pnpm monorepo。三个可部署应用（React SPA、NestJS API、NestJS outbox worker）以模块化单体架构共享多个包。Node.js 24.15.0 为基线版本，支持 Node.js >18。
 
 ## 常用命令
 

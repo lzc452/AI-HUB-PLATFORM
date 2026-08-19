@@ -149,9 +149,7 @@ export interface IdentityRepository {
       status?: "active" | "disabled";
     },
   ): Promise<void>;
-  findRole?(
-    roleCode: string,
-  ): Promise<IdentityRoleRecord | null>;
+  findRole?(roleCode: string): Promise<IdentityRoleRecord | null>;
   deleteRole?(roleCode: string): Promise<void>;
   copyRole?(input: {
     roleCode: string;
@@ -237,10 +235,7 @@ export interface IdentityRepository {
     status: "started" | "completed" | "failed" | "cancelled",
     summary?: unknown,
   ): Promise<void>;
-  markDepartmentSynced?(
-    departmentId: string,
-    syncedAt: Date,
-  ): Promise<void>;
+  markDepartmentSynced?(departmentId: string, syncedAt: Date): Promise<void>;
   findSession(sessionId: string): Promise<SessionRecord | null>;
   createPasswordResetChallenge(input: {
     employeeId: EmployeeId;

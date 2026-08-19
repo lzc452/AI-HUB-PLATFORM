@@ -66,7 +66,9 @@ export function SyncFilterBar({
         value={value.status}
       />
       <div className="ml-auto flex flex-wrap gap-2">
-        <Button onClick={onFullSync} type="primary">发起全量同步</Button>
+        <Button onClick={onFullSync} type="primary">
+          发起全量同步
+        </Button>
         <Button onClick={onRetryFailed}>重新执行失败任务</Button>
         <Button onClick={onExportLogs}>导出日志</Button>
       </div>

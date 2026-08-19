@@ -28,11 +28,7 @@ export function Header({ icon, title, right_slot }: HeaderProps) {
       <Title className="!my-0" level={1}>
         {title}
       </Title>
-      {right_slot && (
-        <div className="ml-auto">
-          {right_slot}
-        </div>
-      )}
+      {right_slot && <div className="ml-auto">{right_slot}</div>}
     </div>
   );
 }

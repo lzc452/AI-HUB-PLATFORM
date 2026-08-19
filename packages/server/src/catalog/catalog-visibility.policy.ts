@@ -1,4 +1,8 @@
-import { hasPermission, PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
+import {
+  hasPermission,
+  PERMISSIONS,
+  type ActorContext,
+} from "@ai-hub/contracts";
 import type { CatalogEntry, CatalogRepository } from "./catalog.types.js";
 
 /**

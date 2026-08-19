@@ -138,7 +138,10 @@ export function MarketplaceDetailDescription({
         </section>
       </div>
 
-      <aside aria-label="应用信息与推荐" className="space-y-4 lg:col-span-1 flex flex-col gap-4">
+      <aside
+        aria-label="应用信息与推荐"
+        className="space-y-4 lg:col-span-1 flex flex-col gap-4"
+      >
         <Card
           aria-labelledby="info-heading"
           className="rounded-2xl shadow-sm"

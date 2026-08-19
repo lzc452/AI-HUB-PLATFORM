@@ -47,8 +47,10 @@ export class PermissionGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthorizedRequest>();
     const cookies = this.readCookies(request.headers?.cookie);
     // 优先使用 HttpOnly 会话 Cookie（防 XSS 窃取）；保留请求头作为非浏览器/测试客户端的兼容通道。
-    const employeeId = cookies["aihub_eid"] ?? this.readHeader(request, "x-employee-id");
-    const sessionId = cookies["aihub_sid"] ?? this.readHeader(request, "x-session-id");
+    const employeeId =
+      cookies["aihub_eid"] ?? this.readHeader(request, "x-employee-id");
+    const sessionId =
+      cookies["aihub_sid"] ?? this.readHeader(request, "x-session-id");
     if (employeeId === undefined || sessionId === undefined) {
       throw new UnauthorizedException("IDENTITY_CREDENTIALS_REQUIRED");
     }

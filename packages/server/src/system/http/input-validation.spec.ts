@@ -5,7 +5,10 @@ import {
   ListApplicationsAdminQueryDto,
   CompleteUnifiedUploadBodyDto,
 } from "../../application/application.dto.js";
-import { ListDemandsQueryDto, DemandVersionQueryDto } from "../../demand/demand.dto.js";
+import {
+  ListDemandsQueryDto,
+  DemandVersionQueryDto,
+} from "../../demand/demand.dto.js";
 import { ListFeedbackQueryDto } from "../../feedback/feedback.dto.js";
 import {
   ListCommentsQueryDto,
@@ -32,7 +35,9 @@ async function expectValid(dto: object): Promise<void> {
 
 describe("查询/请求体 DTO 输入校验（高危-1）", () => {
   it("ListCatalogQueryDto：非法 sort / 负 page / 超大 pageSize 拒绝，合法放行", async () => {
-    await expectInvalid(Object.assign(new ListCatalogQueryDto(), { sort: "evil" }));
+    await expectInvalid(
+      Object.assign(new ListCatalogQueryDto(), { sort: "evil" }),
+    );
     await expectInvalid(Object.assign(new ListCatalogQueryDto(), { page: -1 }));
     await expectInvalid(
       Object.assign(new ListCatalogQueryDto(), { pageSize: 999999 }),

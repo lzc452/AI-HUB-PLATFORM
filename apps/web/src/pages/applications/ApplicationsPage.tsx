@@ -16,9 +16,7 @@ import {
 import { channelText } from "../../modules/marketplace/catalogMeta";
 import { useAdminApplicationList } from "../../modules/application/useAdminApplicationList";
 import { useAdminKpis } from "../../modules/application/useAdminKpis";
-import {
-  publishApplication,
-} from "../../modules/application/application.client";
+import { publishApplication } from "../../modules/application/application.client";
 import { useDeleteApplication } from "../../modules/application/useApplication";
 import { ROUTES } from "../../router/routes";
 

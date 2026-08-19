@@ -72,10 +72,7 @@ describe("session cookie attributes", () => {
       delete process.env.AIHUB_SESSION_COOKIE_SECURE;
       const [sid, eid] = (
         controller as unknown as {
-          sessionCookieHeaders: (
-            s: typeof session,
-            e: string,
-          ) => string[];
+          sessionCookieHeaders: (s: typeof session, e: string) => string[];
         }
       ).sessionCookieHeaders(session, "E001");
       expect(sid).toContain("aihub_sid=session-x");
@@ -91,10 +88,7 @@ describe("session cookie attributes", () => {
       delete process.env.AIHUB_SESSION_COOKIE_SECURE;
       const [sid] = (
         controller as unknown as {
-          sessionCookieHeaders: (
-            s: typeof session,
-            e: string,
-          ) => string[];
+          sessionCookieHeaders: (s: typeof session, e: string) => string[];
         }
       ).sessionCookieHeaders(session, "E001");
       expect(sid).toContain("Secure");

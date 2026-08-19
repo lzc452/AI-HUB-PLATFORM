@@ -328,8 +328,7 @@ export class InteractionController {
     fallback: number,
   ): number {
     if (raw === undefined) return fallback;
-    const n =
-      typeof raw === "number" ? raw : Number.parseInt(raw, 10);
+    const n = typeof raw === "number" ? raw : Number.parseInt(raw, 10);
     return Number.isFinite(n) && n > 0 ? n : fallback;
   }
 

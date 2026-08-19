@@ -68,7 +68,9 @@ export function SyncManagementTab() {
       ...rows.map((row) => [row.时间, row.日志, row.结果]),
     ]
       .map((row) =>
-        row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","),
+        row
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(","),
       )
       .join("\n");
     const blob = new Blob([`\uFEFF${csv}`], {

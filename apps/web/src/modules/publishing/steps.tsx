@@ -25,8 +25,7 @@ import type { AudienceRule } from "@ai-hub/contracts";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { RichTextView } from "../../shared/ui/RichTextView";
-import { getAssetContent } from "../application/application.client";
-import { useAssetImage } from "../application/useApplication";
+import { getAssetContent, useAssetImage } from "../application";
 import {
   formatAudienceParts,
   rulesToSelection,
