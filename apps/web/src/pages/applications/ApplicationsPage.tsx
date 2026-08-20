@@ -172,6 +172,8 @@ export default function ApplicationsPage() {
           return;
         }
         if (action === "delete") {
+          // 先清空待办，避免 mutation 状态翻转引发的重渲染让 effect 再次弹出确认框。
+          setPendingAction(null);
           deleteApplication.mutate(row.applicationId);
           modal.destroy();
           return;
@@ -182,7 +184,7 @@ export default function ApplicationsPage() {
       },
       title: plan.title,
     });
-  }, [list, pendingAction]);
+  }, [pendingAction]);
 
   const handleCreate = () => {
     navigate(ROUTES.creatorCreate);
