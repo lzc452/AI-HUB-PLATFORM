@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { message, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { ApplicationDraft } from "@ai-hub/contracts";
 
 import { formatSubmitError } from "../../modules/application/application.errors";
+import { showErrorMessage } from "../../shared/ui/message";
 import { FormWizard } from "../../shared/forms/FormWizard";
 import {
   applicationDraftDefaults,
@@ -111,14 +112,30 @@ export default function ApplicationCreateWizardPage() {
   }, []);
 
   /**
+   * 进行中的草稿创建 promise：并发触发（双击下一步 / 存草稿+下一步）共享
+   * 同一个创建请求，避免产生孤儿空草稿。
+   */
+  const draftCreationRef = useRef<Promise<string> | null>(null);
+
+  /**
    * 惰性创建草稿：仅当首次有效「下一步」或「存草稿」时才调用创建接口；
    * 编辑模式直接复用 URL 中的 applicationId，不重复创建。
    */
   const ensureDraft = async (): Promise<string | null> => {
     if (applicationId) return applicationId;
-    const created = await createApplicationDraft();
-    setApplicationId(created.applicationId);
-    return created.applicationId;
+    if (!draftCreationRef.current) {
+      draftCreationRef.current = createApplicationDraft()
+        .then((created) => {
+          setApplicationId(created.applicationId);
+          return created.applicationId;
+        })
+        .catch((error: unknown) => {
+          // 创建失败：清除缓存，允许后续操作重试。
+          draftCreationRef.current = null;
+          throw error;
+        });
+    }
+    return draftCreationRef.current;
   };
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
@@ -183,7 +200,13 @@ export default function ApplicationCreateWizardPage() {
         steps={createWizardSteps(options, applicationId ?? "")}
         defaultValues={defaultValues}
         onNextSuccess={async () => {
-          await ensureDraft();
+          try {
+            await ensureDraft();
+          } catch (error) {
+            // 创建失败必须用户可见；仍抛错让 FormWizard 不切换步骤。
+            showErrorMessage(error, "草稿创建失败");
+            throw error;
+          }
         }}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}

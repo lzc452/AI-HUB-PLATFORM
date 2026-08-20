@@ -187,7 +187,7 @@ describe("下一步门禁：校验通过才调用 onNextSuccess 并推进", () =
     expect(activeStepTitle()).toBe("第二步");
   });
 
-  it("onNextSuccess 抛错时不前进", async () => {
+  it("onNextSuccess 抛错时不前进，且按钮 loading 状态恢复", async () => {
     const onNextSuccess = vi.fn(async () => {
       throw new Error("草稿创建失败");
     });
@@ -202,8 +202,42 @@ describe("下一步门禁：校验通过才调用 onNextSuccess 并推进", () =
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "下一步" }));
+    const nextButton = screen.getByRole("button", { name: "下一步" });
+    fireEvent.click(nextButton);
     await waitFor(() => expect(onNextSuccess).toHaveBeenCalled());
     expect(activeStepTitle()).toBe("第一步");
+    await waitFor(() => expect(nextButton).not.toHaveClass("ant-btn-loading"));
+  });
+
+  it("快速连续点击下一步只推进一次（防跳过步骤）", async () => {
+    let resolveNext!: () => void;
+    const onNextSuccess = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveNext = resolve;
+        }),
+    );
+    render(
+      <FormWizard
+        steps={nextSteps}
+        defaultValues={{ name: "测试应用" }}
+        onNextSuccess={onNextSuccess}
+        onSaveDraft={vi.fn()}
+        onSubmit={vi.fn()}
+        resolver={nameResolver}
+      />,
+    );
+
+    const nextButton = screen.getByRole("button", { name: "下一步" });
+    fireEvent.click(nextButton);
+    fireEvent.click(nextButton);
+    // 第二次点击被进行中守卫拦截：onNextSuccess 只触发一次（waitFor 轮询等待
+    // 异步校验落定；若守卫失效会观察到 2 次调用并超时失败）。
+    await waitFor(() => expect(onNextSuccess).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      resolveNext();
+    });
+    // 只前进一步。
+    expect(activeStepTitle()).toBe("第二步");
   });
 });

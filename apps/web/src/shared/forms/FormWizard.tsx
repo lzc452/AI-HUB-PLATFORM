@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Space, Steps } from "antd";
 import { FormProvider, useForm } from "react-hook-form";
@@ -62,6 +62,10 @@ export function FormWizard({
 }: FormWizardProps) {
   const [current, setCurrent] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // 下一步进行中（onNextSuccess 未完成）：驱动按钮 loading。
+  const [advancing, setAdvancing] = useState(false);
+  // 同步守卫：连续点击 / 校验等待期间的重复点击直接拦截，避免跳过步骤或重复副作用。
+  const advancingRef = useRef(false);
   const form = useForm<FieldValues>({
     defaultValues,
     mode: "onChange",
@@ -86,13 +90,19 @@ export function FormWizard({
   };
 
   const handleNext = async () => {
-    if (await validateStep(current)) {
-      try {
-        await onNextSuccess?.(form.getValues());
-      } catch {
-        return; // 副作用失败（如草稿创建失败）不前进
-      }
+    // 进行中守卫必须在任何 await 之前置位：连续点击（含校验等待期间）只放行一次。
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+    try {
+      if (!(await validateStep(current))) return;
+      setAdvancing(true);
+      await onNextSuccess?.(form.getValues());
       setCurrent((index) => Math.min(index + 1, steps.length - 1));
+    } catch {
+      // 副作用失败（如草稿创建失败）不前进
+    } finally {
+      advancingRef.current = false;
+      setAdvancing(false);
     }
   };
 
@@ -164,7 +174,7 @@ export function FormWizard({
           </Button>
           {!isFirst && <Button onClick={handlePrev}>上一步</Button>}
           {!isLast && (
-            <Button type="primary" onClick={handleNext}>
+            <Button type="primary" loading={advancing} onClick={handleNext}>
               下一步
             </Button>
           )}

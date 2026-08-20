@@ -29,6 +29,10 @@ const mocks = vi.hoisted(() => ({
   formWizardProps: null as Record<string, unknown> | null,
 }));
 
+const uiMessageMocks = vi.hoisted(() => ({
+  showErrorMessage: vi.fn(),
+}));
+
 vi.mock("../../modules/publishing", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../modules/publishing")>();
@@ -40,6 +44,10 @@ vi.mock("../../modules/publishing", async (importOriginal) => {
     saveApplicationDraft: mocks.saveApplicationDraft,
   };
 });
+
+vi.mock("../../shared/ui/message", () => ({
+  showErrorMessage: uiMessageMocks.showErrorMessage,
+}));
 
 vi.mock("../../shared/forms/FormWizard", () => ({
   FormWizard: (props: Record<string, unknown>) => {
@@ -141,6 +149,7 @@ describe("草稿惰性创建", () => {
     mocks.createApplicationDraft.mockResolvedValue({
       applicationId: "app-new-1",
     });
+    uiMessageMocks.showErrorMessage.mockReset();
     mocks.formWizardProps = null;
   });
 
@@ -175,5 +184,39 @@ describe("草稿惰性创建", () => {
     // 校验不通过时 FormWizard 不会触发 onNextSuccess / onSaveDraft，
     // 页面自身也不得创建草稿（回归锚点：挂载 effect 无条件创建空草稿）。
     expect(mocks.createApplicationDraft).not.toHaveBeenCalled();
+  });
+
+  it("并发触发 onNextSuccess（双击/存草稿+下一步）只创建一次草稿", async () => {
+    renderPageAddMode();
+    await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
+
+    const onNextSuccess = () =>
+      (
+        mocks.formWizardProps as {
+          onNextSuccess: () => Promise<void>;
+        }
+      ).onNextSuccess();
+    await act(async () => {
+      await Promise.all([onNextSuccess(), onNextSuccess()]);
+    });
+    expect(mocks.createApplicationDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("草稿创建失败时提示错误且不继续", async () => {
+    mocks.createApplicationDraft.mockRejectedValue(new Error("network down"));
+    renderPageAddMode();
+    await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
+
+    const onNextSuccess = (
+      mocks.formWizardProps as {
+        onNextSuccess: () => Promise<void>;
+      }
+    ).onNextSuccess;
+    // 页面提示后仍抛错，由 FormWizard 保证不切换步骤。
+    await expect(onNextSuccess()).rejects.toThrow("network down");
+    expect(uiMessageMocks.showErrorMessage).toHaveBeenCalledWith(
+      expect.any(Error),
+      "草稿创建失败",
+    );
   });
 });
