@@ -1,7 +1,6 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeFilled, LikeOutlined, StarFilled } from "@ant-design/icons";
-import { Button, Dropdown, Rate, Switch, Tag, Tooltip, Typography } from "antd";
-import { useState } from "react";
+import { Button, Dropdown, Rate, Tag, Tooltip, Typography } from "antd";
 
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import type { DeliveryChannel } from "../../../modules/marketplace/marketplace.client";
@@ -49,7 +48,8 @@ export function MarketplaceDetailHeader({
   myRating = 0,
   deliveryUrlMissing = false,
 }: MarketplaceDetailHeaderProps) {
-  const [anonymousRating, setAnonymousRating] = useState(false);
+  // 匿名评分开关 UI 已注释停用（保留读取，onRate 第二参固定为 false）。
+  const anonymousRating = false;
   const departments = useDepartments();
   const departmentName = departments.data?.find(
     (item) => item.departmentId === entry.departmentId,
