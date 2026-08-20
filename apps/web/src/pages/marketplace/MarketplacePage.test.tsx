@@ -8,11 +8,13 @@ import MarketplacePage from "./MarketplacePage";
 
 const mocks = vi.hoisted(() => ({
   useCatalogSearch: vi.fn(),
+  useCatalogCategories: vi.fn(),
   useDepartments: vi.fn(),
 }));
 
 vi.mock("../../modules/marketplace/useCatalog", () => ({
   useCatalogSearch: mocks.useCatalogSearch,
+  useCatalogCategories: mocks.useCatalogCategories,
 }));
 
 vi.mock("../../modules/auth/useIdentity", () => ({
@@ -55,6 +57,13 @@ function renderPage() {
 describe("市场页评分最高排序", () => {
   beforeEach(() => {
     mocks.useCatalogSearch.mockReset();
+    mocks.useCatalogCategories.mockReset();
+    mocks.useCatalogCategories.mockReturnValue({
+      data: [],
+      error: null,
+      isError: false,
+      isPending: false,
+    });
     mocks.useDepartments.mockReset();
     mocks.useDepartments.mockReturnValue({
       data: [],

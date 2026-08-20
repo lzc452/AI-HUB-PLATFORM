@@ -1,5 +1,4 @@
 import type { DeliveryChannel } from "@ai-hub/contracts";
-import { Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -84,7 +83,6 @@ export default function MarketplacePage() {
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_230px]">
         <div className="min-w-0 space-y-4">
-
           <div className="bg-white p-2 lg:p-4 rounded-xl space-y-4">
             <MarketplaceFilters
               categoryId={categoryId}
@@ -143,7 +141,7 @@ export default function MarketplacePage() {
           </div>
         </div>
         {/* 右侧边内容栏 */}
-        <MarketplaceSidebar />
+        <MarketplaceSidebar onSelectCategory={setCategoryId} />
       </div>
     </div>
   );

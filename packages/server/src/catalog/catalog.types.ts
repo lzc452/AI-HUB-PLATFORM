@@ -73,6 +73,7 @@ export interface CatalogListResult {
 export interface CategorySummary {
   categoryId: string;
   name: string;
+  isHot: boolean;
 }
 
 export interface TagSummary {

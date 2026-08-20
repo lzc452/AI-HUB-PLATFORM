@@ -575,6 +575,8 @@ export function buildCatalogFixture(anchor: Date): CatalogFixtureData {
       name: c.name,
       sort_order: c.sort_order,
       enabled: c.enabled,
+      // 与迁移 0050 一致：新增 10 条中前 5 条（sort_order 6..10）为热门。
+      is_hot: c.sort_order >= 6 && c.sort_order <= 10,
     }));
 
   // ── tags (18) ─────────────────────────────────────────────────────────────

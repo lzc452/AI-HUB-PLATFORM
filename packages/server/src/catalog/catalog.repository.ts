@@ -550,13 +550,14 @@ export class KyselyCatalogRepository implements CatalogRepository {
   async listCategories() {
     const rows = await this.db
       .selectFrom("catalog_categories")
-      .select(["category_id", "name"])
+      .select(["category_id", "name", "is_hot"])
       .where("enabled", "=", true)
       .orderBy("sort_order", "asc")
       .execute();
     return rows.map((row) => ({
       categoryId: row.category_id,
       name: row.name,
+      isHot: row.is_hot,
     }));
   }
 

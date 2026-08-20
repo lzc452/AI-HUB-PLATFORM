@@ -210,6 +210,9 @@ export class CategorySummaryDto {
 
   @ApiProperty({ type: String, description: "分类名称", example: "效率工具" })
   name!: string;
+
+  @ApiProperty({ type: Boolean, description: "是否热门分类", example: true })
+  isHot!: boolean;
 }
 
 /** 标签摘要。 */

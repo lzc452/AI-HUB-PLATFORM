@@ -95,9 +95,19 @@ export async function seedDemoBusinessData(
   const inReviewAt = daysAgo(1);
   const pilotStartedAt = daysAgo(2);
   const categories = [
-    { category_id: "productivity", name: "效率工具", sort_order: 1 },
-    { category_id: "ai", name: "AI 应用", sort_order: 2 },
-    { category_id: "reporting", name: "数据报表", sort_order: 3 },
+    {
+      category_id: "productivity",
+      name: "效率工具",
+      sort_order: 1,
+      is_hot: false,
+    },
+    { category_id: "ai", name: "AI 应用", sort_order: 2, is_hot: false },
+    {
+      category_id: "reporting",
+      name: "数据报表",
+      sort_order: 3,
+      is_hot: false,
+    },
   ] as const;
   const tags = [
     { tag_id: "ai", name: "AI" },

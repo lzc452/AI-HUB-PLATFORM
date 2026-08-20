@@ -202,7 +202,7 @@ class MemoryCatalogRepository implements CatalogRepository {
   }
 
   async listCategories() {
-    return [];
+    return [{ categoryId: "smart_assistant", name: "智能助手", isHot: true }];
   }
 
   async listTags() {
@@ -301,6 +301,14 @@ describe("CatalogService", () => {
       "app-finance",
     );
     expect(financeDetail).toMatchObject({ myRating: null, likedByMe: false });
+  });
+
+  it("listCategories 返回 isHot 标记（热门分类透传）", async () => {
+    const service = new CatalogService(new MemoryCatalogRepository());
+
+    await expect(service.listCategories()).resolves.toEqual([
+      { categoryId: "smart_assistant", name: "智能助手", isHot: true },
+    ]);
   });
 
   it("does not return a detail record to an actor outside its audience", async () => {

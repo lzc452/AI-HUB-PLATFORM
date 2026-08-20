@@ -58,6 +58,16 @@ export function listVersions(
   );
 }
 
+export interface CategorySummary {
+  categoryId: string;
+  name: string;
+  isHot: boolean;
+}
+
+export function listCategories(): Promise<CategorySummary[]> {
+  return apiFetch<CategorySummary[]>("/internal/catalog/categories");
+}
+
 export function getRiskDescription(
   applicationId: string,
 ): Promise<RiskDescription> {

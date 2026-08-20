@@ -342,6 +342,7 @@ export interface CatalogCategoriesTable {
   name: string;
   sort_order: number;
   enabled: boolean;
+  is_hot: boolean;
 }
 
 export interface CatalogTagsTable {

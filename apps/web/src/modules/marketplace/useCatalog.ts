@@ -4,11 +4,19 @@ import { showErrorMessage, showSuccessMessage } from "../../shared/ui/message";
 import {
   getCatalogEntry,
   getRiskDescription,
+  listCategories,
   listVersions,
   saveRiskDescription,
   searchCatalog,
   type CatalogSearchParams,
 } from "./marketplace.client";
+
+export function useCatalogCategories() {
+  return useQuery({
+    queryFn: listCategories,
+    queryKey: ["catalog", "categories"],
+  });
+}
 
 export function useCatalogSearch(params: CatalogSearchParams) {
   return useQuery({
