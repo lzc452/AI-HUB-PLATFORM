@@ -241,12 +241,12 @@ describe("IDS department / employee reuse", () => {
 // ── catalog ──────────────────────────────────────────────────────────────────
 
 describe("IDS catalog", () => {
-  it("has 5 categories", () => {
-    expect(Object.keys(IDS.catalog.category)).toHaveLength(5);
+  it("has 15 categories", () => {
+    expect(Object.keys(IDS.catalog.category)).toHaveLength(15);
   });
 
-  it("has 8 tags", () => {
-    expect(Object.keys(IDS.catalog.tag)).toHaveLength(8);
+  it("has 18 tags", () => {
+    expect(Object.keys(IDS.catalog.tag)).toHaveLength(18);
   });
 
   it("category IDs are plain strings, not UUIDs", () => {

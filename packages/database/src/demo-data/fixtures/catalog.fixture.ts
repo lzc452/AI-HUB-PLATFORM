@@ -70,6 +70,66 @@ const CATEGORY_DEFS: readonly CategoryDef[] = Object.freeze([
     sort_order: 5,
     enabled: true,
   },
+  {
+    category_id: IDS.catalog.category.smartAssistant,
+    name: "智能助手",
+    sort_order: 6,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.documentOffice,
+    name: "文档办公",
+    sort_order: 7,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.dataAnalysis,
+    name: "数据分析",
+    sort_order: 8,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.imageRecognition,
+    name: "图像识别",
+    sort_order: 9,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.financeTax,
+    name: "财务税务",
+    sort_order: 10,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.customerService,
+    name: "客户服务",
+    sort_order: 11,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.devTools,
+    name: "开发工具",
+    sort_order: 12,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.educationTraining,
+    name: "教育培训",
+    sort_order: 13,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.hrManagement,
+    name: "人力资源",
+    sort_order: 14,
+    enabled: true,
+  },
+  {
+    category_id: IDS.catalog.category.securityCompliance,
+    name: "安全合规",
+    sort_order: 15,
+    enabled: true,
+  },
 ]);
 
 const TAG_DEFS: readonly TagDef[] = Object.freeze([
@@ -81,6 +141,28 @@ const TAG_DEFS: readonly TagDef[] = Object.freeze([
   { tag_id: IDS.catalog.tag.automation, name: "自动化", enabled: true },
   { tag_id: IDS.catalog.tag.security, name: "安全", enabled: true },
   { tag_id: IDS.catalog.tag.mobile, name: "移动端", enabled: true },
+  { tag_id: IDS.catalog.tag.smartAssistant, name: "智能助手", enabled: true },
+  {
+    tag_id: IDS.catalog.tag.documentProcessing,
+    name: "文档处理",
+    enabled: true,
+  },
+  { tag_id: IDS.catalog.tag.ocr, name: "OCR 识别", enabled: true },
+  { tag_id: IDS.catalog.tag.dataAnalytics, name: "数据分析", enabled: true },
+  {
+    tag_id: IDS.catalog.tag.processAutomation,
+    name: "流程自动化",
+    enabled: true,
+  },
+  { tag_id: IDS.catalog.tag.mobileOffice, name: "移动办公", enabled: true },
+  {
+    tag_id: IDS.catalog.tag.securityCompliance,
+    name: "安全合规",
+    enabled: true,
+  },
+  { tag_id: IDS.catalog.tag.reportAnalysis, name: "报表分析", enabled: true },
+  { tag_id: IDS.catalog.tag.approvalFlow, name: "流程审批", enabled: true },
+  { tag_id: IDS.catalog.tag.knowledgeBase, name: "知识库", enabled: true },
 ]);
 
 // ── metadata plan (10 published apps) ─────────────────────────────────────────
@@ -476,8 +558,8 @@ export interface CatalogFixtureData {
  * Build the catalog fixture.
  *
  * Produces:
- * - 5 categories (productivity, ai, reporting, collaboration, automation)
- * - 8 tags (ai, attendance, productivity, reporting, collaboration, automation, security, mobile)
+ * - 15 categories (productivity, ai, reporting, collaboration, automation + 10 new zh-seed categories)
+ * - 18 tags (ai, attendance, productivity, reporting, collaboration, automation, security, mobile + 10 new zh-seed tags)
  * - 10 catalog metadata entries for published apps (7 healthy, 2 degraded, 1 with replacement)
  * - 3 audience types (all, department, employee)
  * - 23 tag links (2-3 per published app)
@@ -485,7 +567,7 @@ export interface CatalogFixtureData {
  * - 13 delivery actions spanning all 3 action types
  */
 export function buildCatalogFixture(anchor: Date): CatalogFixtureData {
-  // ── categories (5) ────────────────────────────────────────────────────────
+  // ── categories (15) ───────────────────────────────────────────────────────
 
   const categories: Array<Insertable<DatabaseSchema["catalog_categories"]>> =
     CATEGORY_DEFS.map((c) => ({
@@ -495,7 +577,7 @@ export function buildCatalogFixture(anchor: Date): CatalogFixtureData {
       enabled: c.enabled,
     }));
 
-  // ── tags (8) ──────────────────────────────────────────────────────────────
+  // ── tags (18) ─────────────────────────────────────────────────────────────
 
   const tags: Array<Insertable<DatabaseSchema["catalog_tags"]>> = TAG_DEFS.map(
     (t) => ({

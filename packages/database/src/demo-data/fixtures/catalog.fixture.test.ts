@@ -8,12 +8,12 @@ describe("buildCatalogFixture", () => {
 
   // ── counts ────────────────────────────────────────────────────────────────
 
-  it("produces 5 categories", () => {
-    expect(fixture.categories).toHaveLength(5);
+  it("produces 15 categories", () => {
+    expect(fixture.categories).toHaveLength(15);
   });
 
-  it("produces 8 tags", () => {
-    expect(fixture.tags).toHaveLength(8);
+  it("produces 18 tags", () => {
+    expect(fixture.tags).toHaveLength(18);
   });
 
   it("produces 10 catalog metadata entries", () => {

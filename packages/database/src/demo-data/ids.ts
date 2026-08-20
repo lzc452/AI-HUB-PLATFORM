@@ -275,16 +275,26 @@ const ANALYTICS_SCOPE_KEYS = Object.freeze([
 
 // ── catalog string IDs (non-UUID primary keys) ───────────────────────────────
 
-/** Catalog categories (5).  String PK — not UUIDs. */
+/** Catalog categories (15).  String PK — not UUIDs. */
 const CATEGORIES = Object.freeze({
   productivity: "productivity",
   ai: "ai",
   reporting: "reporting",
   collaboration: "collaboration",
   automation: "automation",
+  smartAssistant: "smart_assistant",
+  documentOffice: "document_office",
+  dataAnalysis: "data_analysis",
+  imageRecognition: "image_recognition",
+  financeTax: "finance_tax",
+  customerService: "customer_service",
+  devTools: "dev_tools",
+  educationTraining: "education_training",
+  hrManagement: "hr_management",
+  securityCompliance: "security_compliance",
 } as const);
 
-/** Catalog tags (8).  String PK — not UUIDs. */
+/** Catalog tags (18).  String PK — not UUIDs. */
 const TAGS = Object.freeze({
   ai: "ai",
   attendance: "attendance",
@@ -294,6 +304,16 @@ const TAGS = Object.freeze({
   automation: "automation",
   security: "security",
   mobile: "mobile",
+  smartAssistant: "smart_assistant",
+  documentProcessing: "document_processing",
+  ocr: "ocr",
+  dataAnalytics: "data_analytics",
+  processAutomation: "process_automation",
+  mobileOffice: "mobile_office",
+  securityCompliance: "security_compliance",
+  reportAnalysis: "report_analysis",
+  approvalFlow: "approval_flow",
+  knowledgeBase: "knowledge_base",
 } as const);
 
 // ── department / employee string IDs (reuse existing demo-seed.ts values) ────
