@@ -46,6 +46,7 @@ import * as notificationCreatePermission from "./migrations/0044_notification_cr
 import * as demandAuditEventsIndex from "./migrations/0045_demand_audit_events_index.js";
 import * as employeeDemandClaim from "./migrations/0048_employee_demand_claim.js";
 import * as applicationMaintainers from "./migrations/0049_application_maintainers.js";
+import * as catalogZhHotSeed from "./migrations/0050_catalog_zh_hot_seed.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -97,6 +98,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0045_demand_audit_events_index": demandAuditEventsIndex,
   "0048_employee_demand_claim": employeeDemandClaim,
   "0049_application_maintainers": applicationMaintainers,
+  "0050_catalog_zh_hot_seed": catalogZhHotSeed,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

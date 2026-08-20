@@ -9,18 +9,23 @@ const ZH_RENAME: Readonly<Record<string, string>> = {
   Automation: "流程自动化",
 };
 
-/** 新增 10 分类（前 5 条为热门）。 */
-const CATEGORIES: ReadonlyArray<{ id: string; name: string; hot: boolean }> = [
-  { id: "smart_assistant", name: "智能助手", hot: true },
-  { id: "document_office", name: "文档办公", hot: true },
-  { id: "data_analysis", name: "数据分析", hot: true },
-  { id: "image_recognition", name: "图像识别", hot: true },
-  { id: "finance_tax", name: "财务税务", hot: true },
-  { id: "customer_service", name: "客户服务", hot: false },
-  { id: "dev_tools", name: "开发工具", hot: false },
-  { id: "education_training", name: "教育培训", hot: false },
-  { id: "hr_management", name: "人力资源", hot: false },
-  { id: "security_compliance", name: "安全合规", hot: false },
+/** 新增 10 分类（前 5 条为热门）。sort_order 延续现有 1..5 序列（与 demo fixture 的 6..15 对齐）。 */
+const CATEGORIES: ReadonlyArray<{
+  id: string;
+  name: string;
+  sort_order: number;
+  hot: boolean;
+}> = [
+  { id: "smart_assistant", name: "智能助手", sort_order: 6, hot: true },
+  { id: "document_office", name: "文档办公", sort_order: 7, hot: true },
+  { id: "data_analysis", name: "数据分析", sort_order: 8, hot: true },
+  { id: "image_recognition", name: "图像识别", sort_order: 9, hot: true },
+  { id: "finance_tax", name: "财务税务", sort_order: 10, hot: true },
+  { id: "customer_service", name: "客户服务", sort_order: 11, hot: false },
+  { id: "dev_tools", name: "开发工具", sort_order: 12, hot: false },
+  { id: "education_training", name: "教育培训", sort_order: 13, hot: false },
+  { id: "hr_management", name: "人力资源", sort_order: 14, hot: false },
+  { id: "security_compliance", name: "安全合规", sort_order: 15, hot: false },
 ];
 
 /** 新增 10 标签。 */
@@ -52,8 +57,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   for (const category of CATEGORIES) {
     await sql`
       insert into catalog_categories (category_id, name, sort_order, enabled, is_hot)
-      values (${category.id}, ${category.name}, 10, true, ${category.hot})
-      on conflict (category_id) do update set name = excluded.name, is_hot = excluded.is_hot
+      values (${category.id}, ${category.name}, ${category.sort_order}, true, ${category.hot})
+      on conflict (category_id) do update set name = excluded.name, sort_order = excluded.sort_order, is_hot = excluded.is_hot
     `.execute(db);
   }
   // 新增标签（幂等）
