@@ -150,14 +150,14 @@ create table if not exists catalog_pending_items (
 **后端 `submitDraft`**
 - 完整度校验（:1630-1632）：放宽为"`categoryId` 或 `customCategoryName` 至少一个"
 - 自定义名处理（事务内）：按名称（trim，大小写不敏感）匹配现有 `catalog_categories`/`catalog_tags` → **重名自动复用现有 id**；全新名称 → 幂等插入 `catalog_pending_items`（`unique(application_id, kind, name)` onConflict doNothing）
-- metadata/tagLinks 落库：自定义分类在审核通过前不写 metadata（pending 状态）
+- metadata/tagLinks 落库：**自定义分类场景（`customCategoryName` 存在时）跳过 metadata 分类写入**（`application_catalog_metadata.category_id` NOT NULL，未通过审核前不写占位），推迟到审核通过时由 `review()` 落库；已选现有 id 的标签立即 `replaceTagLinks`，自定义标签同样推迟到审核通过
 
 **审核工作台**（`ApplicationReviewPage.tsx`）
 - 新增"自定义分类/标签"卡片：查询该应用 pending items 列表，每项"删除"按钮
 - 新端点：`DELETE /internal/applications/:applicationId/catalog-pending-items/:itemId`（`RequiresPermissions(APPLICATION_REVIEW)`）→ service 删除该行（校验归属应用）
 
 **`review()` 流转**（`application.service.ts:703-829`）
-- **approve**：事务内把未删除的 pending items 插入正式表 —— 重名复用现有；全新插入 `catalog_categories`（`category_id` 用英文 slug 化 id 或 uuid，name 中文，enabled=true）/ `catalog_tags`；应用关联：有通过的自定义分类 → 该分类成为 `application_catalog_metadata.category_id`；通过的自定义标签 → 追加 tag links；`registerToCatalog` 默认 `categoryId="productivity"` 逻辑（:1543）仅在无自定义分类时生效
+- **approve**：事务内把未删除的 pending items 插入正式表 —— 重名复用现有；全新插入 `catalog_categories`（`category_id` 用 `gen_random_uuid()::text`，name 中文，enabled=true）/ `catalog_tags`（`tag_id` 同理 uuid）；应用关联：有通过的自定义分类 → 补写 `application_catalog_metadata.category_id`；通过的自定义标签 → 追加 tag links；`registerToCatalog` 默认 `categoryId="productivity"` 逻辑（:1543）仅在无自定义分类时生效
 - **reject / 撤回（cancelPendingReview）/ 审核队列完成**：删除该应用全部 pending items（自动删除，已确认决策）
 
 ### 测试
