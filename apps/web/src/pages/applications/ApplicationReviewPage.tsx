@@ -13,6 +13,7 @@ import {
   Card,
   Empty,
   Input,
+  Popconfirm,
   Tag,
   Tabs,
   Timeline,
@@ -29,6 +30,7 @@ import { SlaCountdown } from "../../components/common/SlaCountdown";
 import type {
   ApplicationRecord,
   ApplicationVersionRecord,
+  PendingCatalogItem,
   ReviewRecord,
   ReviewQueueRecord,
 } from "../../modules/application/application.client";
@@ -37,6 +39,8 @@ import {
   useApplicationReviews,
   useApplicationVersions,
   useClaimReview,
+  useDeletePendingCatalogItem,
+  usePendingCatalogItems,
   useReleaseReview,
   useReviewApplicationVersion,
   useReviewQueue,
@@ -76,6 +80,9 @@ export default function ApplicationReviewPage() {
   const claim = useClaimReview();
   const release = useReleaseReview();
   const reviewAction = useReviewApplicationVersion();
+  const pendingCatalogQuery = usePendingCatalogItems(applicationId);
+  const removePendingCatalogItem = useDeletePendingCatalogItem(applicationId);
+  const pendingCatalogItems = pendingCatalogQuery.data ?? [];
   const data = useMemo<ViewModel>(
     () => ({
       app: applicationQuery.data,
@@ -142,6 +149,12 @@ export default function ApplicationReviewPage() {
               reviewAction={reviewAction}
               versionId={versionId}
             />
+            {pendingCatalogItems.length > 0 ? (
+              <PendingCatalogCard
+                items={pendingCatalogItems}
+                remove={removePendingCatalogItem}
+              />
+            ) : null}
           </aside>
           <main className="space-y-3">
             <PreviewCard
@@ -376,6 +389,51 @@ function ReviewActionCard({
       </div>
       <div className="mt-3 text-[11px] text-[#8a94a6]">
         <InfoCircleOutlined /> 提示：不可审核自己参与的应用，请按流程完成审核。
+      </div>
+    </Card>
+  );
+}
+
+function PendingCatalogCard({
+  items,
+  remove,
+}: {
+  items: PendingCatalogItem[];
+  remove: ReturnType<typeof useDeletePendingCatalogItem>;
+}) {
+  return (
+    <Card
+      className="app-admin-card"
+      styles={{ body: { padding: 16 } }}
+      title={<span className="font-semibold">自定义分类/标签</span>}
+    >
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div className="flex items-center gap-2" key={item.itemId}>
+            <Tag color={item.kind === "category" ? "blue" : "geekblue"}>
+              {item.kind === "category" ? "分类" : "标签"}
+            </Tag>
+            <span className="min-w-0 flex-1 truncate text-[13px] text-[#374151]">
+              {item.name}
+            </span>
+            <Popconfirm
+              cancelText="取消"
+              okText="确认删除"
+              onConfirm={() => remove.mutate(item.itemId)}
+              title={`删除自定义${item.kind === "category" ? "分类" : "标签"}「${item.name}」？`}
+            >
+              <Button
+                aria-label={`删除 ${item.name}`}
+                danger
+                loading={remove.isPending}
+                size="small"
+                type="text"
+              >
+                删除
+              </Button>
+            </Popconfirm>
+          </div>
+        ))}
       </div>
     </Card>
   );

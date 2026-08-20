@@ -506,6 +506,35 @@ export function getArtifactUploadStatus(
 
 // ---- 资产 ----
 
+// ---- 待审自定义分类/标签（审核工作台） ----
+
+export interface PendingCatalogItem {
+  itemId: string;
+  kind: "category" | "tag";
+  name: string;
+  createdAt: string;
+}
+
+export function listPendingCatalogItems(
+  applicationId: string,
+): Promise<PendingCatalogItem[]> {
+  return apiFetch<PendingCatalogItem[]>(
+    `${applicationsPath(applicationId)}/catalog-pending-items`,
+  );
+}
+
+export function deletePendingCatalogItem(
+  applicationId: string,
+  itemId: string,
+): Promise<unknown> {
+  return apiFetch<unknown>(
+    `${applicationsPath(applicationId)}/catalog-pending-items/${encodeURIComponent(itemId)}`,
+    { method: "DELETE" },
+  );
+}
+
+// ---- 资产 ----
+
 export interface AssetRecord {
   assetId: string;
   assetType: "icon" | "screenshot" | "attachment";

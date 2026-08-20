@@ -12,6 +12,7 @@ import {
   createVersion,
   deleteApplication,
   deleteAsset,
+  deletePendingCatalogItem,
   getAssetContent,
   getApplication,
   getApplicationWorkspace,
@@ -27,6 +28,7 @@ import {
   getVersionDiff,
   getVersionSnapshot,
   listAssets,
+  listPendingCatalogItems,
   publishApplication,
   releaseReview,
   reviewApplicationVersion,
@@ -384,6 +386,31 @@ export function usePublishApplication(applicationId: string | undefined) {
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("应用已发布到市场");
+    },
+  });
+}
+
+/** 待审自定义分类/标签（审核工作台；仅审核员可访问）。 */
+export function usePendingCatalogItems(applicationId: string | undefined) {
+  return useQuery({
+    enabled: Boolean(applicationId),
+    queryFn: () => listPendingCatalogItems(applicationId as string),
+    queryKey: ["applications", "pending-catalog", applicationId],
+  });
+}
+
+/** 删除待审自定义分类/标签（审核员）；成功后刷新列表。 */
+export function useDeletePendingCatalogItem(applicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      deletePendingCatalogItem(applicationId as string, itemId),
+    onError: (error) => showErrorMessage(error, "删除失败"),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["applications", "pending-catalog", applicationId],
+      });
+      showSuccessMessage("已删除");
     },
   });
 }

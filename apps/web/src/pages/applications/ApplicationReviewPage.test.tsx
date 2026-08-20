@@ -40,10 +40,25 @@ const hoisted = vi.hoisted(() => {
     slaStatus: "on_time",
     status: "available",
   };
+  const mockPendingCatalogItems = [
+    {
+      createdAt: "2026-08-01T10:20:00+08:00",
+      itemId: "pc-1",
+      kind: "category",
+      name: "财务自动化",
+    },
+    {
+      createdAt: "2026-08-01T10:20:00+08:00",
+      itemId: "pc-2",
+      kind: "tag",
+      name: "AI识别",
+    },
+  ];
   return {
     mockApp,
     mockVersion,
     mockReviewQueue,
+    mockPendingCatalogItems,
     settled,
     useApplication: vi.fn((): Query => ({ ...settled, data: mockApp })),
     useApplicationWorkspace: vi.fn(
@@ -84,6 +99,12 @@ const hoisted = vi.hoisted(() => {
       isPending: false,
       mutate: hoisted.reviewMutate,
     })),
+    usePendingCatalogItems: vi.fn((): Query => ({ ...settled, data: [] })),
+    useDeletePendingCatalogItem: vi.fn(() => ({
+      isPending: false,
+      mutate: hoisted.deletePendingCatalogItem,
+    })),
+    deletePendingCatalogItem: vi.fn(),
     reviewMutate: vi.fn(),
     useAuth: vi.fn(() => ({
       actor: { employeeId: "李小龙" },
@@ -110,6 +131,8 @@ vi.mock("../../modules/application/useApplication", () => ({
   useClaimReview: hoisted.useClaimReview,
   useReleaseReview: hoisted.useReleaseReview,
   useReviewApplicationVersion: hoisted.useReviewApplicationVersion,
+  usePendingCatalogItems: hoisted.usePendingCatalogItems,
+  useDeletePendingCatalogItem: hoisted.useDeletePendingCatalogItem,
 }));
 
 const messageMocks = vi.hoisted(() => ({
@@ -162,6 +185,11 @@ describe("ApplicationReviewPage", () => {
       ...hoisted.settled,
       data: [],
     });
+    hoisted.usePendingCatalogItems.mockReturnValue({
+      ...hoisted.settled,
+      data: [],
+    });
+    hoisted.deletePendingCatalogItem.mockClear();
     hoisted.reviewMutate.mockClear();
     messageMocks.showSuccessMessage.mockClear();
     messageMocks.showWarningMessage.mockClear();
@@ -264,5 +292,41 @@ describe("ApplicationReviewPage", () => {
     expect(
       screen.getByRole("button", { name: /领\s*取任务/ }),
     ).not.toBeDisabled();
+  });
+
+  it("存在待审自定义分类/标签时渲染卡片，显示类型与名称", () => {
+    hoisted.usePendingCatalogItems.mockReturnValue({
+      ...hoisted.settled,
+      data: hoisted.mockPendingCatalogItems,
+    });
+
+    renderPage();
+
+    expect(screen.getByText("自定义分类/标签")).toBeInTheDocument();
+    expect(screen.getByText("财务自动化")).toBeInTheDocument();
+    expect(screen.getByText("AI识别")).toBeInTheDocument();
+    // kind 标签：分类 → 分类，tag → 标签
+    expect(screen.getAllByText("分类").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("标签").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("待审列表为空时不渲染自定义分类/标签卡片", () => {
+    renderPage();
+
+    expect(screen.queryByText("自定义分类/标签")).not.toBeInTheDocument();
+  });
+
+  it("点击删除需经 Popconfirm 确认，确认后调用删除 mutation", async () => {
+    hoisted.usePendingCatalogItems.mockReturnValue({
+      ...hoisted.settled,
+      data: hoisted.mockPendingCatalogItems,
+    });
+
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "删除 财务自动化" }));
+    fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
+
+    expect(hoisted.deletePendingCatalogItem).toHaveBeenCalledWith("pc-1");
   });
 });
