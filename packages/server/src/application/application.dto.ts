@@ -1064,6 +1064,7 @@ export class SaveApplicationDraftRequestDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   customCategoryName?: string;
 
   @ApiPropertyOptional({
@@ -1074,6 +1075,7 @@ export class SaveApplicationDraftRequestDto {
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(120, { each: true })
   customTagNames?: string[];
 
   @ApiProperty({

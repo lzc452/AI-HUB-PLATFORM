@@ -324,6 +324,47 @@ describe("分类与自定义分类至少填一个；自定义标签名可多填�
     });
     expect(result.success).toBe(true);
   });
+
+  it("自定义分类/标签名超 120 字拒绝（与 DB varchar(120) 一致）", () => {
+    const overlong = "超".repeat(121);
+    const category = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      categoryId: "",
+      customCategoryName: overlong,
+    });
+    expect(category.success).toBe(false);
+    if (!category.success) {
+      expect(
+        category.error.issues.some(
+          (issue) => issue.message === "自定义分类名称不能超过 120 字",
+        ),
+      ).toBe(true);
+    }
+
+    const tag = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      customTagNames: ["x".repeat(120), overlong],
+    });
+    expect(tag.success).toBe(false);
+    if (!tag.success) {
+      expect(
+        tag.error.issues.some(
+          (issue) => issue.message === "自定义标签名称不能超过 120 字",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("恰好 120 字的自定义分类/标签名通过", () => {
+    const boundary = "界".repeat(120);
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      categoryId: "",
+      customCategoryName: boundary,
+      customTagNames: [boundary],
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("deliveryDraftItemSchema（多选交付逐渠道必填校验）", () => {

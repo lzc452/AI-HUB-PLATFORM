@@ -434,6 +434,19 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     kind: "category" | "tag",
     name: string,
   ): Promise<void> {
+    // 大小写不敏感去重：唯一约束 (application_id, kind, name) 在真实 DB 中
+    // 大小写敏感（"MyTag" 与 "mytag" 会并存两条 pending），而 approve 的
+    // insertTag/findTagByName 按忽略大小写匹配同一正式标签 —— 两条变体最终
+    // 落到同一 (application_id, tag_id) 关联，触发复合主键冲突导致 500。
+    // 写入前先按 lower(name) 查询已有 pending，存在则跳过。
+    const existing = await this.db
+      .selectFrom("catalog_pending_items")
+      .select("item_id")
+      .where("application_id", "=", applicationId)
+      .where("kind", "=", kind)
+      .where(sql`lower(name)`, "=", name.toLowerCase())
+      .executeTakeFirst();
+    if (existing !== undefined) return;
     await this.db
       .insertInto("catalog_pending_items")
       .values({ application_id: applicationId, kind, name })
@@ -1311,6 +1324,23 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       ...delivery,
       targets: targetsByDelivery.get(delivery.deliveryId) ?? [],
     }));
+  }
+
+  /**
+   * 删除该应用不在 channels 集合内的交付渠道行（草稿渠道清理用）。
+   * delivery_targets 经外键 ON DELETE CASCADE 级联清除。
+   */
+  async deleteDeliveriesExcept(
+    applicationId: string,
+    channels: readonly DeliveryChannel[],
+  ): Promise<void> {
+    let query = this.db
+      .deleteFrom("application_deliveries")
+      .where("application_id", "=", applicationId);
+    if (channels.length > 0) {
+      query = query.where("channel", "not in", channels);
+    }
+    await query.execute();
   }
 
   async saveDeliveryTargets(

@@ -1165,6 +1165,7 @@ function BasicInfoStep({
               aria-label="分类"
               mode="tags"
               maxCount={1}
+              optionFilterProp="label"
               value={categoryValueToTags(field.value)}
               onChange={(value: string[]) =>
                 field.onChange(categoryTagsToValue(value))
@@ -1185,6 +1186,7 @@ function BasicInfoStep({
               {...field}
               aria-label="标签"
               mode="tags"
+              optionFilterProp="label"
               placeholder="选择或输入标签（可多选）"
               options={options.tags as { value: string; label: string }[]}
               style={CONTROL_STYLE}

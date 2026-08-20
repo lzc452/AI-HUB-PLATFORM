@@ -269,6 +269,10 @@ class MemoryApplicationRepository implements ApplicationRepository {
     kind: "category" | "tag",
     name: string,
   ) {
+    // 镜像 Kysely 实现：唯一约束 (application_id, kind, name) 在真实 DB 中
+    // 大小写敏感（"MyTag" 与 "mytag" 会并存两条 pending），写入前先按
+    // lower(name) 查已有 pending，存在则跳过 —— 否则 approve 的 insertTag
+    //（忽略大小写）会返回同一正式标签 id，重复关联触发复合主键冲突 500。
     const exists = this.pendingItems.some(
       (item) =>
         item.applicationId === applicationId &&
@@ -536,6 +540,18 @@ class MemoryApplicationRepository implements ApplicationRepository {
     return updated;
   }
   async createDelivery(input: Omit<DeliveryRecord, "deliveryId">) {
+    // 镜像 Kysely 的 UNIQUE(application_id, channel) upsert：同渠道重写行，
+    // 保留原 deliveryId（级联的 delivery_targets 引用不悬空）。
+    const existingIndex = this.deliveries.findIndex(
+      (delivery) =>
+        delivery.applicationId === input.applicationId &&
+        delivery.channel === input.channel,
+    );
+    if (existingIndex >= 0) {
+      const updated = { ...this.deliveries[existingIndex]!, ...input };
+      this.deliveries[existingIndex] = updated;
+      return updated;
+    }
     const delivery = { ...input, deliveryId: `delivery-${this.nextId++}` };
     this.deliveries.push(delivery);
     return delivery;
@@ -549,6 +565,29 @@ class MemoryApplicationRepository implements ApplicationRepository {
           (target) => target.deliveryId === delivery.deliveryId,
         ),
       }));
+  }
+  async deleteDeliveriesExcept(
+    applicationId: string,
+    channels: readonly DeliveryChannel[],
+  ) {
+    // 镜像真实 DB：删除该应用不在 channels 内的交付渠道行，delivery_targets
+    // 经外键 ON DELETE CASCADE 级联清除。
+    const removed = this.deliveries.filter(
+      (delivery) =>
+        delivery.applicationId === applicationId &&
+        !channels.includes(delivery.channel),
+    );
+    this.deliveries = this.deliveries.filter(
+      (delivery) =>
+        delivery.applicationId !== applicationId ||
+        channels.includes(delivery.channel),
+    );
+    const removedIds = new Set(removed.map((delivery) => delivery.deliveryId));
+    if (removedIds.size > 0) {
+      this.deliveryTargets = this.deliveryTargets.filter(
+        (target) => !removedIds.has(target.deliveryId),
+      );
+    }
   }
   async saveDeliveryTargets(
     deliveryId: string,
@@ -2853,6 +2892,61 @@ describe("ApplicationService", () => {
     });
   });
 
+  it("submitDraft：草稿移除渠道后重提交 → 旧渠道行被删除（级联 targets）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const webDelivery = {
+      channel: "web" as const,
+      entryUrl: "https://apps.example.com",
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+    };
+    const desktopDelivery = {
+      channel: "desktop" as const,
+      entryUrl: null,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+      targets: [
+        { kind: "desktop" as const, os: "windows" as const, arch: "x64" },
+      ],
+    };
+    // 首次提交：web + desktop 两个渠道（desktop 带目标）。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [webDelivery, desktopDelivery],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    // 首次发布（draft 审核通过自动上架）后以 published 状态重新提交。
+    const version = [...repository.versions.values()][0]!;
+    await service.claimReview(reviewer, version.applicationVersionId);
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "通过",
+    );
+
+    // 草稿移除 desktop 渠道后重提交：旧渠道行必须被删除（目录「立即使用」
+    // 不再显示），delivery_targets 级联清除。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      version: "2.0.0",
+      deliveries: [webDelivery],
+    });
+    await service.submitDraft(owner, application.applicationId);
+
+    const remaining = await repository.listDeliveries(
+      application.applicationId,
+    );
+    expect(remaining.map((delivery) => delivery.channel)).toEqual(["web"]);
+    expect(repository.deliveryTargets).toHaveLength(0);
+  });
+
   it("rejects draft submission when the web entry URL is not allowlisted", async () => {
     const strictPolicy: WebTargetPolicy = {
       protocols: ["https"],
@@ -3773,8 +3867,37 @@ describe("ApplicationService", () => {
     ]);
   });
 
-  it("submitDraft：自定义分类名可过分类门禁；分类与自定义均为空仍拒绝", async () => {
+  it("submitDraft：自定义名命中现有分类/标签 → 立即关联匹配 id（分类覆盖兜底、标签并入 tagIds）", async () => {
     const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    // 预置现有正式分类与标签：categoryId 为空 + 自定义名命中 → 直接关联匹配 id。
+    repository.categories.set("cat-效率", "效率工具");
+    repository.tags.set("tag-ai", "AI");
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "效率工具",
+      tagIds: [],
+      customTagNames: ["AI"],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    // 分类命中：metadata.category_id 为匹配到的正式分类 id，而非 productivity 占位。
+    expect(
+      repository.catalogMetadata.get(application.applicationId),
+    ).toMatchObject({ categoryId: "cat-效率", applicationType: "web_app" });
+    // 标签命中：tagLinks 并入匹配到的现有标签 id。
+    expect(repository.tagLinks.get(application.applicationId)).toEqual([
+      "tag-ai",
+    ]);
+    // 命中项均不产生 pending。
+    expect(repository.pendingItems).toHaveLength(0);
+  });
+
+  it("submitDraft：自定义分类名可过分类门禁；分类与自定义均为空仍拒绝", async () => {
+    const { service } = makeService();
     const application = await service.createApplication(owner, {
       name: "Copilot",
       summary: "Internal assistant",
@@ -3855,6 +3978,78 @@ describe("ApplicationService", () => {
     ]);
     // pending 表清空。
     expect(repository.pendingItems).toHaveLength(0);
+  });
+
+  it("upsertPendingCatalogItem：同应用大小写变体名称只保留一条 pending（真实 DB 唯一约束大小写敏感）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    // 真实 DB 的 onConflict 按 (application_id, kind, name) 区分大小写，
+    // 大小写变体必须合并为一条，否则 approve 的 insertTag（忽略大小写）
+    // 落到同一正式标签、重复关联触发复合主键冲突 500。
+    await repository.upsertPendingCatalogItem(
+      application.applicationId,
+      "tag",
+      "MyTag",
+    );
+    await repository.upsertPendingCatalogItem(
+      application.applicationId,
+      "tag",
+      "mytag",
+    );
+    await repository.upsertPendingCatalogItem(
+      application.applicationId,
+      "tag",
+      "MYTAG",
+    );
+    expect(repository.pendingItems).toHaveLength(1);
+    expect(repository.pendingItems[0]).toMatchObject({
+      applicationId: application.applicationId,
+      kind: "tag",
+      name: "MyTag",
+    });
+  });
+
+  it("review 通过：pending 标签在审批期间已存在正式标签 → 关联不产生重复", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "我的分类",
+      tagIds: [],
+      customTagNames: ["新标签"],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    // 审批期间该 pending 名（忽略大小写）落入既有正式标签：insertTag 返回
+    // 既有 id，与已有关联重叠时必须去重，否则重复 (application_id, tag_id)
+    // 触发复合主键冲突导致事务回滚 500。
+    repository.tags.set("tag-1", "新标签");
+    repository.tagLinks.set(application.applicationId, ["tag-1"]);
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "通过",
+    );
+
+    // 合并去重：tagLinks 保持既有 tag-1 单条，无重复。
+    expect(repository.tagLinks.get(application.applicationId)).toEqual([
+      "tag-1",
+    ]);
   });
 
   it("review 驳回清空 pending；published 更新撤回也清空 pending", async () => {

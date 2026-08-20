@@ -435,6 +435,11 @@ export interface ApplicationRepository {
     input: Omit<DeliveryRecord, "deliveryId">,
   ): Promise<DeliveryRecord>;
   listDeliveries(applicationId: string): Promise<readonly DeliveryRecord[]>;
+  /** 删除该应用不在 channels 集合内的交付渠道行（delivery_targets 级联清除）。 */
+  deleteDeliveriesExcept(
+    applicationId: string,
+    channels: readonly DeliveryChannel[],
+  ): Promise<void>;
   /** 替换式保存交付目标（先删后插，幂等）。 */
   saveDeliveryTargets(
     deliveryId: string,

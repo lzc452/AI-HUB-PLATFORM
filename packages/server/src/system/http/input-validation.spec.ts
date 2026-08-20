@@ -4,6 +4,7 @@ import { ListCatalogQueryDto } from "../../catalog/catalog.dto.js";
 import {
   ListApplicationsAdminQueryDto,
   CompleteUnifiedUploadBodyDto,
+  SaveApplicationDraftRequestDto,
 } from "../../application/application.dto.js";
 import {
   ListDemandsQueryDto,
@@ -186,5 +187,38 @@ describe("查询/请求体 DTO 输入校验（高危-1）", () => {
     await expectValid(
       Object.assign(new CompleteUnifiedUploadBodyDto(), { signature: "ok" }),
     );
+  });
+
+  it("SaveApplicationDraftRequestDto：自定义分类/标签名超 120 字拒绝（DB varchar(120)）", async () => {
+    // 单个分类名超长 → 长度校验错误（原实现无上限，超长入库裸 500）。
+    const longCategory = await validate(
+      Object.assign(new SaveApplicationDraftRequestDto(), {
+        customCategoryName: "分".repeat(121),
+      }),
+    );
+    expect(
+      longCategory.some((error) => error.property === "customCategoryName"),
+    ).toBe(true);
+    // 数组任一标签名超长 → 长度校验错误（each: true）。
+    const longTag = await validate(
+      Object.assign(new SaveApplicationDraftRequestDto(), {
+        customTagNames: ["ok", "x".repeat(121)],
+      }),
+    );
+    expect(longTag.some((error) => error.property === "customTagNames")).toBe(
+      true,
+    );
+    // 恰好 120 字：custom 字段不产生长度校验错误。
+    const boundary = await validate(
+      Object.assign(new SaveApplicationDraftRequestDto(), {
+        customCategoryName: "分".repeat(120),
+        customTagNames: ["标".repeat(120)],
+      }),
+    );
+    expect(
+      boundary.some((error) =>
+        ["customCategoryName", "customTagNames"].includes(error.property),
+      ),
+    ).toBe(false);
   });
 });

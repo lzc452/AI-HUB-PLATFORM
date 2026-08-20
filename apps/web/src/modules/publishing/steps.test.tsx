@@ -683,6 +683,25 @@ describe("BasicInfoStep（自定义分类/标签输入）", () => {
     });
   });
 
+  it("键入匹配现有 label 的中文分类名：categoryId 写入现有 id（optionFilterProp=label）", async () => {
+    render(<CatalogHarness defaultValues={applicationDraftDefaults} />);
+    // 无 optionFilterProp 时 antd 按 value（slug）过滤，"效率工具" 不匹配
+    // cat-1/cat-2，只能走自定义路径写入名称；按 label 过滤后命中现有选项，
+    // 选择后值是 id，进入既有关联路径。
+    await typeCustomValue("分类", "效率工具");
+    await waitFor(() => {
+      expect(catalogProbeValue().categoryId).toBe("cat-1");
+    });
+  });
+
+  it("键入匹配现有 label 的中文标签名：tagIds 写入现有 id（optionFilterProp=label）", async () => {
+    render(<CatalogHarness defaultValues={applicationDraftDefaults} />);
+    await typeCustomValue("标签", "效率");
+    await waitFor(() => {
+      expect(catalogProbeValue().tagIds).toEqual(["tag-1"]);
+    });
+  });
+
   it("编辑回显：已有分类/标签 id 以标签形式回显", async () => {
     render(
       <CatalogHarness

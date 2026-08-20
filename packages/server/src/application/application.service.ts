@@ -297,24 +297,29 @@ export class ApplicationService {
         name: draft.name,
         summary: plainSummary,
       });
-      // 功能 5c：自定义分类（categoryId 为空）时元数据先落 productivity 兜底
-      // （catalog_categories 外键必填），审核通过后由 applyPendingCatalogItems
-      // 覆盖为新建分类的 id —— 与 registerToCatalog 的兜底语义一致。
-      await repository.upsertCatalogMetadata(applicationId, {
-        categoryId:
-          draft.categoryId.trim().length > 0
-            ? draft.categoryId
-            : "productivity",
-        applicationType: draft.applicationType,
-      });
-      await repository.replaceTagLinks(applicationId, draft.tagIds);
-      await repository.replaceAudiences(applicationId, draft.audience);
       // 功能 5c：自定义分类/标签（重名自动复用现有，其余写入 pending 待审表）。
-      await this.persistPendingCatalogItems(
+      // 重名命中的现有分类/标签 id 立即关联：分类命中时元数据不再落 productivity
+      // 兜底（catalog_categories 外键必填；审核通过后由 applyPendingCatalogItems
+      // 覆盖为新建分类的 id，与 registerToCatalog 的兜底语义一致）；标签命中时
+      // 并入 tagIds，命中的 id 不写 pending。
+      const matchedCatalog = await this.persistPendingCatalogItems(
         repository,
         applicationId,
         sanitizedDraft,
       );
+      await repository.upsertCatalogMetadata(applicationId, {
+        categoryId:
+          draft.categoryId.trim().length > 0
+            ? draft.categoryId
+            : (matchedCatalog.categoryId ?? "productivity"),
+        applicationType: draft.applicationType,
+      });
+      // 去重合并：draft.tagIds 与重名命中的标签 id 可能重叠，
+      // 重复 (application_id, tag_id) 会触发复合主键冲突。
+      await repository.replaceTagLinks(applicationId, [
+        ...new Set([...draft.tagIds, ...matchedCatalog.tagIds]),
+      ]);
+      await repository.replaceAudiences(applicationId, draft.audience);
       // 维护人列表随提交落库（先删后插）；提交门禁已保证非空。
       await repository.setMaintainers(
         applicationId,
@@ -971,15 +976,25 @@ export class ApplicationService {
    * 功能 5c：提交草稿时将自定义分类/标签写入待审表（catalog_pending_items）。
    * 重名（忽略大小写）自动复用现有正式分类/标签，不产生 pending 项；名称
    * 统一 trim 后落值（前后空白不原样入库）。
+   *
+   * @returns 重名命中的现有正式分类/标签 id（{ categoryId, tagIds }），供
+   *   submitDraft 立即关联到应用（分类覆盖 productivity 兜底、标签并入
+   *   tagIds）；未命中而写入 pending 的名称不在此列。
    */
   private async persistPendingCatalogItems(
     repository: ApplicationRepository,
     applicationId: string,
     draft: ApplicationDraft,
-  ): Promise<void> {
+  ): Promise<{ categoryId: string | null; tagIds: string[] }> {
+    let matchedCategoryId: string | null = null;
+    const matchedTagIds: string[] = [];
     const categoryName = draft.customCategoryName?.trim();
     if (categoryName !== undefined && categoryName.length > 0) {
-      if (!(await repository.findCategoryByName(categoryName))) {
+      const existingCategoryId =
+        await repository.findCategoryByName(categoryName);
+      if (existingCategoryId !== null) {
+        matchedCategoryId = existingCategoryId;
+      } else {
         await repository.upsertPendingCatalogItem(
           applicationId,
           "category",
@@ -990,7 +1005,10 @@ export class ApplicationService {
     for (const name of draft.customTagNames ?? []) {
       const trimmed = name.trim();
       if (trimmed.length === 0) continue;
-      if (!(await repository.findTagByName(trimmed))) {
+      const existingTagId = await repository.findTagByName(trimmed);
+      if (existingTagId !== null) {
+        matchedTagIds.push(existingTagId);
+      } else {
         await repository.upsertPendingCatalogItem(
           applicationId,
           "tag",
@@ -998,6 +1016,7 @@ export class ApplicationService {
         );
       }
     }
+    return { categoryId: matchedCategoryId, tagIds: matchedTagIds };
   }
 
   /**
@@ -1031,9 +1050,11 @@ export class ApplicationService {
     }
     if (appliedTagIds.length > 0) {
       const existingTagIds = await repository.listTagIds(applicationId);
+      // 合并去重：insertTag 按忽略大小写复用现有正式标签，pending 大小写变体
+      // 或审批期间新增的正式标签都会让 appliedTagIds 与既有关联重叠 —— 重复
+      // (application_id, tag_id) 会触发复合主键冲突导致事务回滚 500。
       await repository.replaceTagLinks(applicationId, [
-        ...existingTagIds,
-        ...appliedTagIds,
+        ...new Set([...existingTagIds, ...appliedTagIds]),
       ]);
     }
     await repository.deletePendingCatalogItemsByApplication(applicationId);
@@ -1246,6 +1267,12 @@ export class ApplicationService {
    * web 的入口地址在向导内填写；持久化时以空字符串兜底（entryUrl 为
    * string|null）。目标完整性（mini_program targets/二维码）由发布门禁
    * assertDeliveryChannelsComplete 校验。
+   *
+   * 草稿未选的渠道行会被删除（application_deliveries 按 application_id +
+   * channel NOT IN (草稿渠道集) 删除，delivery_targets 经外键级联清除）：
+   * 向导草稿是渠道配置的权威来源，用户从向导移除渠道后重提交，旧渠道不再
+   * 出现在目录「立即使用」。权衡：独立交付页（ApplicationDeliveryPage 逐渠道
+   * PUT）写入的渠道仅在该渠道仍留在草稿时保留 —— 向导重提交以草稿为准覆盖。
    */
   private async persistDraftDeliveries(
     repository: ApplicationRepository,
@@ -1264,6 +1291,10 @@ export class ApplicationService {
         await repository.saveDeliveryTargets(delivery.deliveryId, item.targets);
       }
     }
+    await repository.deleteDeliveriesExcept(
+      applicationId,
+      deliveries.map((item) => item.channel),
+    );
   }
 
   async configureDelivery(

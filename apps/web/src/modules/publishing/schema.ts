@@ -168,10 +168,15 @@ const applicationDraftShape = z.object({
     "mini_program",
   ]),
   tagIds: z.array(z.string()),
-  /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空）。 */
-  customCategoryName: z.string().optional(),
+  /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空；与 DB varchar(120) 一致）。 */
+  customCategoryName: z
+    .string()
+    .max(120, "自定义分类名称不能超过 120 字")
+    .optional(),
   /** 自定义标签名称列表（未匹配现有标签的部分）。 */
-  customTagNames: z.array(z.string()).optional(),
+  customTagNames: z
+    .array(z.string().max(120, "自定义标签名称不能超过 120 字"))
+    .optional(),
   icon: applicationIconSchema,
   screenshotAssetIds: z
     .array(z.string())
@@ -234,10 +239,15 @@ export const applicationDraftSchema = z
       "mini_program",
     ]),
     tagIds: z.array(z.string()),
-    /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空）。 */
-    customCategoryName: z.string().optional(),
+    /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空；与 DB varchar(120) 一致）。 */
+    customCategoryName: z
+      .string()
+      .max(120, "自定义分类名称不能超过 120 字")
+      .optional(),
     /** 自定义标签名称列表（未匹配现有标签的部分）。 */
-    customTagNames: z.array(z.string()).optional(),
+    customTagNames: z
+      .array(z.string().max(120, "自定义标签名称不能超过 120 字"))
+      .optional(),
     icon: applicationIconSchema,
     screenshotAssetIds: z
       .array(z.string())
