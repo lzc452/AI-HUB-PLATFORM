@@ -22,6 +22,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import type { AudienceRule } from "@ai-hub/contracts";
+import { useDepartmentMembers } from "../auth";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { RichTextView } from "../../shared/ui/RichTextView";
@@ -932,8 +933,29 @@ function BasicInfoStep({
   options: PublishingOptions;
   applicationId: string;
 }) {
-  const { control, watch } = useFormContext<FieldValues>();
+  const { control, setValue, watch } = useFormContext<FieldValues>();
   const applicationType = watch("applicationType");
+  // 维护人选项随所选部门联动：维护人必须是归属部门的在职成员
+  // （部门成员接口只需要 identity.department.read 基础权限）。
+  const departmentIdValue = useWatch({
+    control,
+    name: "departmentId",
+  }) as string | undefined;
+  const departmentId =
+    typeof departmentIdValue === "string" && departmentIdValue.length > 0
+      ? departmentIdValue
+      : undefined;
+  const maintainerIds = useWatch({
+    control,
+    name: "maintainerEmployeeIds",
+  }) as string[] | undefined;
+  const membersQuery = useDepartmentMembers(departmentId);
+  const maintainerOptions = (membersQuery.data ?? [])
+    .filter((employee) => employee.status === "active")
+    .map((employee) => ({
+      value: employee.employeeId,
+      label: employee.displayName,
+    }));
   return (
     <Form layout="vertical">
       <Controller
@@ -967,10 +989,25 @@ function BasicInfoStep({
           >
             <Select
               {...field}
+              aria-label="归属部门"
               placeholder="选择部门"
               options={
                 options.departments as { value: string; label: string }[]
               }
+              onChange={(value: string) => {
+                // 切换归属部门时清空已选维护人（编辑回显不触发 onChange，不受影响）。
+                if (
+                  value !== departmentId &&
+                  Array.isArray(maintainerIds) &&
+                  maintainerIds.length > 0
+                ) {
+                  setValue("maintainerEmployeeIds", [], {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
+                }
+                field.onChange(value);
+              }}
               style={CONTROL_STYLE}
             />
           </Form.Item>
@@ -988,9 +1025,13 @@ function BasicInfoStep({
           >
             <Select
               {...field}
+              aria-label="维护人"
               mode="multiple"
-              placeholder="选择维护人（可多选）"
-              options={options.employees as { value: string; label: string }[]}
+              placeholder={
+                departmentId ? "选择维护人（可多选）" : "请先选择部门"
+              }
+              disabled={!departmentId}
+              options={maintainerOptions}
               style={CONTROL_STYLE}
             />
           </Form.Item>

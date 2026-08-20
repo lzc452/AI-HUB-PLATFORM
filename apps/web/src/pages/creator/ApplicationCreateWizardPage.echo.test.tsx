@@ -22,6 +22,12 @@ vi.mock("../../modules/auth/useIdentity", () => ({
     isError: false,
     isPending: false,
   }),
+  useDepartmentMembers: () => ({
+    data: [],
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
 }));
 
 const draftRecord = {

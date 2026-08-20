@@ -1,12 +1,30 @@
+import type { EmployeeSummary } from "@ai-hub/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import type { FieldValues, Resolver } from "react-hook-form";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applicationDraftDefaults, applicationDraftFormSchema } from "./schema";
 import { AudienceField, createWizardSteps, FaqField } from "./steps";
 import type { PublishingOptions } from "./steps";
+
+// useDepartmentMembers 由测试注入各部门成员数据（按 departmentId 查询）。
+const { membersByDepartment } = vi.hoisted(() => ({
+  membersByDepartment: new Map<string, EmployeeSummary[]>(),
+}));
+
+vi.mock("../auth/useIdentity", () => ({
+  useDepartmentMembers: (departmentId?: string) => ({
+    data:
+      departmentId === undefined
+        ? undefined
+        : (membersByDepartment.get(departmentId) ?? []),
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
+}));
 
 const OPTIONS: PublishingOptions = {
   departments: [
@@ -416,5 +434,155 @@ describe("PreviewStep（提交前核对交付目标 / FAQ / 风险 / 受众）",
     render(<PreviewHarness defaultValues={minimal} />);
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
     expect(screen.getByText("Web 应用")).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 基本信息步：维护人随所选部门联动（Bug 3）
+// ---------------------------------------------------------------------------
+
+function MaintainerProbe() {
+  const maintainerEmployeeIds = useWatch({ name: "maintainerEmployeeIds" });
+  return (
+    <div data-testid="maintainer-probe">
+      {JSON.stringify(maintainerEmployeeIds)}
+    </div>
+  );
+}
+
+function maintainerProbeValue(): string[] {
+  const node = document.querySelector<HTMLElement>(
+    '[data-testid="maintainer-probe"]',
+  );
+  expect(node).not.toBeNull();
+  return JSON.parse(node?.textContent ?? "[]") as string[];
+}
+
+function BasicInfoHarness({ defaultValues }: { defaultValues: FieldValues }) {
+  const form = useForm<FieldValues>({
+    defaultValues,
+    mode: "onChange",
+    resolver: zodResolver(
+      applicationDraftFormSchema,
+    ) as unknown as Resolver<FieldValues>,
+  });
+  const steps = createWizardSteps(OPTIONS, "app-1");
+  return (
+    <FormProvider {...form}>
+      {steps[0]!.render(form)}
+      <MaintainerProbe />
+    </FormProvider>
+  );
+}
+
+/** 打开指定 Select（按 aria-label）下拉并点击选项，最后按 Esc 关闭。 */
+async function pickBasicOption(label: RegExp, optionText: string) {
+  const input = screen.getByLabelText(label);
+  fireEvent.mouseDown(input);
+  let option: HTMLElement | undefined;
+  await waitFor(() => {
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>(".ant-select-item-option-content"),
+    );
+    option = items.find((item) => item.textContent === optionText);
+    expect(option).toBeTruthy();
+  });
+  fireEvent.click(option!);
+  fireEvent.keyDown(input, { key: "Escape" });
+}
+
+describe("BasicInfoStep（维护人随归属部门联动）", () => {
+  beforeEach(() => {
+    membersByDepartment.clear();
+    membersByDepartment.set("dept-rnd", [
+      {
+        employeeId: "E001",
+        displayName: "张三",
+        status: "active",
+        primaryDepartmentId: "dept-rnd",
+      },
+      {
+        employeeId: "E002",
+        displayName: "王五",
+        status: "disabled",
+        primaryDepartmentId: "dept-rnd",
+      },
+    ]);
+    membersByDepartment.set("dept-ops", [
+      {
+        employeeId: "E003",
+        displayName: "李四",
+        status: "active",
+        primaryDepartmentId: "dept-ops",
+      },
+    ]);
+  });
+
+  it("未选部门时维护人禁用；选中部门后选项仅含该部门 active 成员", async () => {
+    render(<BasicInfoHarness defaultValues={applicationDraftDefaults} />);
+    // 未选部门：维护人禁用并提示先选部门。
+    expect(screen.getByLabelText(/维护人/)).toBeDisabled();
+    expect(
+      screen.getByLabelText(/维护人/).closest(".ant-select")?.textContent,
+    ).toContain("请先选择部门");
+
+    await pickBasicOption(/归属部门/, "研发部");
+
+    // 打开维护人下拉：仅含研发部 active 成员。
+    fireEvent.mouseDown(screen.getByLabelText(/维护人/));
+    let texts: Array<string | null> = [];
+    await waitFor(() => {
+      const items = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".ant-select-item-option-content",
+        ),
+      );
+      texts = items.map((item) => item.textContent);
+      expect(texts).toContain("张三");
+    });
+    // 停用成员与其他部门成员不出现在选项中。
+    expect(texts).not.toContain("王五");
+    expect(texts).not.toContain("李四");
+  });
+
+  it("切换部门清空已选维护人，选项随新部门更新", async () => {
+    render(<BasicInfoHarness defaultValues={applicationDraftDefaults} />);
+    await pickBasicOption(/归属部门/, "研发部");
+    await pickBasicOption(/维护人/, "张三");
+    expect(maintainerProbeValue()).toEqual(["E001"]);
+
+    // 切换到运营部：已选维护人被清空。
+    await pickBasicOption(/归属部门/, "运营部");
+    await waitFor(() => {
+      expect(maintainerProbeValue()).toEqual([]);
+    });
+
+    // 新部门下拉仅含运营部成员。
+    fireEvent.mouseDown(screen.getByLabelText(/维护人/));
+    await waitFor(() => {
+      const items = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".ant-select-item-option-content",
+        ),
+      );
+      const texts = items.map((item) => item.textContent);
+      expect(texts).toContain("李四");
+      expect(texts).not.toContain("张三");
+    });
+  });
+
+  it("编辑回显：部门与已选维护人一并回显且不被清空", async () => {
+    render(
+      <BasicInfoHarness
+        defaultValues={{
+          ...applicationDraftDefaults,
+          departmentId: "dept-rnd",
+          maintainerEmployeeIds: ["E001"],
+        }}
+      />,
+    );
+    expect(maintainerProbeValue()).toEqual(["E001"]);
+    // 已有部门：维护人可编辑（非禁用）。
+    expect(screen.getByLabelText(/维护人/)).not.toBeDisabled();
   });
 });
