@@ -43,6 +43,8 @@ export interface CommentOutput {
   displayAnonymously: boolean;
   /** 评论作者账号状态；员工行缺失时为 null。 */
   authorStatus: EmployeeStatus | null;
+  /** 评论类型：user=普通评论/用户回复，official=官方回复。 */
+  commentKind: "user" | "official";
   hiddenAt: string | null;
   createdAt: string;
   updatedAt: string;

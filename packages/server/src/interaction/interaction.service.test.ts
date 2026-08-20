@@ -23,6 +23,11 @@ const employee: ActorContext = {
   employeeId: "E200",
   sessionId: "session-employee",
 };
+const colleague: ActorContext = {
+  ...owner,
+  employeeId: "E400",
+  sessionId: "session-colleague",
+};
 const admin: ActorContext = {
   ...owner,
   employeeId: "E300",
@@ -343,7 +348,7 @@ describe("InteractionService", () => {
     expect(repository.ratings[0]?.stars).toBe(5);
   });
 
-  it("allows any employee to create a root comment; only the team may reply", async () => {
+  it("allows any employee to reply once to another's root comment", async () => {
     const repository = new MemoryInteractionRepository();
     const service = new InteractionService(
       repository,
@@ -357,23 +362,40 @@ describe("InteractionService", () => {
     });
     expect(root.commentKind).toBe("user");
 
+    // 普通员工可匿名回复他人根评论：kind=user，匿名展示生效
+    const reply = await service.replyComment(colleague, {
+      applicationId: "app-1",
+      parentCommentId: root.commentId,
+      body: "用户回复",
+      displayAnonymously: true,
+    });
+    expect(reply.commentKind).toBe("user");
+    expect(reply.displayAnonymously).toBe(true);
+    expect(reply.authorEmployeeId).toBe("E400");
+
+    // 不能回复自己的评论
     await expect(
       service.replyComment(employee, {
         applicationId: "app-1",
         parentCommentId: root.commentId,
-        body: "reply",
+        body: "self",
       }),
-    ).rejects.toThrow("OFFICIAL_REPLY_FORBIDDEN");
+    ).rejects.toThrow("COMMENT_SELF_REPLY_FORBIDDEN");
 
+    // owner 回复仍标记官方，且强制实名（匿名请求被忽略）
     const official = await service.replyComment(owner, {
       applicationId: "app-1",
       parentCommentId: root.commentId,
       body: "official",
+      displayAnonymously: true,
     });
     expect(official.commentKind).toBe("official");
+    expect(official.displayAnonymously).toBe(false);
     expect(official.authorEmployeeId).toBe("E100");
+
+    // 回复不可再被回复（一层约束；用他人身份避免先命中自回复检查）
     await expect(
-      service.replyComment(owner, {
+      service.replyComment(colleague, {
         applicationId: "app-1",
         parentCommentId: official.commentId,
         body: "third",

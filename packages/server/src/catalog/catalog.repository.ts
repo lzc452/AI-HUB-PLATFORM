@@ -390,6 +390,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
           canReplyOfficial:
             row.ownerEmployeeId === actor.employeeId ||
             row.maintainerEmployeeId === actor.employeeId,
+          canReply: hasPermission(actor, PERMISSIONS.INTERACTION_INTERACT),
         },
         healthStatus: row.healthStatus,
         deprecatedReason: row.deprecatedReason,

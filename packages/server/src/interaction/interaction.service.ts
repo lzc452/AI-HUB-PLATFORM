@@ -146,13 +146,17 @@ export class InteractionService {
     });
   }
 
-  /** 所有者/维护者回复一级评论（官方回复，保留两级深度约束）。 */
+  /**
+   * 回复一级根评论（保留两级深度约束）。
+   * 任意有互动权限的员工可回复他人评论一层；owner/maintainer 回复标记为官方回复。
+   */
   async replyComment(
     actor: ActorContext,
     input: {
       applicationId: string;
       parentCommentId: string;
       body: string;
+      displayAnonymously?: boolean;
     },
   ) {
     await this.assertAllowed(actor, "interact");
@@ -161,12 +165,6 @@ export class InteractionService {
       input.applicationId,
     );
     const application = await this.requireApplication(input.applicationId);
-    if (
-      application.ownerEmployeeId !== actor.employeeId &&
-      application.maintainerEmployeeId !== actor.employeeId
-    ) {
-      throw new Error("OFFICIAL_REPLY_FORBIDDEN");
-    }
     if (input.body.trim().length === 0) {
       throw new Error("COMMENT_BODY_REQUIRED");
     }
@@ -174,8 +172,14 @@ export class InteractionService {
     if (parent === null || parent.applicationId !== input.applicationId) {
       throw new Error("COMMENT_NOT_FOUND");
     }
+    // 仅可回复他人评论（自己的评论不提供回复入口，后端一并拦截）。
+    if (parent.authorEmployeeId === actor.employeeId)
+      throw new Error("COMMENT_SELF_REPLY_FORBIDDEN");
     if (parent.parentCommentId !== null)
       throw new Error("COMMENT_DEPTH_EXCEEDED");
+    const isOfficial =
+      application.ownerEmployeeId === actor.employeeId ||
+      application.maintainerEmployeeId === actor.employeeId;
     const versionId = await this.repository.findCurrentVersionId(
       input.applicationId,
     );
@@ -186,8 +190,10 @@ export class InteractionService {
         parentCommentId: input.parentCommentId,
         authorEmployeeId: actor.employeeId,
         body: input.body.trim(),
-        displayAnonymously: false,
-        commentKind: "official",
+        displayAnonymously: isOfficial
+          ? false
+          : (input.displayAnonymously ?? false),
+        commentKind: isOfficial ? "official" : "user",
         hiddenAt: null,
       });
       await repository.emitOutbox?.({
@@ -200,7 +206,11 @@ export class InteractionService {
         aggregateId: input.applicationId,
         occurredAt: new Date().toISOString(),
         idempotencyKey: `application-commented:${comment.commentId}`,
-        metadata: { source: "interaction.comment.official" },
+        metadata: {
+          source: isOfficial
+            ? "interaction.comment.official"
+            : "interaction.comment.reply",
+        },
       });
       return comment;
     });

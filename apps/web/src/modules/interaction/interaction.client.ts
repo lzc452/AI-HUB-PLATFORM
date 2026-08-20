@@ -90,14 +90,13 @@ export function reportComment(
 }
 
 // ---------------------------------------------------------------------------
-// 评论（普通员工根评论 / 官方回复）与应用反馈
+// 评论（普通员工根评论 / 一层回复）与应用反馈
 // ---------------------------------------------------------------------------
 
-export interface CommentOutputExt extends CommentOutput {
-  commentKind?: "user" | "official";
-}
-
-/** 发表评论：parentCommentId 为空创建根评论；提供时为官方回复（需 owner/maintainer）。 */
+/**
+ * 发表评论 / 回复一层：parentCommentId 为空创建根评论；提供时回复他人根评论
+ * （可匿名，后端强制一层且不可回复自己的评论；owner/maintainer 回复标记官方）。
+ */
 export function createComment(
   applicationId: string,
   input: {
@@ -105,8 +104,8 @@ export function createComment(
     body: string;
     displayAnonymously?: boolean;
   },
-): Promise<CommentOutputExt> {
-  return apiFetch<CommentOutputExt>(
+): Promise<CommentOutput> {
+  return apiFetch<CommentOutput>(
     `${interactionsPath(applicationId)}/comments`,
     {
       body: JSON.stringify({

@@ -106,7 +106,7 @@
 | GET | `/internal/creator/applications/:applicationId/summary` | `creator.read` | `employee`、`application_admin`、`super_admin` | 当前 actor 必须是负责人或维护者 |
 | POST | `/internal/applications/:applicationId/interactions/like` | `interaction.interact` | 所有在职员工及其专业角色 | 应用必须对 actor 可见；幂等切换 |
 | POST | `/internal/applications/:applicationId/interactions/rating` | `interaction.interact` | 所有在职员工及其专业角色 | 应用必须对 actor 可见；评分范围合法 |
-| POST | `/internal/applications/:applicationId/interactions/comments` | `interaction.interact` | 所有在职员工及其专业角色 | 仅负责人/维护者可官方回复 |
+| POST | `/internal/applications/:applicationId/interactions/comments` | `interaction.interact` | 所有在职员工及其专业角色 | 根评论任意用户可发；回复一层仅限他人根评论（自回复/嵌套被拒）；负责人/维护者回复标记官方 |
 | POST | `/internal/applications/:applicationId/interactions/comments/:commentId/reports` | `interaction.interact` | 所有在职员工及其专业角色 | 只能举报可见评论 |
 | POST | `/internal/applications/:applicationId/interactions/reports/:reportId/resolve` | `interaction.moderate` | `risk_operator`、`super_admin`（custom role 以实际权限为准） | 只能处理未关闭举报并记录审计 |
 | GET | `/internal/applications/:applicationId/interactions/comments/:commentId/anonymous-author` | `interaction.anonymous_audit` | `super_admin`（custom role 以实际权限为准） | 每次查询写入审计事件 |

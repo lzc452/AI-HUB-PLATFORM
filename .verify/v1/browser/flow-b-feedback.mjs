@@ -150,7 +150,7 @@ const evidence = {};
     .getByRole("button", { name: /^回\s*复\s/ })
     .first()
     .click();
-  await page.getByLabel("官方回复内容").fill(replyText);
+  await page.getByLabel("回复内容").fill(replyText);
   await page.getByRole("button", { name: "发送回复" }).click();
   await page.waitForTimeout(1_200);
 

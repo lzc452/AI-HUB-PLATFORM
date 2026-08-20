@@ -36,6 +36,7 @@ import { ErrorBlock } from "../../components/common/ErrorBlock";
 import { ForbiddenBlock } from "../../components/common/ForbiddenBlock";
 import { NotFoundBlock } from "../../components/common/NotFoundBlock";
 import { rememberLastViewedApplicationId } from "../../modules/application/last-viewed";
+import { useAuth } from "../../modules/auth/useAuth";
 import {
   useApplicationFeedback,
   useComments,
@@ -44,7 +45,6 @@ import {
   useHideComment,
   useMyFeedback,
   useRateApplication,
-  useRatings,
   useReportComment,
   useRestoreComment,
   useToggleLike,
@@ -95,7 +95,6 @@ export default function MarketplaceDetailPage() {
   const rateApplication = useRateApplication(applicationId);
   const { activeTab, setTab } = useDetailTabParam();
   const [commentsPage, setCommentsPage] = useState(1);
-  const [ratingsPage, setRatingsPage] = useState(1);
   const [resolving, setResolving] = useState(false);
   // web 交付入口 URL 缺失/非法（WEB_DELIVERY_URL_MISSING）时禁用"立即使用"。
   const [deliveryUrlMissing, setDeliveryUrlMissing] = useState(false);
@@ -109,11 +108,6 @@ export default function MarketplaceDetailPage() {
   );
   const saveRisk = useSaveRiskDescription(
     activeTab === "risk" ? applicationId : undefined,
-  );
-  const ratings = useRatings(
-    activeTab === "reviews" ? applicationId : undefined,
-    ratingsPage,
-    10,
   );
   const comments = useComments(
     activeTab === "reviews" ? applicationId : undefined,
@@ -144,6 +138,10 @@ export default function MarketplaceDetailPage() {
     activeTab === "reviews" ? applicationId : undefined,
   );
   const canReplyOfficial = data?.capabilities?.canReplyOfficial ?? false;
+  // 回复一层：所有有互动权限的员工；自己的评论不显示回复入口。
+  const canReply = data?.capabilities?.canReply ?? false;
+  const { session } = useAuth();
+  const myEmployeeId = session?.employeeId ?? null;
   const applicationFeedback = useApplicationFeedback(
     activeTab === "reviews" && canReplyOfficial ? applicationId : undefined,
   );
@@ -287,6 +285,7 @@ export default function MarketplaceDetailPage() {
               {tab.key === "reviews" && (
                 <MarketplaceDetailReviews
                   applicationFeedback={applicationFeedback.data}
+                  canReply={canReply}
                   canReplyOfficial={canReplyOfficial}
                   comments={comments.data}
                   commentsPage={commentsPage}
@@ -294,15 +293,12 @@ export default function MarketplaceDetailPage() {
                   createComment={createComment}
                   createFeedback={createFeedback}
                   isModerator={data.capabilities?.canModerateComments ?? false}
+                  myEmployeeId={myEmployeeId}
                   myFeedback={myFeedback.data}
                   onCommentsPageChange={setCommentsPage}
                   onHideComment={(id) => hideComment.mutate(id)}
                   onRestoreComment={(id) => restoreComment.mutate(id)}
-                  onRatingsPageChange={setRatingsPage}
-                  ratings={ratings.data}
                   reportComment={reportComment}
-                  ratingsPage={ratingsPage}
-                  ratingsPending={ratings.isPending}
                   updateFeedback={updateFeedback}
                 />
               )}

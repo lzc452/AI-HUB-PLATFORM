@@ -116,19 +116,21 @@ export function FormWizard({
 
   return (
     <FormProvider {...form}>
-      <Steps
-        current={current}
-        items={steps.map((step) => ({
-          title: step.title,
-          description: step.description,
-        }))}
-        onChange={(value) => {
-          if (value < current) setCurrent(value);
-        }}
-        style={{ marginBottom: 24 }}
-      />
+      <div className="px-16 py-8">
+        <Steps
+          current={current}
+          items={steps.map((step) => ({
+            title: step.title,
+            description: step.description,
+          }))}
+          onChange={(value) => {
+            if (value < current) setCurrent(value);
+          }}
+          style={{ marginBottom: 24 }}
+        />
+      </div>
       {/* 所有步骤常驻挂载：保证上传预览等本地状态在步骤切换时不丢失。 */}
-      <div style={{ maxWidth: 680, margin: "0 auto", minHeight: 360 }}>
+      <div className="px-16 py-8" style={{ maxWidth: 680, minHeight: 360 }}>
         {steps.map((step, index) => (
           <div
             key={step.key}

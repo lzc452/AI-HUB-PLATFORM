@@ -56,6 +56,15 @@ export class CommentRequestDto {
   })
   @IsString()
   body!: string;
+
+  @ApiPropertyOptional({
+    type: Boolean,
+    description: "是否匿名展示（官方回复强制实名）",
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  displayAnonymously?: boolean;
 }
 
 /** 举报请求。 */

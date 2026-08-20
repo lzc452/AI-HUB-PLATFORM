@@ -1,4 +1,4 @@
-import type { CommentOutput, RatingOutput } from "@ai-hub/contracts";
+import type { CommentOutput } from "@ai-hub/contracts";
 import {
   QueryClient,
   QueryClientProvider,
@@ -14,7 +14,6 @@ import {
 import type { PropsWithChildren } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CommentOutputExt } from "../../../modules/interaction/interaction.client";
 import { useReportComment } from "../../../modules/interaction/useInteraction";
 import { ApiError } from "../../../shared/api/client";
 import { MarketplaceDetailReviews } from "./MarketplaceDetailReviews";
@@ -53,6 +52,7 @@ const rootComment: CommentOutput = {
   authorStatus: "active",
   body: "希望支持批量识别",
   commentId: "comment-1",
+  commentKind: "user",
   createdAt: "2026-08-15T10:00:00.000Z",
   displayAnonymously: false,
   hiddenAt: null,
@@ -65,6 +65,16 @@ const officialReply: CommentOutput = {
   authorEmployeeId: "E200",
   body: "该能力已在规划中",
   commentId: "reply-1",
+  commentKind: "official",
+  parentCommentId: "comment-1",
+};
+
+const userReply: CommentOutput = {
+  ...rootComment,
+  authorEmployeeId: "E300",
+  body: "我也遇到了同样的问题",
+  commentId: "reply-user",
+  commentKind: "user",
   parentCommentId: "comment-1",
 };
 
@@ -83,22 +93,6 @@ const anonymousDisabledAuthorComment: CommentOutput = {
   commentId: "comment-anon-disabled",
 };
 
-function ratingFixture(overrides: Partial<RatingOutput> = {}): RatingOutput {
-  return {
-    applicationId: "app-1",
-    applicationVersionId: "ver-1",
-    authorStatus: "active",
-    body: null,
-    createdAt: "2026-08-15T10:00:00.000Z",
-    displayAnonymously: false,
-    employeeId: "E300",
-    ratingId: "rating-1",
-    stars: 4,
-    updatedAt: "2026-08-15T10:00:00.000Z",
-    ...overrides,
-  };
-}
-
 function stubMutation<T>(): T {
   return {
     isPending: false,
@@ -108,7 +102,7 @@ function stubMutation<T>(): T {
 }
 
 type CreateCommentMutation = UseMutationResult<
-  CommentOutputExt,
+  CommentOutput,
   unknown,
   {
     parentCommentId?: string | null;
@@ -120,17 +114,20 @@ type CreateCommentMutation = UseMutationResult<
 /** 用真实 useReportComment 接线组件，便于在组件测试中验证成功/错误提示。 */
 function ReviewsHarness({
   comments = [rootComment, officialReply],
-  ratings = [],
+  canReply = false,
+  myEmployeeId = null,
   createCommentMutation = stubMutation<CreateCommentMutation>(),
 }: {
   comments?: readonly CommentOutput[];
-  ratings?: readonly RatingOutput[];
+  canReply?: boolean;
+  myEmployeeId?: string | null;
   createCommentMutation?: CreateCommentMutation;
 } = {}) {
   const reportComment = useReportComment("app-1");
   return (
     <MarketplaceDetailReviews
       applicationFeedback={[]}
+      canReply={canReply}
       canReplyOfficial={false}
       comments={{ items: comments, total: comments.length }}
       commentsPage={1}
@@ -138,14 +135,11 @@ function ReviewsHarness({
       createComment={createCommentMutation}
       createFeedback={stubMutation()}
       isModerator={false}
+      myEmployeeId={myEmployeeId}
       myFeedback={[]}
       onCommentsPageChange={() => undefined}
       onHideComment={() => undefined}
       onRestoreComment={() => undefined}
-      onRatingsPageChange={() => undefined}
-      ratings={{ items: ratings, total: ratings.length }}
-      ratingsPage={1}
-      ratingsPending={false}
       reportComment={reportComment}
       updateFeedback={stubMutation()}
     />
@@ -168,7 +162,8 @@ function createWrapper() {
 
 function renderReviews(options?: {
   comments?: readonly CommentOutput[];
-  ratings?: readonly RatingOutput[];
+  canReply?: boolean;
+  myEmployeeId?: string | null;
   createCommentMutation?: CreateCommentMutation;
 }) {
   return render(<ReviewsHarness {...options} />, { wrapper: createWrapper() });
@@ -282,20 +277,6 @@ describe("MarketplaceDetailReviews 停用员工作者显示", () => {
     expect(screen.getByText("E100")).toBeInTheDocument();
     expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
   });
-
-  it("评分作者为停用员工时显示已停用用户标签且不显示工号", () => {
-    renderReviews({ ratings: [ratingFixture({ authorStatus: "disabled" })] });
-
-    expect(screen.getByText("已停用用户")).toBeInTheDocument();
-    expect(screen.queryByText("E300")).not.toBeInTheDocument();
-  });
-
-  it("评分正常作者显示工号", () => {
-    renderReviews({ ratings: [ratingFixture()] });
-
-    expect(screen.getByText("E300")).toBeInTheDocument();
-    expect(screen.queryByText("已停用用户")).not.toBeInTheDocument();
-  });
 });
 
 describe("MarketplaceDetailReviews 匿名展示选项", () => {
@@ -375,5 +356,102 @@ describe("MarketplaceDetailReviews 匿名展示选项", () => {
     await waitFor(() => expect(createCommentMutateAsync).toHaveBeenCalled());
 
     expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
+  });
+});
+
+describe("MarketplaceDetailReviews 评论回复", () => {
+  it("有回复权限时他人的根评论显示回复按钮；点击展开回复输入区", () => {
+    renderReviews({ canReply: true });
+
+    const replyButton = screen.getByRole("button", { name: "回复 comment-1" });
+    fireEvent.click(replyButton);
+    expect(screen.getByPlaceholderText("输入回复…")).toBeInTheDocument();
+  });
+
+  it("自己的评论不显示回复按钮（即使有回复权限）", () => {
+    renderReviews({ canReply: true, myEmployeeId: "E100" });
+
+    expect(
+      screen.queryByRole("button", { name: "回复 comment-1" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("无回复权限时不显示回复按钮", () => {
+    renderReviews({ canReply: false });
+
+    expect(
+      screen.queryByRole("button", { name: "回复 comment-1" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("回复他人评论默认实名，提交载荷含 parentCommentId 与 displayAnonymously: false", async () => {
+    const createCommentMutateAsync = vi.fn(async () => ({}));
+    renderReviews({
+      canReply: true,
+      createCommentMutation: {
+        isPending: false,
+        mutate: vi.fn(),
+        mutateAsync: createCommentMutateAsync,
+      } as unknown as CreateCommentMutation,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "回复 comment-1" }));
+    fireEvent.change(screen.getByPlaceholderText("输入回复…"), {
+      target: { value: "我也遇到了同样的问题" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送回复" }));
+
+    await waitFor(() =>
+      expect(createCommentMutateAsync).toHaveBeenCalledWith({
+        parentCommentId: "comment-1",
+        body: "我也遇到了同样的问题",
+        displayAnonymously: false,
+      }),
+    );
+  });
+
+  it("开启回复匿名开关后提交匿名回复（displayAnonymously: true）", async () => {
+    const createCommentMutateAsync = vi.fn(async () => ({}));
+    renderReviews({
+      canReply: true,
+      createCommentMutation: {
+        isPending: false,
+        mutate: vi.fn(),
+        mutateAsync: createCommentMutateAsync,
+      } as unknown as CreateCommentMutation,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "回复 comment-1" }));
+    fireEvent.click(screen.getByLabelText("回复匿名展示"));
+    fireEvent.change(screen.getByPlaceholderText("输入回复…"), {
+      target: { value: "匿名回复" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送回复" }));
+
+    await waitFor(() =>
+      expect(createCommentMutateAsync).toHaveBeenCalledWith({
+        parentCommentId: "comment-1",
+        body: "匿名回复",
+        displayAnonymously: true,
+      }),
+    );
+  });
+
+  it("官方回复显示蓝色官方回复标签；用户回复显示作者工号", () => {
+    renderReviews({
+      comments: [rootComment, officialReply, userReply],
+    });
+
+    expect(screen.getByText("官方回复")).toBeInTheDocument();
+    expect(screen.getByText("E300")).toBeInTheDocument();
+  });
+
+  it("匿名用户回复显示匿名用户而非工号", () => {
+    renderReviews({
+      comments: [rootComment, { ...userReply, displayAnonymously: true }],
+    });
+
+    expect(screen.getByText("匿名用户")).toBeInTheDocument();
+    expect(screen.queryByText("E300")).not.toBeInTheDocument();
   });
 });

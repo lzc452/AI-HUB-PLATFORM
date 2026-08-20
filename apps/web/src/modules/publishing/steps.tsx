@@ -37,7 +37,7 @@ import { deleteAsset, uploadAsset } from "./publishing.client";
 const { Text } = Typography;
 
 /** 输入控件统一宽度（单行）。 */
-const CONTROL_STYLE: React.CSSProperties = { width: 240 };
+const CONTROL_STYLE: React.CSSProperties = { width: 480 };
 /** 多行文本宽度（需求：Textarea 480px）。 */
 const TEXTAREA_STYLE: React.CSSProperties = { width: 480 };
 

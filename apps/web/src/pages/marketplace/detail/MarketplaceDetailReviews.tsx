@@ -1,9 +1,9 @@
-import type { CommentOutput, RatingOutput } from "@ai-hub/contracts";
+import type { CommentOutput } from "@ai-hub/contracts";
+
 import {
   EyeInvisibleOutlined,
   EyeOutlined,
   MessageOutlined,
-  StarFilled,
   UserOutlined,
 } from "@ant-design/icons";
 import {
@@ -22,10 +22,7 @@ import {
 } from "antd";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  type CommentOutputExt,
-  type FeedbackRecord,
-} from "../../../modules/interaction/interaction.client";
+import { type FeedbackRecord } from "../../../modules/interaction/interaction.client";
 
 const { Text, Title } = Typography;
 
@@ -61,67 +58,42 @@ function AuthorDisplay({
   return <span>{employeeId}</span>;
 }
 
-function RatingCard({ rating }: { rating: RatingOutput }) {
-  return (
-    <div className="rounded-xl border border-[#f0f0f0] bg-[#fafafa] p-4">
-      <div className="mb-2 flex items-center gap-2">
-        <span className="inline-flex">
-          {Array.from({ length: 5 }, (_, i) => (
-            <StarFilled
-              key={i}
-              className={i < rating.stars ? "text-[#faad14]" : "text-[#e8e8e8]"}
-              style={{ fontSize: 16 }}
-            />
-          ))}
-        </span>
-        <Text type="secondary" className="!text-xs">
-          {formatDate(rating.createdAt)}
-        </Text>
-      </div>
-      {rating.body && (
-        <p className="!mb-0 text-sm leading-relaxed text-[#1f1f1f]">
-          {rating.body}
-        </p>
-      )}
-      <div className="mt-2 flex items-center gap-1 text-xs text-[#8c8c8c]">
-        <UserOutlined />
-        <AuthorDisplay
-          authorStatus={rating.authorStatus}
-          displayAnonymously={rating.displayAnonymously}
-          employeeId={rating.employeeId}
-        />
-      </div>
-    </div>
-  );
-}
-
 function CommentThread({
+  canReply,
   canReplyOfficial,
   comment,
   isModerator,
+  myEmployeeId,
   onHide,
   onReport,
+  onReplyAnonymousChange,
   onReplyCancel,
   onReplyChange,
   onReplyStart,
   onReplySubmit,
   onRestore,
   replies,
+  replyAnonymous,
   replyDraft,
   replyPending,
   replyTargetId,
 }: {
+  canReply: boolean;
+  /** 官方回复者（owner/maintainer）强制实名，不展示匿名开关。 */
   canReplyOfficial: boolean;
   comment: CommentOutput;
   isModerator: boolean;
+  myEmployeeId: string | null;
   onHide: (id: string) => void;
   onReport: (id: string) => void;
+  onReplyAnonymousChange: (value: boolean) => void;
   onReplyCancel: () => void;
   onReplyChange: (value: string) => void;
   onReplyStart: (id: string) => void;
-  onReplySubmit: (body: string) => void;
+  onReplySubmit: (body: string, anonymous: boolean) => void;
   onRestore: (id: string) => void;
   replies: readonly CommentOutput[];
+  replyAnonymous: boolean;
   replyDraft: string;
   replyPending: boolean;
   replyTargetId: string | null;
@@ -190,28 +162,43 @@ function CommentThread({
         {isReplying ? (
           <div className="mt-3 space-y-2">
             <Input.TextArea
-              aria-label="官方回复内容"
+              aria-label="回复内容"
               autoSize={{ minRows: 2, maxRows: 4 }}
               maxLength={500}
               onChange={(event) => onReplyChange(event.target.value)}
-              placeholder="输入官方回复…"
+              placeholder="输入回复…"
               value={replyDraft}
             />
-            <div className="flex justify-end gap-2">
-              <Button onClick={onReplyCancel} size="small">
-                取消
-              </Button>
-              <Button
-                loading={replyPending}
-                onClick={() => onReplySubmit(replyDraft)}
-                size="small"
-                type="primary"
-              >
-                发送回复
-              </Button>
+            <div className="flex mt-4 items-center justify-between gap-2">
+              {!canReplyOfficial && (
+                <label className="inline-flex cursor-pointer items-center gap-2">
+                  <Switch
+                    aria-label="回复匿名展示"
+                    checked={replyAnonymous}
+                    onChange={onReplyAnonymousChange}
+                    size="small"
+                  />
+                  <Text type="secondary" className="!text-xs">
+                    匿名展示不影响后台审计
+                  </Text>
+                </label>
+              )}
+              <div className="ml-auto flex gap-2">
+                <Button onClick={onReplyCancel} size="small">
+                  取消
+                </Button>
+                <Button
+                  loading={replyPending}
+                  onClick={() => onReplySubmit(replyDraft, replyAnonymous)}
+                  size="small"
+                  type="primary"
+                >
+                  发送回复
+                </Button>
+              </div>
             </div>
           </div>
-        ) : canReplyOfficial ? (
+        ) : canReply && comment.authorEmployeeId !== myEmployeeId ? (
           <Button
             aria-label={`回复 ${comment.commentId}`}
             className="mt-2 px-0"
@@ -242,10 +229,14 @@ function CommentThread({
                     displayAnonymously={reply.displayAnonymously}
                     employeeId={reply.authorEmployeeId}
                   />
-                  <span>·</span>
-                  <Tag className="!mr-0" color="blue">
-                    官方回复
-                  </Tag>
+                  {reply.commentKind === "official" && (
+                    <>
+                      <span>·</span>
+                      <Tag className="!mr-0" color="blue">
+                        官方回复
+                      </Tag>
+                    </>
+                  )}
                   {reply.hiddenAt && (
                     <Tag className="!mr-0" color="orange">
                       已隐藏
@@ -378,16 +369,14 @@ function OwnerFeedbackItem({
 
 export interface MarketplaceDetailReviewsProps {
   applicationFeedback: readonly FeedbackRecord[] | undefined;
-  ratings: { items: readonly RatingOutput[]; total: number } | undefined;
   comments: { items: readonly CommentOutput[]; total: number } | undefined;
-  ratingsPending: boolean;
   commentsPending: boolean;
-  ratingsPage: number;
   commentsPage: number;
-  onRatingsPageChange: (page: number) => void;
   onCommentsPageChange: (page: number) => void;
+  canReply: boolean;
   canReplyOfficial: boolean;
   isModerator: boolean;
+  myEmployeeId: string | null;
   onHideComment: (commentId: string) => void;
   onRestoreComment: (commentId: string) => void;
   reportComment: UseMutationResult<
@@ -396,7 +385,7 @@ export interface MarketplaceDetailReviewsProps {
     { commentId: string; reason: string }
   >;
   createComment: UseMutationResult<
-    CommentOutputExt,
+    CommentOutput,
     unknown,
     {
       parentCommentId?: string | null;
@@ -417,19 +406,17 @@ export interface MarketplaceDetailReviewsProps {
   >;
 }
 
-/** 评价管理 Tab：评分列表 + 评论列表（含官方回复线程）+ 评论提交 + 应用反馈。 */
+/** 评价管理 Tab：评分列表 + 评论列表（含一层回复线程）+ 评论提交 + 应用反馈。 */
 export function MarketplaceDetailReviews({
   applicationFeedback,
-  ratings,
   comments,
-  ratingsPending,
   commentsPending,
-  ratingsPage,
   commentsPage,
-  onRatingsPageChange,
   onCommentsPageChange,
+  canReply,
   canReplyOfficial,
   isModerator,
+  myEmployeeId,
   onHideComment,
   onRestoreComment,
   reportComment,
@@ -444,6 +431,7 @@ export function MarketplaceDetailReviews({
   }>();
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
+  const [replyAnonymous, setReplyAnonymous] = useState(false);
   const [feedbackForm] = Form.useForm<{
     type: FeedbackRecord["type"];
     body: string;
@@ -451,7 +439,6 @@ export function MarketplaceDetailReviews({
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [reportForm] = Form.useForm<{ reason: string }>();
 
-  const ratingsPageSize = 10;
   const commentsPageSize = 10;
 
   // Group comments into roots and replies
@@ -485,14 +472,16 @@ export function MarketplaceDetailReviews({
     feedbackForm.resetFields();
   };
 
-  const handleSubmitReply = async (body: string) => {
+  const handleSubmitReply = async (body: string, anonymous: boolean) => {
     if (!replyTargetId || !body.trim()) return;
     await createComment.mutateAsync({
       parentCommentId: replyTargetId,
       body: body.trim(),
+      displayAnonymously: anonymous,
     });
     setReplyTargetId(null);
     setReplyDraft("");
+    setReplyAnonymous(false);
   };
 
   const handleSubmitReport = async () => {
@@ -518,50 +507,6 @@ export function MarketplaceDetailReviews({
 
   return (
     <div className="space-y-6">
-
-      {/* Ratings Section 不用展示用户的评分 */}
-      {/* <section
-        aria-label="用户评分"
-        className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <Title level={2} className="!mb-0 !text-lg">
-            <StarFilled className="mr-2 text-[#faad14]" />
-            用户评分
-            {ratings && (
-              <Text type="secondary" className="!ml-2 !text-sm !font-normal">
-                （{ratings.total}）
-              </Text>
-            )}
-          </Title>
-        </div>
-
-        {ratingsPending ? (
-          <Skeleton active paragraph={{ rows: 4 }} />
-        ) : ratings && ratings.items.length > 0 ? (
-          <>
-            <div className="space-y-3">
-              {ratings.items.map((rating) => (
-                <RatingCard key={rating.ratingId} rating={rating} />
-              ))}
-            </div>
-            {ratings.total > ratingsPageSize && (
-              <div className="mt-4 flex justify-center">
-                <Pagination
-                  current={ratingsPage}
-                  onChange={onRatingsPageChange}
-                  pageSize={ratingsPageSize}
-                  size="small"
-                  total={ratings.total}
-                />
-              </div>
-            )}
-          </>
-        ) : (
-          <Empty description="暂无评分" />
-        )}
-      </section> */}
-
       {/* Comments Section */}
       <section
         aria-label="用户评论"
@@ -621,23 +566,31 @@ export function MarketplaceDetailReviews({
             <div className="space-y-4 mt-4">
               {rootComments.map((root) => (
                 <CommentThread
+                  canReply={canReply}
                   canReplyOfficial={canReplyOfficial}
                   comment={root}
                   isModerator={isModerator}
                   key={root.commentId}
+                  myEmployeeId={myEmployeeId}
                   onHide={onHideComment}
                   onReport={setReportTargetId}
+                  onReplyAnonymousChange={setReplyAnonymous}
                   onReplyCancel={() => {
                     setReplyTargetId(null);
                     setReplyDraft("");
+                    setReplyAnonymous(false);
                   }}
                   onReplyChange={setReplyDraft}
                   onReplyStart={(id) => {
                     setReplyTargetId(id);
                     setReplyDraft("");
+                    setReplyAnonymous(false);
                   }}
-                  onReplySubmit={(body) => void handleSubmitReply(body)}
+                  onReplySubmit={(body, anonymous) =>
+                    void handleSubmitReply(body, anonymous)
+                  }
                   onRestore={onRestoreComment}
+                  replyAnonymous={replyAnonymous}
                   replyDraft={replyDraft}
                   replyPending={createComment.isPending}
                   replyTargetId={replyTargetId}

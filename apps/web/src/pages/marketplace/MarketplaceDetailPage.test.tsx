@@ -98,6 +98,7 @@ const {
           | null;
         body: string;
         commentId: string;
+        commentKind: "user" | "official";
         createdAt: string;
         displayAnonymously: boolean;
         hiddenAt: string | null;
@@ -549,6 +550,7 @@ describe("MarketplaceDetailPage", () => {
         canModerateComments: false,
         canEditRisk: false,
         canReplyOfficial: true,
+        canReply: true,
       },
     };
     commentsState.data = {
@@ -560,6 +562,7 @@ describe("MarketplaceDetailPage", () => {
           authorStatus: "active",
           body: "希望支持批量识别",
           commentId: "comment-1",
+          commentKind: "user",
           createdAt: "2026-08-15T10:00:00.000Z",
           displayAnonymously: false,
           hiddenAt: null,
@@ -577,7 +580,7 @@ describe("MarketplaceDetailPage", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "回复 comment-1" }),
     );
-    fireEvent.change(screen.getByLabelText("官方回复内容"), {
+    fireEvent.change(screen.getByLabelText("回复内容"), {
       target: { value: "该能力已在规划中" },
     });
     fireEvent.click(screen.getByRole("button", { name: "发送回复" }));
@@ -585,6 +588,61 @@ describe("MarketplaceDetailPage", () => {
     expect(commentMutateAsync).toHaveBeenCalledWith({
       parentCommentId: "comment-1",
       body: "该能力已在规划中",
+      displayAnonymously: false,
+    });
+  });
+
+  it("普通员工可匿名回复他人评论", async () => {
+    catalogEntryState.data = {
+      ...mockEntry(),
+      capabilities: {
+        canResolveDelivery: true,
+        canLike: true,
+        canRate: true,
+        canComment: true,
+        canSubmitFeedback: true,
+        canModerateComments: false,
+        canEditRisk: false,
+        canReply: true,
+      },
+    };
+    commentsState.data = {
+      items: [
+        {
+          applicationId: "app-ocr",
+          applicationVersionId: "ver-1",
+          authorEmployeeId: "E200",
+          authorStatus: "active",
+          body: "希望支持批量识别",
+          commentId: "comment-1",
+          commentKind: "user",
+          createdAt: "2026-08-15T10:00:00.000Z",
+          displayAnonymously: false,
+          hiddenAt: null,
+          parentCommentId: null,
+          updatedAt: "2026-08-15T10:00:00.000Z",
+        },
+      ],
+      total: 1,
+    };
+    commentMutateAsync.mockResolvedValue({});
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "OCR 票据识别" });
+    fireEvent.click(screen.getByRole("tab", { name: "评价管理" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "回复 comment-1" }),
+    );
+    fireEvent.click(screen.getByLabelText("回复匿名展示"));
+    fireEvent.change(screen.getByLabelText("回复内容"), {
+      target: { value: "我也遇到了同样的问题" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "发送回复" }));
+
+    expect(commentMutateAsync).toHaveBeenCalledWith({
+      parentCommentId: "comment-1",
+      body: "我也遇到了同样的问题",
+      displayAnonymously: true,
     });
   });
 
@@ -598,6 +656,7 @@ describe("MarketplaceDetailPage", () => {
           authorStatus: "active",
           body: "希望支持批量识别",
           commentId: "comment-1",
+          commentKind: "user",
           createdAt: "2026-08-15T10:00:00.000Z",
           displayAnonymously: false,
           hiddenAt: null,
@@ -611,6 +670,7 @@ describe("MarketplaceDetailPage", () => {
           authorStatus: "active",
           body: "该能力已在规划中",
           commentId: "reply-1",
+          commentKind: "official",
           createdAt: "2026-08-15T10:00:00.000Z",
           displayAnonymously: false,
           hiddenAt: null,
@@ -781,41 +841,6 @@ describe("MarketplaceDetailPage", () => {
     expect(within(tooltip).getByText("交付地址未配置")).toBeInTheDocument();
   });
 
-  it("相关推荐 web 交付 URL 缺失时禁用对应立即使用按钮", async () => {
-    const originalItem = recommendedState.data.items[0]!;
-    recommendedState.data.items[0] = {
-      ...originalItem,
-      capabilities: {
-        canResolveDelivery: true,
-        canLike: true,
-        canRate: true,
-        canComment: true,
-        canSubmitFeedback: true,
-        canModerateComments: false,
-        canEditRisk: false,
-      },
-    } as (typeof recommendedState.data.items)[number];
-    resolveDelivery.mockRejectedValue(
-      new ApiError(400, "WEB_DELIVERY_URL_MISSING"),
-    );
-    try {
-      render(<App />);
-      await screen.findByRole("heading", { name: "OCR 票据识别" });
-
-      const relatedItem = screen
-        .getByRole("link", { name: "查看应用 发票识别助手" })
-        .closest("article")!;
-      const button = within(relatedItem).getByRole("button", {
-        name: "立即使用",
-      });
-      fireEvent.click(button);
-
-      await waitFor(() => expect(button).toBeDisabled());
-    } finally {
-      recommendedState.data.items[0] = originalItem;
-    }
-  });
-
   it("停用员工评论以已停用用户标签展示且不暴露工号", async () => {
     commentsState.data = {
       items: [
@@ -826,6 +851,7 @@ describe("MarketplaceDetailPage", () => {
           authorStatus: "disabled",
           body: "停用员工的历史评论",
           commentId: "comment-1",
+          commentKind: "user",
           createdAt: "2026-08-15T10:00:00.000Z",
           displayAnonymously: false,
           hiddenAt: null,

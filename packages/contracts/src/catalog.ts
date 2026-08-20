@@ -51,6 +51,8 @@ export interface CatalogEntry {
     canModerateComments: boolean;
     canEditRisk: boolean;
     canReplyOfficial?: boolean;
+    /** 当前用户可否回复评论（所有有互动权限的员工）。 */
+    canReply?: boolean;
   };
   healthStatus: CatalogHealthStatus;
   deprecatedReason: string | null;

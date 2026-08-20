@@ -1,24 +1,10 @@
 import type { CatalogEntry } from "@ai-hub/contracts";
 import { LikeOutlined, StarFilled, RightOutlined } from "@ant-design/icons";
-import {
-  Button,
-  Card,
-  Empty as AntdEmpty,
-  message,
-  Tag,
-  Tooltip,
-  Typography,
-} from "antd";
-import { useMemo, useState } from "react";
+import { Card, Empty as AntdEmpty, Tag, Typography } from "antd";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import { ApiError } from "../../../shared/api/client";
 import { useDepartments } from "../../../modules/auth/useIdentity";
-import {
-  downloadDeliveryAsset,
-  resolveDelivery,
-  type DeliveryChannel,
-} from "../../../modules/marketplace/marketplace.client";
 import { useCatalogSearch } from "../../../modules/marketplace/useCatalog";
 import {
   channelText,
@@ -38,63 +24,11 @@ interface RelatedAppItemProps {
 }
 
 function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
-  const [isPending, setIsPending] = useState(false);
-  // web 交付入口 URL 缺失/非法（WEB_DELIVERY_URL_MISSING）时禁用"立即使用"。
-  const [urlMissing, setUrlMissing] = useState(false);
-  const deliveryChannel = entry.deliveryChannels[0] as
-    | DeliveryChannel
-    | undefined;
-  const canResolveDelivery = entry.capabilities?.canResolveDelivery ?? false;
-
-  const handleUse = async () => {
-    if (!deliveryChannel || !canResolveDelivery || isPending || urlMissing) {
-      return;
-    }
-    setIsPending(true);
-    try {
-      const result = await resolveDelivery(
-        entry.applicationId,
-        deliveryChannel,
-      );
-      if (result.kind === "web_redirect") {
-        window.open(result.url, "_blank", "noopener,noreferrer");
-      } else if (result.kind === "download") {
-        const { blob, fileName } = await downloadDeliveryAsset(
-          entry.applicationId,
-          deliveryChannel,
-        );
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement("a");
-        anchor.href = url;
-        anchor.download = fileName;
-        anchor.click();
-        URL.revokeObjectURL(url);
-      } else if (result.kind === "qr") {
-        message.info(result.payload);
-      } else {
-        message.warning(result.reason);
-      }
-    } catch (error) {
-      if (
-        error instanceof ApiError &&
-        error.code === "WEB_DELIVERY_URL_MISSING"
-      ) {
-        // 交付地址未配置/非法：禁用入口并提示，避免打开空白页。
-        setUrlMissing(true);
-        message.error("交付地址未配置");
-      } else {
-        message.error(error instanceof Error ? error.message : "交付解析失败");
-      }
-    } finally {
-      setIsPending(false);
-    }
-  };
-
   return (
     <article className="flex items-center gap-3 bg-white transition-colors hover:border-[#91caff]">
       <Link
         aria-label={`查看应用 ${entry.name}`}
-        className="flex min-w-0 flex-1 items-center gap-3 text-inherit"
+        className="flex min-w-0 flex-1 items-start gap-3 text-inherit"
         to={`/marketplace/${entry.applicationId}`}
       >
         <span
@@ -116,7 +50,7 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           </div>
           <div>
             {entry.deliveryChannels.map((channel) => (
-              <Tag className="!mr-0" color="geekblue" key={channel}>
+              <Tag className="!mr-1" color="geekblue" key={channel}>
                 {channelText[channel]}
               </Tag>
             ))}
@@ -136,28 +70,6 @@ function RelatedAppItem({ departmentName, entry }: RelatedAppItemProps) {
           </div>
         </div>
       </Link>
-      <Tooltip
-        title={
-          urlMissing
-            ? "交付地址未配置"
-            : canResolveDelivery
-              ? `使用${channelText[deliveryChannel ?? "web"]}`
-              : "当前角色无权交付或应用尚未配置可用渠道"
-        }
-      >
-        {/* 禁用按钮不触发鼠标事件，包一层 span 让 Tooltip 在真实浏览器中可用。 */}
-        <span>
-          <Button
-            disabled={!deliveryChannel || !canResolveDelivery || urlMissing}
-            loading={isPending}
-            onClick={handleUse}
-            size="small"
-            type="primary"
-          >
-            立即使用
-          </Button>
-        </span>
-      </Tooltip>
     </article>
   );
 }

@@ -102,9 +102,9 @@ export class InteractionController {
   @Post("comments")
   @RequiresPermissions(PERMISSIONS.INTERACTION_INTERACT)
   @ApiOperation({
-    summary: "发表评论 / 官方回复",
+    summary: "发表评论 / 回复一层",
     description:
-      "parentCommentId 为 null 时创建根评论（普通员工可发）；提供父评论 ID 时仅应用所有者/维护者可进行官方回复。",
+      "parentCommentId 为 null 时创建根评论；提供父评论 ID 时回复一层（仅可回复他人根评论，owner/maintainer 回复标记为官方回复）。",
   })
   @ApiIdentityHeaders()
   @ApiParam({ name: "applicationId", description: "应用 ID" })
@@ -121,7 +121,13 @@ export class InteractionController {
       return this.call(async () =>
         this.interactions.createComment(
           await this.actor(employeeId, sessionId),
-          { applicationId, body: body.body },
+          {
+            applicationId,
+            body: body.body,
+            ...(body.displayAnonymously === undefined
+              ? {}
+              : { displayAnonymously: body.displayAnonymously }),
+          },
         ),
       );
     }
@@ -130,6 +136,9 @@ export class InteractionController {
         applicationId,
         parentCommentId: body.parentCommentId as string,
         body: body.body,
+        ...(body.displayAnonymously === undefined
+          ? {}
+          : { displayAnonymously: body.displayAnonymously }),
       }),
     );
   }
