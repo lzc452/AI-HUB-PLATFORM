@@ -586,3 +586,119 @@ describe("BasicInfoStep（维护人随归属部门联动）", () => {
     expect(screen.getByLabelText(/维护人/)).not.toBeDisabled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 基本信息步：自定义分类/标签输入（功能 5b）
+// ---------------------------------------------------------------------------
+
+const CATALOG_OPTIONS: PublishingOptions = {
+  ...OPTIONS,
+  categories: [
+    { value: "cat-1", label: "效率工具" },
+    { value: "cat-2", label: "数据分析" },
+  ],
+  tags: [
+    { value: "tag-1", label: "效率" },
+    { value: "tag-2", label: "助手" },
+  ],
+};
+
+/** 探针：暴露当前分类/标签表单值（混合现有 id 与自定义名）。 */
+function CatalogProbe() {
+  const categoryId = useWatch({ name: "categoryId" });
+  const tagIds = useWatch({ name: "tagIds" });
+  return (
+    <div data-testid="catalog-probe">
+      {JSON.stringify({ categoryId, tagIds })}
+    </div>
+  );
+}
+
+function catalogProbeValue(): { categoryId: string; tagIds: string[] } {
+  const node = document.querySelector<HTMLElement>(
+    '[data-testid="catalog-probe"]',
+  );
+  expect(node).not.toBeNull();
+  return JSON.parse(node?.textContent ?? "{}") as {
+    categoryId: string;
+    tagIds: string[];
+  };
+}
+
+function CatalogHarness({ defaultValues }: { defaultValues: FieldValues }) {
+  const form = useForm<FieldValues>({
+    defaultValues,
+    mode: "onChange",
+    resolver: zodResolver(
+      applicationDraftFormSchema,
+    ) as unknown as Resolver<FieldValues>,
+  });
+  const steps = createWizardSteps(CATALOG_OPTIONS, "app-1");
+  return (
+    <FormProvider {...form}>
+      {steps[0]!.render(form)}
+      <CatalogProbe />
+    </FormProvider>
+  );
+}
+
+/** tags 模式输入框键入文本后，点击下拉中生成的临时选项完成添加。 */
+async function typeCustomValue(label: string, text: string) {
+  const input = screen.getByLabelText(label);
+  fireEvent.change(input, { target: { value: text } });
+  let option: HTMLElement | undefined;
+  await waitFor(() => {
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>(".ant-select-item-option-content"),
+    );
+    option = items.find((item) => item.textContent === text);
+    expect(option).toBeTruthy();
+  });
+  fireEvent.click(option!);
+}
+
+describe("BasicInfoStep（自定义分类/标签输入）", () => {
+  it("输入自定义分类名：categoryId 写入自定义名称（未匹配现有 id）", async () => {
+    render(<CatalogHarness defaultValues={applicationDraftDefaults} />);
+    await typeCustomValue("分类", "我的分类");
+    await waitFor(() => {
+      expect(catalogProbeValue().categoryId).toBe("我的分类");
+    });
+  });
+
+  it("从下拉选择现有分类：categoryId 写入现有 id", async () => {
+    render(<CatalogHarness defaultValues={applicationDraftDefaults} />);
+    await pickBasicOption(/分类/, "效率工具");
+    await waitFor(() => {
+      expect(catalogProbeValue().categoryId).toBe("cat-1");
+    });
+  });
+
+  it("标签可混合：先选现有标签，再输入自定义标签名", async () => {
+    render(<CatalogHarness defaultValues={applicationDraftDefaults} />);
+    await pickBasicOption(/标签/, "效率");
+    await typeCustomValue("标签", "新标签");
+    await waitFor(() => {
+      expect(catalogProbeValue().tagIds).toEqual(["tag-1", "新标签"]);
+    });
+  });
+
+  it("编辑回显：已有分类/标签 id 以标签形式回显", async () => {
+    render(
+      <CatalogHarness
+        defaultValues={{
+          ...applicationDraftDefaults,
+          categoryId: "cat-1",
+          tagIds: ["tag-1"],
+        }}
+      />,
+    );
+    const selected = Array.from(
+      document.querySelectorAll<HTMLElement>(".ant-select-selection-item"),
+    );
+    expect(selected.map((item) => item.getAttribute("title"))).toEqual([
+      "效率工具",
+      "效率",
+    ]);
+  });
+});

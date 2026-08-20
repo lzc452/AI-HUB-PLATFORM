@@ -283,6 +283,49 @@ describe("applicationDraftFormSchema（受众为多条规则数组）", () => {
   });
 });
 
+describe("分类与自定义分类至少填一个；自定义标签名可多填（功能 5b）", () => {
+  it("categoryId 为空但 customCategoryName 有值时通过", () => {
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      categoryId: "",
+      customCategoryName: "我的分类",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("categoryId 与 customCategoryName 均为空时失败（请选择分类）", () => {
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      categoryId: "",
+      customCategoryName: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) => issue.message === "请选择分类"),
+      ).toBe(true);
+    }
+  });
+
+  it("缺失 categoryId 仅提供 customCategoryName 也通过", () => {
+    const { categoryId: _omitted, ...withoutCategoryId } = completeForm();
+    const result = applicationDraftFormSchema.safeParse({
+      ...withoutCategoryId,
+      customCategoryName: "我的分类",
+    });
+    expect(result.success).toBe(true);
+    expect(_omitted).toBe("cat-1");
+  });
+
+  it("自定义标签名可多填，与既有 tagIds 共存", () => {
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      customTagNames: ["效率", "助手"],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("deliveryDraftItemSchema（多选交付逐渠道必填校验）", () => {
   it("web 渠道缺 entryUrl（null / 空串）时校验失败", () => {
     const base = {

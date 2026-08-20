@@ -135,6 +135,10 @@ export interface ApplicationDraft {
   categoryId: string;
   applicationType: ApplicationType;
   tagIds: string[];
+  /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空）。 */
+  customCategoryName?: string;
+  /** 自定义标签名称列表（未匹配现有标签的部分）。 */
+  customTagNames?: string[];
   icon: ApplicationIcon;
   screenshotAssetIds: string[];
   summaryHtml: string;

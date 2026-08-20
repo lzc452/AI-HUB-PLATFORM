@@ -50,6 +50,14 @@ const CONTROL_STYLE: React.CSSProperties = { width: 480 };
 /** 多行文本宽度（需求：Textarea 480px）。 */
 const TEXTAREA_STYLE: React.CSSProperties = { width: 480 };
 
+/**
+ * tags 模式分类值归一化（功能 5b）：表单存单一字符串（现有分类 id 或自定义名称），
+ * antd tags 控件值为单元素数组（maxCount=1 时仍为数组形态）。
+ */
+const categoryValueToTags = (value: unknown): string[] =>
+  typeof value === "string" && value.length > 0 ? [value] : [];
+const categoryTagsToValue = (tags: string[]): string => tags[0] ?? "";
+
 const APPLICATION_TYPE_LABELS: Record<string, string> = {
   web_app: "Web 应用",
   desktop_app: "桌面端应用",
@@ -1154,7 +1162,14 @@ function BasicInfoStep({
           >
             <Select
               {...field}
-              placeholder="选择分类"
+              aria-label="分类"
+              mode="tags"
+              maxCount={1}
+              value={categoryValueToTags(field.value)}
+              onChange={(value: string[]) =>
+                field.onChange(categoryTagsToValue(value))
+              }
+              placeholder="选择或输入分类"
               options={options.categories as { value: string; label: string }[]}
               style={CONTROL_STYLE}
             />
@@ -1168,8 +1183,9 @@ function BasicInfoStep({
           <Form.Item label="标签">
             <Select
               {...field}
-              mode="multiple"
-              placeholder="选择标签（可多选）"
+              aria-label="标签"
+              mode="tags"
+              placeholder="选择或输入标签（可多选）"
               options={options.tags as { value: string; label: string }[]}
               style={CONTROL_STYLE}
             />

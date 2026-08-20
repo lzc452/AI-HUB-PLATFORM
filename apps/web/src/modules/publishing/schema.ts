@@ -160,7 +160,7 @@ const applicationDraftShape = z.object({
   name: z.string().min(1, "应用名称不能为空").max(160, "名称不能超过 160 字"),
   departmentId: z.string().min(1, "请选择归属部门"),
   maintainerEmployeeIds: z.array(z.string()).min(1, "至少指定一名维护人"),
-  categoryId: z.string().min(1, "请选择分类"),
+  categoryId: z.string().optional(),
   applicationType: z.enum([
     "web_app",
     "desktop_app",
@@ -168,6 +168,10 @@ const applicationDraftShape = z.object({
     "mini_program",
   ]),
   tagIds: z.array(z.string()),
+  /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空）。 */
+  customCategoryName: z.string().optional(),
+  /** 自定义标签名称列表（未匹配现有标签的部分）。 */
+  customTagNames: z.array(z.string()).optional(),
   icon: applicationIconSchema,
   screenshotAssetIds: z
     .array(z.string())
@@ -193,13 +197,36 @@ const applicationDraftShape = z.object({
   version: z.string().min(1, "版本号不能为空"),
   changelog: z.string().min(1, "变更说明不能为空"),
 });
+
+/** 分类：选择现有分类（categoryId）或输入自定义名称（customCategoryName）至少一个非空（功能 5b）。 */
+const refineCategoryOrCustom = (
+  draft: {
+    categoryId?: string | undefined;
+    customCategoryName?: string | undefined;
+  },
+  ctx: z.RefinementCtx,
+) => {
+  const hasCategoryId =
+    typeof draft.categoryId === "string" && draft.categoryId.trim().length > 0;
+  const hasCustomName =
+    typeof draft.customCategoryName === "string" &&
+    draft.customCategoryName.trim().length > 0;
+  if (!hasCategoryId && !hasCustomName) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["categoryId"],
+      message: "请选择分类",
+    });
+  }
+};
+
 /** 完整草稿 schema（与后端 validateDraftCompleteness 同源规则）。 */
 export const applicationDraftSchema = z
   .object({
     name: z.string().min(1, "应用名称不能为空").max(160, "名称不能超过 160 字"),
     departmentId: z.string().min(1, "请选择归属部门"),
     maintainerEmployeeIds: z.array(z.string()).min(1, "至少指定一名维护人"),
-    categoryId: z.string().min(1, "请选择分类"),
+    categoryId: z.string().optional(),
     applicationType: z.enum([
       "web_app",
       "desktop_app",
@@ -207,6 +234,10 @@ export const applicationDraftSchema = z
       "mini_program",
     ]),
     tagIds: z.array(z.string()),
+    /** 自定义分类名称（未匹配现有分类时填写；categoryId 为空）。 */
+    customCategoryName: z.string().optional(),
+    /** 自定义标签名称列表（未匹配现有标签的部分）。 */
+    customTagNames: z.array(z.string()).optional(),
     icon: applicationIconSchema,
     screenshotAssetIds: z
       .array(z.string())
@@ -231,6 +262,7 @@ export const applicationDraftSchema = z
     version: z.string().min(1, "版本号不能为空"),
     changelog: z.string().min(1, "变更说明不能为空"),
   })
+  .superRefine(refineCategoryOrCustom)
   .superRefine((draft, ctx) => {
     const hasManual =
       (typeof draft.manualHtml === "string" &&
@@ -289,8 +321,9 @@ const refineManualExamples = (
 };
 
 /** 表单层 schema（deliveries 可选，由向导自动派生）。供前端分步校验使用。 */
-export const applicationDraftFormSchema =
-  applicationDraftShape.superRefine(refineManualExamples);
+export const applicationDraftFormSchema = applicationDraftShape
+  .superRefine(refineCategoryOrCustom)
+  .superRefine(refineManualExamples);
 
 export type ApplicationDraftFormValues = z.infer<
   typeof applicationDraftFormSchema

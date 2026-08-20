@@ -144,7 +144,40 @@ export default function ApplicationCreateWizardPage() {
   };
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
-    const draft = { ...(values as ApplicationDraft) };
+    // 分类/标签拆分（功能 5b）：表单值混合现有 id 与自定义名称，
+    // 按「是否匹配现有选项的 value」拆分为 categoryId/tagIds 与
+    // customCategoryName/customTagNames（重名自动复用由后端解析）。
+    const existingCategoryIds = new Set(options.categories.map((c) => c.value));
+    const rawCategoryValue = values.categoryId;
+    const categoryValue =
+      typeof rawCategoryValue === "string"
+        ? rawCategoryValue
+        : Array.isArray(rawCategoryValue)
+          ? (rawCategoryValue[0] ?? "")
+          : "";
+    const categoryId = existingCategoryIds.has(categoryValue)
+      ? categoryValue
+      : "";
+    const customCategoryName =
+      typeof categoryValue === "string" &&
+      categoryValue.trim().length > 0 &&
+      !existingCategoryIds.has(categoryValue)
+        ? categoryValue
+        : undefined;
+    const existingTagIds = new Set(options.tags.map((t) => t.value));
+    const tagValues: string[] = Array.isArray(values.tagIds)
+      ? (values.tagIds as string[])
+      : [];
+    const customTagNames = tagValues.filter((v) => !existingTagIds.has(v));
+    const tagIds = tagValues.filter((v) => existingTagIds.has(v));
+
+    const draft: ApplicationDraft = {
+      ...(values as ApplicationDraft),
+      categoryId,
+      tagIds,
+      ...(customCategoryName !== undefined ? { customCategoryName } : {}),
+      ...(customTagNames.length > 0 ? { customTagNames } : {}),
+    };
     // 交付配置以多选渠道为准（功能 4）：未落 deliverables 时按渠道派生；
     // 应用类型由渠道派生（桌面/移动渠道保证安装包制品门禁生效）。
     const channels = Array.isArray(values.deliveryChannels)
