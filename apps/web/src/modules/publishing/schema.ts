@@ -1,4 +1,12 @@
 import { z } from "zod";
+import type { DeliveryChannel, DeliveryDraftItem } from "@ai-hub/contracts";
+
+const deliveryChannelEnum = z.enum([
+  "web",
+  "desktop",
+  "mobile",
+  "mini_program",
+]);
 
 /** AI 风险声明（6 项）。 */
 export const aiRiskDeclarationSchema = z.object({
@@ -101,19 +109,49 @@ export const deliveryTargetSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
-export const deliveryDraftItemSchema = z.object({
-  channel: z.enum(["web", "desktop", "mobile", "mini_program"]),
-  entryUrl: z.string().nullable().optional(),
-  minClientVersion: z.string().nullable().optional(),
-  enabled: z.boolean().optional(),
-  assetIds: z.array(z.string()).optional(),
-  targets: z.array(deliveryTargetSchema).optional(),
-});
+/**
+ * 单条交付配置（多选渠道）：按 channel 逐渠道校验必填——
+ * web 需入口地址；desktop/mobile 需 ≥1 个目标；mini_program 无额外必填
+ * （目标完整性由发布门禁 fail-closed 兜底）。
+ */
+export const deliveryDraftItemSchema = z
+  .object({
+    channel: deliveryChannelEnum,
+    entryUrl: z.string().nullable().optional(),
+    minClientVersion: z.string().nullable().optional(),
+    enabled: z.boolean().optional(),
+    assetIds: z.array(z.string()).optional(),
+    targets: z.array(deliveryTargetSchema).optional(),
+  })
+  .superRefine((item, ctx) => {
+    if (item.channel === "web") {
+      if (
+        typeof item.entryUrl !== "string" ||
+        item.entryUrl.trim().length === 0
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["entryUrl"],
+          message: "Web 渠道需填写入口地址",
+        });
+      }
+    }
+    if (item.channel === "desktop" || item.channel === "mobile") {
+      if (!Array.isArray(item.targets) || item.targets.length < 1) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["targets"],
+          message: "请至少选择一个目标系统/平台",
+        });
+      }
+    }
+  });
 
 /**
  * 草稿字段形状（不含提交期校验）。
- * 交付配置（deliveries）在向导内由应用类型自动派生，故在表单层为可选；
- * 后端提交时的完整性校验仍要求 deliveries 非空（见 applicationDraftSchema）。
+ * 交付配置（deliveries）在向导内由「交付渠道多选」（deliveryChannels）派生，
+ * 故在表单层为可选；后端提交时的完整性校验仍要求 deliveries 非空
+ * （见 applicationDraftSchema）。
  * faq 为规格 §5.4 必填项：optional + refine 让缺失 faq 的旧草稿（undefined）
  * 在回显时显示空列表可编辑，校验（下一步/提交）时按 min(1) 报错 ——
  * 必填只在校验时生效。
@@ -150,6 +188,8 @@ const applicationDraftShape = z.object({
   audience: z.array(audienceRuleSchema).min(1, "受众规则至少一条"),
   risk: aiRiskDeclarationSchema,
   deliveries: z.array(deliveryDraftItemSchema).optional(),
+  /** 向导内交付渠道多选（deliveries 的派生源）；表单层可选。 */
+  deliveryChannels: z.array(deliveryChannelEnum).optional(),
   version: z.string().min(1, "版本号不能为空"),
   changelog: z.string().min(1, "变更说明不能为空"),
 });
@@ -187,6 +227,7 @@ export const applicationDraftSchema = z
     audience: z.array(audienceRuleSchema).min(1, "受众规则至少一条"),
     risk: aiRiskDeclarationSchema,
     deliveries: z.array(deliveryDraftItemSchema).min(1, "交付配置不能为空"),
+    deliveryChannels: z.array(deliveryChannelEnum).optional(),
     version: z.string().min(1, "版本号不能为空"),
     changelog: z.string().min(1, "变更说明不能为空"),
   })
@@ -290,33 +331,50 @@ export const applicationDraftDefaults: ApplicationDraftFormValues = {
     inputRestrictionDisclaimer: "",
   },
   deliveries: [],
+  deliveryChannels: [],
   version: "1.0.0",
   changelog: "",
 };
 
-/** 根据应用类型派生交付配置（向导内不手工配渠道，发布时用独立交付页配置）。 */
-export function defaultDeliveriesForType(applicationType: string): Array<{
-  channel: "web" | "desktop" | "mobile" | "mini_program";
-  entryUrl: string | null;
-  minClientVersion: string | null;
-  enabled: boolean;
-  assetIds: string[];
-}> {
-  const channel =
-    applicationType === "web_app"
-      ? "web"
-      : applicationType === "desktop_app"
-        ? "desktop"
-        : applicationType === "mobile_app"
-          ? "mobile"
-          : "mini_program";
-  return [
-    {
-      channel: channel as "web" | "desktop" | "mobile" | "mini_program",
+/**
+ * 按所选交付渠道派生草稿交付项（功能 4：向导多选渠道）。
+ * - web：entryUrl 空字符串待填（逐渠道必填校验要求非空）
+ * - desktop / mobile：targets 空数组待填（逐渠道必填校验要求 ≥1 个目标）
+ * - mini_program：无额外必填，保持空 entryUrl
+ * 各渠道数据（entryUrl / targets）随后由向导内对应编辑器填写。
+ */
+export function deriveDeliveriesFromChannels(
+  selectedChannels: readonly DeliveryChannel[],
+): DeliveryDraftItem[] {
+  return selectedChannels.map((channel) => {
+    const base: DeliveryDraftItem = {
+      channel,
       entryUrl: null,
       minClientVersion: null,
       enabled: true,
       assetIds: [],
-    },
-  ];
+    };
+    if (channel === "web") {
+      return { ...base, entryUrl: "" };
+    }
+    if (channel === "desktop" || channel === "mobile") {
+      return { ...base, targets: [] };
+    }
+    return base;
+  });
+}
+
+/**
+ * 由所选交付渠道派生应用类型（向导内不再单独选择应用类型）：
+ * 包含 desktop/mobile 渠道时映射为对应类型，保证安装包制品门禁
+ * （ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE）保持生效；单渠道映射与旧
+ * defaultDeliveriesForType 一致；空选择回退 web_app。
+ */
+export function deriveApplicationTypeFromChannels(
+  channels: readonly DeliveryChannel[],
+): "web_app" | "desktop_app" | "mobile_app" | "mini_program" {
+  if (channels.includes("desktop")) return "desktop_app";
+  if (channels.includes("mobile")) return "mobile_app";
+  if (channels.includes("mini_program")) return "mini_program";
+  return "web_app";
 }

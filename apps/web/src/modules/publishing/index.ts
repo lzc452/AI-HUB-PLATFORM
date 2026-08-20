@@ -17,7 +17,8 @@ export {
   audienceRuleSchema,
   deliveryDraftItemSchema,
   deliveryTargetSchema,
-  defaultDeliveriesForType,
+  deriveDeliveriesFromChannels,
+  deriveApplicationTypeFromChannels,
 } from "./schema";
 export type { ApplicationDraftFormValues } from "./schema";
 export {

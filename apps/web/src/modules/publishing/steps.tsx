@@ -21,7 +21,11 @@ import {
   PlusOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import type { AudienceRule } from "@ai-hub/contracts";
+import type {
+  AudienceRule,
+  DeliveryChannel,
+  DeliveryDraftItem,
+} from "@ai-hub/contracts";
 import { useDepartmentMembers } from "../auth";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
@@ -33,6 +37,10 @@ import {
   selectionToRules,
   type AudienceSelection,
 } from "./audience";
+import {
+  deriveApplicationTypeFromChannels,
+  deriveDeliveriesFromChannels,
+} from "./schema";
 import { deleteAsset, uploadAsset } from "./publishing.client";
 
 const { Text } = Typography;
@@ -41,13 +49,6 @@ const { Text } = Typography;
 const CONTROL_STYLE: React.CSSProperties = { width: 480 };
 /** 多行文本宽度（需求：Textarea 480px）。 */
 const TEXTAREA_STYLE: React.CSSProperties = { width: 480 };
-
-const APPLICATION_TYPE_OPTIONS = [
-  { value: "web_app", label: "Web 应用" },
-  { value: "desktop_app", label: "桌面端应用" },
-  { value: "mobile_app", label: "移动端应用" },
-  { value: "mini_program", label: "小程序" },
-];
 
 const APPLICATION_TYPE_LABELS: Record<string, string> = {
   web_app: "Web 应用",
@@ -63,6 +64,17 @@ const CHANNEL_LABELS: Record<string, string> = {
   mini_program: "小程序渠道",
 };
 
+/** 交付渠道多选选项（功能 4：交付配置按渠道多选，不再按应用类型单选）。 */
+const DELIVERY_CHANNEL_OPTIONS: Array<{
+  value: DeliveryChannel;
+  label: string;
+}> = [
+  { value: "web", label: "Web 渠道" },
+  { value: "desktop", label: "桌面端渠道" },
+  { value: "mobile", label: "移动端渠道" },
+  { value: "mini_program", label: "小程序渠道" },
+];
+
 const DESKTOP_OS_LABELS: Record<string, string> = {
   windows: "Windows",
   macos: "macOS",
@@ -77,16 +89,6 @@ const MINI_PROGRAM_LABELS: Record<string, string> = {
   wechat: "微信",
   dingtalk: "钉钉",
   alipay: "支付宝",
-};
-
-const CHANNEL_BY_TYPE: Record<
-  string,
-  "web" | "desktop" | "mobile" | "mini_program"
-> = {
-  web_app: "web",
-  desktop_app: "desktop",
-  mobile_app: "mobile",
-  mini_program: "mini_program",
 };
 
 const MINI_PROGRAM_PLATFORMS: ReadonlyArray<{
@@ -707,47 +709,76 @@ export function FaqField() {
 // 各步骤组件
 // ---------------------------------------------------------------------------
 
-/**
- * 交付目标（基本字段）：按应用类型收集 OS / 平台 / 小程序渠道元数据。
- * - desktop_app：目标 OS 多选（windows/macos）
- * - mobile_app：目标平台多选（android/ios）
- * - mini_program：平台多选（微信/钉钉/支付宝）+ 每平台二维码上传（kind=qr）
- * - web_app：无目标
- * 写入表单 `deliveries[0].targets`（deliveries 数组由向导自动派生，非空时
- * 保留表单值提交，见页面层 withDeliveries）。
- */
-function DeliveryTargetsField({
+/** 桌面端 / 移动端渠道的目标系统 / 平台多选（必填：≥1 个目标）。 */
+function TargetSelectEditor({
+  channel,
+  item,
+  commitTargets,
+}: {
+  channel: "desktop" | "mobile";
+  item: DeliveryDraftItem | undefined;
+  commitTargets: (channel: "desktop" | "mobile", targets: TargetLike[]) => void;
+}) {
+  const isDesktop = channel === "desktop";
+  const options = isDesktop ? DESKTOP_OS_OPTIONS : MOBILE_PLATFORM_OPTIONS;
+  const current = Array.isArray(item?.targets)
+    ? (item.targets as TargetLike[])
+    : [];
+  const selected = current.flatMap((target) => {
+    const value = isDesktop ? target.os : target.platform;
+    return value === undefined ? [] : [value];
+  });
+  return (
+    <Form.Item
+      label={isDesktop ? "目标系统（桌面端渠道）" : "目标平台（移动端渠道）"}
+      required
+      help="必填：至少选择一个目标系统/平台，作为下载安装元数据"
+    >
+      <Select
+        aria-label={isDesktop ? "目标系统" : "目标平台"}
+        mode="multiple"
+        placeholder={
+          isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
+        }
+        options={options}
+        value={selected}
+        onChange={(values: string[]) =>
+          commitTargets(
+            channel,
+            values.map((value) =>
+              isDesktop
+                ? {
+                    kind: "desktop" as const,
+                    os: value as "windows" | "macos",
+                    arch: null,
+                  }
+                : {
+                    kind: "mobile" as const,
+                    platform: value as "android" | "ios",
+                    arch: null,
+                  },
+            ),
+          )
+        }
+        style={CONTROL_STYLE}
+      />
+    </Form.Item>
+  );
+}
+
+/** 小程序渠道：平台多选 + 每平台 AppId / 二维码 / 版本说明。 */
+function MiniProgramTargetEditor({
   applicationId,
-  applicationType,
+  item,
+  commitTargets,
 }: {
   applicationId: string;
-  applicationType: string;
+  item: DeliveryDraftItem | undefined;
+  commitTargets: (channel: "mini_program", targets: TargetLike[]) => void;
 }) {
-  const { control, setValue, trigger } = useFormContext<FieldValues>();
-  const targets = useWatch({ control, name: "deliveries.0.targets" }) as
-    | TargetLike[]
-    | undefined;
-
-  const commitTargets = (nextTargets: TargetLike[]) => {
-    const channel = CHANNEL_BY_TYPE[applicationType] ?? "web";
-    setValue(
-      "deliveries",
-      [
-        {
-          channel,
-          entryUrl: null,
-          minClientVersion: null,
-          enabled: true,
-          assetIds: [],
-          targets: nextTargets,
-        },
-      ],
-      { shouldDirty: true, shouldValidate: true },
-    );
-    void trigger("deliveries");
-  };
-
-  const current = Array.isArray(targets) ? targets : [];
+  const current = Array.isArray(item?.targets)
+    ? (item.targets as TargetLike[])
+    : [];
   const hasTarget = (platform: string) =>
     current.some((target) => target.platform === platform);
 
@@ -758,54 +789,8 @@ function DeliveryTargetsField({
     const next = current.map((target) =>
       target.platform === platform ? { ...target, ...patch } : target,
     );
-    commitTargets(next);
+    commitTargets("mini_program", next);
   };
-
-  if (applicationType === "desktop_app" || applicationType === "mobile_app") {
-    const isDesktop = applicationType === "desktop_app";
-    const options = isDesktop ? DESKTOP_OS_OPTIONS : MOBILE_PLATFORM_OPTIONS;
-    const selected = current.flatMap((target) => {
-      const value = isDesktop ? target.os : target.platform;
-      return value === undefined ? [] : [value];
-    });
-    return (
-      <Form.Item
-        label={isDesktop ? "目标系统（桌面端）" : "目标平台（移动端）"}
-        help="可选；发布门禁不强制桌面/移动目标，仅作为下载安装元数据"
-      >
-        <Select
-          mode="multiple"
-          placeholder={
-            isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
-          }
-          options={options}
-          value={selected}
-          onChange={(values: string[]) =>
-            commitTargets(
-              values.map((value) =>
-                isDesktop
-                  ? {
-                      kind: "desktop" as const,
-                      os: value as "windows" | "macos",
-                      arch: null,
-                    }
-                  : {
-                      kind: "mobile" as const,
-                      platform: value as "android" | "ios",
-                      arch: null,
-                    },
-              ),
-            )
-          }
-          style={CONTROL_STYLE}
-        />
-      </Form.Item>
-    );
-  }
-
-  if (applicationType !== "mini_program") {
-    return null;
-  }
 
   return (
     <Form.Item
@@ -833,7 +818,7 @@ function DeliveryTargetsField({
                 checked={enabled}
                 onChange={(event) => {
                   if (event.target.checked) {
-                    commitTargets([
+                    commitTargets("mini_program", [
                       ...current,
                       {
                         kind: "miniprogram",
@@ -846,6 +831,7 @@ function DeliveryTargetsField({
                     ]);
                   } else {
                     commitTargets(
+                      "mini_program",
                       current.filter((item) => item.platform !== value),
                     );
                   }
@@ -926,6 +912,100 @@ function DeliveryTargetsField({
   );
 }
 
+/**
+ * 交付配置（多选渠道的逐渠道必填字段）：
+ * - web 渠道：入口地址（必填）
+ * - desktop 渠道：目标 OS 多选（windows/macos，必填）
+ * - mobile 渠道：目标平台多选（android/ios，必填）
+ * - mini_program 渠道：平台多选（微信/钉钉/支付宝）+ 每平台二维码上传
+ * 全部写入对应渠道的草稿项（不再硬编码 deliveries[0]）。
+ */
+function DeliveryTargetsField({ applicationId }: { applicationId: string }) {
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const deliveryChannels = useWatch({ control, name: "deliveryChannels" }) as
+    | DeliveryChannel[]
+    | undefined;
+  const deliveries = useWatch({ control, name: "deliveries" }) as
+    | DeliveryDraftItem[]
+    | undefined;
+  const channels = Array.isArray(deliveryChannels) ? deliveryChannels : [];
+  const list = Array.isArray(deliveries) ? deliveries : [];
+
+  const itemOf = (channel: DeliveryChannel): DeliveryDraftItem | undefined =>
+    list.find((item) => item.channel === channel);
+
+  /** 更新指定渠道草稿项（不存在时按派生函数新建，保留既有字段）。
+   *  targets 以表单内宽松形状 TargetLike（编辑期字段可选）存储，提交时由
+   *  deliveryDraftItemSchema 收紧校验。 */
+  const patchItem = (
+    channel: DeliveryChannel,
+    patch: Omit<Partial<DeliveryDraftItem>, "targets"> & {
+      targets?: readonly TargetLike[];
+    },
+  ) => {
+    const next = [...list];
+    const index = next.findIndex((item) => item.channel === channel);
+    const base =
+      index >= 0 ? next[index]! : deriveDeliveriesFromChannels([channel])[0]!;
+    const merged = { ...base, ...patch } as DeliveryDraftItem;
+    if (index >= 0) next[index] = merged;
+    else next.push(merged);
+    setValue("deliveries", next, { shouldDirty: true, shouldValidate: true });
+    void trigger("deliveries");
+  };
+
+  /** 把指定渠道的交付目标写入该渠道对应草稿项。 */
+  const commitTargets = (channel: DeliveryChannel, nextTargets: TargetLike[]) =>
+    patchItem(channel, { targets: nextTargets });
+
+  if (channels.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {channels.includes("web") && (
+        <Form.Item
+          label="Web 入口地址"
+          required
+          help="必填：Web 渠道发布后用户从该入口使用应用"
+        >
+          <Input
+            aria-label="Web 入口地址"
+            placeholder="https://apps.internal.example.com/xxx"
+            value={itemOf("web")?.entryUrl ?? ""}
+            onChange={(event) =>
+              patchItem("web", { entryUrl: event.target.value })
+            }
+            style={CONTROL_STYLE}
+          />
+        </Form.Item>
+      )}
+      {channels.includes("desktop") && (
+        <TargetSelectEditor
+          channel="desktop"
+          item={itemOf("desktop")}
+          commitTargets={commitTargets}
+        />
+      )}
+      {channels.includes("mobile") && (
+        <TargetSelectEditor
+          channel="mobile"
+          item={itemOf("mobile")}
+          commitTargets={commitTargets}
+        />
+      )}
+      {channels.includes("mini_program") && (
+        <MiniProgramTargetEditor
+          applicationId={applicationId}
+          item={itemOf("mini_program")}
+          commitTargets={commitTargets}
+        />
+      )}
+    </>
+  );
+}
+
 function BasicInfoStep({
   options,
   applicationId,
@@ -933,8 +1013,33 @@ function BasicInfoStep({
   options: PublishingOptions;
   applicationId: string;
 }) {
-  const { control, setValue, watch } = useFormContext<FieldValues>();
-  const applicationType = watch("applicationType");
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const deliveries = useWatch({ control, name: "deliveries" }) as
+    | DeliveryDraftItem[]
+    | undefined;
+
+  /**
+   * 交付渠道多选变更：同步 deliveries（新增渠道派生空项、保留既有渠道的
+   * 已填数据、移除取消渠道）并派生 applicationType（安装包制品门禁依据）。
+   */
+  const handleChannelsChange = (channels: DeliveryChannel[]) => {
+    const current = Array.isArray(deliveries) ? deliveries : [];
+    const kept = current.filter((item) => channels.includes(item.channel));
+    const added = channels.filter(
+      (channel) => !current.some((item) => item.channel === channel),
+    );
+    const next = [
+      ...kept,
+      ...added.flatMap((channel) => deriveDeliveriesFromChannels([channel])),
+    ];
+    setValue("deliveries", next, { shouldDirty: true, shouldValidate: true });
+    setValue("applicationType", deriveApplicationTypeFromChannels(channels), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    void trigger(["deliveries", "applicationType"]);
+  };
+
   // 维护人选项随所选部门联动：维护人必须是归属部门的在职成员
   // （部门成员接口只需要 identity.department.read 基础权限）。
   const departmentIdValue = useWatch({
@@ -1073,7 +1178,7 @@ function BasicInfoStep({
       />
       <Controller
         control={control}
-        name="applicationType"
+        name="deliveryChannels"
         render={({ field, fieldState }) => (
           <Form.Item
             label="交付配置"
@@ -1081,20 +1186,20 @@ function BasicInfoStep({
             validateStatus={fieldState.error ? "error" : ""}
             help={fieldState.error?.message}
           >
-            <Radio.Group
+            <Checkbox.Group
               {...field}
-              optionType="button"
-              options={APPLICATION_TYPE_OPTIONS}
+              aria-label="交付渠道"
+              options={DELIVERY_CHANNEL_OPTIONS}
+              onChange={(checkedValues) => {
+                const next = checkedValues as DeliveryChannel[];
+                field.onChange(next);
+                handleChannelsChange(next);
+              }}
             />
           </Form.Item>
         )}
       />
-      <DeliveryTargetsField
-        applicationId={applicationId}
-        applicationType={
-          typeof applicationType === "string" ? applicationType : ""
-        }
-      />
+      <DeliveryTargetsField applicationId={applicationId} />
       <AudienceField options={options} />
       <Form.Item label="应用图标" required>
         <IconField applicationId={applicationId} />
@@ -1521,6 +1626,7 @@ export function createWizardSteps(
         "maintainerEmployeeIds",
         "categoryId",
         "applicationType",
+        "deliveryChannels",
         "audience",
         "icon.mode",
         "icon.assetId",

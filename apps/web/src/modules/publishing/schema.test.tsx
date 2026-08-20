@@ -4,7 +4,41 @@ import {
   applicationDraftDefaults,
   applicationDraftFormSchema,
   audienceRuleSchema,
+  deliveryDraftItemSchema,
+  deriveApplicationTypeFromChannels,
+  deriveDeliveriesFromChannels,
 } from "./schema";
+
+/** 完整表单值（除 deliveries 外全部必填），供多选交付逐渠道校验用例使用。 */
+function completeForm(): Record<string, unknown> {
+  return {
+    ...applicationDraftDefaults,
+    name: "智能考勤助手",
+    manualHtml: "<p>手册</p>",
+    examplesHtml: "<p>示例</p>",
+    screenshotAssetIds: ["asset-1"],
+    summaryHtml: "<p>简介</p>",
+    departmentId: "dept-rnd",
+    risk: {
+      ...applicationDraftDefaults.risk,
+      modelProviders: ["local"],
+      inputRestrictionDisclaimer: "请勿输入敏感信息",
+    },
+    maintainerEmployeeIds: ["E100"],
+    categoryId: "cat-1",
+    version: "1.0.0",
+    changelog: "首次发布",
+    faq: [{ question: "如何重置密码？", answer: "联系管理员" }],
+    audience: [
+      {
+        audienceType: "all",
+        departmentId: null,
+        employeeId: null,
+        includeChildren: false,
+      },
+    ],
+  };
+}
 
 describe("audienceRuleSchema（单值规则，与契约 AudienceRule 同源）", () => {
   it("all 规则（标量 null）通过", () => {
@@ -246,5 +280,228 @@ describe("applicationDraftFormSchema（受众为多条规则数组）", () => {
     };
     const result = applicationDraftFormSchema.safeParse(complete);
     expect(result.success).toBe(true);
+  });
+});
+
+describe("deliveryDraftItemSchema（多选交付逐渠道必填校验）", () => {
+  it("web 渠道缺 entryUrl（null / 空串）时校验失败", () => {
+    const base = {
+      channel: "web" as const,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [] as string[],
+    };
+    const nullResult = deliveryDraftItemSchema.safeParse({
+      ...base,
+      entryUrl: null,
+    });
+    expect(nullResult.success).toBe(false);
+    const emptyResult = deliveryDraftItemSchema.safeParse({
+      ...base,
+      entryUrl: "",
+    });
+    expect(emptyResult.success).toBe(false);
+    if (!nullResult.success) {
+      expect(
+        nullResult.error.issues.some(
+          (issue) => issue.message === "Web 渠道需填写入口地址",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("desktop 渠道缺 targets 时校验失败", () => {
+    const result = deliveryDraftItemSchema.safeParse({
+      channel: "desktop",
+      entryUrl: null,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) => issue.message === "请至少选择一个目标系统/平台",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("mobile 渠道缺 targets 时校验失败", () => {
+    const result = deliveryDraftItemSchema.safeParse({
+      channel: "mobile",
+      entryUrl: null,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some(
+          (issue) => issue.message === "请至少选择一个目标系统/平台",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("mini_program 渠道无额外必填（entryUrl 可空、无 targets 通过）", () => {
+    const result = deliveryDraftItemSchema.safeParse({
+      channel: "mini_program",
+      entryUrl: null,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("web 渠道填写 entryUrl、desktop 渠道填写 targets 后通过", () => {
+    const web = deliveryDraftItemSchema.safeParse({
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+    });
+    expect(web.success).toBe(true);
+    const desktop = deliveryDraftItemSchema.safeParse({
+      channel: "desktop",
+      entryUrl: null,
+      minClientVersion: null,
+      enabled: true,
+      assetIds: [],
+      targets: [{ kind: "desktop", os: "windows", arch: null }],
+    });
+    expect(desktop.success).toBe(true);
+  });
+
+  it("多选交付渠道时逐渠道校验必填：web 缺 entryUrl 失败、desktop 缺 targets 失败", () => {
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const messages = result.error.issues.map((issue) => issue.message);
+      expect(messages).toContain("Web 渠道需填写入口地址");
+      expect(messages).toContain("请至少选择一个目标系统/平台");
+    }
+  });
+
+  it("多选渠道各自填写必填项后整体通过（web + desktop + mini_program）", () => {
+    const result = applicationDraftFormSchema.safeParse({
+      ...completeForm(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://apps.example.com",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+          targets: [{ kind: "desktop", os: "windows", arch: null }],
+        },
+        {
+          channel: "mini_program",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("deriveDeliveriesFromChannels / deriveApplicationTypeFromChannels", () => {
+  it("按选择派生逐渠道草稿项：web→entryUrl 空串待填、desktop/mobile→空 targets、mini_program→空 entryUrl", () => {
+    expect(
+      deriveDeliveriesFromChannels([
+        "web",
+        "desktop",
+        "mobile",
+        "mini_program",
+      ]),
+    ).toEqual([
+      {
+        channel: "web",
+        entryUrl: "",
+        minClientVersion: null,
+        enabled: true,
+        assetIds: [],
+      },
+      {
+        channel: "desktop",
+        entryUrl: null,
+        minClientVersion: null,
+        enabled: true,
+        assetIds: [],
+        targets: [],
+      },
+      {
+        channel: "mobile",
+        entryUrl: null,
+        minClientVersion: null,
+        enabled: true,
+        assetIds: [],
+        targets: [],
+      },
+      {
+        channel: "mini_program",
+        entryUrl: null,
+        minClientVersion: null,
+        enabled: true,
+        assetIds: [],
+      },
+    ]);
+  });
+
+  it("空选择派生为空数组", () => {
+    expect(deriveDeliveriesFromChannels([])).toEqual([]);
+  });
+
+  it("单渠道映射应用类型与旧 defaultDeliveriesForType 一致", () => {
+    expect(deriveApplicationTypeFromChannels(["web"])).toBe("web_app");
+    expect(deriveApplicationTypeFromChannels(["desktop"])).toBe("desktop_app");
+    expect(deriveApplicationTypeFromChannels(["mobile"])).toBe("mobile_app");
+    expect(deriveApplicationTypeFromChannels(["mini_program"])).toBe(
+      "mini_program",
+    );
+  });
+
+  it("多渠道时优先 desktop/mobile：安装包制品门禁保持生效", () => {
+    expect(deriveApplicationTypeFromChannels(["web", "desktop"])).toBe(
+      "desktop_app",
+    );
+    expect(deriveApplicationTypeFromChannels(["mobile", "web"])).toBe(
+      "mobile_app",
+    );
+    expect(deriveApplicationTypeFromChannels(["web", "mini_program"])).toBe(
+      "mini_program",
+    );
   });
 });

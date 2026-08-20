@@ -4,6 +4,7 @@ import {
   type ActorContext,
   type ApplicationDraft,
   type ApplicationDraftRecord,
+  type DeliveryDraftItem,
   type DeliveryTarget,
 } from "@ai-hub/contracts";
 import type {
@@ -297,6 +298,13 @@ export class ApplicationService {
       await repository.setMaintainers(
         applicationId,
         draft.maintainerEmployeeIds,
+      );
+      // 草稿交付配置落库为已启用渠道（功能 4：向导多选渠道直接落库，
+      // 目录渠道不再依赖独立交付页逐渠道 PUT）。
+      await this.persistDraftDeliveries(
+        repository,
+        applicationId,
+        sanitizedDraft.deliveries,
       );
 
       const version = await repository.createVersion({
@@ -828,18 +836,28 @@ export class ApplicationService {
     return updated;
   }
 
-  /** §5.4 发布前置校验：应用必须包含类型对应的已启用交付渠道（publish 与自动上架共用）。 */
+  /** §5.4 发布前置校验：草稿所选交付渠道必须全部启用（publish 与自动上架共用）。 */
   private async assertDeliveryChannelsComplete(
     repository: ApplicationRepository,
     applicationId: string,
   ): Promise<void> {
     const deliveries = await repository.listDeliveries(applicationId);
     const applicationType = await repository.getApplicationType(applicationId);
+    // 功能 4：发布门禁以草稿所选渠道为准（向导多选 + submitDraft 落库）。
+    // 草稿缺失（遗留 publish 路径）或草稿未选任何渠道（未提交过的保存值）
+    // 时回退到类型对应渠道（fail-closed：未知类型回退四类齐全，绝不放宽）。
+    const draft = await repository.findDraft(applicationId);
+    const draftChannels =
+      draft !== null && Array.isArray(draft.draft.deliveries)
+        ? draft.draft.deliveries.map((item) => item.channel)
+        : [];
     const requiredChannels =
-      applicationType !== null &&
-      requiredChannelsByType[applicationType] !== undefined
-        ? requiredChannelsByType[applicationType]
-        : requiredDeliveryChannels;
+      draftChannels.length > 0
+        ? draftChannels
+        : applicationType !== null &&
+            requiredChannelsByType[applicationType] !== undefined
+          ? requiredChannelsByType[applicationType]
+          : requiredDeliveryChannels;
     // 目标完整性门禁（规格 P1-11）：类型已知时按类型要求的渠道校验，
     // mini_program 渠道除启用外还必须有 ≥1 个 miniprogram 目标且二维码
     // 资产存在（二维码内容在 configureDelivery 保存时已校验）。
@@ -1040,6 +1058,33 @@ export class ApplicationService {
       undefined,
       actor.employeeId,
     );
+  }
+
+  /**
+   * 将草稿交付配置落库为已启用渠道（功能 4）：向导提交时把所选渠道写入
+   * application_deliveries（createDelivery 为 UNIQUE(application_id, channel)
+   * upsert，幂等），desktop/mobile/mini_program 的交付目标一并保存。
+   * web 的入口地址在向导内填写；持久化时以空字符串兜底（entryUrl 为
+   * string|null）。目标完整性（mini_program targets/二维码）由发布门禁
+   * assertDeliveryChannelsComplete 校验。
+   */
+  private async persistDraftDeliveries(
+    repository: ApplicationRepository,
+    applicationId: string,
+    deliveries: readonly DeliveryDraftItem[],
+  ): Promise<void> {
+    for (const item of deliveries) {
+      const delivery = await repository.createDelivery({
+        applicationId,
+        channel: item.channel,
+        entryUrl: item.entryUrl ?? "",
+        minClientVersion: item.minClientVersion,
+        enabled: true,
+      });
+      if (item.targets && item.targets.length > 0) {
+        await repository.saveDeliveryTargets(delivery.deliveryId, item.targets);
+      }
+    }
   }
 
   async configureDelivery(

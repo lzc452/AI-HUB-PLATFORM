@@ -4,7 +4,7 @@ import { message, Spin } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import type { FieldValues, Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ApplicationDraft } from "@ai-hub/contracts";
+import type { ApplicationDraft, DeliveryChannel } from "@ai-hub/contracts";
 
 import { formatSubmitError } from "../../modules/application/application.errors";
 import { showErrorMessage } from "../../shared/ui/message";
@@ -14,7 +14,8 @@ import {
   applicationDraftFormSchema,
   createWizardSteps,
   createApplicationDraft,
-  defaultDeliveriesForType,
+  deriveApplicationTypeFromChannels,
+  deriveDeliveriesFromChannels,
   getApplicationDraft,
   listCategories,
   listTags,
@@ -93,6 +94,10 @@ export default function ApplicationCreateWizardPage() {
               ...(record.draft as unknown as FieldValues),
               manualHtml: record.draft.manualHtml ?? "",
               examplesHtml: record.draft.examplesHtml ?? "",
+              // 渠道多选回显：草稿交付项的渠道集合（后端不持久化 deliveryChannels）。
+              deliveryChannels: (record.draft.deliveries ?? []).map(
+                (item) => item.channel,
+              ),
             });
           }
         } else if (wizardType === "edit" && !draftIdFromQuery) {
@@ -140,11 +145,17 @@ export default function ApplicationCreateWizardPage() {
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
     const draft = { ...(values as ApplicationDraft) };
+    // 交付配置以多选渠道为准（功能 4）：未落 deliverables 时按渠道派生；
+    // 应用类型由渠道派生（桌面/移动渠道保证安装包制品门禁生效）。
+    const channels = Array.isArray(values.deliveryChannels)
+      ? (values.deliveryChannels as DeliveryChannel[])
+      : Array.isArray(draft.deliveries)
+        ? draft.deliveries.map((item) => item.channel)
+        : [];
     if (!draft.deliveries || draft.deliveries.length === 0) {
-      draft.deliveries = defaultDeliveriesForType(
-        draft.applicationType,
-      ) as ApplicationDraft["deliveries"];
+      draft.deliveries = deriveDeliveriesFromChannels(channels);
     }
+    draft.applicationType = deriveApplicationTypeFromChannels(channels);
     return draft;
   };
 

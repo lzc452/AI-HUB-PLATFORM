@@ -2704,6 +2704,164 @@ describe("ApplicationService", () => {
     ).resolves.toMatchObject({ maintainerEmployeeId: "E400" });
   });
 
+  it("submitDraft 将草稿 deliveries 落库为 enabled 交付渠道（含 targets）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    // 向导多选：web（入口地址）+ desktop（目标 OS）两个渠道。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://apps.example.com",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+          targets: [{ kind: "desktop", os: "windows", arch: "x64" }],
+        },
+      ],
+    });
+
+    await service.submitDraft(owner, application.applicationId);
+
+    // 两条渠道按草稿落库且均为 enabled：目录渠道不再依赖独立交付页逐渠道 PUT。
+    const deliveries = await repository.listDeliveries(
+      application.applicationId,
+    );
+    expect(deliveries.map((delivery) => delivery.channel)).toEqual([
+      "web",
+      "desktop",
+    ]);
+    for (const delivery of deliveries) {
+      expect(delivery.enabled).toBe(true);
+    }
+    // desktop 渠道的交付目标一并落库（saveDeliveryTargets）。
+    const desktop = deliveries.find(
+      (delivery) => delivery.channel === "desktop",
+    );
+    const targets = await repository.listDeliveryTargets(desktop!.deliveryId);
+    expect(targets).toHaveLength(1);
+    expect(targets[0]).toMatchObject({
+      kind: "desktop",
+      os: "windows",
+      arch: "x64",
+      enabled: true,
+    });
+  });
+
+  it("publish 门禁以草稿渠道为准：草稿仅选 web 时桌面类型不要求桌面渠道", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    // 类型为桌面端：旧门禁（按类型）会要求 desktop 渠道，此处只有 web。
+    repository.catalogTypes.set(application.applicationId, "desktop_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+    // 模拟自动上架上线前的历史数据：审核通过后应用停在 approved，等待手动 publish。
+    repository.applications.set(application.applicationId, {
+      ...application,
+      status: "approved",
+    });
+    // 草稿只选了 web 渠道（功能 4：发布门禁以草稿所选渠道为准）。
+    await service.saveDraft(owner, application.applicationId, completeDraft());
+
+    const published = await service.publish(
+      owner,
+      version.applicationVersionId,
+    );
+    expect(published.status).toBe("published");
+  });
+
+  it("publish 门禁拦截草稿所选但未启用的渠道（desktop）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    // 类型为 web_app：旧门禁（按类型）只要求 web，仅配置 web 即放行——
+    // 新门禁以草稿渠道为准，desktop 未启用必须拦截。
+    repository.catalogTypes.set(application.applicationId, "web_app");
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+    repository.applications.set(application.applicationId, {
+      ...application,
+      status: "approved",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+
+    await expect(
+      service.publish(owner, version.applicationVersionId),
+    ).rejects.toThrow("DELIVERY_CHANNELS_INCOMPLETE");
+  });
+
+  it("草稿 mini_program 渠道无 target 时自动上架门禁拦截（目标完整性保留）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      applicationType: "mini_program",
+      deliveries: [
+        {
+          channel: "mini_program",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+    // submitDraft 落库 mini_program 渠道（enabled）但无任何 target。
+    await service.submitDraft(owner, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await expect(
+      service.review(reviewer, version.applicationVersionId, "approve", "ok"),
+    ).rejects.toThrow("DELIVERY_TARGETS_INCOMPLETE");
+  });
+
   it("syncs maintainers when a draft is saved", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
