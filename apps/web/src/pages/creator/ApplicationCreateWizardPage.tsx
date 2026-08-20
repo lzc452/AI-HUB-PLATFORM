@@ -96,10 +96,9 @@ export default function ApplicationCreateWizardPage() {
           }
         } else if (wizardType === "edit" && !draftIdFromQuery) {
           message.error("编辑模式缺少应用 ID");
-        } else {
-          const created = await createApplicationDraft();
-          if (!cancelled) setApplicationId(created.applicationId);
         }
+        // 新增模式：不预创建草稿，首次有效「下一步」/「存草稿」时才惰性创建，
+        // 校验不通过或直接离开页面不会产生空草稿。
       } catch {
         message.error("初始化草稿失败，请刷新重试");
       } finally {
@@ -110,6 +109,17 @@ export default function ApplicationCreateWizardPage() {
       cancelled = true;
     };
   }, []);
+
+  /**
+   * 惰性创建草稿：仅当首次有效「下一步」或「存草稿」时才调用创建接口；
+   * 编辑模式直接复用 URL 中的 applicationId，不重复创建。
+   */
+  const ensureDraft = async (): Promise<string | null> => {
+    if (applicationId) return applicationId;
+    const created = await createApplicationDraft();
+    setApplicationId(created.applicationId);
+    return created.applicationId;
+  };
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
     const draft = { ...(values as ApplicationDraft) };
@@ -122,10 +132,11 @@ export default function ApplicationCreateWizardPage() {
   };
 
   const handleSaveDraft = async (values: FieldValues) => {
-    if (!applicationId) return;
     setSaveState("saving");
     try {
-      await saveApplicationDraft(applicationId, withDeliveries(values));
+      const id = await ensureDraft();
+      if (!id) return;
+      await saveApplicationDraft(id, withDeliveries(values));
       setSaveState("saved");
       message.success("草稿已保存");
     } catch {
@@ -171,6 +182,9 @@ export default function ApplicationCreateWizardPage() {
       <FormWizard
         steps={createWizardSteps(options, applicationId ?? "")}
         defaultValues={defaultValues}
+        onNextSuccess={async () => {
+          await ensureDraft();
+        }}
         onSaveDraft={handleSaveDraft}
         onSubmit={handleSubmit}
         saveState={saveState}

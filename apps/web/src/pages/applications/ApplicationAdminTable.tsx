@@ -153,29 +153,33 @@ function buildColumns(
       title: "应用名称",
       key: "name",
       width: "24%",
-      render: (_, row) => (
-        <div className="flex items-start gap-3">
-          <div
-            aria-hidden="true"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
-            style={{ background: iconGradient(row.applicationId) }}
-          >
-            {row.name.slice(0, 1)}
-          </div>
-          <div className="min-w-0 flex-1 space-y-0.5">
-            <Link
-              aria-label={`查看应用 ${row.name}`}
-              className="block truncate text-sm font-medium !text-[#1f1f1f] transition-colors hover:!text-[#1677ff]"
-              to={`/applications/${row.applicationId}`}
+      render: (_, row) => {
+        // 惰性创建的草稿可能尚未填写名称：空名称显示「未命名草稿」。
+        const displayName = row.name.trim() || "未命名草稿";
+        return (
+          <div className="flex items-start gap-3">
+            <div
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
+              style={{ background: iconGradient(row.applicationId) }}
             >
-              {row.name}
-            </Link>
-            <p className="m-0 line-clamp-2 text-xs !text-[#8c8c8c]">
-              {row.summary}
-            </p>
+              {displayName.slice(0, 1)}
+            </div>
+            <div className="min-w-0 flex-1 space-y-0.5">
+              <Link
+                aria-label={`查看应用 ${displayName}`}
+                className="block truncate text-sm font-medium !text-[#1f1f1f] transition-colors hover:!text-[#1677ff]"
+                to={`/applications/${row.applicationId}`}
+              >
+                {displayName}
+              </Link>
+              <p className="m-0 line-clamp-2 text-xs !text-[#8c8c8c]">
+                {row.summary}
+              </p>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: "状态",

@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntApp } from "antd";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -22,6 +22,7 @@ vi.mock("../../modules/auth/useIdentity", () => ({
 }));
 
 const mocks = vi.hoisted(() => ({
+  createApplicationDraft: vi.fn(),
   getApplicationDraft: vi.fn(),
   submitApplicationDraft: vi.fn(),
   saveApplicationDraft: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("../../modules/publishing", async (importOriginal) => {
     await importOriginal<typeof import("../../modules/publishing")>();
   return {
     ...actual,
+    createApplicationDraft: mocks.createApplicationDraft,
     getApplicationDraft: mocks.getApplicationDraft,
     submitApplicationDraft: mocks.submitApplicationDraft,
     saveApplicationDraft: mocks.saveApplicationDraft,
@@ -74,8 +76,28 @@ function renderPage() {
   );
 }
 
+/** 新增模式（无 applicationId）：草稿惰性创建的行为锚点。 */
+function renderPageAddMode() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <AntApp>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/creator/create"]}>
+          <ApplicationCreateWizardPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </AntApp>,
+  );
+}
+
 describe("提交审核状态门禁", () => {
   beforeEach(() => {
+    mocks.createApplicationDraft.mockReset();
+    mocks.createApplicationDraft.mockResolvedValue({
+      applicationId: "app-new-1",
+    });
     mocks.getApplicationDraft.mockReset();
     mocks.submitApplicationDraft.mockClear();
     mocks.saveApplicationDraft.mockClear();
@@ -110,5 +132,48 @@ describe("提交审核状态门禁", () => {
     renderPage();
     await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
     expect(mocks.formWizardProps?.submitDisabled).toBe(false);
+  });
+});
+
+describe("草稿惰性创建", () => {
+  beforeEach(() => {
+    mocks.createApplicationDraft.mockReset();
+    mocks.createApplicationDraft.mockResolvedValue({
+      applicationId: "app-new-1",
+    });
+    mocks.formWizardProps = null;
+  });
+
+  it("挂载时不创建草稿；首次下一步校验通过后才创建，且后续复用同一草稿", async () => {
+    renderPageAddMode();
+    await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
+    expect(mocks.createApplicationDraft).not.toHaveBeenCalled();
+
+    // 模拟 FormWizard「校验通过后」回调 onNextSuccess（本文件将 FormWizard
+    // 整体 mock，校验门禁行为由 FormWizard 自身的测试覆盖）。
+    const invokeNext = async () => {
+      await act(async () => {
+        await (
+          mocks.formWizardProps as {
+            onNextSuccess: () => Promise<void>;
+          }
+        ).onNextSuccess();
+      });
+    };
+
+    await invokeNext();
+    expect(mocks.createApplicationDraft).toHaveBeenCalledTimes(1);
+
+    // 后续「下一步」复用已创建草稿，不重复创建。
+    await invokeNext();
+    expect(mocks.createApplicationDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("校验不通过时点下一步不创建草稿", async () => {
+    renderPageAddMode();
+    await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
+    // 校验不通过时 FormWizard 不会触发 onNextSuccess / onSaveDraft，
+    // 页面自身也不得创建草稿（回归锚点：挂载 effect 无条件创建空草稿）。
+    expect(mocks.createApplicationDraft).not.toHaveBeenCalled();
   });
 });

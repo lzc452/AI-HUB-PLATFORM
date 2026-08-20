@@ -34,6 +34,11 @@ export interface FormWizardProps {
   onSaveDraft: (values: FieldValues) => void | Promise<void>;
   /** 最终提交回调（接收全量值）。 */
   onSubmit: (values: FieldValues) => void | Promise<void>;
+  /**
+   * 下一步校验通过后、切换前执行的副作用（如惰性创建草稿）；
+   * await 完成才切换，抛错则不前进。
+   */
+  onNextSuccess?: (values: FieldValues) => Promise<void>;
   /** 草稿保存状态（用于按钮 loading / 提示）。 */
   saveState?: "idle" | "saving" | "saved";
   /** 提交按钮文案。 */
@@ -49,6 +54,7 @@ export function FormWizard({
   defaultValues,
   onSaveDraft,
   onSubmit,
+  onNextSuccess,
   saveState = "idle",
   submitLabel = "提交审核",
   submitDisabled = false,
@@ -81,6 +87,11 @@ export function FormWizard({
 
   const handleNext = async () => {
     if (await validateStep(current)) {
+      try {
+        await onNextSuccess?.(form.getValues());
+      } catch {
+        return; // 副作用失败（如草稿创建失败）不前进
+      }
       setCurrent((index) => Math.min(index + 1, steps.length - 1));
     }
   };
