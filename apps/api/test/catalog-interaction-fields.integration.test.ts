@@ -49,6 +49,7 @@ async function seedBase(db: Kysely<DatabaseSchema>): Promise<void> {
       name: "效率工具",
       sort_order: 1,
       enabled: true,
+      is_hot: false,
     })
     .execute();
   for (const employeeId of ["E100", "E200"]) {

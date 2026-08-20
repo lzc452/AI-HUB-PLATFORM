@@ -123,6 +123,7 @@ describe("catalog search ranking (pg_trgm)", () => {
         name: "效率工具",
         sort_order: 1,
         enabled: true,
+        is_hot: false,
       })
       .execute();
     await db
@@ -203,6 +204,7 @@ describe("catalog search ranking (pg_trgm)", () => {
         name: "报销助手系统",
         sort_order: 2,
         enabled: true,
+        is_hot: false,
       })
       .execute();
     await db
@@ -273,6 +275,7 @@ describe("catalog search ranking (pg_trgm)", () => {
         name: "评分排序测试",
         sort_order: 3,
         enabled: true,
+        is_hot: false,
       })
       .execute();
     // g1 需要第二条评分（E101）得到 4.5 均值，先建员工。
