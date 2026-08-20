@@ -710,6 +710,29 @@ export class ReviewQueueDto {
   slaStatus!: "on_time" | "overdue";
 }
 
+/** 待审自定义分类/标签项（审核员查看/删除）。 */
+export class PendingCatalogItemDto {
+  @ApiProperty({ type: String, description: "待审项 ID" })
+  itemId!: string;
+
+  @ApiProperty({
+    type: String,
+    description: "类型",
+    enum: ["category", "tag"],
+  })
+  kind!: "category" | "tag";
+
+  @ApiProperty({ type: String, description: "名称" })
+  name!: string;
+
+  @ApiProperty({
+    description: "创建时间（ISO 8601）",
+    type: String,
+    format: "date-time",
+  })
+  createdAt!: string;
+}
+
 /** 应用管理四个工作台共用的聚合视图。 */
 export class ApplicationWorkspaceDto {
   @ApiProperty({ type: ApplicationDto })
@@ -1033,6 +1056,25 @@ export class SaveApplicationDraftRequestDto {
   @IsArray()
   @IsString({ each: true })
   tagIds!: string[];
+
+  @ApiPropertyOptional({
+    type: String,
+    description:
+      "自定义分类名称（未匹配现有分类时；提交后进入待审，审核通过生效）",
+  })
+  @IsOptional()
+  @IsString()
+  customCategoryName?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      "自定义标签名称列表（未匹配现有标签的部分；提交后进入待审，审核通过生效）",
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  customTagNames?: string[];
 
   @ApiProperty({
     type: "object",

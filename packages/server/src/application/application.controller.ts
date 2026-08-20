@@ -45,6 +45,7 @@ import {
   CreateVersionRequestDto,
   DeliveryDto,
   PublishRequestDto,
+  PendingCatalogItemDto,
   RequestWithdrawRequestDto,
   ReviewDto,
   ReviewQueueDto,
@@ -302,6 +303,54 @@ export class ApplicationController {
         versionId,
         body.decision,
         body.comment,
+      ),
+    );
+  }
+
+  @Get(":applicationId/catalog-pending-items")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
+  @ApiOperation({ summary: "待审自定义分类/标签列表" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiOkResponse({
+    description: "待审自定义分类/标签项列表",
+    type: PendingCatalogItemDto,
+    isArray: true,
+  })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async listPendingCatalogItems(
+    @Param("applicationId") applicationId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.applications.listPendingCatalogItemsForReview(
+        await this.requireActor(employeeId, sessionId, "review"),
+        applicationId,
+      ),
+    );
+  }
+
+  @Delete(":applicationId/catalog-pending-items/:itemId")
+  @RequiresPermissions(PERMISSIONS.APPLICATION_REVIEW)
+  @HttpCode(200)
+  @ApiOperation({ summary: "删除待审自定义分类/标签（审核员）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "itemId", description: "待审项 ID" })
+  @ApiOkResponse({ description: "删除成功" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async deletePendingCatalogItem(
+    @Param("applicationId") applicationId: string,
+    @Param("itemId") itemId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () =>
+      this.applications.deletePendingCatalogItem(
+        await this.requireActor(employeeId, sessionId, "review"),
+        applicationId,
+        itemId,
       ),
     );
   }

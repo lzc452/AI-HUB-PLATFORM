@@ -92,6 +92,19 @@ export default function ApplicationCreateWizardPage() {
             setAppStatus(record.status);
             setDefaultValues({
               ...(record.draft as unknown as FieldValues),
+              // 自定义分类/标签回显（功能 5c）：草稿存 customCategoryName/
+              // customTagNames（选择自定义时 categoryId 为空），反解回表单值，
+              // 与 withDeliveries 的拆分互逆。
+              categoryId:
+                record.draft.customCategoryName?.trim() ||
+                record.draft.categoryId ||
+                "",
+              tagIds: [
+                ...(record.draft.tagIds ?? []),
+                ...(record.draft.customTagNames ?? [])
+                  .map((name) => name.trim())
+                  .filter((name) => name.length > 0),
+              ],
               manualHtml: record.draft.manualHtml ?? "",
               examplesHtml: record.draft.examplesHtml ?? "",
               // 渠道多选回显：草稿交付项的渠道集合（后端不持久化 deliveryChannels）。

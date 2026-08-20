@@ -21,6 +21,7 @@ import type {
   AssetRecord,
   DeliveryChannel,
   DeliveryRecord,
+  PendingCatalogItemRecord,
   ReviewDecision,
   ReviewQueueRecord,
   ReviewQueueView,
@@ -296,12 +297,24 @@ export class ApplicationService {
         name: draft.name,
         summary: plainSummary,
       });
+      // 功能 5c：自定义分类（categoryId 为空）时元数据先落 productivity 兜底
+      // （catalog_categories 外键必填），审核通过后由 applyPendingCatalogItems
+      // 覆盖为新建分类的 id —— 与 registerToCatalog 的兜底语义一致。
       await repository.upsertCatalogMetadata(applicationId, {
-        categoryId: draft.categoryId,
+        categoryId:
+          draft.categoryId.trim().length > 0
+            ? draft.categoryId
+            : "productivity",
         applicationType: draft.applicationType,
       });
       await repository.replaceTagLinks(applicationId, draft.tagIds);
       await repository.replaceAudiences(applicationId, draft.audience);
+      // 功能 5c：自定义分类/标签（重名自动复用现有，其余写入 pending 待审表）。
+      await this.persistPendingCatalogItems(
+        repository,
+        applicationId,
+        sanitizedDraft,
+      );
       // 维护人列表随提交落库（先删后插）；提交门禁已保证非空。
       await repository.setMaintainers(
         applicationId,
@@ -607,6 +620,10 @@ export class ApplicationService {
       // 删除队列行而非置 completed：application_review_queue.application_version_id
       // 有 UNIQUE 约束，保留终态行会阻塞同一版本撤回后的再次提交。
       await repository.deleteReviewQueue(applicationVersionId);
+      // 功能 5c：撤回提交时清空该应用的待审自定义分类/标签（未出结论不生效）。
+      await repository.deletePendingCatalogItemsByApplication(
+        application.applicationId,
+      );
       const updated = await repository.setApplicationStatus({
         applicationId: application.applicationId,
         expectedStatus: "published",
@@ -622,6 +639,35 @@ export class ApplicationService {
       );
       return updated;
     });
+  }
+
+  /** 功能 5c：审核员读取应用的待审自定义分类/标签列表。 */
+  async listPendingCatalogItemsForReview(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<readonly PendingCatalogItemRecord[]> {
+    await this.assertAuthorized(actor, allowedActions.review);
+    await this.requireApplication(applicationId);
+    return this.repository.listPendingCatalogItems(applicationId);
+  }
+
+  /**
+   * 功能 5c：审核员删除应用的待审自定义分类/标签项。归属校验——item 不属于
+   * 该应用（或不存在）时抛 PENDING_ITEM_NOT_FOUND（controller 映射 404）。
+   */
+  async deletePendingCatalogItem(
+    actor: ActorContext,
+    applicationId: string,
+    itemId: string,
+  ): Promise<void> {
+    await this.assertAuthorized(actor, allowedActions.review);
+    await this.requireApplication(applicationId);
+    const pending =
+      await this.repository.listPendingCatalogItems(applicationId);
+    if (!pending.some((item) => item.itemId === itemId)) {
+      throw new Error("PENDING_ITEM_NOT_FOUND");
+    }
+    await this.repository.deletePendingCatalogItem(itemId);
   }
 
   async claimReview(
@@ -785,6 +831,18 @@ export class ApplicationService {
             throw new Error("ARTIFACT_REQUIRED_FOR_DELIVERY_TYPE");
           }
         }
+        // 功能 5c：自定义分类/标签随审核流转——通过时插入正式表并关联应用，
+        // 驳回/要求修改时清空该应用的 pending 项（草稿回滚后可重新提交）。
+        if (approved) {
+          await this.applyPendingCatalogItems(
+            repository,
+            application.applicationId,
+          );
+        } else {
+          await repository.deletePendingCatalogItemsByApplication(
+            application.applicationId,
+          );
+        }
         const updated = await repository.setApplicationStatus({
           applicationId: application.applicationId,
           expectedStatus: application.status,
@@ -907,6 +965,78 @@ export class ApplicationService {
         }
       }
     }
+  }
+
+  /**
+   * 功能 5c：提交草稿时将自定义分类/标签写入待审表（catalog_pending_items）。
+   * 重名（忽略大小写）自动复用现有正式分类/标签，不产生 pending 项；名称
+   * 统一 trim 后落值（前后空白不原样入库）。
+   */
+  private async persistPendingCatalogItems(
+    repository: ApplicationRepository,
+    applicationId: string,
+    draft: ApplicationDraft,
+  ): Promise<void> {
+    const categoryName = draft.customCategoryName?.trim();
+    if (categoryName !== undefined && categoryName.length > 0) {
+      if (!(await repository.findCategoryByName(categoryName))) {
+        await repository.upsertPendingCatalogItem(
+          applicationId,
+          "category",
+          categoryName,
+        );
+      }
+    }
+    for (const name of draft.customTagNames ?? []) {
+      const trimmed = name.trim();
+      if (trimmed.length === 0) continue;
+      if (!(await repository.findTagByName(trimmed))) {
+        await repository.upsertPendingCatalogItem(
+          applicationId,
+          "tag",
+          trimmed,
+        );
+      }
+    }
+  }
+
+  /**
+   * 功能 5c：审核通过时把待审自定义分类/标签流转到正式表并关联应用：
+   * - 分类插入 catalog_categories（uuid id），元数据 category_id 覆盖为新建 id；
+   * - 标签插入 catalog_tags，并与应用现有标签链接合并（不覆盖）；
+   * - 全部处理后清空该应用的 pending 项。
+   */
+  private async applyPendingCatalogItems(
+    repository: ApplicationRepository,
+    applicationId: string,
+  ): Promise<void> {
+    const pending = await repository.listPendingCatalogItems(applicationId);
+    if (pending.length === 0) return;
+    let appliedCategoryId: string | null = null;
+    const appliedTagIds: string[] = [];
+    for (const item of pending) {
+      if (item.kind === "category") {
+        appliedCategoryId = await repository.insertCategory(item.name);
+      } else {
+        appliedTagIds.push(await repository.insertTag(item.name));
+      }
+    }
+    if (appliedCategoryId !== null) {
+      const applicationType =
+        await repository.getApplicationType(applicationId);
+      await repository.upsertCatalogMetadata(applicationId, {
+        categoryId: appliedCategoryId,
+        applicationType: applicationType ?? "web_app",
+      });
+    }
+    if (appliedTagIds.length > 0) {
+      const existingTagIds = await repository.listTagIds(applicationId);
+      await repository.replaceTagLinks(applicationId, [
+        ...existingTagIds,
+        ...appliedTagIds,
+      ]);
+    }
+    await repository.deletePendingCatalogItemsByApplication(applicationId);
   }
 
   async publish(
@@ -1721,7 +1851,15 @@ export function validateDraftCompleteness(
   ) {
     fail("DRAFT_DEPARTMENT_REQUIRED", "归属部门不能为空");
   }
-  if (typeof draft.categoryId !== "string" || draft.categoryId.length === 0) {
+  // 功能 5c：分类门禁放宽为「分类 ID 或自定义分类名称至少其一」（trim 后非空）——
+  // 前端选择自定义分类时 categoryId 为空、名称走 customCategoryName。
+  const categoryIdValue =
+    typeof draft.categoryId === "string" ? draft.categoryId.trim() : "";
+  const customCategoryValue =
+    typeof draft.customCategoryName === "string"
+      ? draft.customCategoryName.trim()
+      : "";
+  if (categoryIdValue.length === 0 && customCategoryValue.length === 0) {
     fail("DRAFT_CATEGORY_REQUIRED", "分类不能为空");
   }
   if (

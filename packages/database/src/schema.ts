@@ -351,6 +351,16 @@ export interface CatalogTagsTable {
   enabled: boolean;
 }
 
+/** 待审自定义分类/标签（0051 迁移）：提交草稿时记录，审核通过插入正式表、驳回/撤回删除。 */
+export interface CatalogPendingItemsTable {
+  item_id: Generated<string>;
+  application_id: string;
+  kind: "category" | "tag";
+  name: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, never>;
+}
+
 export interface ApplicationAudiencesTable {
   audience_id: Generated<string>;
   application_id: string;
@@ -769,6 +779,7 @@ export interface DatabaseSchema {
   application_audit_events: ApplicationAuditEventsTable;
   catalog_categories: CatalogCategoriesTable;
   catalog_tags: CatalogTagsTable;
+  catalog_pending_items: CatalogPendingItemsTable;
   application_audiences: ApplicationAudiencesTable;
   application_tag_links: ApplicationTagLinksTable;
   application_catalog_metadata: ApplicationCatalogMetadataTable;

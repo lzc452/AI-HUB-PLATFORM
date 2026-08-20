@@ -30,7 +30,13 @@ vi.mock("../../modules/auth/useIdentity", () => ({
   }),
 }));
 
-const draftRecord = {
+let draftRecord: {
+  applicationId: string;
+  ownerEmployeeId: string;
+  status: string;
+  updatedAt: string;
+  draft: import("@ai-hub/contracts").ApplicationDraft;
+} = {
   applicationId: "app-001",
   ownerEmployeeId: "E0001",
   status: "draft",
@@ -51,7 +57,9 @@ const draftRecord = {
     screenshotAssetIds: [] as string[],
     summaryHtml: "<p>简介回显内容</p>",
     manualHtml: "<p>手册回显内容</p>",
+    manualAssetId: null,
     examplesHtml: "<p>示例回显内容</p>",
+    examplesAssetId: null,
     faq: [],
     audience: [
       {
@@ -175,6 +183,31 @@ describe("编辑回显", () => {
       expect(html).toContain("简介回显内容");
       expect(html).toContain("手册回显内容");
       expect(html).toContain("示例回显内容");
+    });
+  });
+
+  it("自定义分类/标签回显：customCategoryName 映射回分类表单值、customTagNames 并入标签", async () => {
+    draftRecord = {
+      ...draftRecord,
+      draft: {
+        ...draftRecord.draft,
+        categoryId: "",
+        customCategoryName: "自定义分类",
+        tagIds: ["tag-1"],
+        customTagNames: ["新标签A", " 新标签B "],
+      },
+    };
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("回显应用")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      // 分类 tags 选择器回显自定义分类名；标签选择器回显现有 id 与自定义名（trim 后）。
+      // 预览步常驻挂载也会渲染同名文本，因此用 getAllByText 断言存在。
+      expect(screen.getAllByText("自定义分类").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("tag-1").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("新标签A").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("新标签B").length).toBeGreaterThan(0);
     });
   });
 });

@@ -14,6 +14,7 @@ import type {
   ApplicationAdminListInput,
   ApplicationAdminListResult,
   DeliveryChannel,
+  PendingCatalogItemRecord,
   ValidationCheckRecord,
   VersionSnapshotRecord,
 } from "./application.types.js";
@@ -417,6 +418,109 @@ export class KyselyApplicationRepository implements ApplicationRepository {
         )
         .execute();
     }
+  }
+
+  async listTagIds(applicationId: string): Promise<readonly string[]> {
+    const rows = await this.db
+      .selectFrom("application_tag_links")
+      .select("tag_id")
+      .where("application_id", "=", applicationId)
+      .execute();
+    return rows.map((row) => row.tag_id);
+  }
+
+  async upsertPendingCatalogItem(
+    applicationId: string,
+    kind: "category" | "tag",
+    name: string,
+  ): Promise<void> {
+    await this.db
+      .insertInto("catalog_pending_items")
+      .values({ application_id: applicationId, kind, name })
+      .onConflict((oc) =>
+        oc.columns(["application_id", "kind", "name"]).doNothing(),
+      )
+      .execute();
+  }
+
+  async listPendingCatalogItems(
+    applicationId: string,
+  ): Promise<readonly PendingCatalogItemRecord[]> {
+    const rows = await this.db
+      .selectFrom("catalog_pending_items")
+      .select(["item_id", "kind", "name", "created_at"])
+      .where("application_id", "=", applicationId)
+      .orderBy("created_at", "asc")
+      .execute();
+    return rows.map((row) => ({
+      itemId: row.item_id,
+      kind: row.kind,
+      name: row.name,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async deletePendingCatalogItem(itemId: string): Promise<number> {
+    const result = await this.db
+      .deleteFrom("catalog_pending_items")
+      .where("item_id", "=", itemId)
+      .execute();
+    return Number(result[0]?.numDeletedRows ?? 0);
+  }
+
+  async deletePendingCatalogItemsByApplication(
+    applicationId: string,
+  ): Promise<void> {
+    await this.db
+      .deleteFrom("catalog_pending_items")
+      .where("application_id", "=", applicationId)
+      .execute();
+  }
+
+  async findCategoryByName(name: string): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("catalog_categories")
+      .select("category_id")
+      .where(sql`lower(name)`, "=", name.toLowerCase())
+      .executeTakeFirst();
+    return row?.category_id ?? null;
+  }
+
+  async findTagByName(name: string): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("catalog_tags")
+      .select("tag_id")
+      .where(sql`lower(name)`, "=", name.toLowerCase())
+      .executeTakeFirst();
+    return row?.tag_id ?? null;
+  }
+
+  async insertCategory(name: string): Promise<string> {
+    await this.db
+      .insertInto("catalog_categories")
+      .values({
+        category_id: randomUUID(),
+        name,
+        sort_order: 0,
+        enabled: true,
+        is_hot: false,
+      })
+      .onConflict((oc) => oc.column("category_id").doNothing())
+      .execute();
+    const id = await this.findCategoryByName(name);
+    if (id === null) throw new Error("CATALOG_CATEGORY_INSERT_FAILED");
+    return id;
+  }
+
+  async insertTag(name: string): Promise<string> {
+    await this.db
+      .insertInto("catalog_tags")
+      .values({ tag_id: randomUUID(), name, enabled: true })
+      .onConflict((oc) => oc.column("tag_id").doNothing())
+      .execute();
+    const id = await this.findTagByName(name);
+    if (id === null) throw new Error("CATALOG_TAG_INSERT_FAILED");
+    return id;
   }
 
   async replaceAudiences(

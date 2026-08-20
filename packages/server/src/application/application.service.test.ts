@@ -96,6 +96,24 @@ class MemoryApplicationRepository implements ApplicationRepository {
   }> = [];
   failOutbox = false;
   nextId = 1;
+  /** 待审自定义分类/标签项（功能 5c）。 */
+  pendingItems: Array<{
+    itemId: string;
+    applicationId: string;
+    kind: "category" | "tag";
+    name: string;
+    createdAt: Date;
+  }> = [];
+  /** 正式分类/标签（id → name）。 */
+  categories = new Map<string, string>();
+  tags = new Map<string, string>();
+  /** 应用标签关联（applicationId → tagId 列表）。 */
+  tagLinks = new Map<string, string[]>();
+  /** 应用目录元数据（applicationId → { categoryId, applicationType }）。 */
+  catalogMetadata = new Map<
+    string,
+    { categoryId: string; applicationType: string }
+  >();
   private transactionQueue: Promise<void> = Promise.resolve();
 
   async withTransaction<T>(
@@ -124,6 +142,11 @@ class MemoryApplicationRepository implements ApplicationRepository {
       catalogRegistrations: [...this.catalogRegistrations],
       deliveryAssets: [...this.deliveryAssets],
       deliveryTargets: [...this.deliveryTargets],
+      pendingItems: [...this.pendingItems],
+      categories: new Map(this.categories),
+      tags: new Map(this.tags),
+      tagLinks: new Map(this.tagLinks),
+      catalogMetadata: new Map(this.catalogMetadata),
       nextId: this.nextId,
     };
     try {
@@ -230,9 +253,80 @@ class MemoryApplicationRepository implements ApplicationRepository {
     input: { categoryId: string; applicationType: string },
   ) {
     this.catalogTypes.set(applicationId, input.applicationType);
+    this.catalogMetadata.set(applicationId, {
+      categoryId: input.categoryId,
+      applicationType: input.applicationType,
+    });
   }
-  async replaceTagLinks(_applicationId: string, _tagIds: readonly string[]) {
-    // no-op in memory repository
+  async replaceTagLinks(applicationId: string, tagIds: readonly string[]) {
+    this.tagLinks.set(applicationId, [...tagIds]);
+  }
+  async listTagIds(applicationId: string) {
+    return this.tagLinks.get(applicationId) ?? [];
+  }
+  async upsertPendingCatalogItem(
+    applicationId: string,
+    kind: "category" | "tag",
+    name: string,
+  ) {
+    const exists = this.pendingItems.some(
+      (item) =>
+        item.applicationId === applicationId &&
+        item.kind === kind &&
+        item.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (exists) return;
+    this.pendingItems.push({
+      itemId: `pending-${this.nextId++}`,
+      applicationId,
+      kind,
+      name,
+      createdAt: new Date(),
+    });
+  }
+  async listPendingCatalogItems(applicationId: string) {
+    return this.pendingItems.filter(
+      (item) => item.applicationId === applicationId,
+    );
+  }
+  async deletePendingCatalogItem(itemId: string) {
+    const index = this.pendingItems.findIndex((item) => item.itemId === itemId);
+    if (index >= 0) {
+      this.pendingItems.splice(index, 1);
+      return 1;
+    }
+    return 0;
+  }
+  async deletePendingCatalogItemsByApplication(applicationId: string) {
+    this.pendingItems = this.pendingItems.filter(
+      (item) => item.applicationId !== applicationId,
+    );
+  }
+  async findCategoryByName(name: string) {
+    for (const [id, existing] of this.categories) {
+      if (existing.toLowerCase() === name.toLowerCase()) return id;
+    }
+    return null;
+  }
+  async findTagByName(name: string) {
+    for (const [id, existing] of this.tags) {
+      if (existing.toLowerCase() === name.toLowerCase()) return id;
+    }
+    return null;
+  }
+  async insertCategory(name: string) {
+    const existing = await this.findCategoryByName(name);
+    if (existing !== null) return existing;
+    const id = `cat-${this.nextId++}`;
+    this.categories.set(id, name);
+    return id;
+  }
+  async insertTag(name: string) {
+    const existing = await this.findTagByName(name);
+    if (existing !== null) return existing;
+    const id = `tag-${this.nextId++}`;
+    this.tags.set(id, name);
+    return id;
   }
   async replaceAudiences(
     _applicationId: string,
@@ -3647,5 +3741,233 @@ describe("ApplicationService", () => {
       status: "published",
       currentVersionId: updateVersion!.applicationVersionId,
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 功能 5c：自定义分类/标签随审核流转（pending 表 + 通过插入正式表 + 驳回删除）
+  // ---------------------------------------------------------------------------
+
+  it("submitDraft：自定义分类/标签写入 pending 表，重名复用现有（不产生 pending）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    // 预置现有分类与标签：重名（忽略大小写）复用现有，不产生 pending 项。
+    repository.categories.set("cat-existing", "效率工具");
+    repository.tags.set("tag-existing", "ai");
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "效率工具",
+      tagIds: [],
+      customTagNames: ["新标签", "AI"],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    expect(repository.pendingItems).toEqual([
+      expect.objectContaining({
+        applicationId: application.applicationId,
+        kind: "tag",
+        name: "新标签",
+      }),
+    ]);
+  });
+
+  it("submitDraft：自定义分类名可过分类门禁；分类与自定义均为空仍拒绝", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    // categoryId 为空但 customCategoryName 非空 → 分类门禁放行。
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "我的分类",
+    });
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).resolves.toMatchObject({ status: "in_review" });
+
+    // categoryId 与 customCategoryName 均为空 → 仍报 DRAFT_CATEGORY_REQUIRED。
+    const empty = await service.createApplication(owner, {
+      name: "Empty",
+      summary: "No category",
+    });
+    await service.saveDraft(owner, empty.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+    });
+    await expect(
+      service.submitDraft(owner, empty.applicationId),
+    ).rejects.toMatchObject({
+      issues: [expect.objectContaining({ code: "DRAFT_CATEGORY_REQUIRED" })],
+    });
+  });
+
+  it("review 通过：pending 项插入正式表并关联应用（分类元数据 + 标签合并）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "我的分类",
+      tagIds: ["ai"],
+      customTagNames: ["我的标签"],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    // 已有关联标签 "ai"：approve 后应合并新标签而非覆盖。
+    repository.tagLinks.set(application.applicationId, ["ai"]);
+    await service.configureDelivery(owner, application.applicationId, {
+      channel: "web",
+      entryUrl: "https://apps.example.com",
+      enabled: true,
+    });
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "通过",
+    );
+
+    // 自定义分类插入正式表（uuid id）并写回应用元数据。
+    const categoryId = [...repository.categories].find(
+      ([, name]) => name === "我的分类",
+    )?.[0];
+    expect(categoryId).toBeDefined();
+    expect(
+      repository.catalogMetadata.get(application.applicationId),
+    ).toMatchObject({ categoryId, applicationType: "web_app" });
+    // 自定义标签插入正式表并与现有标签合并关联。
+    const tagId = [...repository.tags].find(
+      ([, name]) => name === "我的标签",
+    )?.[0];
+    expect(tagId).toBeDefined();
+    expect(repository.tagLinks.get(application.applicationId)).toEqual([
+      "ai",
+      tagId,
+    ]);
+    // pending 表清空。
+    expect(repository.pendingItems).toHaveLength(0);
+  });
+
+  it("review 驳回清空 pending；published 更新撤回也清空 pending", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      categoryId: "",
+      customCategoryName: "我的分类",
+      customTagNames: ["我的标签"],
+    });
+    await service.submitDraft(owner, application.applicationId);
+    const version = [...repository.versions.values()][0]!;
+    await service.claimReview(reviewer, version.applicationVersionId);
+    expect(repository.pendingItems.length).toBeGreaterThan(0);
+
+    // 驳回 → pending 清空（应用回滚到 draft）。
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "reject",
+      "不合规",
+    );
+    expect(repository.pendingItems).toHaveLength(0);
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ status: "draft" });
+
+    // published 应用提交更新（pending_version_id 置位）后撤回 → pending 清空。
+    const published = await preparePublishedApplication(service);
+    await service.saveDraft(owner, published.application.applicationId, {
+      ...completeDraft(),
+      version: "2.0.0",
+      categoryId: "",
+      customCategoryName: "更新分类",
+    });
+    await service.submitDraft(owner, published.application.applicationId);
+    const updateVersion = [...repository.versions.values()].find(
+      (candidate) =>
+        candidate.applicationId === published.application.applicationId &&
+        candidate.applicationVersionId !==
+          published.version.applicationVersionId,
+    )!;
+    expect(repository.pendingItems.length).toBeGreaterThan(0);
+    await service.cancelPendingReview(
+      owner,
+      updateVersion.applicationVersionId,
+    );
+    expect(repository.pendingItems).toHaveLength(0);
+  });
+
+  it("待审项列表与删除：审核员可读可删，非本应用项 PENDING_ITEM_NOT_FOUND", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const other = await service.createApplication(owner, {
+      name: "Other",
+      summary: "Other app",
+    });
+    repository.pendingItems.push(
+      {
+        itemId: "pending-1",
+        applicationId: application.applicationId,
+        kind: "category",
+        name: "分类A",
+        createdAt: new Date(),
+      },
+      {
+        itemId: "pending-2",
+        applicationId: other.applicationId,
+        kind: "tag",
+        name: "标签B",
+        createdAt: new Date(),
+      },
+    );
+
+    // 列表仅含本应用项。
+    const list = await service.listPendingCatalogItemsForReview(
+      reviewer,
+      application.applicationId,
+    );
+    expect(list.map((item) => item.itemId)).toEqual(["pending-1"]);
+    expect(list[0]).toMatchObject({ kind: "category", name: "分类A" });
+
+    // 审核员可删除本应用项。
+    await expect(
+      service.deletePendingCatalogItem(
+        reviewer,
+        application.applicationId,
+        "pending-1",
+      ),
+    ).resolves.toBeUndefined();
+    expect(repository.pendingItems).toHaveLength(1);
+
+    // 非本应用项 / 不存在项 → PENDING_ITEM_NOT_FOUND（404）。
+    await expect(
+      service.deletePendingCatalogItem(
+        reviewer,
+        application.applicationId,
+        "pending-2",
+      ),
+    ).rejects.toThrow("PENDING_ITEM_NOT_FOUND");
+    await expect(
+      service.deletePendingCatalogItem(
+        reviewer,
+        application.applicationId,
+        "nope",
+      ),
+    ).rejects.toThrow("PENDING_ITEM_NOT_FOUND");
   });
 });

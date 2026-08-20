@@ -33,6 +33,16 @@ export type ValidationCheckStatus =
   | "info"
   | "failed";
 
+export type PendingCatalogItemKind = "category" | "tag";
+
+/** 待审自定义分类/标签项（catalog_pending_items）。 */
+export interface PendingCatalogItemRecord {
+  itemId: string;
+  kind: PendingCatalogItemKind;
+  name: string;
+  createdAt: Date;
+}
+
 export interface ValidationCheckRecord {
   validationCheckId: string;
   applicationVersionId: string;
@@ -300,6 +310,26 @@ export interface ApplicationRepository {
     applicationId: string,
     tagIds: readonly string[],
   ): Promise<void>;
+  /** 读取应用当前关联的标签 ID 列表（审核通过合并自定义标签用）。 */
+  listTagIds(applicationId: string): Promise<readonly string[]>;
+  /** 待审自定义分类/标签：按 (application_id, kind, name) 幂等写入。 */
+  upsertPendingCatalogItem(
+    applicationId: string,
+    kind: PendingCatalogItemKind,
+    name: string,
+  ): Promise<void>;
+  listPendingCatalogItems(
+    applicationId: string,
+  ): Promise<readonly PendingCatalogItemRecord[]>;
+  /** 按 itemId 删除待审项；返回删除行数（0 表示不存在）。 */
+  deletePendingCatalogItem(itemId: string): Promise<number>;
+  deletePendingCatalogItemsByApplication(applicationId: string): Promise<void>;
+  /** 按名称查找正式分类/标签（忽略大小写）；不存在返回 null。 */
+  findCategoryByName(name: string): Promise<string | null>;
+  findTagByName(name: string): Promise<string | null>;
+  /** 插入正式分类/标签（uuid id，重名不重复插入），返回其 id。 */
+  insertCategory(name: string): Promise<string>;
+  insertTag(name: string): Promise<string>;
   replaceAudiences(
     applicationId: string,
     audience: readonly AudienceRule[],
