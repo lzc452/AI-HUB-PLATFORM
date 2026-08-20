@@ -2759,6 +2759,197 @@ describe("ApplicationService", () => {
     });
   });
 
+  it("rejects draft submission when the web entry URL is not allowlisted", async () => {
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service, repository } = makeService({
+      webTargetPolicy: strictPolicy,
+    });
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://evil.example.net/dashboard",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+
+    // 白名单校验在事务外拦截（与 configureDelivery 同路径）：不落库、不建版本。
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).rejects.toThrow("WEB_URL_HOST_NOT_ALLOWED");
+    expect(repository.deliveries).toHaveLength(0);
+    expect(repository.versions.size).toBe(0);
+    await expect(
+      service.getApplication(application.applicationId),
+    ).resolves.toMatchObject({ status: "draft" });
+  });
+
+  it("accepts draft submission with an allowlisted web entry URL", async () => {
+    const strictPolicy: WebTargetPolicy = {
+      protocols: ["https"],
+      allowedHostnames: ["apps.internal.example.com"],
+      allowedPorts: [443],
+      allowedCidrs: ["10.0.0.0/8"],
+    };
+    const { service } = makeService({ webTargetPolicy: strictPolicy });
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "https://apps.internal.example.com/ocr",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).resolves.toMatchObject({ status: "in_review" });
+  });
+
+  it("rejects a draft with an empty web entry URL（逐渠道必填校验）", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "web",
+          entryUrl: "",
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+
+    const error = await service
+      .submitDraft(owner, application.applicationId)
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(DraftValidationError);
+    expect(
+      (error as DraftValidationError).issues.some(
+        (issue) => issue.code === "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a draft whose desktop channel has no targets（逐渠道必填校验）", async () => {
+    const { service } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+        },
+      ],
+    });
+
+    const error = await service
+      .submitDraft(owner, application.applicationId)
+      .catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(DraftValidationError);
+    expect(
+      (error as DraftValidationError).issues.some(
+        (issue) => issue.code === "DRAFT_DELIVERY_TARGETS_REQUIRED",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects draft submission when a desktop delivery carries a mismatched target kind", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+          targets: [{ kind: "mobile", platform: "android", arch: null }],
+        },
+      ],
+    });
+
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).rejects.toThrow("DELIVERY_TARGET_INVALID");
+    expect(repository.deliveries).toHaveLength(0);
+    expect(repository.versions.size).toBe(0);
+  });
+
+  it("rejects draft submission when a miniprogram target lacks its qr asset", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "mini_program",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: [],
+          targets: [
+            {
+              kind: "miniprogram",
+              platform: "wechat",
+              appId: "wx-app-id",
+              qrCodeAssetId: "",
+              versionNote: null,
+              enabled: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      service.submitDraft(owner, application.applicationId),
+    ).rejects.toThrow("DELIVERY_TARGET_QR_REQUIRED");
+    expect(repository.deliveries).toHaveLength(0);
+    expect(repository.versions.size).toBe(0);
+  });
+
   it("publish 门禁以草稿渠道为准：草稿仅选 web 时桌面类型不要求桌面渠道", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {

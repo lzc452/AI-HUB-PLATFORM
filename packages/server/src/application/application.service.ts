@@ -281,6 +281,14 @@ export class ApplicationService {
       throw new Error("VERSION_ALREADY_EXISTS");
     }
 
+    // 交付配置静态校验（事务外执行）：web 入口地址命中内网白名单（DNS 解析）、
+    // targets 枚举/二维码内容校验（对象存储读取）均不可回滚——与
+    // configureDelivery 的校验时机一致（被拒绝的 URL/target 根本不落库）。
+    const validatedDeliveries = await this.validateDraftDeliveries(
+      applicationId,
+      sanitizedDraft.deliveries,
+    );
+
     const plainSummary = draft.summaryHtml.replace(/<[^>]*>/g, "").trim();
 
     return this.repository.withTransaction(async (repository) => {
@@ -300,11 +308,11 @@ export class ApplicationService {
         draft.maintainerEmployeeIds,
       );
       // 草稿交付配置落库为已启用渠道（功能 4：向导多选渠道直接落库，
-      // 目录渠道不再依赖独立交付页逐渠道 PUT）。
+      // 目录渠道不再依赖独立交付页逐渠道 PUT；静态校验已在事务外完成）。
       await this.persistDraftDeliveries(
         repository,
         applicationId,
-        sanitizedDraft.deliveries,
+        validatedDeliveries,
       );
 
       const version = await repository.createVersion({
@@ -1061,6 +1069,47 @@ export class ApplicationService {
   }
 
   /**
+   * 提交前静态校验草稿交付配置（与 configureDelivery 同一套校验路径）：
+   * - web 渠道 entryUrl 命中内网白名单（规格 §11.3；空 URL 视为尚未配置
+   *   入口，跳过校验——与 configureDelivery 一致；空串/空 URL 已由
+   *   validateDraftCompleteness 的逐渠道必填拦截）
+   * - web 渠道不允许 targets
+   * - 各渠道 targets 复用 validateDeliveryTargets（kind/platform 枚举、
+   *   二维码资产存在性与归属、二维码内容格式），返回规范化后的 targets
+   *   （小程序 appId 按二维码内容回填）
+   * 校验含 DNS 解析与对象存储读取（不可回滚），必须在 submitDraft 事务外执行。
+   */
+  private async validateDraftDeliveries(
+    applicationId: string,
+    deliveries: readonly DeliveryDraftItem[],
+  ): Promise<readonly DeliveryDraftItem[]> {
+    const validated: DeliveryDraftItem[] = [];
+    for (const item of deliveries) {
+      if (item.channel === "web") {
+        if (item.entryUrl !== null && item.entryUrl !== "") {
+          await validateWebTargetUrl(
+            item.entryUrl,
+            this.webTargetPolicy,
+            this.resolveWebTargetHost,
+          );
+        }
+        if (item.targets && item.targets.length > 0) {
+          throw new Error("DELIVERY_TARGETS_NOT_ALLOWED");
+        }
+      }
+      const targets = await this.validateDeliveryTargets(
+        applicationId,
+        item.channel,
+        item.targets ?? [],
+      );
+      validated.push(
+        targets.length > 0 ? { ...item, targets: [...targets] } : item,
+      );
+    }
+    return validated;
+  }
+
+  /**
    * 将草稿交付配置落库为已启用渠道（功能 4）：向导提交时把所选渠道写入
    * application_deliveries（createDelivery 为 UNIQUE(application_id, channel)
    * upsert，幂等），desktop/mobile/mini_program 的交付目标一并保存。
@@ -1780,6 +1829,29 @@ export function validateDraftCompleteness(
 
   if (!Array.isArray(draft.deliveries) || draft.deliveries.length === 0) {
     fail("DRAFT_DELIVERY_REQUIRED", "交付配置不能为空");
+  } else {
+    // 功能 4 逐渠道必填（与前端 deliveryDraftItemSchema 同源规则）：
+    // web 需入口地址；desktop/mobile 需 ≥1 个目标；mini_program 无额外必填。
+    for (const item of draft.deliveries) {
+      if (item.channel === "web") {
+        if (
+          typeof item.entryUrl !== "string" ||
+          item.entryUrl.trim().length === 0
+        ) {
+          fail(
+            "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED",
+            "Web 渠道需填写入口地址",
+          );
+        }
+      } else if (item.channel === "desktop" || item.channel === "mobile") {
+        if (!Array.isArray(item.targets) || item.targets.length < 1) {
+          fail(
+            "DRAFT_DELIVERY_TARGETS_REQUIRED",
+            "请至少选择一个目标系统/平台",
+          );
+        }
+      }
+    }
   }
 
   return issues;
