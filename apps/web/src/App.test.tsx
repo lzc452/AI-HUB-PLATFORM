@@ -132,6 +132,11 @@ vi.mock("./modules/application/useApplication", () => {
     useVersionDiff: () => ({ ...settled, data: undefined }),
     useReviewQueue: () => ({ ...settled, data: null }),
     useValidationChecks: () => ({ ...settled, data: [] }),
+    usePendingCatalogItems: () => ({ ...settled, data: [] }),
+    useDeletePendingCatalogItem: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+    }),
     useClaimReview: () => ({ isPending: false, mutate: vi.fn() }),
     useReleaseReview: () => ({ isPending: false, mutate: vi.fn() }),
     useReviewApplicationVersion: () => ({

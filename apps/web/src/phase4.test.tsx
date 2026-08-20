@@ -34,6 +34,7 @@ vi.mock("./modules/marketplace/useCatalog", () => ({
     isError: false,
     isPending: false,
   }),
+  useCatalogCategories: () => ({ data: [] }),
 }));
 
 describe("Phase 4 market shell", () => {
