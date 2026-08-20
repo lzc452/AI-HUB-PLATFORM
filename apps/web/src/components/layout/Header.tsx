@@ -98,7 +98,8 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
           className="flex shrink-0 items-center gap-2 text-[#1f1f1f]"
           to={ROUTES.marketplace}
         >
-          <img alt="AI应用共享平台" className="h-8 w-auto" src={logoUrl} />
+          <img alt="AI应用共享平台" className="h-10 w-auto" src={logoUrl} />
+          <span className="hidden text-lg font-bold sm:inline">AI应用平台</span>
         </Link>
 
         <div className="flex flex-1 justify-center">

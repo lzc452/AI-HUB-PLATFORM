@@ -142,14 +142,14 @@ export function MarketplaceDetailHeader({
               onClick={onLike}
               type={likedByMe ? "primary" : "default"}
             >
-              {likedByMe ? "已赞" : "点赞"}
+              {likedByMe ? "已赞" : "为他点赞"}
             </Button>
-            <span className="text-sm text-[#595959]">
+            {/* <span className="text-sm text-[#595959]">
               综合评分：
               <Text strong className="!text-[#1f1f1f]">
                 {ratingLabel}
               </Text>
-            </span>
+            </span> */}
             <span className="inline-flex items-center gap-2 text-sm text-[#595959]">
               我的评分：
               <Rate
@@ -158,14 +158,14 @@ export function MarketplaceDetailHeader({
                 onChange={(stars) => onRate(stars, anonymousRating)}
                 value={ratingPending ? 0 : (myRating ?? 0)}
               />
-              <label className="inline-flex cursor-pointer items-center gap-1">
+              {/* <label className="inline-flex cursor-pointer items-center gap-1">
                 <Switch
                   checked={anonymousRating}
                   onChange={setAnonymousRating}
                   size="small"
                 />
                 <span className="text-xs text-[#8c8c8c]">匿名评分</span>
-              </label>
+              </label> */}
             </span>
           </section>
 

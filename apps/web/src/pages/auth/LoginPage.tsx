@@ -74,7 +74,7 @@ export default function LoginPage() {
           {/* 品牌区 */}
           <div className="flex items-center gap-3 px-8 pt-6 lg:px-12">
             <img alt="AI应用共享平台" className="h-9 w-auto" src={logoUrl} />
-            <span className="text-xl font-bold text-black">AI应用共享平台</span>
+            <span className="text-xl font-bold text-black">AI应用平台</span>
           </div>
 
           {/* 表单主体：弹性垂直居中，空间不足时自动压缩间距 */}

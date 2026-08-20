@@ -488,13 +488,6 @@ export default function InnovationDemandDetailPage() {
               <Text type="secondary">暂无附件</Text>
             )}
           </Card>
-          <Card className="rounded-xl border-[#edf0f5]" title="治理说明">
-            <ul className="list-disc space-y-2 pl-5 text-sm leading-6 text-[#595959]">
-              <li>讨论支持文字、Emoji 与一级回复，不展示图片附件。</li>
-              <li>举报、匿名追溯与状态推进会写入审计记录。</li>
-              <li>需求治理操作入口位于标题右侧“更多”。</li>
-            </ul>
-          </Card>
         </main>
         <aside className="min-w-0">
           <Card

@@ -518,50 +518,9 @@ export function MarketplaceDetailReviews({
 
   return (
     <div className="space-y-6">
-      {/* 评论提交表单 */}
-      <section className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6">
-        <Title level={2} className="!mb-2 !text-lg">
-          <MessageOutlined className="mr-2" />
-          发表评论
-        </Title>
-        <Form form={commentForm} layout="vertical" name="create-comment">
-          <Form.Item
-            name="body"
-            rules={[{ required: true, message: "请输入评论内容" }]}
-          >
-            <Input.TextArea
-              maxLength={500}
-              placeholder="分享你的使用体验或提出问题…"
-              rows={3}
-            />
-          </Form.Item>
-          <div className="flex items-center justify-between gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <Form.Item
-                initialValue={false}
-                name="displayAnonymously"
-                noStyle
-                valuePropName="checked"
-              >
-                <Switch size="small" />
-              </Form.Item>
-              <Text type="secondary" className="!text-xs">
-                匿名展示不影响后台审计
-              </Text>
-            </label>
-            <Button
-              loading={createComment.isPending}
-              onClick={() => void handleSubmitComment()}
-              type="primary"
-            >
-              发表评论
-            </Button>
-          </div>
-        </Form>
-      </section>
 
-      {/* Ratings Section */}
-      <section
+      {/* Ratings Section 不用展示用户的评分 */}
+      {/* <section
         aria-label="用户评分"
         className="rounded-2xl border border-[#d9d9d9] bg-white p-4 shadow-sm md:p-6"
       >
@@ -601,7 +560,7 @@ export function MarketplaceDetailReviews({
         ) : (
           <Empty description="暂无评分" />
         )}
-      </section>
+      </section> */}
 
       {/* Comments Section */}
       <section
@@ -620,11 +579,46 @@ export function MarketplaceDetailReviews({
           </Title>
         </div>
 
+        <Form form={commentForm} layout="vertical" name="create-comment">
+          <Form.Item
+            name="body"
+            rules={[{ required: true, message: "请输入评论内容" }]}
+          >
+            <Input.TextArea
+              maxLength={500}
+              placeholder="分享你的使用体验或提出问题…"
+              rows={3}
+            />
+          </Form.Item>
+          <div className="flex items-center justify-between gap-2">
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <Form.Item
+                initialValue={false}
+                name="displayAnonymously"
+                noStyle
+                valuePropName="checked"
+              >
+                <Switch size="small" />
+              </Form.Item>
+              <Text type="secondary" className="!text-xs">
+                匿名展示不影响后台审计
+              </Text>
+            </label>
+            <Button
+              loading={createComment.isPending}
+              onClick={() => void handleSubmitComment()}
+              type="primary"
+            >
+              发表评论
+            </Button>
+          </div>
+        </Form>
+
         {commentsPending ? (
           <Skeleton active paragraph={{ rows: 6 }} />
         ) : rootComments.length > 0 ? (
           <>
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               {rootComments.map((root) => (
                 <CommentThread
                   canReplyOfficial={canReplyOfficial}

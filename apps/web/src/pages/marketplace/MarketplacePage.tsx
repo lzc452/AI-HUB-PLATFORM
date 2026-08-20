@@ -82,30 +82,8 @@ export default function MarketplacePage() {
 
   return (
     <div className="space-y-4">
-      <Typography.Title className="!my-0" level={1}>
-        发现企业内部 AI 应用
-      </Typography.Title>
-      <Typography.Paragraph className="!mb-0 text-sm text-[#595959]">
-        统一查找、体验与分享各部门 AI 工具
-      </Typography.Paragraph>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_230px]">
         <div className="min-w-0 space-y-4">
-          {/* <section
-            aria-label="应用市场欢迎"
-            className="flex items-center justify-between gap-6 rounded-2xl border border-[#d6e4ff] bg-gradient-to-br from-[#e6f4ff] via-[#f0f7ff] to-[#fafcff] p-4 lg:p-6"
-          >
-            <div className="min-w-0 space-y-2">
-              <Typography.Title
-                level={1}
-                className="!mb-0 !text-2xl lg:!text-3xl"
-              >
-                发现企业内部 AI 应用
-              </Typography.Title>
-              <Paragraph className="!mb-0 text-sm text-[#595959] lg:text-base">
-                统一查找、体验与分享各部门 AI 工具
-              </Paragraph>
-            </div>
-          </section> */}
 
           <div className="bg-white p-2 lg:p-4 rounded-xl space-y-4">
             <MarketplaceFilters
