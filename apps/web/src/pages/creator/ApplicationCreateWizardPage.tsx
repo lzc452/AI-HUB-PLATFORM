@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { ApplicationDraft, DeliveryChannel } from "@ai-hub/contracts";
 
 import { formatSubmitError } from "../../modules/application/application.errors";
+import { ApiError } from "../../shared/api/client";
 import { showErrorMessage } from "../../shared/ui/message";
 import { FormWizard } from "../../shared/forms/FormWizard";
 import {
@@ -21,6 +22,7 @@ import {
   listTags,
   saveApplicationDraft,
   submitApplicationDraft,
+  uploadAsset,
   type PublishingOptions,
 } from "../../modules/publishing";
 import { useDepartments, useEmployees } from "../../modules/auth/useIdentity";
@@ -118,8 +120,18 @@ export default function ApplicationCreateWizardPage() {
         }
         // 新增模式：不预创建草稿，首次有效「下一步」/「存草稿」时才惰性创建，
         // 校验不通过或直接离开页面不会产生空草稿。
-      } catch {
-        message.error("初始化草稿失败，请刷新重试");
+      } catch (error: unknown) {
+        if (error instanceof ApiError && error.status === 404) {
+          // 应用行存在但无草稿行（历史孤儿草稿 / demo 种子缺草稿行）：
+          // 按空草稿继续编辑，首次保存会补建草稿行。
+          if (!cancelled) {
+            setApplicationId(draftIdFromQuery);
+            message.info("该草稿暂无内容，已按新草稿打开");
+          }
+        } else {
+          console.error("初始化草稿失败", error);
+          message.error("初始化草稿失败，请刷新重试");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -154,6 +166,19 @@ export default function ApplicationCreateWizardPage() {
         });
     }
     return draftCreationRef.current;
+  };
+
+  /**
+   * 向导上传回调：先确保草稿创建（新增模式首次选文件即创建应用），
+   * 避免 applicationId 为空时上传请求打到 `/internal/applications//uploads`。
+   */
+  const upload = async (
+    kind: Parameters<typeof uploadAsset>[1],
+    file: File,
+  ) => {
+    const id = await ensureDraft();
+    if (!id) throw new Error("草稿创建失败");
+    return uploadAsset(id, kind, file);
   };
 
   const withDeliveries = (values: FieldValues): ApplicationDraft => {
@@ -254,7 +279,7 @@ export default function ApplicationCreateWizardPage() {
   return (
     <div className="rounded-xl border border-solid border-[#d9d9d9] bg-white p-4">
       <FormWizard
-        steps={createWizardSteps(options, applicationId ?? "")}
+        steps={createWizardSteps(options, applicationId ?? "", upload)}
         defaultValues={defaultValues}
         onNextSuccess={async () => {
           try {

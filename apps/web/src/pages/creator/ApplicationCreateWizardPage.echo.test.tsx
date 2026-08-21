@@ -1,6 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntApp } from "antd";
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { Controller } from "react-hook-form";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -8,6 +13,11 @@ import { describe, expect, it, vi } from "vitest";
 import ApplicationCreateWizardPage from "./ApplicationCreateWizardPage";
 import { FormWizard } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
+import { ApiError } from "../../shared/api/client";
+import {
+  createWizardSteps,
+  getApplicationDraft,
+} from "../../modules/publishing";
 
 vi.mock("../../modules/auth/useIdentity", () => ({
   useDepartments: () => ({
@@ -85,12 +95,29 @@ let draftRecord: {
   },
 };
 
+const { createApplicationDraftMock, uploadAssetMock, createWizardStepsMock } =
+  vi.hoisted(() => ({
+    createApplicationDraftMock: vi.fn(async () => ({
+      applicationId: "app-new",
+    })),
+    uploadAssetMock: vi.fn(async () => ({ assetId: "asset-1" })),
+    createWizardStepsMock: vi.fn(),
+  }));
+
 vi.mock("../../modules/publishing", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../modules/publishing")>();
+  // 默认委托给真实实现；单个测试可用 mockImplementationOnce 捕获参数。
+  createWizardStepsMock.mockImplementation(
+    (...args: Parameters<typeof actual.createWizardSteps>) =>
+      actual.createWizardSteps(...args),
+  );
   return {
     ...actual,
     getApplicationDraft: vi.fn(async () => draftRecord),
+    createApplicationDraft: createApplicationDraftMock,
+    uploadAsset: uploadAssetMock,
+    createWizardSteps: createWizardStepsMock,
   };
 });
 
@@ -104,6 +131,21 @@ function renderPage() {
         <MemoryRouter
           initialEntries={["/creator/create?type=edit&applicationId=app-001"]}
         >
+          <ApplicationCreateWizardPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </AntApp>,
+  );
+}
+
+function renderAddMode() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <AntApp>
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/creator/create"]}>
           <ApplicationCreateWizardPage />
         </MemoryRouter>
       </QueryClientProvider>
@@ -209,5 +251,38 @@ describe("编辑回显", () => {
       expect(screen.getAllByText("新标签A").length).toBeGreaterThan(0);
       expect(screen.getAllByText("新标签B").length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe("草稿初始化与上传时序修复", () => {
+  it("编辑模式草稿 404（孤儿草稿）时按空草稿打开并提示", async () => {
+    vi.mocked(getApplicationDraft).mockRejectedValueOnce(
+      new ApiError(404, "DRAFT_NOT_FOUND", "DRAFT_NOT_FOUND"),
+    );
+    renderPage();
+    expect(
+      await screen.findByText("该草稿暂无内容，已按新草稿打开"),
+    ).toBeInTheDocument();
+    // 表单正常渲染（非加载态）：步骤标题可见
+    expect(screen.getByText("基本信息")).toBeInTheDocument();
+  });
+
+  it("新增模式上传前自动创建草稿（applicationId 为空时不发空 id 请求）", async () => {
+    let captured:
+      | ((kind: string, file: File) => Promise<{ assetId: string }>)
+      | null = null;
+    createWizardStepsMock.mockImplementationOnce(
+      (_options, _applicationId, upload) => {
+        captured = upload;
+        return [];
+      },
+    );
+    renderAddMode();
+    await waitFor(() => expect(captured).not.toBeNull());
+
+    const file = new File(["fake-icon"], "icon.png", { type: "image/png" });
+    await captured!("icon", file);
+    expect(createApplicationDraftMock).toHaveBeenCalledTimes(1);
+    expect(uploadAssetMock).toHaveBeenCalledWith("app-new", "icon", file);
   });
 });

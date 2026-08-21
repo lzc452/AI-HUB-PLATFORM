@@ -25,6 +25,7 @@ import type {
   AudienceRule,
   DeliveryChannel,
   DeliveryDraftItem,
+  UploadKind,
 } from "@ai-hub/contracts";
 import { useDepartmentMembers } from "../auth";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
@@ -157,7 +158,19 @@ const DISCLAIMER_TEMPLATE =
 // 图标 / 截图上传（对接统一上传 client）
 // ---------------------------------------------------------------------------
 
-function IconField({ applicationId }: { applicationId: string }) {
+/** 向导上传回调：由页面注入（先确保草稿创建再上传，避免 applicationId 为空时 404）。 */
+export type WizardUploadFn = (
+  kind: UploadKind,
+  file: File,
+) => Promise<{ assetId: string }>;
+
+function IconField({
+  applicationId,
+  upload,
+}: {
+  applicationId: string;
+  upload: WizardUploadFn;
+}) {
   const { control, watch, setValue, trigger } = useFormContext<FieldValues>();
   const mode = watch("icon.mode");
   const name = watch("name");
@@ -242,7 +255,7 @@ function IconField({ applicationId }: { applicationId: string }) {
                         shouldDirty: true,
                         shouldValidate: true,
                       });
-                      void uploadAsset(applicationId, "icon", file as File)
+                      void upload("icon", file as File)
                         .then((asset) => {
                           setValue("icon.assetId", asset.assetId, {
                             shouldDirty: true,
@@ -302,7 +315,13 @@ interface ScreenshotFile {
   name: string;
 }
 
-function ScreenshotField({ applicationId }: { applicationId: string }) {
+function ScreenshotField({
+  applicationId,
+  upload,
+}: {
+  applicationId: string;
+  upload: WizardUploadFn;
+}) {
   const { control, setValue, trigger } = useFormContext<FieldValues>();
   const watchedScreenshotIds = useWatch({
     control,
@@ -382,7 +401,7 @@ function ScreenshotField({ applicationId }: { applicationId: string }) {
             { uid, assetId: uid, url, name: file.name },
           ].slice(0, 6);
           commit(optimistic);
-          void uploadAsset(applicationId, "screenshot", file)
+          void upload("screenshot", file)
             .then((asset) => {
               commit(
                 filesRef.current.map((p) =>
@@ -779,10 +798,12 @@ function MiniProgramTargetEditor({
   applicationId,
   item,
   commitTargets,
+  upload,
 }: {
   applicationId: string;
   item: DeliveryDraftItem | undefined;
   commitTargets: (channel: "mini_program", targets: TargetLike[]) => void;
+  upload: WizardUploadFn;
 }) {
   const current = Array.isArray(item?.targets)
     ? (item.targets as TargetLike[])
@@ -871,7 +892,7 @@ function MiniProgramTargetEditor({
                     maxCount={1}
                     showUploadList={false}
                     beforeUpload={(file) => {
-                      void uploadAsset(applicationId, "qr", file as File)
+                      void upload("qr", file as File)
                         .then((asset) => {
                           patchMiniProgramTarget(value, {
                             qrCodeAssetId: asset.assetId,
@@ -928,7 +949,13 @@ function MiniProgramTargetEditor({
  * - mini_program 渠道：平台多选（微信/钉钉/支付宝）+ 每平台二维码上传
  * 全部写入对应渠道的草稿项（不再硬编码 deliveries[0]）。
  */
-function DeliveryTargetsField({ applicationId }: { applicationId: string }) {
+function DeliveryTargetsField({
+  applicationId,
+  upload,
+}: {
+  applicationId: string;
+  upload: WizardUploadFn;
+}) {
   const { control, setValue, trigger } = useFormContext<FieldValues>();
   const deliveryChannels = useWatch({ control, name: "deliveryChannels" }) as
     | DeliveryChannel[]
@@ -1008,6 +1035,7 @@ function DeliveryTargetsField({ applicationId }: { applicationId: string }) {
           applicationId={applicationId}
           item={itemOf("mini_program")}
           commitTargets={commitTargets}
+          upload={upload}
         />
       )}
     </>
@@ -1017,9 +1045,11 @@ function DeliveryTargetsField({ applicationId }: { applicationId: string }) {
 function BasicInfoStep({
   options,
   applicationId,
+  upload,
 }: {
   options: PublishingOptions;
   applicationId: string;
+  upload: WizardUploadFn;
 }) {
   const { control, setValue, trigger } = useFormContext<FieldValues>();
   const deliveries = useWatch({ control, name: "deliveries" }) as
@@ -1217,13 +1247,13 @@ function BasicInfoStep({
           </Form.Item>
         )}
       />
-      <DeliveryTargetsField applicationId={applicationId} />
+      <DeliveryTargetsField applicationId={applicationId} upload={upload} />
       <AudienceField options={options} />
       <Form.Item label="应用图标" required>
-        <IconField applicationId={applicationId} />
+        <IconField applicationId={applicationId} upload={upload} />
       </Form.Item>
       <Form.Item label="应用截图（1–6 张）" required>
-        <ScreenshotField applicationId={applicationId} />
+        <ScreenshotField applicationId={applicationId} upload={upload} />
       </Form.Item>
       <Controller
         control={control}
@@ -1633,6 +1663,8 @@ function PreviewStep({ options }: { options: PublishingOptions }) {
 export function createWizardSteps(
   options: PublishingOptions,
   applicationId: string,
+  upload: WizardUploadFn = (kind, file) =>
+    uploadAsset(applicationId, kind, file),
 ): WizardStepConfig[] {
   return [
     {
@@ -1654,7 +1686,11 @@ export function createWizardSteps(
         "changelog",
       ],
       render: () => (
-        <BasicInfoStep options={options} applicationId={applicationId} />
+        <BasicInfoStep
+          options={options}
+          applicationId={applicationId}
+          upload={upload}
+        />
       ),
     },
     {
