@@ -576,7 +576,6 @@ export function AudienceField({ options }: { options: PublishingOptions }) {
               <Select
                 aria-label="指定部门"
                 mode="multiple"
-                placeholder="选择部门（可多选）"
                 value={selection.departmentIds}
                 onChange={(value: string[]) =>
                   commit({ ...selection, departmentIds: value })
@@ -585,6 +584,7 @@ export function AudienceField({ options }: { options: PublishingOptions }) {
                   options.departments as { value: string; label: string }[]
                 }
                 style={{ width: 480 }}
+                placeholder="请选择部门（可多选）"
               />
               <Checkbox
                 checked={selection.includeChildren}
@@ -1186,7 +1186,7 @@ function DeliveryTargetsField({
         >
           <Input
             aria-label="Web 入口地址"
-            placeholder="https://apps.internal.example.com/xxx"
+            placeholder="https://192.168.1.1:443/path"
             value={itemOf("web")?.entryUrl ?? ""}
             onChange={(event) =>
               patchItem("web", { entryUrl: event.target.value })
@@ -1320,7 +1320,6 @@ function BasicInfoStep({
             <Select
               {...field}
               aria-label="归属部门"
-              placeholder="选择部门"
               options={
                 options.departments as { value: string; label: string }[]
               }
@@ -1339,6 +1338,7 @@ function BasicInfoStep({
                 field.onChange(value);
               }}
               style={CONTROL_STYLE}
+              placeholder="请选择部门"
             />
           </Form.Item>
         )}
@@ -1442,9 +1442,7 @@ function BasicInfoStep({
       <Form.Item label="应用截图（1–6 张）" required>
         <ScreenshotField applicationId={applicationId} upload={upload} />
       </Form.Item>
-      <Form.Item label="附件（使用手册 / 部署指南等，可选）">
-        <AttachmentField applicationId={applicationId} upload={upload} />
-      </Form.Item>
+      
       <Controller
         control={control}
         name="version"
@@ -1478,6 +1476,9 @@ function BasicInfoStep({
           </Form.Item>
         )}
       />
+      <Form.Item label="附件（使用手册 / 部署指南等，可选）">
+        <AttachmentField applicationId={applicationId} upload={upload} />
+      </Form.Item>
     </Form>
   );
 }

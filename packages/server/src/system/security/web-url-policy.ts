@@ -6,6 +6,10 @@ import { isIP } from "node:net";
  *
  * 与 `assertPublicHttpTarget`（拒绝私网目标的公网校验）相反，本策略面向
  * **内网**目标：仅当协议、端口、主机名与 DNS 解析地址全部命中白名单时放行。
+ * 正确示例：
+ * - `https://example.com/`（主机名精确匹配）
+ * - `http://sub.corp.example.com:8080/path`（主机名后缀匹配，端口显式允许）
+ * - `https://192.168.1.1:443/path`（IP 地址直接匹配，端口显式允许）
  * 违规抛出的错误码：
  * - `WEB_URL_INVALID` / `WEB_URL_CREDENTIALS_FORBIDDEN`
  * - `WEB_URL_PROTOCOL_NOT_ALLOWED` / `WEB_URL_PORT_NOT_ALLOWED`

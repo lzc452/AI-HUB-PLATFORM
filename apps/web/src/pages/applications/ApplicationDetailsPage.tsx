@@ -1,4 +1,4 @@
-import { Button, Empty, Spin, Tag, Tooltip, Typography } from "antd";
+import { Button, Empty, Spin, Tag, Tooltip, Typography, Image } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
@@ -151,7 +151,7 @@ export default function ApplicationDetailsPage() {
             </div>
           </section>
           <section className="border-b border-[#edf0f5] px-6 py-3">
-            <h3 className="mb-2 text-[16px] font-semibold text-[#1f2937]">
+            <h3 className="!mb-2 text-[16px] font-semibold text-[#1f2937]">
               截图预览
             </h3>
             {screenshots.length > 0 ? (
@@ -449,18 +449,18 @@ function AssetPreview({
   const { objectUrl } = useAssetImage(applicationId, asset.assetId);
   if (objectUrl !== null && asset.mimeType.startsWith("image/")) {
     return (
-      <div className="flex min-h-[72px] items-center gap-3 rounded-md border border-[#d8e0eb] bg-[#f8fbff] p-3">
-        <img
+      <div className="flex items-center gap-2 rounded-md border border-[#d8e0eb] bg-[#f8fbff] p-1">
+        {/* <img
           alt={asset.name}
-          className="h-20 w-20 rounded-md border border-[#d8e0eb] object-cover"
+          className="hrounded-md border border-[#d8e0eb] object-cover"
           src={objectUrl}
+          style={{ width: "100%", height: "100%" }}
+        /> */}
+        <Image
+          alt={asset.name}
+          src={objectUrl}
+          style={{ width: "100%", height: "100%" }}
         />
-        <div className="min-w-0">
-          <div className="truncate text-sm text-[#374151]">{asset.name}</div>
-          <div className="text-xs text-[#8a94a6]">
-            {asset.mimeType} · {formatBytes(asset.sizeBytes)}
-          </div>
-        </div>
       </div>
     );
   }

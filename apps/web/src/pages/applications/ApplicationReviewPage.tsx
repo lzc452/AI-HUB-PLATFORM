@@ -170,7 +170,7 @@ export default function ApplicationReviewPage() {
               version={data.version}
               versionId={versionId}
             />
-            <ValidationCard checks={data.checks} />
+            
             <ReviewActionCard
               canDecide={
                 data.reviewQueue?.claimedByEmployeeId === actor?.employeeId &&
@@ -185,6 +185,7 @@ export default function ApplicationReviewPage() {
                 remove={removePendingCatalogItem}
               />
             ) : null}
+            { data.checks.length ? <ValidationCard checks={data.checks} /> : null }
           </aside>
           <main className="space-y-3 flex flex-col gap-3">
             <PreviewCard
@@ -239,7 +240,7 @@ function TaskInfoCard({
   return (
     <Card
       className="app-admin-card"
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">审核任务信息</span>}
     >
       <div className="space-y-3 text-[13px]">
@@ -414,7 +415,7 @@ function ValidationCard({ checks }: { checks: Check[] }) {
   return (
     <Card
       className="app-admin-card"
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">自动校验报告</span>}
     >
       <div className="space-y-3">
@@ -457,32 +458,32 @@ function ReviewActionCard({
   return (
     <Card
       className="app-admin-card"
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">审核操作</span>}
     >
-      {!canDecide && versionId ? (
+      {/* {!canDecide && versionId ? (
         <div className="mb-3 rounded-md bg-[#fff7e6] px-3 py-2 text-[12px] text-[#ad6800]">
           请先在任务信息中领取该审核任务，再进行通过/驳回操作。
         </div>
-      ) : null}
+      ) : null} */}
       <label
         className="text-[13px] font-medium text-[#374151]"
         htmlFor="reject-reason"
       >
-        <span className="text-[#f04444]">*</span> 驳回原因
+        <span className="text-[#f04444]">*</span> 审核意见
       </label>
       <TextArea
         id="reject-reason"
-        aria-label="驳回原因"
+        aria-label="审核意见"
         className="mt-2"
         disabled={!versionId}
         maxLength={500}
         onChange={(event) => setReason(event.target.value)}
-        placeholder="请输入驳回原因（必填）"
+        placeholder="请输入审核意见（驳回必填）"
         showCount
         rows={4}
       />
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-5 grid grid-cols-2 gap-2">
         <Button
           disabled={!versionId || !canDecide}
           loading={reviewAction.isPending}
@@ -521,9 +522,9 @@ function ReviewActionCard({
           驳回
         </Button>
       </div>
-      <div className="mt-3 text-[11px] text-[#8a94a6]">
+      {/* <div className="mt-3 text-[11px] text-[#8a94a6]">
         <InfoCircleOutlined /> 提示：不可审核自己参与的应用，请按流程完成审核。
-      </div>
+      </div> */}
     </Card>
   );
 }
@@ -538,7 +539,7 @@ function PendingCatalogCard({
   return (
     <Card
       className="app-admin-card"
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">自定义分类/标签</span>}
     >
       <div className="space-y-3">
@@ -735,7 +736,7 @@ function PreviewOverview({
           </dl>
         </section>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+      {/* <div className="grid gap-3 md:grid-cols-2">
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-3 font-semibold">截图预览</h4>
           {screenshots.length > 0 ? (
@@ -809,7 +810,7 @@ function PreviewOverview({
             ) : null}
           </div>
         </section>
-      </div>
+      </div> */}
       <Text type="secondary">
         提交版本：{version?.version ?? "未提供"} - 当前状态：{status.text}
       </Text>
@@ -854,7 +855,7 @@ function ReviewHistoryCard({ reviews }: { reviews: ReviewRecord[] }) {
   return (
     <Card
       className="app-admin-card"
-      styles={{ body: { padding: 20 } }}
+      styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">审核意见记录</span>}
     >
       {reviews.length === 0 ? (
