@@ -87,7 +87,10 @@ export const UPLOAD_KIND_POLICIES: Readonly<
     allowedExtensions: ["exe", "msi", "dmg", "pkg", "apk", "zip", "tar", "gz"],
     allowedMimeTypes: [],
     svgAllowed: false,
-    createsAsset: false,
+    // 创建应用向导上传安装包后经 complete 创建资产行（资产类型 artifact），
+    // 提交时由 persistDraftDeliveries 关联到交付渠道供目录下载。
+    createsAsset: true,
+    assetType: "artifact",
   },
 };
 

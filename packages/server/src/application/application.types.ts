@@ -124,7 +124,13 @@ export interface ArtifactUploadRecord {
   createdAt: Date;
 }
 
-export type AssetType = "icon" | "screenshot" | "cover" | "attachment" | "qr";
+export type AssetType =
+  | "icon"
+  | "screenshot"
+  | "cover"
+  | "attachment"
+  | "qr"
+  | "artifact";
 
 export interface AssetRecord {
   assetId: string;

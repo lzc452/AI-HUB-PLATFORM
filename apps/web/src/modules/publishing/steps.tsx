@@ -11,7 +11,9 @@ import {
   Modal,
   Radio,
   Select,
+  Space,
   Switch,
+  Tag,
   Typography,
   Upload,
 } from "antd";
@@ -740,11 +742,15 @@ export function FaqField() {
 function TargetSelectEditor({
   channel,
   item,
+  commitAssetIds,
   commitTargets,
+  upload,
 }: {
   channel: "desktop" | "mobile";
   item: DeliveryDraftItem | undefined;
+  commitAssetIds: (channel: "desktop" | "mobile", assetIds: string[]) => void;
   commitTargets: (channel: "desktop" | "mobile", targets: TargetLike[]) => void;
+  upload: WizardUploadFn;
 }) {
   const isDesktop = channel === "desktop";
   const options = isDesktop ? DESKTOP_OS_OPTIONS : MOBILE_PLATFORM_OPTIONS;
@@ -755,41 +761,95 @@ function TargetSelectEditor({
     const value = isDesktop ? target.os : target.platform;
     return value === undefined ? [] : [value];
   });
+  const assetIds = Array.isArray(item?.assetIds) ? item.assetIds : [];
+  const handleInstallerUpload = (file: File) => {
+    void upload("artifact", file)
+      .then((asset) => {
+        commitAssetIds(channel, [...assetIds, asset.assetId]);
+        message.success("安装包已上传");
+      })
+      .catch((error: unknown) => {
+        message.error(
+          `安装包上传失败：${
+            error instanceof Error ? error.message : "上传服务或存储配置异常"
+          }`,
+        );
+      });
+  };
   return (
-    <Form.Item
-      label={isDesktop ? "目标系统（桌面端渠道）" : "目标平台（移动端渠道）"}
-      required
-      help="必填：至少选择一个目标系统/平台，作为下载安装元数据"
-    >
-      <Select
-        aria-label={isDesktop ? "目标系统" : "目标平台"}
-        mode="multiple"
-        placeholder={
-          isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
+    <>
+      <Form.Item
+        label={isDesktop ? "目标系统（桌面端渠道）" : "目标平台（移动端渠道）"}
+        required
+        help="必填：至少选择一个目标系统/平台，作为下载安装元数据"
+      >
+        <Select
+          aria-label={isDesktop ? "目标系统" : "目标平台"}
+          mode="multiple"
+          placeholder={
+            isDesktop ? "选择目标系统（可多选）" : "选择目标平台（可多选）"
+          }
+          options={options}
+          value={selected}
+          onChange={(values: string[]) =>
+            commitTargets(
+              channel,
+              values.map((value) =>
+                isDesktop
+                  ? {
+                      kind: "desktop" as const,
+                      os: value as "windows" | "macos",
+                      arch: null,
+                    }
+                  : {
+                      kind: "mobile" as const,
+                      platform: value as "android" | "ios",
+                      arch: null,
+                    },
+              ),
+            )
+          }
+          style={CONTROL_STYLE}
+        />
+      </Form.Item>
+      <Form.Item
+        label="安装包（可选，发布后目录渠道可下载）"
+        help={
+          assetIds.length > 0
+            ? `已上传 ${assetIds.length} 个安装包`
+            : "支持 exe / msi / dmg / pkg / apk / zip / tar / gz"
         }
-        options={options}
-        value={selected}
-        onChange={(values: string[]) =>
-          commitTargets(
-            channel,
-            values.map((value) =>
-              isDesktop
-                ? {
-                    kind: "desktop" as const,
-                    os: value as "windows" | "macos",
-                    arch: null,
-                  }
-                : {
-                    kind: "mobile" as const,
-                    platform: value as "android" | "ios",
-                    arch: null,
-                  },
-            ),
-          )
-        }
-        style={CONTROL_STYLE}
-      />
-    </Form.Item>
+      >
+        <Space wrap>
+          <Upload
+            maxCount={1}
+            showUploadList={false}
+            beforeUpload={(file) => {
+              handleInstallerUpload(file as File);
+              return false;
+            }}
+          >
+            <Button icon={<UploadOutlined />}>上传安装包</Button>
+          </Upload>
+          {assetIds.map((assetId) => (
+            <Tag
+              className="!mr-0"
+              closable
+              key={assetId}
+              onClose={(event) => {
+                event.preventDefault();
+                commitAssetIds(
+                  channel,
+                  assetIds.filter((id) => id !== assetId),
+                );
+              }}
+            >
+              安装包 #{assetIds.indexOf(assetId) + 1}
+            </Tag>
+          ))}
+        </Space>
+      </Form.Item>
+    </>
   );
 }
 
@@ -1139,14 +1199,22 @@ function DeliveryTargetsField({
         <TargetSelectEditor
           channel="desktop"
           item={itemOf("desktop")}
+          commitAssetIds={(targetChannel, assetIds) =>
+            patchItem(targetChannel, { assetIds })
+          }
           commitTargets={commitTargets}
+          upload={upload}
         />
       )}
       {channels.includes("mobile") && (
         <TargetSelectEditor
           channel="mobile"
           item={itemOf("mobile")}
+          commitAssetIds={(targetChannel, assetIds) =>
+            patchItem(targetChannel, { assetIds })
+          }
           commitTargets={commitTargets}
+          upload={upload}
         />
       )}
       {channels.includes("mini_program") && (

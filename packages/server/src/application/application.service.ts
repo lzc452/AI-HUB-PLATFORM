@@ -1290,6 +1290,15 @@ export class ApplicationService {
       if (item.targets && item.targets.length > 0) {
         await repository.saveDeliveryTargets(delivery.deliveryId, item.targets);
       }
+      // 向导上传的安装包（assetIds）挂接到对应交付渠道，供目录下载。
+      for (const [index, assetId] of (item.assetIds ?? []).entries()) {
+        await repository.linkDeliveryAsset({
+          applicationId,
+          channel: item.channel,
+          assetId,
+          sortOrder: index,
+        });
+      }
     }
     await repository.deleteDeliveriesExcept(
       applicationId,

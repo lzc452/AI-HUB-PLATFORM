@@ -2892,6 +2892,44 @@ describe("ApplicationService", () => {
     });
   });
 
+  it("submitDraft：草稿渠道 assetIds 挂接到交付渠道（安装包下载）", async () => {
+    const { service, repository } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "",
+      summary: "",
+    });
+    await service.saveDraft(owner, application.applicationId, {
+      ...completeDraft(),
+      deliveries: [
+        {
+          channel: "desktop",
+          entryUrl: null,
+          minClientVersion: null,
+          enabled: true,
+          assetIds: ["asset-1", "asset-2"],
+          targets: [{ kind: "desktop", os: "windows", arch: "x64" }],
+        },
+      ],
+    });
+
+    await service.submitDraft(owner, application.applicationId);
+
+    expect(repository.deliveryAssets).toEqual([
+      expect.objectContaining({
+        applicationId: application.applicationId,
+        assetId: "asset-1",
+        channel: "desktop",
+        sortOrder: 0,
+      }),
+      expect.objectContaining({
+        applicationId: application.applicationId,
+        assetId: "asset-2",
+        channel: "desktop",
+        sortOrder: 1,
+      }),
+    ]);
+  });
+
   it("submitDraft：草稿移除渠道后重提交 → 旧渠道行被删除（级联 targets）", async () => {
     const { service, repository } = makeService();
     const application = await service.createApplication(owner, {
