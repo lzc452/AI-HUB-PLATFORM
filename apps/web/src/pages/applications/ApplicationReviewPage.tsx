@@ -134,7 +134,7 @@ export default function ApplicationReviewPage() {
       />
       {!pending && !hasError ? (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="space-y-3">
+          <aside className="space-y-3 flex flex-col gap-3">
             <TaskInfoCard
               actorEmployeeId={actor?.employeeId}
               app={data.app}
@@ -146,6 +146,10 @@ export default function ApplicationReviewPage() {
             />
             <ValidationCard checks={data.checks} />
             <ReviewActionCard
+              canDecide={
+                data.reviewQueue?.claimedByEmployeeId === actor?.employeeId &&
+                data.reviewQueue?.status === "claimed"
+              }
               reviewAction={reviewAction}
               versionId={versionId}
             />
@@ -156,7 +160,7 @@ export default function ApplicationReviewPage() {
               />
             ) : null}
           </aside>
-          <main className="space-y-3">
+          <main className="space-y-3 flex flex-col gap-3">
             <PreviewCard
               app={data.app}
               checks={data.checks}
@@ -319,9 +323,12 @@ function ValidationCard({ checks }: { checks: Check[] }) {
 }
 
 function ReviewActionCard({
+  canDecide,
   reviewAction,
   versionId,
 }: {
+  /** 当前审核员是否已认领该任务（未认领时禁用操作，避免 REVIEW_QUEUE_CLAIM_REQUIRED 400）。 */
+  canDecide: boolean;
   reviewAction: ReturnType<typeof useReviewApplicationVersion>;
   versionId: string | undefined;
 }) {
@@ -332,6 +339,11 @@ function ReviewActionCard({
       styles={{ body: { padding: 16 } }}
       title={<span className="font-semibold">审核操作</span>}
     >
+      {!canDecide && versionId ? (
+        <div className="mb-3 rounded-md bg-[#fff7e6] px-3 py-2 text-[12px] text-[#ad6800]">
+          请先在任务信息中领取该审核任务，再进行通过/驳回操作。
+        </div>
+      ) : null}
       <label
         className="text-[13px] font-medium text-[#374151]"
         htmlFor="reject-reason"
@@ -351,14 +363,15 @@ function ReviewActionCard({
       />
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Button
-          disabled={!versionId}
+          disabled={!versionId || !canDecide}
           loading={reviewAction.isPending}
           type="primary"
           onClick={() => {
-            if (versionId) {
+            if (versionId && canDecide) {
               reviewAction.mutate({
                 applicationVersionId: versionId,
-                comment: "",
+                // 后端 ReviewRequestDto.comment 必填（批准也要求非空）。
+                comment: "审核通过",
                 decision: "approve",
               });
             }
@@ -369,10 +382,10 @@ function ReviewActionCard({
         <Button
           aria-label="驳回"
           danger
-          disabled={!versionId}
+          disabled={!versionId || !canDecide}
           loading={reviewAction.isPending}
           onClick={() => {
-            if (!versionId) return;
+            if (!versionId || !canDecide) return;
             if (!reason.trim()) {
               showWarningMessage("请输入驳回原因");
               return;
@@ -493,7 +506,8 @@ function PreviewOverview({
   return (
     <div className="space-y-5 p-5">
       <div className="flex items-start gap-4">
-        <OcrApplicationIcon className="h-20 w-20" />
+        {/* <OcrApplicationIcon className="h-20 w-20" /> */}
+        
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="m-0 text-[20px] font-semibold">

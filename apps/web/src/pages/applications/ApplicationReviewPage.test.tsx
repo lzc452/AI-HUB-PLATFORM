@@ -234,19 +234,45 @@ describe("ApplicationReviewPage", () => {
     expect(screen.queryByText("审核任务信息")).not.toBeInTheDocument();
   });
 
+  it("未认领任务时禁用通过/驳回并提示先领取", () => {
+    // 默认 mockReviewQueue 未认领（claimedByEmployeeId: null）
+    renderPage();
+
+    expect(screen.getByText("请先在任务信息中领取该审核任务，再进行通过/驳回操作。")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "通过审核" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "驳回" })).toBeDisabled();
+  });
+
   it("submits an approve decision through the review mutation", () => {
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: {
+        ...hoisted.mockReviewQueue,
+        claimedByEmployeeId: "李小龙",
+        status: "claimed",
+      },
+    });
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "通过审核" }));
 
+    // 后端 ReviewRequestDto.comment 必填（批准也要求非空），前端补默认意见。
     expect(hoisted.reviewMutate).toHaveBeenCalledWith({
       applicationVersionId: "ver-1",
-      comment: "",
+      comment: "审核通过",
       decision: "approve",
     });
   });
 
   it("warns and blocks rejection when the reason is empty", () => {
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: {
+        ...hoisted.mockReviewQueue,
+        claimedByEmployeeId: "李小龙",
+        status: "claimed",
+      },
+    });
     renderPage();
 
     fireEvent.click(screen.getByRole("button", { name: "驳回" }));
@@ -258,6 +284,14 @@ describe("ApplicationReviewPage", () => {
   });
 
   it("submits a rejection decision with the provided reason", () => {
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: {
+        ...hoisted.mockReviewQueue,
+        claimedByEmployeeId: "李小龙",
+        status: "claimed",
+      },
+    });
     renderPage();
 
     fireEvent.change(screen.getByLabelText("驳回原因"), {
