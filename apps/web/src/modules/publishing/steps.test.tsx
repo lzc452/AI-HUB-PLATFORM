@@ -14,6 +14,25 @@ const { membersByDepartment } = vi.hoisted(() => ({
   membersByDepartment: new Map<string, EmployeeSummary[]>(),
 }));
 
+const { deleteAssetMock, listAssetsMock, uploadAssetMock } = vi.hoisted(
+  () => ({
+    deleteAssetMock: vi.fn(async () => undefined),
+    listAssetsMock: vi.fn(async () => []),
+    uploadAssetMock: vi.fn(async () => ({ assetId: "asset-1" })),
+  }),
+);
+
+vi.mock("./publishing.client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("./publishing.client")>();
+  return {
+    ...actual,
+    deleteAsset: deleteAssetMock,
+    listAssets: listAssetsMock,
+    uploadAsset: uploadAssetMock,
+  };
+});
+
 vi.mock("../auth/useIdentity", () => ({
   useDepartmentMembers: (departmentId?: string) => ({
     data:
@@ -719,5 +738,58 @@ describe("BasicInfoStep（自定义分类/标签输入）", () => {
       "效率工具",
       "效率",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 附件上传字段
+// ---------------------------------------------------------------------------
+
+function BasicStepHarness({ defaultValues }: { defaultValues: FieldValues }) {
+  const form = useForm<FieldValues>({ defaultValues, mode: "onChange" });
+  const steps = createWizardSteps(OPTIONS, "app-1");
+  return <FormProvider {...form}>{steps[0]!.render(form)}</FormProvider>;
+}
+
+describe("附件上传字段", () => {
+  it("渲染附件上传入口", () => {
+    render(
+      <BasicStepHarness
+        defaultValues={{ ...applicationDraftDefaults }}
+      />,
+    );
+    expect(screen.getByText("上传附件")).toBeInTheDocument();
+  });
+
+  it("编辑模式按草稿附件 id 回显文件名", async () => {
+    listAssetsMock.mockResolvedValueOnce([
+      {
+        applicationId: "app-1",
+        applicationVersionId: null,
+        assetId: "a1",
+        assetType: "attachment",
+        createdAt: "2026-08-21T00:00:00.000Z",
+        mimeType: "application/pdf",
+        name: "使用手册.pdf",
+        scanStatus: "passed",
+        sha256: null,
+        sizeBytes: 1024,
+        sortOrder: 0,
+        storageKey: "apps/app-1/attachments/a1.pdf",
+        uploadedByEmployeeId: null,
+      },
+    ]);
+    render(
+      <BasicStepHarness
+        defaultValues={{
+          ...applicationDraftDefaults,
+          attachmentAssetIds: ["a1"],
+        }}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByText("使用手册.pdf")).toBeInTheDocument(),
+    );
+    expect(listAssetsMock).toHaveBeenCalledWith("app-1");
   });
 });

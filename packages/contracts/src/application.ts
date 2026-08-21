@@ -141,6 +141,8 @@ export interface ApplicationDraft {
   customTagNames?: string[];
   icon: ApplicationIcon;
   screenshotAssetIds: string[];
+  /** 附件资产 ID 列表（使用手册/部署指南等，kind=attachment）。 */
+  attachmentAssetIds?: string[];
   summaryHtml: string;
   manualHtml: string | null;
   manualAssetId: string | null;

@@ -182,6 +182,7 @@ const applicationDraftShape = z.object({
     .array(z.string())
     .min(1, "至少上传 1 张截图")
     .max(6, "截图最多 6 张"),
+  attachmentAssetIds: z.array(z.string()).max(10, "附件最多 10 个").optional(),
   summaryHtml: z.string().min(1, "简介不能为空"),
   manualHtml: z.string().nullable().optional(),
   manualAssetId: z.string().nullable().optional(),
@@ -253,6 +254,10 @@ export const applicationDraftSchema = z
       .array(z.string())
       .min(1, "至少上传 1 张截图")
       .max(6, "截图最多 6 张"),
+    attachmentAssetIds: z
+      .array(z.string())
+      .max(10, "附件最多 10 个")
+      .optional(),
     summaryHtml: z.string().min(1, "简介不能为空"),
     manualHtml: z.string().nullable().optional(),
     manualAssetId: z.string().nullable().optional(),
@@ -349,6 +354,7 @@ export const applicationDraftDefaults: ApplicationDraftFormValues = {
   tagIds: [],
   icon: { mode: "auto", backgroundColor: "#185FA5", text: "", assetId: null },
   screenshotAssetIds: [],
+  attachmentAssetIds: [],
   summaryHtml: "",
   manualHtml: "",
   manualAssetId: null,

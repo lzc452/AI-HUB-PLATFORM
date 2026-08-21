@@ -42,7 +42,7 @@ import {
   deriveApplicationTypeFromChannels,
   deriveDeliveriesFromChannels,
 } from "./schema";
-import { deleteAsset, uploadAsset } from "./publishing.client";
+import { deleteAsset, listAssets, uploadAsset } from "./publishing.client";
 
 const { Text } = Typography;
 
@@ -941,6 +941,125 @@ function MiniProgramTargetEditor({
   );
 }
 
+interface AttachmentFile {
+  assetId: string;
+  name: string;
+}
+
+/** 附件上传（使用手册/部署指南等，kind=attachment）：多文件、可删除、编辑模式回显文件名。 */
+function AttachmentField({
+  applicationId,
+  upload,
+}: {
+  applicationId: string;
+  upload: WizardUploadFn;
+}) {
+  const { control, setValue, trigger } = useFormContext<FieldValues>();
+  const watchedIds = useWatch({ control, name: "attachmentAssetIds" }) as
+    | string[]
+    | undefined;
+  const watchedKey = Array.isArray(watchedIds) ? watchedIds.join(",") : "";
+  const filesRef = useRef<AttachmentFile[]>([]);
+  const [files, setFiles] = useState<AttachmentFile[]>([]);
+
+  const sync = (next: AttachmentFile[]) => {
+    filesRef.current = next;
+    setFiles(next);
+    setValue(
+      "attachmentAssetIds",
+      next.map((file) => file.assetId),
+      { shouldDirty: true, shouldValidate: true },
+    );
+    void trigger("attachmentAssetIds");
+  };
+
+  // 编辑模式回显：按草稿附件资产 id 拉取元数据补文件名。
+  useEffect(() => {
+    if (
+      !applicationId ||
+      !Array.isArray(watchedIds) ||
+      watchedIds.length === 0
+    ) {
+      return;
+    }
+    const existing = new Set(filesRef.current.map((file) => file.assetId));
+    const missing = watchedIds.filter(
+      (assetId) =>
+        typeof assetId === "string" &&
+        assetId.length > 0 &&
+        !existing.has(assetId),
+    );
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void listAssets(applicationId)
+      .then((assets) => {
+        if (cancelled) return;
+        const added = missing
+          .map((assetId) => assets.find((asset) => asset.assetId === assetId))
+          .filter((asset) => asset !== undefined)
+          .map((asset) => ({ assetId: asset.assetId, name: asset.name }));
+        sync([...filesRef.current, ...added]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId, watchedKey]);
+
+  return (
+    <Controller
+      control={control}
+      name="attachmentAssetIds"
+      render={({ fieldState }) => (
+        <div>
+          <Upload
+            fileList={files.map((file) => ({
+              name: file.name,
+              status: "done" as const,
+              uid: file.assetId,
+            }))}
+            multiple
+            beforeUpload={(file) => {
+              void upload("attachment", file as File)
+                .then((asset) => {
+                  sync([
+                    ...filesRef.current,
+                    { assetId: asset.assetId, name: (file as File).name },
+                  ]);
+                })
+                .catch((error: unknown) => {
+                  message.error(
+                    `附件上传失败：${
+                      error instanceof Error
+                        ? error.message
+                        : "上传服务或存储配置异常"
+                    }`,
+                  );
+                });
+              return false;
+            }}
+            onRemove={(file) => {
+              const assetId = file.uid;
+              sync(filesRef.current.filter((f) => f.assetId !== assetId));
+              if (applicationId && assetId) {
+                void deleteAsset(applicationId, assetId).catch(() => {});
+              }
+              return true;
+            }}
+          >
+            <Button icon={<UploadOutlined />}>上传附件</Button>
+          </Upload>
+          {fieldState.error !== undefined && (
+            <div style={{ color: "#ff4d4f", fontSize: 12, marginTop: 4 }}>
+              {fieldState.error.message}
+            </div>
+          )}
+        </div>
+      )}
+    />
+  );
+}
+
 /**
  * 交付配置（多选渠道的逐渠道必填字段）：
  * - web 渠道：入口地址（必填）
@@ -1254,6 +1373,9 @@ function BasicInfoStep({
       </Form.Item>
       <Form.Item label="应用截图（1–6 张）" required>
         <ScreenshotField applicationId={applicationId} upload={upload} />
+      </Form.Item>
+      <Form.Item label="附件（使用手册 / 部署指南等，可选）">
+        <AttachmentField applicationId={applicationId} upload={upload} />
       </Form.Item>
       <Controller
         control={control}
@@ -1681,6 +1803,7 @@ export function createWizardSteps(
         "icon.mode",
         "icon.assetId",
         "screenshotAssetIds",
+        "attachmentAssetIds",
         "deliveries",
         "version",
         "changelog",
