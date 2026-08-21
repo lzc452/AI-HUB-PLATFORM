@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -95,6 +96,11 @@ const hoisted = vi.hoisted(() => {
     useValidationChecks: vi.fn((): Query => ({ ...settled, data: [] })),
     useClaimReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
     useReleaseReview: vi.fn(() => ({ isPending: false, mutate: vi.fn() })),
+    useTransferReviewTask: vi.fn(() => ({
+      isPending: false,
+      mutate: hoisted.transferMutate,
+    })),
+    transferMutate: vi.fn(),
     useReviewApplicationVersion: vi.fn(() => ({
       isPending: false,
       mutate: hoisted.reviewMutate,
@@ -107,7 +113,7 @@ const hoisted = vi.hoisted(() => {
     deletePendingCatalogItem: vi.fn(),
     reviewMutate: vi.fn(),
     useAuth: vi.fn(() => ({
-      actor: { employeeId: "李小龙" },
+      actor: { employeeId: "李小龙", permissions: [] as string[] },
       canAccess: () => true,
     })),
   };
@@ -130,6 +136,7 @@ vi.mock("../../modules/application/useApplication", () => ({
   useValidationChecks: hoisted.useValidationChecks,
   useClaimReview: hoisted.useClaimReview,
   useReleaseReview: hoisted.useReleaseReview,
+  useTransferReviewTask: hoisted.useTransferReviewTask,
   useReviewApplicationVersion: hoisted.useReviewApplicationVersion,
   usePendingCatalogItems: hoisted.usePendingCatalogItems,
   useDeletePendingCatalogItem: hoisted.useDeletePendingCatalogItem,
@@ -139,6 +146,50 @@ const messageMocks = vi.hoisted(() => ({
   showSuccessMessage: vi.fn(),
   showWarningMessage: vi.fn(),
 }));
+
+const { listAssetsMock } = vi.hoisted(() => ({
+  listAssetsMock: vi.fn(
+    async (): Promise<
+      import("../../modules/application/application.client").AssetRecord[]
+    > => [],
+  ),
+}));
+
+vi.mock("../../modules/auth/useIdentity", () => ({
+  useDepartments: () => ({
+    data: [{ departmentId: "dept-rnd", name: "研发部" }],
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
+  useDepartmentMembers: () => ({
+    data: [
+      {
+        departmentId: "dept-rnd",
+        displayName: "王五",
+        employeeId: "E300",
+        status: "active",
+      },
+    ],
+    error: null,
+    isError: false,
+    isPending: false,
+  }),
+}));
+
+vi.mock(
+  "../../modules/application/application.client",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("../../modules/application/application.client")
+      >();
+    return {
+      ...actual,
+      listAssets: listAssetsMock,
+    };
+  },
+);
 
 vi.mock("../../shared/ui/message", async (importOriginal) => {
   const actual =
@@ -151,15 +202,20 @@ vi.mock("../../shared/ui/message", async (importOriginal) => {
 });
 
 function renderPage() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter initialEntries={["/applications/app-001/review"]}>
-      <Routes>
-        <Route
-          element={<ApplicationReviewPage />}
-          path="/applications/:applicationId/review"
-        />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/applications/app-001/review"]}>
+        <Routes>
+          <Route
+            element={<ApplicationReviewPage />}
+            path="/applications/:applicationId/review"
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -191,8 +247,14 @@ describe("ApplicationReviewPage", () => {
     });
     hoisted.deletePendingCatalogItem.mockClear();
     hoisted.reviewMutate.mockClear();
+    hoisted.transferMutate.mockClear();
     messageMocks.showSuccessMessage.mockClear();
     messageMocks.showWarningMessage.mockClear();
+    // 防止前序用例修改的 actor 状态泄漏（领取/转交状态机依赖 actor）。
+    hoisted.useAuth.mockReturnValue({
+      actor: { employeeId: "李小龙", permissions: [] as string[] },
+      canAccess: () => true,
+    });
   });
 
   it("renders the workbench heading and all section cards", () => {
@@ -238,7 +300,9 @@ describe("ApplicationReviewPage", () => {
     // 默认 mockReviewQueue 未认领（claimedByEmployeeId: null）
     renderPage();
 
-    expect(screen.getByText("请先在任务信息中领取该审核任务，再进行通过/驳回操作。")).toBeInTheDocument();
+    expect(
+      screen.getByText("请先在任务信息中领取该审核任务，再进行通过/驳回操作。"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "通过审核" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "驳回" })).toBeDisabled();
   });
@@ -308,7 +372,7 @@ describe("ApplicationReviewPage", () => {
 
   it("禁止审核自己提交的应用：所有者视角领取按钮禁用", () => {
     hoisted.useAuth.mockReturnValue({
-      actor: { employeeId: "李小龙" },
+      actor: { employeeId: "李小龙", permissions: [] as string[] },
       canAccess: () => true,
     });
     renderPage();
@@ -318,7 +382,7 @@ describe("ApplicationReviewPage", () => {
 
   it("他人提交的应用允许领取任务", () => {
     hoisted.useAuth.mockReturnValue({
-      actor: { employeeId: "E900" },
+      actor: { employeeId: "E900", permissions: [] as string[] },
       canAccess: () => true,
     });
     renderPage();
@@ -362,5 +426,120 @@ describe("ApplicationReviewPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
 
     expect(hoisted.deletePendingCatalogItem).toHaveBeenCalledWith("pc-1");
+  });
+});
+
+describe("审核任务信息按钮状态机", () => {
+  it("未领取时只显示领取按钮", () => {
+    // 默认 mockReviewQueue 未领取
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: "领取任务" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "释放任务" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "转交任务" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("已由我领取后隐藏领取按钮，显示释放；无 APPLICATION_MANAGE 权限不显示转交", () => {
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: {
+        ...hoisted.mockReviewQueue,
+        claimedByEmployeeId: "李小龙",
+        status: "claimed",
+      },
+    });
+    renderPage();
+
+    expect(
+      screen.queryByRole("button", { name: "领取任务" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "释放任务" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "转交任务" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("有 APPLICATION_MANAGE 权限时领取后显示转交按钮，弹窗确认后调用转交 mutation", async () => {
+    hoisted.useAuth.mockReturnValue({
+      actor: {
+        employeeId: "李小龙",
+        permissions: ["application.manage"],
+      },
+      canAccess: () => true,
+    });
+    hoisted.useReviewQueue.mockReturnValue({
+      ...hoisted.settled,
+      data: {
+        ...hoisted.mockReviewQueue,
+        claimedByEmployeeId: "李小龙",
+        status: "claimed",
+      },
+    });
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: "转交任务" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "转交任务" }));
+
+    // 弹窗选择部门 → 接收人 → 确认转交
+    fireEvent.mouseDown(screen.getByLabelText("选择部门"));
+    fireEvent.click(
+      await screen
+        .findByText("研发部", undefined, { timeout: 2000 })
+        .catch(() => {
+          throw new Error("部门选项未出现");
+        }),
+    );
+    fireEvent.mouseDown(screen.getByLabelText("选择接收人"));
+    fireEvent.click(await screen.findByText("王五"));
+    fireEvent.click(screen.getByRole("button", { name: "确认转交" }));
+
+    expect(hoisted.transferMutate).toHaveBeenCalledWith({
+      applicationVersionId: "ver-1",
+      claimedByEmployeeId: "E300",
+    });
+  });
+
+  it("预览详情展示截图与附件资产并可下载", async () => {
+    listAssetsMock.mockResolvedValueOnce([
+      {
+        assetId: "shot-1",
+        assetType: "screenshot",
+        createdAt: "2026-08-01T10:20:00+08:00",
+        mimeType: "image/png",
+        name: "截图1.png",
+        scanStatus: "passed",
+        sha256: null,
+        sizeBytes: 1024,
+        storageKey: "apps/app-001/screenshots/shot-1.png",
+      },
+      {
+        assetId: "att-1",
+        assetType: "attachment",
+        createdAt: "2026-08-01T10:20:00+08:00",
+        mimeType: "application/pdf",
+        name: "使用手册.pdf",
+        scanStatus: "passed",
+        sha256: null,
+        sizeBytes: 2048,
+        storageKey: "apps/app-001/attachments/att-1.pdf",
+      },
+    ]);
+    renderPage();
+
+    // 附件名称展示 + 下载按钮可用
+    expect(await screen.findByText("使用手册.pdf")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "下载 使用手册.pdf" }),
+    ).toBeInTheDocument();
   });
 });

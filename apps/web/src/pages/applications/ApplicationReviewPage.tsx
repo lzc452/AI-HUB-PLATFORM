@@ -13,12 +13,15 @@ import {
   Card,
   Empty,
   Input,
+  Modal,
   Popconfirm,
+  Select,
   Tag,
   Tabs,
   Timeline,
   Typography,
 } from "antd";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -30,9 +33,15 @@ import { SlaCountdown } from "../../components/common/SlaCountdown";
 import type {
   ApplicationRecord,
   ApplicationVersionRecord,
+  AssetRecord,
   PendingCatalogItem,
   ReviewRecord,
   ReviewQueueRecord,
+} from "../../modules/application/application.client";
+import {
+  downloadAssetContent,
+  getAssetContent,
+  listAssets,
 } from "../../modules/application/application.client";
 import {
   useApplication,
@@ -44,10 +53,17 @@ import {
   useReleaseReview,
   useReviewApplicationVersion,
   useReviewQueue,
+  useAssetImage,
+  useTransferReviewTask,
   useValidationChecks,
 } from "../../modules/application/useApplication";
 import { statusMeta } from "../../modules/application/application-status";
 import { useAuth } from "../../modules/auth/useAuth";
+import { hasPermission } from "../../modules/auth/roles";
+import {
+  useDepartmentMembers,
+  useDepartments,
+} from "../../modules/auth/useIdentity";
 import { MessageError, showWarningMessage } from "../../shared/ui/message";
 
 const { Text } = Typography;
@@ -79,10 +95,18 @@ export default function ApplicationReviewPage() {
   );
   const claim = useClaimReview();
   const release = useReleaseReview();
+  const transfer = useTransferReviewTask();
   const reviewAction = useReviewApplicationVersion();
   const pendingCatalogQuery = usePendingCatalogItems(applicationId);
   const removePendingCatalogItem = useDeletePendingCatalogItem(applicationId);
   const pendingCatalogItems = pendingCatalogQuery.data ?? [];
+  // 审核工作台资产（截图/附件）：与应用详情一致，审核员可预览与下载。
+  const assetsQuery = useQuery({
+    enabled: Boolean(applicationId),
+    queryFn: () => listAssets(applicationId as string),
+    queryKey: ["applications", "assets", applicationId],
+  });
+  const assets = assetsQuery.data ?? [];
   const data = useMemo<ViewModel>(
     () => ({
       app: applicationQuery.data,
@@ -138,9 +162,11 @@ export default function ApplicationReviewPage() {
             <TaskInfoCard
               actorEmployeeId={actor?.employeeId}
               app={data.app}
+              canTransfer={hasPermission(actor, "application.manage")}
               claim={claim}
               release={release}
               reviewQueue={data.reviewQueue}
+              transfer={transfer}
               version={data.version}
               versionId={versionId}
             />
@@ -163,6 +189,7 @@ export default function ApplicationReviewPage() {
           <main className="space-y-3 flex flex-col gap-3">
             <PreviewCard
               app={data.app}
+              assets={assets}
               checks={data.checks}
               version={data.version}
             />
@@ -185,22 +212,30 @@ function SpinPlaceholder() {
 function TaskInfoCard({
   actorEmployeeId,
   app,
+  canTransfer,
   claim,
   release,
   reviewQueue,
+  transfer,
   version,
   versionId,
 }: {
   actorEmployeeId: string | undefined;
   app: ApplicationRecord | undefined;
+  /** 转交需 APPLICATION_MANAGE（后端同步校验），无权限不显示转交按钮。 */
+  canTransfer: boolean;
   claim: ReturnType<typeof useClaimReview>;
   release: ReturnType<typeof useReleaseReview>;
   reviewQueue: ReviewQueueRecord | null;
+  transfer: ReturnType<typeof useTransferReviewTask>;
   version: ApplicationVersionRecord | undefined;
   versionId: string | undefined;
 }) {
   const selfReview =
     app !== undefined && app.ownerEmployeeId === actorEmployeeId;
+  const claimedByMe = reviewQueue?.claimedByEmployeeId === actorEmployeeId;
+  const claimed = reviewQueue?.claimedByEmployeeId != null;
+  const [transferOpen, setTransferOpen] = useState(false);
   return (
     <Card
       className="app-admin-card"
@@ -234,34 +269,120 @@ function TaskInfoCard({
           </span>
         </InfoLine>
       </div>
-      <Button
-        block
-        className="mt-4"
-        disabled={!versionId || selfReview}
-        loading={claim.isPending}
-        title={selfReview ? "禁止审核自己提交的应用" : undefined}
-        type="primary"
-        onClick={() => {
-          if (versionId) claim.mutate(versionId);
-        }}
-      >
-        领取任务
-      </Button>
-      <div className="mt-2 grid grid-cols-2 gap-2">
+      {!claimed ? (
         <Button
-          disabled={!versionId}
-          loading={release.isPending}
+          block
+          className="mt-4"
+          disabled={!versionId || selfReview}
+          loading={claim.isPending}
+          title={selfReview ? "禁止审核自己提交的应用" : undefined}
+          type="primary"
           onClick={() => {
-            if (versionId) release.mutate(versionId);
+            if (versionId) claim.mutate(versionId);
           }}
         >
-          释放任务
+          领取任务
         </Button>
-        <Button disabled title="V1 暂不支持转交">
-          转交任务
-        </Button>
-      </div>
+      ) : claimedByMe ? (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Button
+            disabled={!versionId}
+            loading={release.isPending}
+            onClick={() => {
+              if (versionId) release.mutate(versionId);
+            }}
+          >
+            释放任务
+          </Button>
+          {canTransfer ? (
+            <Button
+              loading={transfer.isPending}
+              onClick={() => setTransferOpen(true)}
+            >
+              转交任务
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-4 text-center text-[12px] text-[#8a94a6]">
+          任务已被他人领取
+        </div>
+      )}
+      {transferOpen ? (
+        <TransferReviewModal
+          onCancel={() => setTransferOpen(false)}
+          onConfirm={(claimedByEmployeeId) => {
+            if (versionId) {
+              transfer.mutate({
+                applicationVersionId: versionId,
+                claimedByEmployeeId,
+              });
+            }
+            setTransferOpen(false);
+          }}
+        />
+      ) : null}
     </Card>
+  );
+}
+
+/** 转交任务弹窗：选部门 → 选接收人（与应用管理移交负责人弹窗同模式）。 */
+function TransferReviewModal({
+  onCancel,
+  onConfirm,
+}: {
+  onCancel: () => void;
+  onConfirm: (claimedByEmployeeId: string) => void;
+}) {
+  const departments = useDepartments();
+  const [departmentId, setDepartmentId] = useState<string>();
+  const members = useDepartmentMembers(departmentId);
+  const [target, setTarget] = useState<string>();
+  const departmentOptions = (departments.data ?? []).map((department) => ({
+    label: department.name,
+    value: department.departmentId,
+  }));
+  const memberOptions = (members.data ?? [])
+    .filter((member) => member.status === "active")
+    .map((member) => ({
+      label: member.displayName,
+      value: member.employeeId,
+    }));
+  return (
+    <Modal
+      okButtonProps={{ disabled: target === undefined }}
+      okText="确认转交"
+      onCancel={() => {
+        setDepartmentId(undefined);
+        setTarget(undefined);
+        onCancel();
+      }}
+      onOk={() => {
+        if (target !== undefined) onConfirm(target);
+      }}
+      open
+      title="转交审核任务"
+    >
+      <div className="space-y-3">
+        <Select
+          aria-label="选择部门"
+          onChange={setDepartmentId}
+          options={departmentOptions}
+          placeholder="选择部门"
+          style={{ width: "100%" }}
+          value={departmentId}
+        />
+        <Select
+          aria-label="选择接收人"
+          disabled={departmentId === undefined}
+          onChange={setTarget}
+          options={memberOptions}
+          placeholder="选择接收人"
+          style={{ width: "100%" }}
+          value={target}
+        />
+      </div>
+    </Modal>
   );
 }
 
@@ -454,10 +575,12 @@ function PendingCatalogCard({
 
 function PreviewCard({
   app,
+  assets,
   checks,
   version,
 }: {
   app: ApplicationRecord | undefined;
+  assets: readonly AssetRecord[];
   checks: Check[];
   version: ApplicationVersionRecord | undefined;
 }) {
@@ -470,7 +593,9 @@ function PreviewCard({
           {
             key: "preview",
             label: "预览详情",
-            children: <PreviewOverview app={app} version={version} />,
+            children: (
+              <PreviewOverview app={app} assets={assets} version={version} />
+            ),
           },
           {
             key: "diff",
@@ -493,21 +618,54 @@ function PreviewCard({
   );
 }
 
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+/** 审核预览截图（经资产内容端点读取，审核员可访问）。 */
+function ScreenshotImage({
+  applicationId,
+  assetId,
+}: {
+  applicationId: string | undefined;
+  assetId: string;
+}) {
+  const { objectUrl } = useAssetImage(applicationId, assetId);
+  if (!objectUrl) return null;
+  return (
+    <img
+      alt="应用截图"
+      className="h-32 w-full rounded-lg border border-[#e4eaf2] object-cover"
+      src={objectUrl}
+    />
+  );
+}
+
 function PreviewOverview({
   app,
+  assets,
   version,
 }: {
   app: ApplicationRecord | undefined;
+  assets: readonly AssetRecord[];
   version: ApplicationVersionRecord | undefined;
 }) {
   // 预览内容使用设计稿中的中文间隔，保留信息层级。
   const status = statusMeta(app?.status ?? "unknown");
+  const screenshots = assets.filter(
+    (asset) => asset.assetType === "screenshot",
+  );
+  const attachments = assets.filter(
+    (asset) => asset.assetType === "attachment",
+  );
 
   return (
     <div className="space-y-5 p-5">
       <div className="flex items-start gap-4">
         {/* <OcrApplicationIcon className="h-20 w-20" /> */}
-        
+
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="m-0 text-[20px] font-semibold">
@@ -580,31 +738,75 @@ function PreviewOverview({
       <div className="grid gap-3 md:grid-cols-2">
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-3 font-semibold">截图预览</h4>
-          <Empty
-            description="暂无截图资产"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
+          {screenshots.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {screenshots.map((asset) => (
+                <ScreenshotImage
+                  applicationId={app?.applicationId}
+                  assetId={asset.assetId}
+                  key={asset.assetId}
+                />
+              ))}
+            </div>
+          ) : (
+            <Empty
+              description="暂无截图资产"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
         </section>
         <section className="rounded-lg border border-[#e4eaf2] p-4">
           <h4 className="mb-3 font-semibold">相关附件</h4>
           <div className="space-y-3">
+            {attachments.length > 0 ? (
+              attachments.map((asset) => (
+                <div
+                  className="flex items-center gap-2 text-[12px]"
+                  key={asset.assetId}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-[#eef5ff] text-[#1677ff]">
+                    <FileTextOutlined />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{asset.name}</span>
+                  <span className="text-[#8a94a6]">
+                    {formatBytes(asset.sizeBytes)}
+                  </span>
+                  <Button
+                    aria-label={`下载 ${asset.name}`}
+                    icon={<DownloadOutlined />}
+                    onClick={() =>
+                      void downloadAssetContent(
+                        app?.applicationId ?? "",
+                        asset.assetId,
+                        asset.name,
+                      )
+                    }
+                    size="small"
+                    type="link"
+                  >
+                    下载
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <Empty
+                description="暂无附件"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
             {version ? (
               <div className="flex items-center gap-2 text-[12px]">
-                <span className="flex h-7 w-7 items-center justify-center rounded bg-[#eef5ff] text-[#1677ff]">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-[#eef5ff] text-[#1677ff]">
                   <FileTextOutlined />
                 </span>
                 <span className="min-w-0 flex-1 truncate">
                   {version.artifactKey}
                 </span>
-                <span className="text-[#8a94a6]">安全校验后可用</span>
-                <DownloadOutlined className="text-[#8a94a6]" />
+                <span className="text-[#8a94a6]">
+                  版本制品（安全校验后可用）
+                </span>
               </div>
-            ) : (
-              <Empty
-                description="暂无制品附件"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            )}
+            ) : null}
           </div>
         </section>
       </div>

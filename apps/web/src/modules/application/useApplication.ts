@@ -34,6 +34,7 @@ import {
   reviewApplicationVersion,
   submitApplicationReview,
   transferApplicationOwner,
+  transferReviewTask,
   withdrawApplication,
   withdrawApplicationReview,
   type ArtifactUploadRecord,
@@ -352,6 +353,24 @@ export function useReleaseReview() {
     onSuccess: async () => {
       await invalidateCaches();
       showSuccessMessage("已释放审核认领");
+    },
+  });
+}
+
+export function useTransferReviewTask() {
+  const invalidateCaches = useInvalidateApplicationCaches();
+  return useMutation({
+    mutationFn: ({
+      applicationVersionId,
+      claimedByEmployeeId,
+    }: {
+      applicationVersionId: string;
+      claimedByEmployeeId: string;
+    }) => transferReviewTask(applicationVersionId, claimedByEmployeeId),
+    onError: (error) => showErrorMessage(error, "转交审核失败"),
+    onSuccess: async () => {
+      await invalidateCaches();
+      showSuccessMessage("审核任务已转交");
     },
   });
 }

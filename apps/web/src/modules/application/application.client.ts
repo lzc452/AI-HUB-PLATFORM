@@ -410,6 +410,17 @@ export function releaseReview(
   );
 }
 
+/** 转交评审任务（仅 APPLICATION_MANAGE，后端校验）。 */
+export function transferReviewTask(
+  applicationVersionId: string,
+  claimedByEmployeeId: string,
+): Promise<unknown> {
+  return apiFetch<unknown>(
+    `/internal/applications/versions/${encodeURIComponent(applicationVersionId)}/transfer-review`,
+    { method: "POST", body: JSON.stringify({ claimedByEmployeeId }) },
+  );
+}
+
 export function reviewApplicationVersion(
   applicationVersionId: string,
   input: {

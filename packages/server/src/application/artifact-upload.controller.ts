@@ -388,7 +388,9 @@ export class ArtifactUploadController {
       application === null ||
       (application.ownerEmployeeId !== actor.employeeId &&
         application.maintainerEmployeeId !== actor.employeeId &&
-        !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE))
+        !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE) &&
+        // 审核员在审核工作台预览截图/下载附件（审核中的应用资产）。
+        !hasPermission(actor, PERMISSIONS.APPLICATION_REVIEW))
     ) {
       throw new ForbiddenException("APPLICATION_ACCESS_FORBIDDEN");
     }
