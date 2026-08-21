@@ -30,6 +30,7 @@ const entries: CatalogEntry[] = [
     summary: "平台流程自动化",
     departmentId: "dept-platform",
     categoryId: "cat-productivity",
+    categoryName: null,
     tagIds: ["tag-ai"],
     trustLabels: ["verified"],
     currentVersionId: "version-platform",
@@ -49,6 +50,7 @@ const entries: CatalogEntry[] = [
     summary: "财务报表查询",
     departmentId: "dept-finance",
     categoryId: "cat-productivity",
+    categoryName: null,
     tagIds: ["tag-ai"],
     trustLabels: ["experimental"],
     currentVersionId: "version-finance",
@@ -68,6 +70,7 @@ const entries: CatalogEntry[] = [
     summary: "小程序报销",
     departmentId: "dept-platform",
     categoryId: "cat-productivity",
+    categoryName: null,
     tagIds: [],
     trustLabels: ["verified"],
     currentVersionId: "version-miniprogram",
@@ -168,6 +171,10 @@ class MemoryCatalogRepository implements CatalogRepository {
   }
 
   async findDeliveryAssetStorageKey(): Promise<string | null> {
+    return null;
+  }
+
+  async findScreenshotAssetStorageKey(): Promise<string | null> {
     return null;
   }
 

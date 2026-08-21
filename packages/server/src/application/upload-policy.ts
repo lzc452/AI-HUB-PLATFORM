@@ -1,16 +1,19 @@
 import type { UploadKind } from "@ai-hub/contracts";
+import type { AssetType } from "./application.types.js";
 
 /** 资产类 kind（complete 后自动创建 asset）。 */
-export type AssetKind = Exclude<UploadKind, "artifact">;
+export type AssetKind = UploadKind;
 
 export interface UploadKindPolicy {
   kind: UploadKind;
   maxSizeBytes: number;
   allowedExtensions: readonly string[];
+  /** 允许无扩展名文件（如附件文档）；缺省 false。 */
+  allowExtensionless?: boolean;
   allowedMimeTypes: readonly string[];
   svgAllowed: boolean;
   createsAsset: boolean;
-  assetType?: AssetKind;
+  assetType?: AssetType;
 }
 
 const KB = 1024;
@@ -57,18 +60,39 @@ export const UPLOAD_KIND_POLICIES: Readonly<
     allowedExtensions: [
       "pdf",
       "zip",
+      "rar",
+      "7z",
       "doc",
       "docx",
       "xls",
       "xlsx",
       "ppt",
       "pptx",
+      "wps",
       "txt",
       "md",
       "csv",
+      "json",
+      "yaml",
+      "yml",
+      "log",
+      "rtf",
+      "odt",
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "webp",
+      "svg",
+      "html",
+      "htm",
+      "xmind",
     ],
     allowedMimeTypes: [],
     svgAllowed: false,
+    // 附件是通用文档桶：允许无扩展名文件（微信/浏览器下载常见），
+    // 大小与后续 ClamAV 扫描作为约束。
+    allowExtensionless: true,
     createsAsset: true,
     assetType: "attachment",
   },
@@ -126,7 +150,10 @@ export function assertUploadAllowed(input: {
     throw new Error("UPLOAD_SIZE_TOO_LARGE");
   }
   const ext = fileExtension(input.fileName);
-  if (!policy.allowedExtensions.includes(ext)) {
+  if (
+    !(policy.allowExtensionless === true && ext === "") &&
+    !policy.allowedExtensions.includes(ext)
+  ) {
     throw new Error("UPLOAD_EXTENSION_NOT_ALLOWED");
   }
   if (

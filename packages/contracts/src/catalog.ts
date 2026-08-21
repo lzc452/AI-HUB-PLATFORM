@@ -24,7 +24,13 @@ export interface CatalogEntry {
   summary: string;
   departmentId: string;
   categoryId: string;
+  /** 分类名称（自定义分类审核通过后为新增分类名）。 */
+  categoryName: string | null;
   tagIds: readonly string[];
+  /** 标签名称（与 tagIds 同序）。 */
+  tagNames?: readonly string[];
+  /** 已通过扫描的截图资产 ID（用于市场详情截图预览）。 */
+  screenshotAssetIds?: readonly string[];
   trustLabels: readonly TrustLabel[];
   currentVersionId: string;
   publishedAt: string;

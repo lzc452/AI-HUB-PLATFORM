@@ -95,7 +95,23 @@ export function MarketplaceDetailDescription({
           <Title id="screenshots-heading" level={2} className="!mb-3 !text-lg">
             截图预览
           </Title>
-          <Empty description="该应用暂未上传截图" imageStyle={{ height: 80 }} />
+          {(entry.screenshotAssetIds ?? []).length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {(entry.screenshotAssetIds ?? []).map((assetId) => (
+                <img
+                  alt="应用截图"
+                  className="h-40 w-full rounded-lg border border-[#f0f0f0] object-cover"
+                  key={assetId}
+                  src={`/internal/catalog/${encodeURIComponent(entry.applicationId)}/screenshots/${encodeURIComponent(assetId)}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <Empty
+              description="该应用暂未上传截图"
+              imageStyle={{ height: 80 }}
+            />
+          )}
         </section>
 
         <section
@@ -165,7 +181,7 @@ export function MarketplaceDetailDescription({
           <Descriptions column={1} size="small">
             <Descriptions.Item label="分类">
               <Tag color="geekblue" className="!mr-0">
-                {entry.categoryId}
+                {entry.categoryName ?? entry.categoryId}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="维护人">
@@ -183,9 +199,9 @@ export function MarketplaceDetailDescription({
             <Descriptions.Item label="标签">
               {entry.tagIds.length > 0 ? (
                 <Space size={4} wrap>
-                  {entry.tagIds.map((tag) => (
+                  {entry.tagIds.map((tag, index) => (
                     <Tag className="!mr-0" color="cyan" key={tag}>
-                      {tag}
+                      {entry.tagNames?.[index] ?? tag}
                     </Tag>
                   ))}
                 </Space>

@@ -59,8 +59,23 @@ export class CatalogEntryDto {
   })
   categoryId!: string;
 
+  @ApiProperty({ type: String, description: "分类名称", nullable: true })
+  categoryName!: string | null;
+
   @ApiProperty({ description: "标签 ID 列表", type: [String] })
   tagIds!: string[];
+
+  @ApiPropertyOptional({
+    description: "标签名称列表（与 tagIds 同序）",
+    type: [String],
+  })
+  tagNames?: string[];
+
+  @ApiPropertyOptional({
+    description: "已通过扫描的截图资产 ID 列表",
+    type: [String],
+  })
+  screenshotAssetIds?: string[];
 
   @ApiProperty({
     description: "信任标签列表",

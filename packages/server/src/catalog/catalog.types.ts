@@ -19,7 +19,10 @@ export interface CatalogEntry {
   summary: string;
   departmentId: string;
   categoryId: string;
+  categoryName: string | null;
   tagIds: readonly string[];
+  tagNames?: readonly string[];
+  screenshotAssetIds?: readonly string[];
   trustLabels: readonly TrustLabel[];
   currentVersionId: string;
   publishedAt: Date;
@@ -111,6 +114,10 @@ export interface CatalogRepository {
   findDeliveryAssetStorageKey(
     applicationId: string,
     channel: DeliveryChannel,
+  ): Promise<string | null>;
+  findScreenshotAssetStorageKey(
+    applicationId: string,
+    assetId: string,
   ): Promise<string | null>;
   /** delivery_targets.qr_code_asset_id → application_assets 记录（含存储键与 mime）。 */
   findQrAssetForDelivery(

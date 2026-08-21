@@ -190,6 +190,22 @@ export class CatalogService {
     return { kind: "unavailable", reason: "该渠道暂未配置可下载安装包" };
   }
 
+  async getScreenshotStorageKey(
+    actor: ActorContext,
+    applicationId: string,
+    assetId: string,
+  ): Promise<string> {
+    await this.getDetail(actor, applicationId);
+    const storageKey = await this.repository.findScreenshotAssetStorageKey(
+      applicationId,
+      assetId,
+    );
+    if (storageKey === null) {
+      throw new Error("CATALOG_SCREENSHOT_NOT_FOUND");
+    }
+    return storageKey;
+  }
+
   async getDeliveryAssetStorageKey(
     actor: ActorContext,
     applicationId: string,

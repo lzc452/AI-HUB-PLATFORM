@@ -298,7 +298,18 @@ export class KyselyCatalogRepository implements CatalogRepository {
   ): Promise<readonly CatalogEntry[]> {
     if (rows.length === 0) return [];
     const applicationIds = rows.map((row) => row.applicationId);
-    const [tags, labels, deliveries, attachments] = await Promise.all([
+    const categoryIds = [
+      ...new Set(rows.map((row) => row.categoryId).filter(Boolean)),
+    ];
+    const [
+      tags,
+      labels,
+      deliveries,
+      attachments,
+      categoryRows,
+      tagRows,
+      screenshots,
+    ] = await Promise.all([
       this.db
         .selectFrom("application_tag_links as tag_link")
         .select("tag_link.tag_id")
@@ -333,26 +344,67 @@ export class KyselyCatalogRepository implements CatalogRepository {
         .where("scan_status", "=", "passed")
         .orderBy("sort_order")
         .execute(),
+      categoryIds.length === 0
+        ? Promise.resolve([])
+        : this.db
+            .selectFrom("catalog_categories")
+            .select(["category_id", "name"])
+            .where("category_id", "in", categoryIds)
+            .execute(),
+      this.db
+        .selectFrom("application_tag_links as tag_link")
+        .innerJoin("catalog_tags", "catalog_tags.tag_id", "tag_link.tag_id")
+        .select([
+          "tag_link.tag_id",
+          "tag_link.application_id",
+          "catalog_tags.name",
+        ])
+        .where("tag_link.application_id", "in", applicationIds)
+        .orderBy("tag_link.tag_id")
+        .execute(),
+      this.db
+        .selectFrom("application_assets")
+        .select(["application_id", "asset_id"])
+        .where("application_id", "in", applicationIds)
+        .where("asset_type", "=", "screenshot")
+        .where("scan_status", "=", "passed")
+        .orderBy("sort_order")
+        .execute(),
     ]);
+    const categoryNameById = new Map(
+      categoryRows.map((item) => [item.category_id, item.name]),
+    );
     const tagsByApp = groupBy(tags, (item) => item.application_id);
+    const tagNamesByApp = groupBy(tagRows, (item) => item.application_id);
     const labelsByApp = groupBy(labels, (item) => item.application_id);
     const deliveriesByApp = groupBy(deliveries, (item) => item.application_id);
     const attachmentsByApp = groupBy(
       attachments,
       (item) => item.application_id,
     );
+    const screenshotsByApp = groupBy(
+      screenshots,
+      (item) => item.application_id,
+    );
     return rows.map((row) => {
       const appTags = tagsByApp.get(row.applicationId) ?? [];
+      const appTagNames = tagNamesByApp.get(row.applicationId) ?? [];
       const appLabels = labelsByApp.get(row.applicationId) ?? [];
       const appDeliveries = deliveriesByApp.get(row.applicationId) ?? [];
       const appAttachments = attachmentsByApp.get(row.applicationId) ?? [];
+      const appScreenshots = screenshotsByApp.get(row.applicationId) ?? [];
       return {
         applicationId: row.applicationId,
         name: row.name,
         summary: row.summary,
         departmentId: row.departmentId,
         categoryId: row.categoryId,
+        categoryName: categoryNameById.get(row.categoryId) ?? null,
         tagIds: appTags.map((tag) => tag.tag_id),
+        tagNames: appTagNames.map((tag) => tag.name),
+        screenshotAssetIds: appScreenshots.map(
+          (screenshot) => screenshot.asset_id,
+        ),
         trustLabels: appLabels.map(
           (label) => label.label as CatalogEntry["trustLabels"][number],
         ),
@@ -512,6 +564,21 @@ export class KyselyCatalogRepository implements CatalogRepository {
       .where("application_assets.scan_status", "=", "passed")
       .orderBy("application_delivery_assets.sort_order", "asc")
       .limit(1)
+      .executeTakeFirst();
+    return row?.storage_key ?? null;
+  }
+
+  async findScreenshotAssetStorageKey(
+    applicationId: string,
+    assetId: string,
+  ): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("application_assets")
+      .select("storage_key")
+      .where("application_id", "=", applicationId)
+      .where("asset_id", "=", assetId)
+      .where("asset_type", "=", "screenshot")
+      .where("scan_status", "=", "passed")
       .executeTakeFirst();
     return row?.storage_key ?? null;
   }

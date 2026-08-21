@@ -28,6 +28,7 @@ function entry(name: string, ratingAverage: number | null): CatalogEntry {
     summary: "",
     departmentId: "dept-rnd",
     categoryId: "productivity",
+    categoryName: null,
     tagIds: [],
     trustLabels: [],
     currentVersionId: "v1",

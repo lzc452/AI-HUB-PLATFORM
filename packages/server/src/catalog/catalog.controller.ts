@@ -276,6 +276,38 @@ export class CatalogController {
     );
   }
 
+  @Get(":applicationId/screenshots/:assetId")
+  @RequiresPermissions(PERMISSIONS.CATALOG_READ)
+  @ApiOperation({ summary: "市场详情截图（流式，可见用户可读）" })
+  @ApiIdentityHeaders()
+  @ApiParam({ name: "applicationId", description: "应用 ID" })
+  @ApiParam({ name: "assetId", description: "截图资产 ID" })
+  @ApiOkResponse({ description: "截图图片流" })
+  @ApiProblemResponses([400, 401, 403, 404])
+  async screenshotContent(
+    @Param("applicationId") applicationId: string,
+    @Param("assetId") assetId: string,
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    const actor = await this.requireActor(employeeId, sessionId);
+    const storageKey = await this.call(() =>
+      this.catalog.getScreenshotStorageKey(actor, applicationId, assetId),
+    );
+    if (this.storage === undefined) {
+      throw new NotFoundException("CATALOG_SCREENSHOT_NOT_FOUND");
+    }
+    const stream = await this.storage.openReadStream(storageKey);
+    if (stream === null) {
+      throw new NotFoundException("CATALOG_SCREENSHOT_NOT_FOUND");
+    }
+    return new StreamableFile(
+      stream instanceof Readable
+        ? stream
+        : Readable.from(stream as AsyncIterable<Uint8Array>),
+    );
+  }
+
   @Get(":applicationId/deliveries/:channel/asset")
   @RequiresPermissions(PERMISSIONS.CATALOG_READ)
   @ApiOperation({ summary: "下载交付安装包（流式）" })

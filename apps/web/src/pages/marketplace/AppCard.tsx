@@ -67,7 +67,7 @@ export function AppCard({ departmentName, entry }: AppCardProps) {
             </Tag>
           ))}
           <Tag className="!mr-0" color="geekblue">
-            {entry.categoryId}
+            {entry.categoryName ?? entry.categoryId}
           </Tag>
         </div>
         <Text type="secondary" className="!text-xs">

@@ -44,6 +44,7 @@ const {
         {
           applicationId: "app-ocr-2",
           categoryId: "cat-ocr",
+          categoryName: null,
           currentVersionId: "ver-2",
           deliveryChannels: ["web"],
           departmentId: "dept-finance",
@@ -201,6 +202,7 @@ function mockEntry(): CatalogEntry {
   return {
     applicationId: "app-ocr",
     categoryId: "cat-ocr",
+    categoryName: null,
     currentVersionId: "ver-1",
     deliveryChannels: ["web"],
     departmentId: "dept-finance",

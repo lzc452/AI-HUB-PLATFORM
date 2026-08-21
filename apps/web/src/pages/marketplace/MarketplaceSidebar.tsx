@@ -6,7 +6,7 @@ import {
   RightOutlined,
   TrophyOutlined,
 } from "@ant-design/icons";
-import { Typography } from "antd";
+import { Tag, Typography } from "antd";
 import { useState } from "react";
 
 import { useCatalogCategories } from "../../modules/marketplace/useCatalog";
@@ -19,6 +19,16 @@ import {
 const { Title } = Typography;
 
 const recentUpdates: string[] = []; // 最近更新，api 待实现
+
+const presets = [
+  'gold',
+  'lime',
+  'green',
+  'cyan',
+  'blue',
+  'geekblue',
+  'purple',
+]; // 预设的标签颜色列表
 
 interface MarketplaceSidebarProps {
   /** 点击热门分类时的回调，参数为分类 ID。 */
@@ -54,27 +64,30 @@ export function MarketplaceSidebar({
         <Title level={5} className="!mb-4 !mt-0 !text-base">
           热门分类
         </Title>
-        <ul className="m-0 h-32 overflow-y-auto">
-          {hotCategories.map((category) => (
-            <li key={category.categoryId} className="flex items-center gap-3">
-              <button
-                className="flex w-full items-center gap-3 rounded-md border-0 bg-transparent p-1 text-left transition-colors hover:bg-[#f0f7ff]"
-                onClick={() => onSelectCategory(category.categoryId)}
-                style={{ fontFamily: "inherit" }}
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
-                  style={{
-                    background: "linear-gradient(135deg, #3d6bff, #7c9bff)",
-                  }}
-                >
-                  <TrophyOutlined />
-                </span>
-                <span className="text-xs text-[#1f1f1f]">{category.name}</span>
-              </button>
-            </li>
+        <ul className="m-0 overflow-y-auto flex flex-wrap gap-1.5">
+          {hotCategories.map((category, index) => (
+            // <li key={category.categoryId} className="flex items-center gap-3">
+            //   <button
+            //     className="flex w-full items-center gap-3 rounded-md border-0 bg-transparent p-1 text-left transition-colors hover:bg-[#f0f7ff]"
+            //     onClick={() => onSelectCategory(category.categoryId)}
+            //     style={{ fontFamily: "inherit" }}
+            //     type="button"
+            //   >
+            //     <span
+            //       aria-hidden="true"
+            //       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white shadow-sm"
+            //       style={{
+            //         background: "linear-gradient(135deg, #3d6bff, #7c9bff)",
+            //       }}
+            //     >
+            //       <TrophyOutlined />
+            //     </span>
+            //     <span className="text-xs text-[#1f1f1f]">{category.name}</span>
+            //   </button>
+            // </li>
+            <Tag className="" color={presets[index % presets.length]} onClick={() => onSelectCategory(category.categoryId)}>
+              {category.name}
+            </Tag>
           ))}
         </ul>
       </section>

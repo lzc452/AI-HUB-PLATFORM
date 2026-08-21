@@ -18,6 +18,7 @@ const entry: CatalogEntry = {
   summary: "平台流程自动化",
   departmentId: "dept-platform",
   categoryId: "cat-productivity",
+  categoryName: null,
   tagIds: ["tag-ai"],
   trustLabels: ["verified"],
   currentVersionId: "version-platform",
@@ -119,6 +120,10 @@ class ApiCatalogRepository implements CatalogRepository {
   }
 
   async findDeliveryAssetStorageKey(): Promise<string | null> {
+    return null;
+  }
+
+  async findScreenshotAssetStorageKey(): Promise<string | null> {
     return null;
   }
 

@@ -48,7 +48,17 @@ export default function MarketplacePage() {
   );
 
   const categoryOptions = useMemo(
-    () => [...new Set((data?.items ?? []).map((item) => item.categoryId))],
+    () => [
+      ...new Map(
+        (data?.items ?? []).map((item) => [
+          item.categoryId,
+          {
+            label: item.categoryName ?? item.categoryId,
+            value: item.categoryId,
+          },
+        ]),
+      ).values(),
+    ],
     [data],
   );
   const tagOptions = useMemo(

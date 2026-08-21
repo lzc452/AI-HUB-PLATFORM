@@ -35,6 +35,7 @@ function publishedEntry(): CatalogEntry {
     summary: "平台流程自动化",
     departmentId: "dept-platform",
     categoryId: "cat-productivity",
+    categoryName: null,
     tagIds: [],
     trustLabels: ["verified"],
     currentVersionId: "version-1",

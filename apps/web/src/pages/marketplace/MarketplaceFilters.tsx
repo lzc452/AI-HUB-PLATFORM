@@ -6,7 +6,7 @@ import { channelText } from "../../modules/marketplace/catalogMeta";
 
 export interface MarketplaceFiltersProps {
   categoryId: string | undefined;
-  categoryOptions: string[];
+  categoryOptions: { label: string; value: string }[];
   channel: DeliveryChannel | undefined;
   departmentId: string | undefined;
   departmentOptions: { label: string; value: string }[];
@@ -42,7 +42,7 @@ export function MarketplaceFilters({
         aria-label="全部分类"
         className="min-w-32"
         onChange={(value?: string) => onCategoryChange(value)}
-        options={categoryOptions.map((value) => ({ label: value, value }))}
+        options={categoryOptions}
         placeholder="全部分类"
         value={categoryId}
       />
