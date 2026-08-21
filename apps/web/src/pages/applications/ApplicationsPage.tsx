@@ -18,6 +18,8 @@ import { useAdminApplicationList } from "../../modules/application/useAdminAppli
 import { useAdminKpis } from "../../modules/application/useAdminKpis";
 import { publishApplication } from "../../modules/application/application.client";
 import { useDeleteApplication } from "../../modules/application/useApplication";
+import { useAuth } from "../../modules/auth/useAuth";
+import { hasPermission } from "../../modules/auth/roles";
 import { ROUTES } from "../../router/routes";
 
 import { ApplicationAdminHero } from "./ApplicationAdminHero";
@@ -84,6 +86,9 @@ export default function ApplicationsPage() {
   const list = useAdminApplicationList({ pageSize: 10 });
   const kpisQuery = useAdminKpis();
   const deleteApplication = useDeleteApplication();
+  const { actor } = useAuth();
+  // 审核入口（待审核 KPI / 待我审核筛选 / 行审核按钮）仅对具备审核权限的角色可见。
+  const canReview = hasPermission(actor, "application.review");
   const [pendingAction, setPendingAction] = useState<{
     action: ApplicationRowAction;
     row: AdminApplicationRow;
@@ -118,9 +123,9 @@ export default function ApplicationsPage() {
     () => ({
       all: kpiNumbers.total,
       owned: list.data?.items.filter((item) => item.isMine).length ?? 0,
-      review: kpiNumbers.pendingReview,
+      review: canReview ? kpiNumbers.pendingReview : 0,
     }),
-    [kpiNumbers.total, kpiNumbers.pendingReview],
+    [kpiNumbers.total, kpiNumbers.pendingReview, canReview],
   );
 
   // 行操作点击：先弹出确认弹窗，关闭后清空待办状态。
@@ -199,6 +204,7 @@ export default function ApplicationsPage() {
       />
 
       <ApplicationAdminKpiCards
+        canReview={canReview}
         cards={kpiCards}
         isLoading={kpisQuery.isPending}
       />
@@ -225,6 +231,7 @@ export default function ApplicationsPage() {
         sort={list.filters.sort}
         status={list.filters.status}
         statusOptions={defaultStatusFilterOptions}
+        showReviewMode={canReview}
       />
 
       <MessageError
@@ -235,6 +242,7 @@ export default function ApplicationsPage() {
 
       <div className="space-y-0">
         <ApplicationAdminTable
+          canReview={canReview}
           isError={list.isError}
           isLoading={list.isPending && list.data === undefined}
           onAction={(action, row) => setPendingAction({ action, row })}
@@ -266,10 +274,11 @@ function describeAction(
   action: ApplicationRowAction,
   row: AdminApplicationRow,
 ): ActionPlan {
+  const name = row.name ?? "未命名应用";
   switch (action) {
     case "delete":
       return {
-        content: `确认删除草稿「${row.name}」？删除后不可恢复。`,
+        content: `确认删除草稿「${name}」？删除后不可恢复。`,
         danger: true,
         okText: "确认删除",
         success: "应用已删除",
@@ -277,7 +286,7 @@ function describeAction(
       };
     case "edit":
       return {
-        content: `继续编辑「${row.name}」？将跳转到创作者中心。`,
+        content: `继续编辑「${name}」？将跳转到创作者中心。`,
         danger: false,
         okText: "继续编辑",
         success: "已为你打开编辑视图",
@@ -285,7 +294,7 @@ function describeAction(
       };
     case "republish":
       return {
-        content: `「${row.name}」已下架。重新发布需重新提交审核并走发布流程，请在应用工作台中操作。`,
+        content: `「${name}」已下架。重新发布需重新提交审核并走发布流程，请在应用工作台中操作。`,
         danger: false,
         okText: "知道了",
         success: "",
@@ -293,7 +302,7 @@ function describeAction(
       };
     case "publish":
       return {
-        content: `确认将「${row.name}」发布到市场？发布后所有目标受众可见。`,
+        content: `确认将「${name}」发布到市场？发布后所有目标受众可见。`,
         danger: false,
         okText: "确认发布",
         success: "应用已发布到市场",
@@ -301,7 +310,7 @@ function describeAction(
       };
     case "review":
       return {
-        content: `开始审核「${row.name}」当前版本 ${row.currentVersion}？`,
+        content: `开始审核「${name}」当前版本 ${row.currentVersion}？`,
         danger: false,
         okText: "开始审核",
         success: "已进入审核工作台",
@@ -309,7 +318,7 @@ function describeAction(
       };
     case "version":
       return {
-        content: `查看「${row.name}」的全部版本记录？`,
+        content: `查看「${name}」的全部版本记录？`,
         danger: false,
         okText: "查看版本",
         success: "已加载版本历史",
@@ -318,7 +327,7 @@ function describeAction(
     case "view":
     default:
       return {
-        content: `查看「${row.name}」的完整管理信息？`,
+        content: `查看「${name}」的完整管理信息？`,
         danger: false,
         okText: "查看",
         success: "正在打开应用详情",

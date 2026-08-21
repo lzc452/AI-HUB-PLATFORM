@@ -29,10 +29,12 @@ const hoisted = vi.hoisted(() => {
     updatedAt: "2026-08-20T00:00:00.000Z",
   };
   const noop = () => {};
+  // 可替换的行集合：审核入口权限测试需要 in_review 行。
+  const rows: AdminApplicationRow[] = [draftRow];
   // 每次调用返回全新对象引用：真实 hook 每次渲染都会新建返回对象，
   // 使 effect 的 list 依赖在任意重渲染后都“变化”——这是连弹 bug 的触发条件。
   const makeListMock = () => ({
-    data: { items: [draftRow], page: 1, pageSize: 10, total: 1 },
+    data: { items: rows, page: 1, pageSize: 10, total: rows.length },
     error: null,
     isError: false,
     isFetching: false,
@@ -60,8 +62,17 @@ const hoisted = vi.hoisted(() => {
     setPage: noop,
     setPageSize: noop,
   });
-  return { deleteMutate: vi.fn(), draftRow, makeListMock };
+  // 审核入口权限测试：可替换当前登录 actor 的权限集合。
+  const actorPermissions: string[] = ["application.read"];
+  return { actorPermissions, deleteMutate: vi.fn(), draftRow, makeListMock, rows };
 });
+
+vi.mock("../../modules/auth/useAuth", () => ({
+  useAuth: () => ({
+    actor: { permissions: hoisted.actorPermissions },
+    session: { employeeId: "E0001" },
+  }),
+}));
 
 vi.mock("../../modules/application/useAdminApplicationList", () => ({
   useAdminApplicationList: () => hoisted.makeListMock(),
@@ -128,5 +139,65 @@ describe("ApplicationsPage 删除草稿", () => {
       expect(hoisted.deleteMutate).toHaveBeenCalledWith("app-1"),
     );
     expect(confirmSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ApplicationsPage 审核入口权限", () => {
+  afterEach(() => {
+    hoisted.actorPermissions.splice(
+      0,
+      hoisted.actorPermissions.length,
+      "application.read",
+    );
+    hoisted.rows.splice(0, hoisted.rows.length, hoisted.draftRow);
+  });
+
+  it("无 application.review 权限时不显示待审核 KPI、待我审核筛选与审核按钮", () => {
+    hoisted.actorPermissions.splice(0, hoisted.actorPermissions.length, "application.read");
+    hoisted.rows.splice(0, hoisted.rows.length, {
+      ...hoisted.draftRow,
+      needsMyReview: true,
+      status: "in_review",
+    });
+    render(
+      <MemoryRouter>
+        <ApplicationsPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText("待审核")).not.toBeInTheDocument();
+    expect(screen.queryByText("待我审核")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "审核 测试草稿" }),
+    ).not.toBeInTheDocument();
+    // 无权限时 in_review 行仍可查看
+    expect(
+      screen.getByRole("button", { name: "查看 测试草稿" }),
+    ).toBeInTheDocument();
+  });
+
+  it("有 application.review 权限时显示审核入口", () => {
+    hoisted.actorPermissions.splice(
+      0,
+      hoisted.actorPermissions.length,
+      "application.read",
+      "application.review",
+    );
+    hoisted.rows.splice(0, hoisted.rows.length, {
+      ...hoisted.draftRow,
+      needsMyReview: true,
+      status: "in_review",
+    });
+    render(
+      <MemoryRouter>
+        <ApplicationsPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByText("待审核").length).toBeGreaterThan(0);
+    expect(screen.getByText("待我审核")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "审核 测试草稿" }),
+    ).toBeInTheDocument();
   });
 });

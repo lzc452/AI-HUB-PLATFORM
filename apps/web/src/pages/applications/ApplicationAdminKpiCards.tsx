@@ -5,6 +5,8 @@ import type { AdminKpiCards } from "../../modules/application/adminListMeta";
 export interface ApplicationAdminKpiCardsProps {
   cards: AdminKpiCards;
   isLoading?: boolean;
+  /** 无审核权限时不展示"待审核"卡片。 */
+  canReview?: boolean;
 }
 
 const cardAccentByKey: Record<keyof AdminKpiCards, string> = {
@@ -28,13 +30,17 @@ const order: ReadonlyArray<keyof AdminKpiCards> = [
 export function ApplicationAdminKpiCards({
   cards,
   isLoading = false,
+  canReview = true,
 }: ApplicationAdminKpiCardsProps) {
+  const visibleOrder = canReview
+    ? order
+    : order.filter((key) => key !== "pendingReview");
   return (
     <section
       aria-label="应用概览指标"
       className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
     >
-      {order.map((key) => {
+      {visibleOrder.map((key) => {
         const card = cards[key];
         return (
           <article

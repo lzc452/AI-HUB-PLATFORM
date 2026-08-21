@@ -31,6 +31,8 @@ export interface ApplicationAdminTableProps {
   isError?: boolean;
   onAction?: (action: ApplicationRowAction, row: AdminApplicationRow) => void;
   rows: readonly AdminApplicationRow[];
+  /** 无审核权限时不展示"审核"行操作。 */
+  canReview?: boolean;
 }
 
 const channelMeta: Record<
@@ -104,6 +106,7 @@ const statusMeta: Record<
  * - 加载/错误/空态：内嵌 Skeleton、空提示与失败提示
  */
 export function ApplicationAdminTable({
+  canReview = true,
   isError = false,
   isLoading = false,
   onAction,
@@ -134,7 +137,7 @@ export function ApplicationAdminTable({
     <div className="rounded-2xl border border-[#f0f0f0] bg-white">
       <Table<AdminApplicationRow>
         aria-label="应用管理列表"
-        columns={buildColumns(onAction)}
+        columns={buildColumns(onAction, canReview)}
         dataSource={[...rows]}
         pagination={false}
         rowKey="applicationId"
@@ -147,6 +150,7 @@ export function ApplicationAdminTable({
 
 function buildColumns(
   onAction?: (action: ApplicationRowAction, row: AdminApplicationRow) => void,
+  canReview = true,
 ): NonNullable<TableProps<AdminApplicationRow>["columns"]> {
   return [
     {
@@ -228,7 +232,9 @@ function buildColumns(
       title: "操作",
       key: "actions",
       width: "16%",
-      render: (_, row) => <RowActions onAction={onAction} row={row} />,
+      render: (_, row) => (
+        <RowActions canReview={canReview} onAction={onAction} row={row} />
+      ),
     },
   ];
 }
@@ -280,9 +286,11 @@ function ChannelTags({ channels }: { channels: readonly DeliveryChannel[] }) {
 }
 
 function RowActions({
+  canReview = true,
   onAction,
   row,
 }: {
+  canReview?: boolean;
   onAction?:
     | ((action: ApplicationRowAction, row: AdminApplicationRow) => void)
     | undefined;
@@ -294,11 +302,13 @@ function RowActions({
   if (row.status === "in_review") {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        <ActionLink
-          ariaLabel={`审核 ${row.name}`}
-          label="审核"
-          onClick={handle("review")}
-        />
+        {canReview && (
+          <ActionLink
+            ariaLabel={`审核 ${row.name}`}
+            label="审核"
+            onClick={handle("review")}
+          />
+        )}
         <ActionLink
           ariaLabel={`查看 ${row.name}`}
           label="查看"

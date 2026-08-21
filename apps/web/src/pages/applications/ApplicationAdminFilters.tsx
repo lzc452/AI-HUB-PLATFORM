@@ -38,6 +38,8 @@ export interface ApplicationAdminFiltersProps {
   sort: SortOption;
   status: string;
   statusOptions: readonly FilterOption[];
+  /** 无审核权限时不展示"待我审核"筛选。 */
+  showReviewMode?: boolean;
 }
 
 export type SortOption = "recent" | "name" | "status";
@@ -84,6 +86,7 @@ export function ApplicationAdminFilters({
   sort,
   status,
   statusOptions,
+  showReviewMode = true,
 }: ApplicationAdminFiltersProps) {
   const modeItems: ReadonlyArray<{
     label: React.ReactNode;
@@ -93,10 +96,14 @@ export function ApplicationAdminFilters({
       label: <ModeLabel count={countByMode.all} mode="all" />,
       value: "all",
     },
-    {
-      label: <ModeLabel count={countByMode.review} mode="review" />,
-      value: "review",
-    },
+    ...(showReviewMode
+      ? [
+          {
+            label: <ModeLabel count={countByMode.review} mode="review" />,
+            value: "review" as const,
+          },
+        ]
+      : []),
     {
       label: <ModeLabel count={countByMode.owned} mode="owned" />,
       value: "owned",
