@@ -87,7 +87,16 @@ export const UPLOAD_KIND_POLICIES: Readonly<
     allowedExtensions: ["exe", "msi", "dmg", "pkg", "apk", "zip", "tar", "gz"],
     allowedMimeTypes: [],
     svgAllowed: false,
-    // 创建应用向导上传安装包后经 complete 创建资产行（资产类型 artifact），
+    // 版本制品的异步流水线（outbox → worker 校验），complete 不创建资产行。
+    createsAsset: false,
+  },
+  installer: {
+    kind: "installer",
+    maxSizeBytes: 2 * GB,
+    allowedExtensions: ["exe", "msi", "dmg", "pkg", "apk", "zip", "tar", "gz"],
+    allowedMimeTypes: [],
+    svgAllowed: false,
+    // 创建应用向导上传安装包（同步 complete 创建资产行，资产类型 artifact），
     // 提交时由 persistDraftDeliveries 关联到交付渠道供目录下载。
     createsAsset: true,
     assetType: "artifact",

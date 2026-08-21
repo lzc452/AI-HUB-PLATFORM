@@ -870,7 +870,13 @@ export class AssetDto {
   assetId!: string;
 
   @ApiProperty({ type: String, description: "资产类型" })
-  assetType!: "icon" | "screenshot" | "cover" | "attachment" | "qr";
+  assetType!:
+    | "icon"
+    | "screenshot"
+    | "cover"
+    | "attachment"
+    | "qr"
+    | "artifact";
 
   @ApiProperty({ type: String, description: "资产名称" })
   name!: string;

@@ -77,7 +77,8 @@ export type UploadKind =
   | "cover"
   | "attachment"
   | "qr"
-  | "artifact";
+  | "artifact"
+  | "installer";
 
 export type IconMode = "auto" | "upload";
 export type ApplicationType =

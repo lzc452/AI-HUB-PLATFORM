@@ -213,7 +213,13 @@ export interface ApplicationAssetsTable {
   asset_id: Generated<string>;
   application_id: string;
   application_version_id: string | null;
-  asset_type: "icon" | "screenshot" | "cover" | "attachment" | "qr";
+  asset_type:
+    | "icon"
+    | "screenshot"
+    | "cover"
+    | "attachment"
+    | "qr"
+    | "artifact";
   name: string;
   storage_key: string;
   mime_type: string;

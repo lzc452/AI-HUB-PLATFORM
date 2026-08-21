@@ -763,7 +763,7 @@ function TargetSelectEditor({
   });
   const assetIds = Array.isArray(item?.assetIds) ? item.assetIds : [];
   const handleInstallerUpload = (file: File) => {
-    void upload("artifact", file)
+    void upload("installer", file)
       .then((asset) => {
         commitAssetIds(channel, [...assetIds, asset.assetId]);
         message.success("安装包已上传");
