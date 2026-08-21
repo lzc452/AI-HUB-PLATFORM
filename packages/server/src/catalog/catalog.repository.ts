@@ -321,7 +321,13 @@ export class KyselyCatalogRepository implements CatalogRepository {
         .execute(),
       this.db
         .selectFrom("application_assets")
-        .select(["application_id", "name", "mime_type", "size_bytes"])
+        .select([
+          "application_id",
+          "asset_id",
+          "name",
+          "mime_type",
+          "size_bytes",
+        ])
         .where("application_id", "in", applicationIds)
         .where("asset_type", "=", "attachment")
         .where("scan_status", "=", "passed")
@@ -360,6 +366,7 @@ export class KyselyCatalogRepository implements CatalogRepository {
         likedByMe: row.likedByMe,
         maintainers: row.maintainerName === null ? [] : [row.maintainerName],
         attachments: appAttachments.map((attachment) => ({
+          assetId: attachment.asset_id,
           name: attachment.name,
           type: attachment.mime_type.includes("pdf")
             ? "pdf"

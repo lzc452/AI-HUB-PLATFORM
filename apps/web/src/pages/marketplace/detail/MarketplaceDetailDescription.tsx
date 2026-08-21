@@ -10,6 +10,7 @@ import {
   Typography,
 } from "antd";
 
+import { downloadAssetContent } from "../../../modules/application/application.client";
 import { useDepartments } from "../../../modules/auth/useIdentity";
 import {
   buildBusinessScenario,
@@ -50,6 +51,8 @@ export function MarketplaceDetailDescription({
   const keyPoints = buildKeyPoints(entry);
   const maintainers = deriveMaintainers(entry);
   const attachments = listAttachments(entry);
+  // 附件下载仅对负责人/维护人/管理员开放（服务端同步校验），普通员工不展示下载入口。
+  const canDownload = entry.capabilities?.canEditRisk ?? false;
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -123,15 +126,23 @@ export function MarketplaceDetailDescription({
                   </span>
                   <span className="text-xs text-[#8c8c8c]">{att.size}</span>
                 </div>
-                <Button
-                  aria-label={`下载 ${att.name}`}
-                  disabled
-                  icon={<DownloadOutlined aria-hidden="true" />}
-                  size="small"
-                  type="link"
-                >
-                  下载
-                </Button>
+                {canDownload ? (
+                  <Button
+                    aria-label={`下载 ${att.name}`}
+                    icon={<DownloadOutlined aria-hidden="true" />}
+                    onClick={() =>
+                      void downloadAssetContent(
+                        entry.applicationId,
+                        att.assetId,
+                        att.name,
+                      )
+                    }
+                    size="small"
+                    type="link"
+                  >
+                    下载
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>

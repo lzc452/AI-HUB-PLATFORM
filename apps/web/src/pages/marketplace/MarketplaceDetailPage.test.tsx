@@ -212,8 +212,18 @@ function mockEntry(): CatalogEntry {
     ratingCount: 24,
     maintainers: ["测试维护人"],
     attachments: [
-      { name: "使用手册", type: "pdf", size: "2.4 MB" },
-      { name: "部署指南", type: "docx", size: "1.1 MB" },
+      {
+        assetId: "asset-manual",
+        name: "使用手册",
+        type: "pdf",
+        size: "2.4 MB",
+      },
+      {
+        assetId: "asset-deploy",
+        name: "部署指南",
+        type: "docx",
+        size: "1.1 MB",
+      },
     ],
     capabilities: {
       canResolveDelivery: true,

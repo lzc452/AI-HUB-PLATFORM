@@ -3,6 +3,7 @@ import type { CatalogEntry, DeliveryChannel } from "@ai-hub/contracts";
 import { channelText } from "./catalogMeta";
 
 export interface AttachmentMeta {
+  assetId: string;
   name: string;
   type: "pdf" | "docx" | "doc" | "other";
   size: string;

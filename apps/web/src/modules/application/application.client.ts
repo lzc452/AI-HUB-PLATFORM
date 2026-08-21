@@ -537,7 +537,7 @@ export function deletePendingCatalogItem(
 
 export interface AssetRecord {
   assetId: string;
-  assetType: "icon" | "screenshot" | "attachment";
+  assetType: "icon" | "screenshot" | "cover" | "attachment" | "qr" | "artifact";
   name: string;
   storageKey: string;
   mimeType: string;
@@ -549,6 +549,21 @@ export interface AssetRecord {
 
 export function listAssets(applicationId: string): Promise<AssetRecord[]> {
   return apiFetch<AssetRecord[]>(`${applicationsPath(applicationId)}/assets`);
+}
+
+/** 下载附件/资产内容到本地文件（权限由服务端校验：负责人/维护人/APPLICATION_MANAGE）。 */
+export async function downloadAssetContent(
+  applicationId: string,
+  assetId: string,
+  fileName: string,
+): Promise<void> {
+  const blob = await getAssetContent(applicationId, assetId);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 /** 读取资产内容（图标/截图/附件），供详情页图片预览使用。 */

@@ -13,7 +13,10 @@ import {
   useCreatorApplications,
   usePublishedVersion,
 } from "../../modules/application/useApplication";
-import type { AssetRecord } from "../../modules/application/application.client";
+import {
+  downloadAssetContent,
+  type AssetRecord,
+} from "../../modules/application/application.client";
 import { useAuth } from "../../modules/auth/useAuth";
 import {
   listDepartmentMembers,
@@ -190,15 +193,19 @@ export default function ApplicationDetailsPage() {
                     <span className="hidden w-24 text-right text-[#8a94a6] sm:block">
                       {formatDate(asset.createdAt)}
                     </span>
-                    <Tooltip title="附件下载暂未纳入 V1 交付契约">
-                      <Button
-                        aria-label={`下载 ${asset.name}`}
-                        disabled
-                        size="small"
-                      >
-                        下载
-                      </Button>
-                    </Tooltip>
+                    <Button
+                      aria-label={`下载 ${asset.name}`}
+                      onClick={() =>
+                        void downloadAssetContent(
+                          applicationId as string,
+                          asset.assetId,
+                          asset.name,
+                        )
+                      }
+                      size="small"
+                    >
+                      下载
+                    </Button>
                   </div>
                 ))
               ) : (

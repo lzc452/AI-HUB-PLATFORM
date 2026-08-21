@@ -38,6 +38,7 @@ export interface CatalogEntry {
   likedByMe: boolean;
   maintainers?: readonly string[];
   attachments?: readonly {
+    assetId: string;
     name: string;
     type: "pdf" | "docx" | "doc" | "other";
     size: string;
