@@ -403,13 +403,8 @@
         <div class="panel" style="margin-top: 16px">
           <h2>当前判断</h2>
           <p class="note">
-            <strong>本地 V1 尚未闭环。</strong>
-            工程静态门禁和若干后端状态机已有代码证据，但 21
-            张设计图当前运行截图验收为 0/21，Compose + PostgreSQL + API + worker
-            + 浏览器端到端领域链为 0/11。“上传应用 → 审核 →
-            发布市场”与“下载/使用 → 评论 → 点赞 → 评分 →
-            反馈”两条主流程均不能标记为 DONE。详细证据见“V1 闭环审计”页签和
-            <code>docs/audit/v1-flow-gap-matrix.md</code>。
+            <strong>Portal 一期前端与平台领域已完成，生产上线仍未切换。</strong>
+            AI-HUB-PORTAL 已独立建仓并按多笔提交推送 GitHub，SkillHub 逆向证据、响应式页面、四类资源、代码文件树、Markdown、评论双视图和发布工作流均已通过本地门禁；AI Hub Platform 同时完成 Portal 数据库、API、Worker 与 Console `/console` 基址改造。剩余上线门禁是生产网关切换、SSO/API 联调和真实 PostgreSQL 运行环境验收。详细证据见“V1 闭环审计”页签、<code>AI-HUB-PORTAL/design-qa.md</code> 与 <code>docs/deployment/portal-console-routing.md</code>。
           </p>
         </div>
       </section>
@@ -533,7 +528,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-17",
+        updatedAt: "2026-08-25",
         phases: [
           {
             id: "product",
@@ -553,6 +548,8 @@
             goal: "Web 壳、核心页面、组件与交互状态",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
+              "SkillHub 1440/768/390 逆向截图、DOM、交互与设计规格已归档",
+              "AI-HUB-PORTAL 视觉系统完成 Header、资源卡、详情 Tab、Dashboard 和移动端断点复刻",
               "五层架构已设计：pages/components/modules/router/shared",
               "按 frontend-ui-design.md 完成管理后台布局重构与全页面中文换壳",
               "前端 actor 恢复、路由守卫、权限菜单过滤、面包屑和管理页标题已完成",
@@ -570,6 +567,8 @@
             goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
             tasks: [
               "Phase 1–7 后端模块全部落地",
+              "Portal App、Skill、Plugin、MCP、SkillPackage、AppHunt、评论聚合和统一发布 API 已接入平台",
+              "AI-HUB-PORTAL 独立仓库已完成 Vite/React/TypeScript 分层架构、同域部署配置和 GitHub 多笔提交",
               "应用详情、版本、审核和交付工作台已接入共享应用壳与真实路由；其余未列页面仍保留静态演示数据",
               "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
               "新增业务演示数据 seed（应用/需求/互动/通知/分析）与 init:dev、init:production 统一入口",
@@ -597,6 +596,8 @@
               "应用管理目标路由 4/4 通过，审核工作台 6/6 通过；全量 Web 仍有 2 个既有基线失败",
               "Artifact Intake 异常注入 10/10 场景 Compose 证据通过（.verify/v1/artifact/）",
               "五角色矩阵/流程 A/B/21 图四视口验收完成；Sidebar 校准 220px 并生成壳层像素矩阵（正文/图标字形逐像素比对留待人工）",
+              "Portal typecheck、lint、Vitest 7/7、Sites 4/4、Playwright 桌面/移动 20/20 和 production build 全部通过",
+              "Portal Design QA 已完成：1440/390 浏览器截图并置、代码文件树/Markdown/评论/列表切换交互验证，无 P0/P1/P2",
             ],
           },
           {
@@ -1023,6 +1024,40 @@
           },
         ],
         tasks: [
+          {
+            id: "t-ai-hub-portal-phase-1-20260825",
+            phase: "dev",
+            status: "已完成",
+            title: "AI-HUB-PORTAL 一期前端与平台领域交付",
+            owner: "Codex",
+            start: "2026-08-24",
+            end: "2026-08-25",
+            progress:
+              "完成 SkillHub 逆向证据驱动的 Portal 前端：App、Skill、Plugin、MCP、AppHunt、Department、SkillPackage、Docs、Dashboard 路由；@/ alias 分层；Markdown 安全渲染、react-arborist 文件树、react-syntax-highlighter 代码查看；评论双视图；四类统一发布；AI-HUB-PLATFORM 完成 portal_* 数据库、内部 API、Worker Outbox 消费和 Console /console 部署基址。",
+            problem:
+              "Portal 需要独立仓库与 GitHub 多次提交；首次桌面路由巡检因 20 个懒加载路由累计超过默认 30 秒而超时。",
+            solution:
+              "建立私有 lzc452/AI-HUB-PORTAL 仓库，按研究文档、前端实现、测试、视觉证据分四次推进同一 codex 分支；路由巡检用例设置 90 秒明确预算，并重新跑通桌面/移动 20/20。",
+            skip:
+              "生产网关根路径切换、真实 SSO/API/PostgreSQL 联调和 Portal/Console 生产回滚演练需部署窗口执行；不在本地预览中伪造完成。",
+          },
+          {
+            id: "t-ai-hub-portal-visual-qa-20260825",
+            phase: "test",
+            status: "已完成",
+            title: "Portal 桌面/移动视觉与交互验收",
+            owner: "Codex",
+            start: "2026-08-24",
+            end: "2026-08-25",
+            progress:
+              "使用 Codex In-app Browser 在 1440x900 与 390x844 验证首页、列表、详情代码、评论、发布；并置 SkillHub source/Portal 截图，检查字体、布局节奏、颜色 token、资源资产、文案、无横向溢出和 console error，design-qa.md 最终结果为 passed。",
+            problem:
+              "首页能力区最初为静态三列，窄宽度下操作链接有重叠风险；源站品牌资产不能运行时热链。",
+            solution:
+              "改为可滚动能力 rail，加入桌面前后控制和移动单列断点，增加卡片底部空间；使用本地 AI Hub logo 和业务首字母回退资产。",
+            skip:
+              "SkillHub 原站真实品牌图片不复制到生产运行时；后续仅在获得授权的前提下替换本地品牌资产。",
+          },
           {
             id: "t-application-admin-polish-20260817b",
             phase: "dev",
@@ -1694,6 +1729,24 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-25",
+            phase: "test",
+            title: "Portal 视觉与交互验收完成",
+            body: "1440/390 浏览器截图及并置比较完成；首页轮播、四类资源列表/卡片持久化、代码文件树/语法高亮/复制、Markdown、评论双视图和统一发布流程通过，Portal Design QA 为 passed。",
+          },
+          {
+            date: "2026-08-25",
+            phase: "dev",
+            title: "AI-HUB-PORTAL 多笔 GitHub 提交完成",
+            body: "独立私有仓库 lzc452/AI-HUB-PORTAL 的 codex/ai-hub-portal-phase-1 分四次推送：逆向研究、前端架构与页面、测试验收、视觉证据；平台分支继续保持数据库/API/Worker/Console 分阶段提交。",
+          },
+          {
+            date: "2026-08-24",
+            phase: "dev",
+            title: "Portal 领域 API 与 Console /console 基址完成",
+            body: "Platform 新增 portal_* 迁移、领域服务、内部 API 和 Outbox 生命周期消费；Console Vite base、Router basename、SSO returnTo、旧路由 308 和 Nginx 缓存规则切换至 /console。",
+          },
           {
             date: "2026-08-17",
             phase: "dev",
