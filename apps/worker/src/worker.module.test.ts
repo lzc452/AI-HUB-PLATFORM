@@ -3,12 +3,13 @@ import {
   createArtifactVerificationFailedNotificationHandler,
   createOutboxHandlers,
   outboxHandlers,
+  portalLifecycleRecordedHandler,
   systemProbeRequestedHandler,
 } from "./worker.module.js";
 
 describe("worker outbox handlers", () => {
   it("registers the infrastructure probe handler and it resolves", async () => {
-    expect(Object.keys(outboxHandlers)).toEqual(["system.probe.requested"]);
+    expect(Object.keys(outboxHandlers)).toContain("system.probe.requested");
     expect(outboxHandlers["system.probe.requested"]).toBe(
       systemProbeRequestedHandler,
     );
@@ -24,6 +25,38 @@ describe("worker outbox handlers", () => {
         attempts: 1,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it("registers and validates every Portal lifecycle event", async () => {
+    const eventType = "portal.skill.status.published";
+    expect(outboxHandlers[eventType]).toBe(portalLifecycleRecordedHandler);
+    await expect(
+      portalLifecycleRecordedHandler({
+        id: "portal-event-1",
+        eventType,
+        aggregateType: "portal_skill",
+        aggregateId: "skill-1",
+        payload: {
+          resourceId: "skill-1",
+          resourceType: "skill",
+          actorEmployeeId: "E100",
+        },
+        idempotencyKey: "portal-skill-published-1",
+        attempts: 1,
+      }),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      portalLifecycleRecordedHandler({
+        id: "portal-event-invalid",
+        eventType,
+        aggregateType: "portal_skill",
+        aggregateId: "skill-1",
+        payload: {},
+        idempotencyKey: "portal-skill-invalid-1",
+        attempts: 1,
+      }),
+    ).rejects.toThrow("PORTAL_OUTBOX_PAYLOAD_INVALID");
   });
 
   it("registers the post-Outbox DingTalk notification handler", () => {

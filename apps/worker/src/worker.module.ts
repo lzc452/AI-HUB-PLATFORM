@@ -21,6 +21,50 @@ import {
 
 export const systemProbeRequestedHandler: OutboxHandler = async () => {};
 
+/**
+ * Portal 生命周期当前已在同一事务中写入业务状态与安全审计；Worker 负责校验
+ * 事件载荷并确认消费，避免已知 Portal 事件因缺少下游订阅者被隔离。后续通知、
+ * 搜索索引等订阅者可在此处理器之后按事件类型替换，无需改变业务事务。
+ */
+export const portalLifecycleRecordedHandler: OutboxHandler = async (event) => {
+  if (typeof event.payload !== "object" || event.payload === null) {
+    throw new Error("PORTAL_OUTBOX_PAYLOAD_INVALID");
+  }
+  const payload = event.payload as {
+    resourceId?: unknown;
+    resourceType?: unknown;
+  };
+  if (
+    typeof payload.resourceId !== "string" ||
+    !["app", "skill", "plugin", "mcp"].includes(
+      String(payload.resourceType),
+    )
+  ) {
+    throw new Error("PORTAL_OUTBOX_PAYLOAD_INVALID");
+  }
+};
+
+const portalResourceTypes = ["app", "skill", "plugin", "mcp"] as const;
+const portalLifecycleEvents = [
+  "draft.created",
+  "draft.updated",
+  "version.created",
+  "status.in_review",
+  "status.approved",
+  "status.draft",
+  "status.published",
+  "status.withdrawn",
+] as const;
+
+const portalOutboxHandlers = Object.fromEntries(
+  portalResourceTypes.flatMap((type) =>
+    portalLifecycleEvents.map((event) => [
+      `portal.${type}.${event}`,
+      portalLifecycleRecordedHandler,
+    ]),
+  ),
+) as OutboxHandlerMap;
+
 const unavailableDingTalk = {
   async send() {
     return { delivered: false, errorCode: "DINGTALK_UNAVAILABLE" };
@@ -73,6 +117,7 @@ export function createArtifactVerificationFailedNotificationHandler(
 
 export const outboxHandlers: OutboxHandlerMap = {
   "system.probe.requested": systemProbeRequestedHandler,
+  ...portalOutboxHandlers,
 };
 
 export function createOutboxHandlers(
