@@ -280,6 +280,23 @@ export type {
   AnalyticsExportRow,
 } from "./analytics/export.types.js";
 export type { AnalyticsRetentionRepository } from "./analytics/retention.types.js";
+export { PortalController } from "./portal/portal.controller.js";
+export { PortalModule } from "./portal/portal.module.js";
+export { KyselyPortalRepository } from "./portal/portal.repository.js";
+export { PortalService } from "./portal/portal.service.js";
+export { PORTAL_SERVICE } from "./portal/portal.tokens.js";
+export type {
+  DashboardCommentQuery,
+  PortalCommentItem,
+  PortalDraftInput,
+  PortalListInput,
+  PortalListResult,
+  PortalNativeResourceType,
+  PortalRepository,
+  PortalResourceItem,
+  PortalResourceType,
+  PortalVersionInput,
+} from "./portal/portal.types.js";
 export type {
   AssistantAuditRecord,
   AssistantAuditRepository,

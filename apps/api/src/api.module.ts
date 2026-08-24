@@ -37,6 +37,7 @@ import {
   type ArtifactVerificationPort,
   type ReadableObjectStoragePort,
   type WebTargetPolicy,
+  PortalModule,
 } from "@ai-hub/server";
 
 export interface ApiModuleTestOptions {
@@ -151,6 +152,7 @@ export class ApiModule {
         CreatorModule.register(database),
         DemandModule.register(database, storageDirectory),
         AnalyticsModule.register(database),
+        PortalModule.register(database),
         HealthModule.register(createProductionDatabaseCheck(database, metrics)),
       ],
     };

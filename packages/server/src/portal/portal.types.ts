@@ -1,0 +1,140 @@
+import type { ActorContext } from "@ai-hub/contracts";
+import type { PortalResourceStatus } from "@ai-hub/database";
+
+export type PortalResourceType = "app" | "skill" | "plugin" | "mcp";
+export type PortalNativeResourceType = Exclude<PortalResourceType, "app">;
+
+export interface PortalListInput {
+  query?: string;
+  ownerEmployeeId?: string;
+  status?: PortalResourceStatus;
+  sortBy: "score" | "latest" | "name";
+  page: number;
+  pageSize: number;
+}
+
+export interface PortalResourceItem {
+  resourceId: string;
+  resourceType: PortalResourceType;
+  ownerEmployeeId: string;
+  ownerName: string;
+  slug: string;
+  name: string;
+  summary: string;
+  status: PortalResourceStatus;
+  metadata: unknown;
+  favoriteCount: number;
+  isFavorited: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PortalListResult {
+  items: PortalResourceItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface PortalDraftInput {
+  resourceType: PortalResourceType;
+  slug: string;
+  name: string;
+  summary: string;
+  metadata?: unknown;
+}
+
+export interface PortalVersionInput {
+  version: string;
+  changelog: string;
+  metadata?: unknown;
+}
+
+export interface PortalCommentItem {
+  commentId: string;
+  resourceType: PortalResourceType;
+  resourceId: string;
+  resourceName: string;
+  resourceHref: string;
+  body: string;
+  kind: "comment" | "reply";
+  author: {
+    employeeId: string;
+    displayName: string;
+  };
+  parentComment: {
+    commentId: string;
+    body: string;
+    author: {
+      employeeId: string;
+      displayName: string;
+    };
+  } | null;
+  createdAt: Date;
+}
+
+export interface DashboardCommentQuery {
+  view: "replies" | "mine";
+  resourceType?: PortalResourceType;
+  sort: "latest" | "oldest";
+  page: number;
+  pageSize: number;
+}
+
+export interface PortalRepository {
+  listResources(
+    actor: ActorContext,
+    type: PortalResourceType,
+    input: PortalListInput,
+  ): Promise<PortalListResult>;
+  findResource(
+    actor: ActorContext,
+    type: PortalResourceType,
+    ownerEmployeeId: string | null,
+    slug: string,
+  ): Promise<PortalResourceItem | null>;
+  findResourceById(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+  ): Promise<PortalResourceItem | null>;
+  createDraft(actor: ActorContext, input: PortalDraftInput): Promise<PortalResourceItem>;
+  updateDraft(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+    input: Omit<PortalDraftInput, "resourceType">,
+  ): Promise<PortalResourceItem>;
+  saveVersion(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+    input: PortalVersionInput,
+  ): Promise<void>;
+  transition(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+    from: readonly PortalResourceStatus[],
+    to: PortalResourceStatus,
+  ): Promise<PortalResourceItem>;
+  setFavorite(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+    active: boolean,
+  ): Promise<boolean>;
+  listFavorites(actor: ActorContext, page: number, pageSize: number): Promise<PortalListResult>;
+  listComments(type: PortalResourceType, resourceId: string): Promise<PortalCommentItem[]>;
+  createComment(
+    actor: ActorContext,
+    type: PortalResourceType,
+    resourceId: string,
+    body: string,
+    parentCommentId: string | null,
+  ): Promise<PortalCommentItem>;
+  listDashboardComments(
+    actor: ActorContext,
+    input: DashboardCommentQuery,
+  ): Promise<{ items: PortalCommentItem[]; total: number; page: number; pageSize: number }>;
+}
