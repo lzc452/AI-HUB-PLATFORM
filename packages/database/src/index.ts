@@ -3,7 +3,11 @@ export { createDatabaseRuntime, createDatabaseRuntimeFrom } from "./runtime.js";
 export type { DatabaseRuntime } from "./runtime.js";
 export { runMigrations } from "./migrate.js";
 export { OutboxStore } from "./outbox/outbox-store.js";
-export type { DatabaseSchema, OutboxEventsTable } from "./schema.js";
+export type {
+  DatabaseSchema,
+  OutboxEventsTable,
+  PortalResourceStatus,
+} from "./schema.js";
 export {
   DEMO_ACCOUNT_DEFINITIONS,
   DEMO_DEPARTMENT_DEFINITIONS,

@@ -754,6 +754,193 @@ export interface AnalyticsExportJobsTable {
   completed_at: Date | null;
 }
 
+export type PortalResourceStatus =
+  | "draft"
+  | "in_review"
+  | "approved"
+  | "published"
+  | "withdrawn"
+  | "archived";
+
+export interface PortalSkillsTable {
+  skill_id: Generated<string>;
+  owner_employee_id: string;
+  skill_slug: string;
+  name: string;
+  summary: string;
+  metadata: unknown;
+  status: PortalResourceStatus;
+  current_version_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalSkillVersionsTable {
+  skill_version_id: Generated<string>;
+  skill_id: string;
+  version: string;
+  changelog: string;
+  metadata: unknown;
+  scan_status: "pending" | "passed" | "failed";
+  created_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalSkillFilesTable {
+  skill_file_id: Generated<string>;
+  skill_version_id: string;
+  name: string;
+  storage_key: string;
+  mime_type: string;
+  size_bytes: number;
+  sha256: string | null;
+  scan_status: "pending" | "passed" | "failed";
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalPluginsTable {
+  plugin_id: Generated<string>;
+  owner_employee_id: string;
+  plugin_slug: string;
+  name: string;
+  summary: string;
+  metadata: unknown;
+  status: PortalResourceStatus;
+  current_version_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalPluginVersionsTable {
+  plugin_version_id: Generated<string>;
+  plugin_id: string;
+  version: string;
+  changelog: string;
+  metadata: unknown;
+  scan_status: "pending" | "passed" | "failed";
+  created_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalMcpsTable {
+  mcp_id: Generated<string>;
+  owner_employee_id: string;
+  mcp_slug: string;
+  name: string;
+  summary: string;
+  metadata: unknown;
+  status: PortalResourceStatus;
+  current_version_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalMcpVersionsTable {
+  mcp_version_id: Generated<string>;
+  mcp_id: string;
+  version: string;
+  changelog: string;
+  metadata: unknown;
+  scan_status: "pending" | "passed" | "failed";
+  created_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalSkillPackagesTable {
+  skill_package_id: Generated<string>;
+  owner_employee_id: string;
+  package_slug: string;
+  name: string;
+  summary: string;
+  status: PortalResourceStatus;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalSkillPackageItemsTable {
+  skill_package_id: string;
+  skill_id: string;
+  sort_order: number;
+}
+
+export interface PortalAppHuntPeriodsTable {
+  period_id: Generated<string>;
+  name: string;
+  starts_at: Date;
+  ends_at: Date;
+  status: "scheduled" | "active" | "closed";
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalAppHuntEntriesTable {
+  entry_id: Generated<string>;
+  period_id: string;
+  application_id: string;
+  nominated_by_employee_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalAppHuntVotesTable {
+  vote_id: Generated<string>;
+  period_id: string;
+  entry_id: string;
+  employee_id: string;
+  active: boolean;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalDepartmentProfilesTable {
+  department_id: string;
+  description: string;
+  cover_storage_key: string | null;
+  metadata: unknown;
+  updated_by_employee_id: string | null;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalFavoritesTable {
+  favorite_id: Generated<string>;
+  employee_id: string;
+  resource_type: "app" | "skill" | "plugin" | "mcp";
+  resource_id: string;
+  created_at: ColumnType<Date, Date | undefined, never>;
+}
+
+export interface PortalResourceCommentsTable {
+  comment_id: Generated<string>;
+  resource_type: "skill" | "plugin" | "mcp";
+  resource_id: string;
+  parent_comment_id: string | null;
+  author_employee_id: string;
+  body: string;
+  hidden_at: Date | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalContentPagesTable {
+  page_key: string;
+  title: string;
+  body_markdown: string;
+  status: "draft" | "published" | "archived";
+  updated_by_employee_id: string | null;
+  published_at: Date | null;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+export interface PortalCurationsTable {
+  curation_id: Generated<string>;
+  slot_key: string;
+  resource_type: string;
+  resource_id: string;
+  sort_order: number;
+  enabled: boolean;
+  metadata: unknown;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
 export interface DatabaseSchema {
   outbox_events: OutboxEventsTable;
   departments: DepartmentsTable;
@@ -818,6 +1005,23 @@ export interface DatabaseSchema {
   analytics_export_jobs: AnalyticsExportJobsTable;
   dingtalk_sso_transactions: DingTalkSsoTransactionsTable;
   application_drafts: ApplicationDraftsTable;
+  portal_skills: PortalSkillsTable;
+  portal_skill_versions: PortalSkillVersionsTable;
+  portal_skill_files: PortalSkillFilesTable;
+  portal_plugins: PortalPluginsTable;
+  portal_plugin_versions: PortalPluginVersionsTable;
+  portal_mcps: PortalMcpsTable;
+  portal_mcp_versions: PortalMcpVersionsTable;
+  portal_skill_packages: PortalSkillPackagesTable;
+  portal_skill_package_items: PortalSkillPackageItemsTable;
+  portal_app_hunt_periods: PortalAppHuntPeriodsTable;
+  portal_app_hunt_entries: PortalAppHuntEntriesTable;
+  portal_app_hunt_votes: PortalAppHuntVotesTable;
+  portal_department_profiles: PortalDepartmentProfilesTable;
+  portal_favorites: PortalFavoritesTable;
+  portal_resource_comments: PortalResourceCommentsTable;
+  portal_content_pages: PortalContentPagesTable;
+  portal_curations: PortalCurationsTable;
 }
 
 export interface DingTalkSsoTransactionsTable {
