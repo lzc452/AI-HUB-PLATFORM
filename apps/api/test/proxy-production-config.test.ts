@@ -15,5 +15,7 @@ describe("production proxy security configuration", () => {
     expect(config).toContain("X-Content-Type-Options");
     expect(config).toContain("X-Frame-Options");
     expect(config).toContain("return 308 https://");
+    expect(config).toContain("location /console/");
+    expect(config).toContain("return 308 /console$request_uri;");
   });
 });

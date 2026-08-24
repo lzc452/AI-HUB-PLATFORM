@@ -186,6 +186,10 @@ vi.mock("./modules/application/useApplication", () => {
       isPending: false,
       mutate: vi.fn(),
     }),
+    useTransferReviewTask: () => ({
+      isPending: false,
+      mutate: vi.fn(),
+    }),
     useDeleteApplication: () => ({
       isPending: false,
       mutate: vi.fn(),
@@ -200,7 +204,7 @@ const styles = readFileSync(
 
 describe("App", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/");
+    globalThis.window.history.pushState({}, "", "/console/");
   });
 
   it("keeps Request and AbortSignal constructors compatible", () => {
@@ -342,14 +346,14 @@ describe("App", () => {
       await screen.findByRole("link", {
         name: "查看应用 统一研发效能数据看板",
       }),
-    ).toHaveAttribute("href", "/applications/app-rd-perf-001");
+    ).toHaveAttribute("href", "/console/applications/app-rd-perf-001");
   });
 
   it.each([
-    ["/applications/app-001", "应用详情"],
-    ["/applications/app-001/versions", "版本管理"],
-    ["/applications/app-001/review", "审核工作台"],
-    ["/applications/app-001/delivery", "交付配置"],
+    ["/console/applications/app-001", "应用详情"],
+    ["/console/applications/app-001/versions", "版本管理"],
+    ["/console/applications/app-001/review", "审核工作台"],
+    ["/console/applications/app-001/delivery", "交付配置"],
   ])("renders the application route %s", async (route, heading) => {
     globalThis.window.history.pushState({}, "", route);
 
@@ -361,7 +365,11 @@ describe("App", () => {
   });
 
   it("shows application lifecycle and delivery state labels", async () => {
-    globalThis.window.history.pushState({}, "", "/applications/app-001");
+    globalThis.window.history.pushState(
+      {},
+      "",
+      "/console/applications/app-001",
+    );
 
     render(<App />);
 

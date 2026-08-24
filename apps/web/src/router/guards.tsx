@@ -5,6 +5,7 @@ import { ForbiddenBlock } from "../components/common/ForbiddenBlock";
 import { useAuth } from "../modules/auth/useAuth";
 import type { PermissionRequirement } from "../modules/auth/roles";
 import { MessageError } from "../shared/ui/message";
+import { consoleReturnTo } from "./base";
 import { ROUTES } from "./routes";
 
 export function RequireAuth() {
@@ -15,9 +16,10 @@ export function RequireAuth() {
     return <Spin aria-label="正在恢复会话" />;
   }
   if (!isAuthenticated) {
-    return (
-      <Navigate replace state={{ from: location.pathname }} to={ROUTES.login} />
-    );
+    const search = new URLSearchParams({
+      returnTo: consoleReturnTo(location),
+    });
+    return <Navigate replace to={`${ROUTES.login}?${search.toString()}`} />;
   }
   if (!actor) {
     return <MessageError active cause={error} title="无法恢复当前身份" />;

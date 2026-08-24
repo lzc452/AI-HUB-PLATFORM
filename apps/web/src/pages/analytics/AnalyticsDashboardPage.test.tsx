@@ -6,7 +6,7 @@ import { setSession } from "../../modules/auth/session.store";
 
 describe("数据看板页面", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/analytics");
+    globalThis.window.history.pushState({}, "", "/console/analytics");
     setSession({ employeeId: "E0001" });
     vi.stubGlobal(
       "fetch",

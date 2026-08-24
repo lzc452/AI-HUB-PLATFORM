@@ -12,7 +12,7 @@ import { setSession } from "./modules/auth/session.store";
 
 describe("authentication", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/marketplace");
+    globalThis.window.history.pushState({}, "", "/console/marketplace");
   });
 
   afterEach(() => {
@@ -29,13 +29,35 @@ describe("authentication", () => {
     expect(
       await screen.findByRole("heading", { name: "欢迎登录" }),
     ).toBeInTheDocument();
+    expect(globalThis.window.location.pathname).toBe("/console/login");
+    expect(
+      new URLSearchParams(globalThis.window.location.search).get("returnTo"),
+    ).toBe("/console/marketplace");
+  });
+
+  it("preserves query and hash while redirecting a protected deep link", async () => {
+    setSession(null);
+    globalThis.window.history.pushState(
+      {},
+      "",
+      "/console/applications/app-1?tab=delivery#web",
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "欢迎登录" }),
+    ).toBeInTheDocument();
+    expect(
+      new URLSearchParams(globalThis.window.location.search).get("returnTo"),
+    ).toBe("/console/applications/app-1?tab=delivery#web");
   });
 
   it("validates the login form before submitting", async () => {
     setSession(null);
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    globalThis.window.history.pushState({}, "", "/login");
+    globalThis.window.history.pushState({}, "", "/console/login");
 
     render(<App />);
 
@@ -59,7 +81,7 @@ describe("authentication", () => {
         ),
       ),
     );
-    globalThis.window.history.pushState({}, "", "/login");
+    globalThis.window.history.pushState({}, "", "/console/login");
 
     render(<App />);
 

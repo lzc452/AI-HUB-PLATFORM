@@ -5,7 +5,7 @@ import { App } from "./App";
 
 describe("identity administration routes", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/");
+    globalThis.window.history.pushState({}, "", "/console/");
   });
 
   it("exposes organization and security administration routes", async () => {

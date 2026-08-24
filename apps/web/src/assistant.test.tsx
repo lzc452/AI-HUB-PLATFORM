@@ -5,7 +5,7 @@ import { App } from "./App";
 
 describe("assistant page", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/assistant");
+    globalThis.window.history.pushState({}, "", "/console/assistant");
   });
 
   it("renders the assistant welcome state with example questions", async () => {

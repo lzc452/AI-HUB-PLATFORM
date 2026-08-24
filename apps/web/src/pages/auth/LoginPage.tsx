@@ -7,7 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 
 import { useAuth } from "../../modules/auth/useAuth";
-import { ROUTES } from "../../router/routes";
+import { resolveLoginReturnTo } from "../../router/base";
 import { MessageError } from "../../shared/ui/message";
 import loginBgVideoUrl from "../../../assets/login_bg.mp4";
 // Vite 方式引入右侧背景图（由构建器处理为资源 URL）
@@ -25,18 +25,29 @@ export default function LoginPage() {
   const { error, isLoading, login, completeDingTalkLogin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from =
-    (location.state as { from?: string } | null)?.from ?? ROUTES.marketplace;
+  const from = resolveLoginReturnTo(
+    location.search,
+    (location.state as { from?: string } | null)?.from,
+  );
 
-  // Handle DingTalk SSO callback on mount.
+  // 钉钉回调先完成 HttpOnly handoff，再恢复原始 Console 深链。
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.has("code") && params.has("state")) {
-      completeDingTalkLogin().then((succeeded) => {
-        if (succeeded) navigate(from, { replace: true });
-      });
+    const isSsoCallback =
+      params.get("sso") === "complete" ||
+      (params.has("code") && params.has("state"));
+    if (!isSsoCallback) {
+      return;
     }
-  }, []);
+
+    let active = true;
+    void completeDingTalkLogin().then((succeeded) => {
+      if (active && succeeded) navigate(from, { replace: true });
+    });
+    return () => {
+      active = false;
+    };
+  }, [completeDingTalkLogin, from, location.search, navigate]);
 
   const {
     control,

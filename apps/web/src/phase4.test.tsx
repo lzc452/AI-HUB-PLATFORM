@@ -39,7 +39,7 @@ vi.mock("./modules/marketplace/useCatalog", () => ({
 
 describe("Phase 4 market shell", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/");
+    globalThis.window.history.pushState({}, "", "/console/");
   });
 
   it("shows fixed market sections, search and trust labels", async () => {
@@ -73,7 +73,11 @@ describe("Phase 4 market shell", () => {
     expect(screen.getByRole("tab", { name: "未读" })).toBeInTheDocument();
     expect(screen.getByText("暂无通知")).toBeInTheDocument();
 
-    globalThis.window.history.pushState({}, "", "/creator/app-platform");
+    globalThis.window.history.pushState(
+      {},
+      "",
+      "/console/creator/app-platform",
+    );
     render(<App />);
     // 创作者中心无 h1 标题：断言 KPI 指标卡（真实渲染元素）
     expect(await screen.findByText("总发布应用")).toBeInTheDocument();

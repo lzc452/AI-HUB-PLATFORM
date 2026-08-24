@@ -263,7 +263,7 @@ describe("MarketplaceDetailPage", () => {
     saveRiskMutateAsync.mockReset();
     // Modal.info 等静态方法挂载在独立 React root，cleanup 不会卸载，需显式销毁。
     Modal.destroyAll();
-    globalThis.window.history.pushState({}, "", "/marketplace/app-ocr");
+    globalThis.window.history.pushState({}, "", "/console/marketplace/app-ocr");
   });
 
   /** 打开"立即使用"下拉并点击"小程序"，触发交付解析后返回 Modal 内容。 */

@@ -4,7 +4,6 @@ import {
   ExperimentOutlined,
   ReadOutlined,
   RightOutlined,
-  TrophyOutlined,
 } from "@ant-design/icons";
 import { Tag, Typography } from "antd";
 import { useState } from "react";
@@ -20,15 +19,7 @@ const { Title } = Typography;
 
 const recentUpdates: string[] = []; // 最近更新，api 待实现
 
-const presets = [
-  'gold',
-  'lime',
-  'green',
-  'cyan',
-  'blue',
-  'geekblue',
-  'purple',
-]; // 预设的标签颜色列表
+const presets = ["gold", "lime", "green", "cyan", "blue", "geekblue", "purple"]; // 预设的标签颜色列表
 
 interface MarketplaceSidebarProps {
   /** 点击热门分类时的回调，参数为分类 ID。 */
@@ -85,7 +76,13 @@ export function MarketplaceSidebar({
             //     <span className="text-xs text-[#1f1f1f]">{category.name}</span>
             //   </button>
             // </li>
-            <Tag className="" color={presets[index % presets.length]} onClick={() => onSelectCategory(category.categoryId)}>
+            <Tag
+              className=""
+              {...(presets[index % presets.length]
+                ? { color: presets[index % presets.length] }
+                : {})}
+              onClick={() => onSelectCategory(category.categoryId)}
+            >
               {category.name}
             </Tag>
           ))}

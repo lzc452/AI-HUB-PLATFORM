@@ -9,6 +9,7 @@ import { defineConfig } from "vitest/config";
 const enableHttps = process.env.VITE_DEV_HTTPS === "1";
 
 export default defineConfig({
+  base: "/console/",
   plugins: [react(), tailwindcss(), ...(enableHttps ? [basicSsl()] : [])],
   server: {
     host: true,

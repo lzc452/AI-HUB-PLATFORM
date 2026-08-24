@@ -147,25 +147,23 @@ export default function ApplicationsPage() {
       onOk: async () => {
         // 语义接线：review 走审核工作台；edit 走创作者中心；publish 调真实发布接口。
         if (action === "review" && row.currentVersionId) {
-          window.location.assign(
+          navigate(
             `/applications/${encodeURIComponent(row.applicationId)}/review`,
           );
           return;
         }
         if (action === "edit") {
-          window.location.assign(
+          navigate(
             `/creator/create?type=edit&applicationId=${encodeURIComponent(row.applicationId)}`,
           );
           return;
         }
         if (action === "view") {
-          window.location.assign(
-            `/applications/${encodeURIComponent(row.applicationId)}`,
-          );
+          navigate(`/applications/${encodeURIComponent(row.applicationId)}`);
           return;
         }
         if (action === "version") {
-          window.location.assign(
+          navigate(
             `/applications/${encodeURIComponent(row.applicationId)}/versions`,
           );
           return;

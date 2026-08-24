@@ -31,6 +31,10 @@ import {
 } from "./session.store";
 import { showSuccessMessage } from "../../shared/ui/message";
 import { ApiError } from "../../shared/api/client";
+import {
+  CONSOLE_DEFAULT_PATH,
+  createConsoleSsoCallbackPath,
+} from "../../router/base";
 
 function sessionKey(session: AuthSession | null) {
   return session ? session.employeeId : null;
@@ -208,14 +212,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [setActor],
   );
 
-  const startDingTalkLogin = useCallback(async (returnTo = "/marketplace") => {
-    try {
-      const result = await startDingTalkSso(returnTo);
-      window.location.href = result.redirectUrl;
-    } catch {
-      setError("钉钉登录暂不可用");
-    }
-  }, []);
+  const startDingTalkLogin = useCallback(
+    async (returnTo = CONSOLE_DEFAULT_PATH) => {
+      try {
+        const result = await startDingTalkSso(
+          createConsoleSsoCallbackPath(returnTo),
+        );
+        window.location.href = result.redirectUrl;
+      } catch {
+        setError("钉钉登录暂不可用");
+      }
+    },
+    [],
+  );
 
   const completeDingTalkLogin = useCallback(async () => {
     const requestVersion = ++requestVersionRef.current;

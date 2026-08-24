@@ -8,6 +8,7 @@ import {
 import { AppShell } from "../components/layout/AppShell";
 import { RequireAuth, RequirePermission } from "./guards";
 import { ROUTE_ACCESS } from "../modules/auth/roles";
+import { CONSOLE_BASENAME } from "./base";
 import { ROUTES } from "./routes";
 
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
@@ -57,7 +58,7 @@ const SecurityPage = lazy(() => import("../pages/security/SecurityPage"));
 const AssistantPage = lazy(() => import("../pages/assistant/AssistantPage"));
 
 export function createRouter() {
-  return createBrowserRouter([
+  const routes = [
     {
       element: <LoginPage />,
       path: ROUTES.login,
@@ -208,7 +209,9 @@ export function createRouter() {
         },
       ],
     },
-  ]);
+  ];
+
+  return createBrowserRouter(routes, { basename: CONSOLE_BASENAME });
 }
 
 export function AppRouter() {

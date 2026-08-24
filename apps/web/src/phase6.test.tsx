@@ -40,7 +40,7 @@ vi.mock("./modules/analytics/usePlatformOverview", () => ({
 
 describe("Phase 6 analytics dashboard shell", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState({}, "", "/analytics");
+    globalThis.window.history.pushState({}, "", "/console/analytics");
   });
 
   it("shows tabbed dashboard with platform overview and time filter", async () => {
