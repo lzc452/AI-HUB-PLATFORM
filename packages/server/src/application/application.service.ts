@@ -173,10 +173,9 @@ export class ApplicationService {
     if (application.ownerEmployeeId !== actor.employeeId) {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
-    if (
-      application.status === "archived" ||
-      application.status === "withdrawn"
-    ) {
+    // 已下架（withdrawn）应用允许重新编辑草稿：修改后可重新提交审核恢复上架；
+    // 归档（archived）为终态，不再可编辑。
+    if (application.status === "archived") {
       throw new Error("APPLICATION_NOT_EDITABLE");
     }
     const sanitizedDraft: ApplicationDraft = {
@@ -249,7 +248,13 @@ export class ApplicationService {
     if (application.ownerEmployeeId !== actor.employeeId) {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
-    if (application.status !== "draft" && application.status !== "published") {
+    // draft：首次提交；published：提交更新审核（保持目录可见）；
+    // withdrawn：下架后重新提交审核恢复上架（审核通过自动发布，见 review）。
+    if (
+      application.status !== "draft" &&
+      application.status !== "published" &&
+      application.status !== "withdrawn"
+    ) {
       throw new Error("INVALID_APPLICATION_TRANSITION");
     }
     const result = await this.repository.findDraft(applicationId);
@@ -354,7 +359,8 @@ export class ApplicationService {
         applicationId,
         expectedStatus: application.status,
         // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
-        // draft 提交审核才进入 in_review。
+        // draft/withdrawn 提交审核进入 in_review（下架应用审核通过后自动重新上架，
+        // 见 review 的 sourceStatus 恢复路径）。
         status: isPublishedUpdate ? "published" : "in_review",
         pendingVersionId: isPublishedUpdate
           ? version.applicationVersionId

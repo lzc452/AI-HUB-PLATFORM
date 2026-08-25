@@ -141,6 +141,25 @@ describe("提交审核状态门禁", () => {
     await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
     expect(mocks.formWizardProps?.submitDisabled).toBe(false);
   });
+
+  it("withdrawn（已下架）应用保持提交按钮可用且可重新提交", async () => {
+    mocks.getApplicationDraft.mockResolvedValue({
+      ...recordBase,
+      status: "withdrawn",
+    });
+    renderPage();
+    await waitFor(() => expect(mocks.formWizardProps).not.toBeNull());
+    expect(mocks.formWizardProps?.submitDisabled).toBe(false);
+
+    const onSubmit = (
+      mocks.formWizardProps as {
+        onSubmit: (values: unknown) => Promise<void>;
+      }
+    ).onSubmit;
+    await onSubmit({});
+    expect(mocks.saveApplicationDraft).toHaveBeenCalled();
+    expect(mocks.submitApplicationDraft).toHaveBeenCalled();
+  });
 });
 
 describe("草稿惰性创建", () => {

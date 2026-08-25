@@ -207,7 +207,7 @@ export function CreatorAppTable({
                   type: "link",
                 }}
                 buttonText="下架"
-                content="下架后应用将从市场移除，且无法即时恢复上架，确定要下架该应用吗？"
+                content="下架后应用将从市场移除，需重新编辑并提交审核后才能恢复上架，确定要下架该应用吗？"
                 danger
                 okText="确认下架"
                 onOk={() => withdraw.mutate(record.applicationId)}
@@ -257,6 +257,30 @@ export function CreatorAppTable({
                 }}
                 title="撤回审核"
               />
+            </span>
+          );
+        }
+        if (record.status === "withdrawn") {
+          return (
+            <span className="flex items-center">
+              <Button
+                onClick={() => navigate(detailPath)}
+                size="small"
+                type="link"
+              >
+                查看
+              </Button>
+              <Button
+                onClick={() =>
+                  navigate(
+                    `/creator/create?type=edit&applicationId=${encodeURIComponent(record.applicationId)}`,
+                  )
+                }
+                size="small"
+                type="link"
+              >
+                继续编辑
+              </Button>
             </span>
           );
         }

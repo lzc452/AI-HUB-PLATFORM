@@ -1827,6 +1827,81 @@ describe("ApplicationService", () => {
     expect(repository.events).not.toContain("application.withdraw.requested");
   });
 
+  describe("下架后重新编辑与重新提交（恢复上架）", () => {
+    /** 完整走一遍发布-审核流程后下架，返回 withdrawn 应用 ID。 */
+    async function publishThenWithdraw(
+      service: ApplicationService,
+    ): Promise<string> {
+      const { application } = await preparePublishedApplication(service);
+      await service.withdraw(owner, application.applicationId, "下架");
+      return application.applicationId;
+    }
+
+    it("saveDraft 允许已下架（withdrawn）应用保存草稿", async () => {
+      const { service } = makeService();
+      const applicationId = await publishThenWithdraw(service);
+      await expect(
+        service.saveDraft(owner, applicationId, completeDraft()),
+      ).resolves.toMatchObject({ status: "withdrawn" });
+    });
+
+    it("submitDraft 允许已下架应用重新提交审核（withdrawn → in_review）", async () => {
+      const { service } = makeService();
+      const applicationId = await publishThenWithdraw(service);
+      await service.saveDraft(owner, applicationId, {
+        ...completeDraft(),
+        version: "2.0.0",
+      });
+      const updated = await service.submitDraft(owner, applicationId);
+      expect(updated.status).toBe("in_review");
+      await expect(
+        service.getApplication(applicationId),
+      ).resolves.toMatchObject({ status: "in_review" });
+    });
+
+    it("归档（archived）应用仍拒绝保存草稿与重新提交", async () => {
+      const { service } = makeService();
+      const applicationId = await publishThenWithdraw(service);
+      await service.archive(owner, applicationId);
+      await expect(
+        service.saveDraft(owner, applicationId, completeDraft()),
+      ).rejects.toThrow("APPLICATION_NOT_EDITABLE");
+      await expect(
+        service.submitDraft(owner, applicationId),
+      ).rejects.toThrow("INVALID_APPLICATION_TRANSITION");
+    });
+
+    it("下架应用经向导重新提交审核通过后自动重新上架（恢复闭环）", async () => {
+      const { service, repository } = makeService();
+      const applicationId = await publishThenWithdraw(service);
+      await service.saveDraft(owner, applicationId, {
+        ...completeDraft(),
+        version: "2.0.0",
+      });
+      await service.submitDraft(owner, applicationId);
+      const resubmitVersion = [...repository.versions.values()].find(
+        (candidate) =>
+          candidate.applicationId === applicationId &&
+          candidate.version === "2.0.0",
+      )!;
+      await service.claimReview(
+        reviewer,
+        resubmitVersion.applicationVersionId,
+      );
+      const result = await service.review(
+        reviewer,
+        resubmitVersion.applicationVersionId,
+        "approve",
+        "恢复上架",
+      );
+
+      expect(result.status).toBe("published");
+      expect(result.currentVersionId).toBe(resubmitVersion.applicationVersionId);
+      expect(repository.catalogRegistrations).toContain(applicationId);
+      expect(repository.events).toContain("application.published");
+    });
+  });
+
   it("requires all four delivery channels before publication", async () => {
     const { service, repository } = makeService();
     // 手动 publish 仅兼容自动上架上线前的历史数据（审核通过后停在 approved）。

@@ -217,7 +217,7 @@ describe("创作者中心页面", () => {
     expect(screen.getAllByText("下架应用").length).toBeGreaterThan(0);
     expect(
       within(latestDialog()).getByText(
-        "下架后应用将从市场移除，且无法即时恢复上架，确定要下架该应用吗？",
+        "下架后应用将从市场移除，需重新编辑并提交审核后才能恢复上架，确定要下架该应用吗？",
       ),
     ).toBeInTheDocument();
 
@@ -250,6 +250,28 @@ describe("创作者中心页面", () => {
 
     expect(state.withdrawMutate).toHaveBeenCalledTimes(1);
     expect(state.withdrawMutate).toHaveBeenCalledWith("app-001");
+  });
+
+  it("已下架（withdrawn）行提供继续编辑入口", () => {
+    state.creatorApplications = {
+      ...settled,
+      data: {
+        items: [{ ...sampleItems[0], status: "withdrawn" }],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+      },
+    };
+
+    renderPage();
+
+    expect(
+      screen.getByRole("button", { name: /继续编辑/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /查\s*看/ })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /下\s*架/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("in_review 行的撤回按钮可用", () => {

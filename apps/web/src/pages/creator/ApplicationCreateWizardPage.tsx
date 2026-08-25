@@ -244,9 +244,13 @@ export default function ApplicationCreateWizardPage() {
     }
   };
 
-  // 与后端 submitDraft 的状态机一致：仅 draft / published 可提交审核；
-  // 已进入审核（in_review）等状态重复提交会返回 INVALID_APPLICATION_TRANSITION。
-  const submittable = appStatus === "draft" || appStatus === "published";
+  // 与后端 submitDraft 的状态机一致：draft / published / withdrawn（下架后
+  // 重新编辑提交审核恢复上架）可提交；已进入审核（in_review）等状态重复
+  // 提交会返回 INVALID_APPLICATION_TRANSITION。
+  const submittable =
+    appStatus === "draft" ||
+    appStatus === "published" ||
+    appStatus === "withdrawn";
 
   const handleSubmit = async (values: FieldValues) => {
     if (!applicationId) return;
