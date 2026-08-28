@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档版本 | `v1.1` |
+| 文档版本 | `v1.2` |
 | 更新日期 | `2026-08-28` |
 | 服务端仓库 | `AI-HUB-PLATFORM` |
 | 客户端仓库 | `AI-HUB-PORTAL` |
@@ -41,6 +41,12 @@ const response = await fetch(path, {
 - `aihub_sid`：当前会话。
 
 为兼容旧客户端，也接受请求头 `x-employee-id` 和 `x-session-id`。生产代码不得把会话值写入 `localStorage`，也不得在日志中打印 Cookie 或身份请求头。写请求沿用现有 CSRF、`x-request-nonce` 和 `x-request-timestamp` 约定。
+
+### 2.1 DingTalk SSO
+
+`GET /internal/identity/login/options` 始终包含 `password`；仅在服务端注入 DingTalk SSO 服务时才额外包含 `dingtalk_sso`。客户端只有收到该 method 才展示入口。
+
+完整流程为：客户端调用 `GET /internal/identity/login/dingtalk/start?returnTo=...`，其中 `returnTo` 必须是 Portal 的回调页，例如 `/login?dingtalk=complete&returnTo=%2Fdashboard`；服务端完成 OAuth 回调后写入短时 HttpOnly `dingtalk_handoff` cookie 并重定向至该地址；Portal 立即 `POST /internal/identity/login/dingtalk/complete` 消费 handoff、取得正式会话，再跳转安全校验后的 `returnTo`。不要把 handoff token 暴露到 URL 或 localStorage。
 
 ## 3. 通用数据结构
 
@@ -128,7 +134,8 @@ interface PortalProblem {
   issues?: Array<{
     code: string;
     message: string;
-    path?: string[];
+    /** 稳定点路径，例如 `deliveries.0.entryUrl`。 */
+    path?: string;
   }>;
 }
 ```
@@ -138,7 +145,7 @@ interface PortalProblem {
 | HTTP | `code` 示例 | 前端处理 |
 | --- | --- | --- |
 | `400` | `PORTAL_APP_DRAFT_REQUIRED` | 提示补齐完整应用表单，不重试原请求 |
-| `400` | `DRAFT_VALIDATION_FAILED` | 展示 `issues` 的字段级校验信息，保留原始 `path` |
+| `400` | `DRAFT_VALIDATION_FAILED` | 展示 `issues` 的字段级校验信息；`path` 为服务端 dotted string |
 | `400` | `PORTAL_RESOURCE_STATE_CONFLICT`、`PORTAL_VERSION_ALREADY_EXISTS` | 刷新详情后让用户重新选择操作 |
 | `400` | `PORTAL_REVIEW_QUEUE_NOT_FOUND`、`REVIEW_QUEUE_CLAIM_REQUIRED` | 刷新审核队列；不要自动重复提交结论 |
 | `403` | `PORTAL_PUBLISH_FORBIDDEN`、`PORTAL_REVIEW_FORBIDDEN`、`PORTAL_SELF_REVIEW_FORBIDDEN` | 显示无权限或禁止自审，不泄露额外对象信息 |
@@ -281,6 +288,8 @@ GET  /internal/portal/dashboard/publish/app/:applicationId/uploads/:uploadId
 
 推荐顺序为创建会话 → PUT raw body → complete → 将返回的 `assetId` 写入草稿 → 刷新草稿回读。扫描失败、魔数/MIME/大小不符和过期会话按 `errorCode` 展示并重新创建上传，不重试已失败会话。
 
+PUT 请求推荐使用 `Content-Type: application/octet-stream`，以便 Portal 与 AI Hub Web 共用同一客户端约定。为兼容浏览器直接发送 `File`/`Blob` 的真实 MIME（如 `image/png`），服务端也会在**上述内容上传 PUT 路由**解析 raw body；这不会放宽其他业务路由。实际允许的声明 MIME、扩展名、大小及文件魔数仍按创建上传会话时的统一策略校验。
+
 ### 5.3 `ApplicationDraft` 完整结构
 
 前端表单提交的对象必须满足以下字段。字段值应与 `@ai-hub/contracts` 中的 `ApplicationDraft` 一致：
@@ -368,12 +377,16 @@ POST /internal/portal/dashboard/publish/app/{applicationId}/submit
   "code": "DRAFT_VALIDATION_FAILED",
   "detail": "草稿未通过提交校验",
   "issues": [
-    { "code": "DELIVERY_REQUIRED", "message": "至少配置一个可用交付渠道" }
+    {
+      "code": "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED",
+      "message": "Web 渠道需填写入口地址",
+      "path": "deliveries.0.entryUrl"
+    }
   ]
 }
 ```
 
-当前后端的 `issues` 保证 `code` 和 `message`；如果未来版本补充 `path`，前端应原样保留并用于字段定位。
+当前后端的 `issues` 保证 `code`、`message` 和稳定的 dotted-string `path`；前端应保留并用于字段定位。历史服务若返回 `path: string[]`，适配层可兼容转换为页面内部模型，但不得要求新后端返回数组。
 
 缺少完整草稿时返回 `PORTAL_APP_DRAFT_REQUIRED`，前端应回到编辑页补全，而不是重试同一请求。
 
@@ -457,7 +470,7 @@ draft ──submit──> in_review ──approve──> published
 3. 将现有 `PublishDraft` 适配为 `ApplicationDraft`。`metadata` 只为历史 skill/plugin/mcp 请求保留；应用写请求统一发送 `applicationDraft`。
 4. 创建应用后保存返回的 `resourceId`，后续更新、版本、提交、审核和下架都使用该 ID；列表详情 URL 仍按 `ownerEmployeeId + slug` 查询。
 5. 生产联调使用 `VITE_PORTAL_USE_FIXTURES=false`。Fixture 只用于本地无后端开发，不能作为真实状态来源。
-6. 对 `DRAFT_VALIDATION_FAILED` 按 `issues[].path` 定位表单字段；对认领冲突和状态冲突只做一次刷新，不做无限自动重试。
+6. 对 `DRAFT_VALIDATION_FAILED` 按 `issues[].path`（dotted string）定位表单字段；对认领冲突和状态冲突只做一次刷新，不做无限自动重试。
 7. 前端不直接依赖数据库列名、Portal 历史事件或 reconciliation CLI；这些属于服务端内部实现。
 
 ## 9. 联调验收清单

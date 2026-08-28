@@ -3179,7 +3179,9 @@ describe("ApplicationService", () => {
     expect(error).toBeInstanceOf(DraftValidationError);
     expect(
       (error as DraftValidationError).issues.some(
-        (issue) => issue.code === "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED",
+        (issue) =>
+          issue.code === "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED" &&
+          issue.path === "deliveries.0.entryUrl",
       ),
     ).toBe(true);
   });

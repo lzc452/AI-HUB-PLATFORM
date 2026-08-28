@@ -73,6 +73,8 @@ export interface CreateDeliveryInput {
 export interface DraftValidationIssue {
   code: string;
   message: string;
+  /** 表单字段的稳定点路径，例如 `deliveries.0.entryUrl`。 */
+  path?: string;
 }
 
 /** 提交校验失败（携带问题列表，供 400 响应返回）。 */
@@ -1888,20 +1890,20 @@ export function validateDraftCompleteness(
   draft: ApplicationDraft,
 ): DraftValidationIssue[] {
   const issues: DraftValidationIssue[] = [];
-  const fail = (code: string, message: string): void => {
-    issues.push({ code, message });
+  const fail = (code: string, message: string, path: string): void => {
+    issues.push({ code, message, path });
   };
 
   if (typeof draft.name !== "string" || draft.name.trim().length === 0) {
-    fail("DRAFT_NAME_REQUIRED", "应用名称不能为空");
+    fail("DRAFT_NAME_REQUIRED", "应用名称不能为空", "name");
   } else if (draft.name.length > 160) {
-    fail("DRAFT_NAME_TOO_LONG", "应用名称不能超过 160 字");
+    fail("DRAFT_NAME_TOO_LONG", "应用名称不能超过 160 字", "name");
   }
   if (
     typeof draft.departmentId !== "string" ||
     draft.departmentId.length === 0
   ) {
-    fail("DRAFT_DEPARTMENT_REQUIRED", "归属部门不能为空");
+    fail("DRAFT_DEPARTMENT_REQUIRED", "归属部门不能为空", "departmentId");
   }
   // 功能 5c：分类门禁放宽为「分类 ID 或自定义分类名称至少其一」（trim 后非空）——
   // 前端选择自定义分类时 categoryId 为空、名称走 customCategoryName。
@@ -1912,31 +1914,31 @@ export function validateDraftCompleteness(
       ? draft.customCategoryName.trim()
       : "";
   if (categoryIdValue.length === 0 && customCategoryValue.length === 0) {
-    fail("DRAFT_CATEGORY_REQUIRED", "分类不能为空");
+    fail("DRAFT_CATEGORY_REQUIRED", "分类不能为空", "categoryId");
   }
   if (
     !Array.isArray(draft.maintainerEmployeeIds) ||
     draft.maintainerEmployeeIds.length === 0
   ) {
-    fail("DRAFT_MAINTAINER_REQUIRED", "至少指定一名维护人");
+    fail("DRAFT_MAINTAINER_REQUIRED", "至少指定一名维护人", "maintainerEmployeeIds");
   }
 
   const icon = draft.icon;
   if (icon === undefined || icon === null) {
-    fail("DRAFT_ICON_REQUIRED", "应用图标不能为空");
+    fail("DRAFT_ICON_REQUIRED", "应用图标不能为空", "icon");
   } else if (icon.mode === "auto") {
     if (
       typeof icon.backgroundColor !== "string" ||
       icon.backgroundColor.trim().length === 0
     ) {
-      fail("DRAFT_ICON_BACKGROUND_REQUIRED", "自动图标需指定背景色");
+      fail("DRAFT_ICON_BACKGROUND_REQUIRED", "自动图标需指定背景色", "icon.backgroundColor");
     }
   } else if (icon.mode === "upload") {
     if (typeof icon.assetId !== "string" || icon.assetId.length === 0) {
-      fail("DRAFT_ICON_ASSET_REQUIRED", "上传图标需指定图标资产");
+      fail("DRAFT_ICON_ASSET_REQUIRED", "上传图标需指定图标资产", "icon.assetId");
     }
   } else {
-    fail("DRAFT_ICON_MODE_INVALID", "图标模式非法");
+    fail("DRAFT_ICON_MODE_INVALID", "图标模式非法", "icon.mode");
   }
 
   if (
@@ -1944,21 +1946,21 @@ export function validateDraftCompleteness(
     draft.screenshotAssetIds.length < 1 ||
     draft.screenshotAssetIds.length > 6
   ) {
-    fail("DRAFT_SCREENSHOTS_COUNT", "截图数量需在 1–6 张之间");
+    fail("DRAFT_SCREENSHOTS_COUNT", "截图数量需在 1–6 张之间", "screenshotAssetIds");
   }
 
   if (
     typeof draft.summaryHtml !== "string" ||
     draft.summaryHtml.trim().length === 0
   ) {
-    fail("DRAFT_SUMMARY_REQUIRED", "简介不能为空");
+    fail("DRAFT_SUMMARY_REQUIRED", "简介不能为空", "summaryHtml");
   }
   const hasManual =
     (typeof draft.manualHtml === "string" &&
       draft.manualHtml.trim().length > 0) ||
     (typeof draft.manualAssetId === "string" && draft.manualAssetId.length > 0);
   if (!hasManual) {
-    fail("DRAFT_MANUAL_REQUIRED", "操作手册需提供富文本或附件");
+    fail("DRAFT_MANUAL_REQUIRED", "操作手册需提供富文本或附件", "manualHtml");
   }
   const hasExamples =
     (typeof draft.examplesHtml === "string" &&
@@ -1966,63 +1968,80 @@ export function validateDraftCompleteness(
     (typeof draft.examplesAssetId === "string" &&
       draft.examplesAssetId.length > 0);
   if (!hasExamples) {
-    fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件");
+    fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件", "examplesHtml");
   }
 
   // 规格 §5.4：常见问题必填，且每条须同时包含问题与答案（fail-closed：
   // 非字符串/空串均拒绝，防止绕过前端直接调提交接口）。
-  if (
-    !Array.isArray(draft.faq) ||
-    draft.faq.length === 0 ||
-    draft.faq.some(
+  if (!Array.isArray(draft.faq) || draft.faq.length === 0) {
+    fail("DRAFT_FAQ_REQUIRED", "请至少填写一条常见问题（含问题与答案）", "faq");
+  } else {
+    const invalidFaqIndex = draft.faq.findIndex(
       (entry) =>
         entry === null ||
         typeof entry.question !== "string" ||
         entry.question.trim().length === 0 ||
         typeof entry.answer !== "string" ||
         entry.answer.trim().length === 0,
-    )
-  ) {
-    fail("DRAFT_FAQ_REQUIRED", "请至少填写一条常见问题（含问题与答案）");
+    );
+    if (invalidFaqIndex >= 0) {
+      const entry = draft.faq[invalidFaqIndex]!;
+      const path =
+        entry === null ||
+        typeof entry.question !== "string" ||
+        entry.question.trim().length === 0
+          ? `faq.${invalidFaqIndex}.question`
+          : `faq.${invalidFaqIndex}.answer`;
+      fail(
+        "DRAFT_FAQ_REQUIRED",
+        "请至少填写一条常见问题（含问题与答案）",
+        path,
+      );
+    }
   }
 
   if (!Array.isArray(draft.audience) || draft.audience.length === 0) {
-    fail("DRAFT_AUDIENCE_REQUIRED", "受众规则至少一条");
+    fail("DRAFT_AUDIENCE_REQUIRED", "受众规则至少一条", "audience");
   }
 
   const risk = draft.risk;
   if (risk === undefined || risk === null) {
-    fail("DRAFT_RISK_REQUIRED", "AI 风险声明不能为空");
+    fail("DRAFT_RISK_REQUIRED", "AI 风险声明不能为空", "risk");
   } else {
-    const booleans = [
-      risk.handlesSensitiveData,
-      risk.sendsDataExternally,
-      risk.retainsConversations,
-      risk.affectsHighRiskDecisions,
+    const booleanFields = [
+      ["handlesSensitiveData", risk.handlesSensitiveData],
+      ["sendsDataExternally", risk.sendsDataExternally],
+      ["retainsConversations", risk.retainsConversations],
+      ["affectsHighRiskDecisions", risk.affectsHighRiskDecisions],
     ];
-    if (booleans.some((value) => typeof value !== "boolean")) {
-      fail("DRAFT_RISK_OPTION_REQUIRED", "AI 风险选项需逐项选择是/否");
+    const missingBoolean = booleanFields.find(([, value]) => typeof value !== "boolean");
+    if (missingBoolean !== undefined) {
+      fail(
+        "DRAFT_RISK_OPTION_REQUIRED",
+        "AI 风险选项需逐项选择是/否",
+        `risk.${missingBoolean[0]}`,
+      );
     }
     if (
       !Array.isArray(risk.modelProviders) ||
       risk.modelProviders.length === 0
     ) {
-      fail("DRAFT_RISK_PROVIDER_REQUIRED", "需选择模型 / AI 提供方");
+      fail("DRAFT_RISK_PROVIDER_REQUIRED", "需选择模型 / AI 提供方", "risk.modelProviders");
     }
     if (
       typeof risk.inputRestrictionDisclaimer !== "string" ||
       risk.inputRestrictionDisclaimer.trim().length === 0
     ) {
-      fail("DRAFT_RISK_DISCLAIMER_REQUIRED", "免责声明不能为空");
+      fail("DRAFT_RISK_DISCLAIMER_REQUIRED", "免责声明不能为空", "risk.inputRestrictionDisclaimer");
     }
   }
 
   if (!Array.isArray(draft.deliveries) || draft.deliveries.length === 0) {
-    fail("DRAFT_DELIVERY_REQUIRED", "交付配置不能为空");
+    fail("DRAFT_DELIVERY_REQUIRED", "交付配置不能为空", "deliveries");
   } else {
     // 功能 4 逐渠道必填（与前端 deliveryDraftItemSchema 同源规则）：
     // web 需入口地址；desktop/mobile 需 ≥1 个目标；mini_program 无额外必填。
-    for (const item of draft.deliveries) {
+    for (const [index, item] of draft.deliveries.entries()) {
       if (item.channel === "web") {
         if (
           typeof item.entryUrl !== "string" ||
@@ -2031,6 +2050,7 @@ export function validateDraftCompleteness(
           fail(
             "DRAFT_DELIVERY_WEB_ENTRY_URL_REQUIRED",
             "Web 渠道需填写入口地址",
+            `deliveries.${index}.entryUrl`,
           );
         }
       } else if (item.channel === "desktop" || item.channel === "mobile") {
@@ -2038,6 +2058,7 @@ export function validateDraftCompleteness(
           fail(
             "DRAFT_DELIVERY_TARGETS_REQUIRED",
             "请至少选择一个目标系统/平台",
+            `deliveries.${index}.targets`,
           );
         }
       }

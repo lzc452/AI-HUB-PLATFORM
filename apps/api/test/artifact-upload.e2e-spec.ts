@@ -232,6 +232,23 @@ describe("artifact upload API", () => {
       });
   }
 
+  it("does not parse text/plain as JSON outside an upload content route", async () => {
+    await request(app.getHttpServer())
+      .post("/internal/applications/app-1/artifact-uploads")
+      .set(ownerHeaders)
+      .set("content-type", "text/plain")
+      .send(
+        JSON.stringify({
+          fileName: "artifact.zip",
+          mimeType: "application/zip",
+          sizeBytes: 8,
+        }),
+      )
+      .expect(400);
+
+    expect(repository.uploads).toHaveLength(0);
+  });
+
   it("accepts an application/octet-stream body and preserves its exact bytes", async () => {
     const content = Buffer.from("artifact");
     const created = await createUpload(content.byteLength).expect(201);
@@ -247,6 +264,46 @@ describe("artifact upload API", () => {
 
     expect(uploaded.body.sha256).toBe(
       "c7c5c1d70c5dec4416ab6158afd0b223ef40c29b1dc1f97ed9428b94d4cadb1c",
+    );
+    expect(storage.objects.get(created.body.objectKey)).toEqual(content);
+  });
+
+  it("accepts an image/png body and preserves its exact bytes", async () => {
+    const content = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]);
+    const created = await createUpload(content.byteLength).expect(201);
+
+    const uploaded = await request(app.getHttpServer())
+      .put(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/content`,
+      )
+      .set(ownerHeaders)
+      .set("content-type", "image/png")
+      .send(content)
+      .expect(200);
+
+    expect(uploaded.body.sha256).toBe(
+      "4c4b6a3be1314ab86138bef4314dde022e600960d8689a2c8f8631802d20dab6",
+    );
+    expect(storage.objects.get(created.body.objectKey)).toEqual(content);
+  });
+
+  it("keeps application/json file contents as raw bytes", async () => {
+    const content = Buffer.from('{"v":1}');
+    const created = await createUpload(content.byteLength).expect(201);
+
+    const uploaded = await request(app.getHttpServer())
+      .put(
+        `/internal/applications/app-1/artifact-uploads/${created.body.uploadId}/content`,
+      )
+      .set(ownerHeaders)
+      .set("content-type", "application/json")
+      .send(content.toString("utf8"))
+      .expect(200);
+
+    expect(uploaded.body.sha256).toBe(
+      "afbf9d0f3560b0fd7795e81c42a0a79ee6b6fc67e064f77826aee642cad28d91",
     );
     expect(storage.objects.get(created.body.objectKey)).toEqual(content);
   });

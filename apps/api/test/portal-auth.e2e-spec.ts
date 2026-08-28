@@ -185,7 +185,11 @@ describe("Portal 发布接口认证兼容", () => {
       .expect(({ body }) => {
         expect(body.code).toBe("DRAFT_VALIDATION_FAILED");
         expect(body.issues).toEqual([
-          { code: "DELIVERY_REQUIRED", message: "至少配置一个交付方式" },
+          {
+            code: "DELIVERY_REQUIRED",
+            message: "至少配置一个交付方式",
+            path: "deliveries.0.entryUrl",
+          },
         ]);
       });
   });
@@ -221,7 +225,11 @@ async function createApp(
     },
     async updateDraft() {
       throw new DraftValidationError([
-        { code: "DELIVERY_REQUIRED", message: "至少配置一个交付方式" },
+        {
+          code: "DELIVERY_REQUIRED",
+          message: "至少配置一个交付方式",
+          path: "deliveries.0.entryUrl",
+        },
       ]);
     },
   } as unknown as PortalService;

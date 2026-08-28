@@ -833,10 +833,8 @@ export class IdentityController {
   @ApiOkResponse({ description: "可用登录方式列表" })
   @ApiProblemResponses([400])
   getLoginOptions() {
-    const methods: string[] = [];
-    // Password login is always available.
-    methods.push("password");
-    // DingTalk SSO availability depends on config — checked dynamically.
+    const methods = ["password"];
+    if (this.dingtalkSso !== undefined) methods.push("dingtalk_sso");
     return { methods };
   }
 

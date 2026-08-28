@@ -5,6 +5,7 @@ import {
   shouldSecureSessionCookie,
 } from "./session-cookie.js";
 import { IdentityController } from "./identity.controller.js";
+import type { DingTalkSsoService } from "./dingtalk-sso.service.js";
 import type { IdentityService } from "./identity.service.js";
 
 /** 仅用于实例化控制器；sessionCookieHeaders 不依赖这些成员。 */
@@ -93,5 +94,19 @@ describe("session cookie attributes", () => {
       ).sessionCookieHeaders(session, "E001");
       expect(sid).toContain("Secure");
     });
+  });
+});
+
+describe("IdentityController login options", () => {
+  it("仅在 DingTalk SSO 服务可用时公开该登录方式", () => {
+    expect(new IdentityController(stubIdentity).getLoginOptions()).toEqual({
+      methods: ["password"],
+    });
+    expect(
+      new IdentityController(
+        stubIdentity,
+        {} as DingTalkSsoService,
+      ).getLoginOptions(),
+    ).toEqual({ methods: ["password", "dingtalk_sso"] });
   });
 });
