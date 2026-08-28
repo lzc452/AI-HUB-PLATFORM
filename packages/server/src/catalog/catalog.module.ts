@@ -20,12 +20,13 @@ export class CatalogModule {
   static register(
     database: Kysely<DatabaseSchema>,
     storage?: ReadableObjectStoragePort,
+    applicationModule?: DynamicModule,
   ): DynamicModule {
     return {
       module: CatalogModule,
       imports: [
         IdentityModule.register(database),
-        ApplicationModule.registerService(database),
+        applicationModule ?? ApplicationModule.registerService(database),
       ],
       controllers: [CatalogController],
       providers: [

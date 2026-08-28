@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  applicationReconciliationRecordedHandler,
   createArtifactVerificationFailedNotificationHandler,
   createOutboxHandlers,
   outboxHandlers,
@@ -57,6 +58,40 @@ describe("worker outbox handlers", () => {
         attempts: 1,
       }),
     ).rejects.toThrow("PORTAL_OUTBOX_PAYLOAD_INVALID");
+  });
+
+  it("registers and validates application reconciliation events", async () => {
+    const eventType = "application.reconciled";
+    expect(outboxHandlers[eventType]).toBe(
+      applicationReconciliationRecordedHandler,
+    );
+    expect(outboxHandlers["application.reconciliation.rolled_back"]).toBe(
+      applicationReconciliationRecordedHandler,
+    );
+
+    await expect(
+      applicationReconciliationRecordedHandler({
+        id: "reconciliation-event-1",
+        eventType,
+        aggregateType: "application",
+        aggregateId: "app-1",
+        payload: { batchId: "batch-1", applicationId: "app-1" },
+        idempotencyKey: "application.reconciled:batch-1:app-1",
+        attempts: 1,
+      }),
+    ).resolves.toBeUndefined();
+
+    await expect(
+      applicationReconciliationRecordedHandler({
+        id: "reconciliation-event-invalid",
+        eventType,
+        aggregateType: "application",
+        aggregateId: "app-1",
+        payload: { batchId: "batch-1", applicationId: "another-app" },
+        idempotencyKey: "application.reconciled:batch-1:app-1:invalid",
+        attempts: 1,
+      }),
+    ).rejects.toThrow("APPLICATION_RECONCILIATION_OUTBOX_INVALID");
   });
 
   it("registers the post-Outbox DingTalk notification handler", () => {

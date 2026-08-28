@@ -3,4 +3,9 @@ export interface ApiErrorResponse {
   message: string;
   traceId: string;
   details?: Readonly<Record<string, unknown>>;
+  issues?: readonly Readonly<{
+    code: string;
+    message: string;
+    path?: string;
+  }>[];
 }

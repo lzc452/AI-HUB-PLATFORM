@@ -37,6 +37,7 @@ import {
   type ArtifactVerificationPort,
   type ReadableObjectStoragePort,
   type WebTargetPolicy,
+  type PortalService,
   PortalModule,
 } from "@ai-hub/server";
 
@@ -49,6 +50,7 @@ export interface ApiModuleTestOptions {
   notification?: NotificationService;
   creator?: CreatorService;
   demand?: DemandService;
+  portal?: PortalService;
   analytics?: {
     dashboard: AnalyticsDashboardService;
     exportService: AnalyticsExportService;
@@ -122,6 +124,16 @@ export class ApiModule {
         ? createDatabase(databaseOrUrl)
         : databaseOrUrl;
     const metrics = observability.metrics ?? new ObservabilityMetrics();
+    // Portal 通过同一个动态模块注入 ApplicationService，确保 Portal 与 AI Hub
+    // 不会各自创建独立的应用生命周期服务实例。
+    const applicationModule = ApplicationModule.register(
+      database,
+      artifactVerification,
+      storageDirectory,
+      artifactMaxSizeBytes,
+      artifactStorage,
+      webTargetPolicy,
+    );
     return {
       module: ApiModule,
       providers: [
@@ -137,22 +149,15 @@ export class ApiModule {
             ? {}
             : { auditExportStorage: artifactStorage }),
         }),
-        ApplicationModule.register(
-          database,
-          artifactVerification,
-          storageDirectory,
-          artifactMaxSizeBytes,
-          artifactStorage,
-          webTargetPolicy,
-        ),
-        CatalogModule.register(database, artifactStorage),
+        applicationModule,
+        CatalogModule.register(database, artifactStorage, applicationModule),
         InteractionModule.register(database),
         FeedbackModule.register(database),
         NotificationModule.register(database),
         CreatorModule.register(database),
-        DemandModule.register(database, storageDirectory),
+        DemandModule.register(database, storageDirectory, applicationModule),
         AnalyticsModule.register(database),
-        PortalModule.register(database),
+        PortalModule.register(database, applicationModule),
         HealthModule.register(createProductionDatabaseCheck(database, metrics)),
       ],
     };
@@ -215,6 +220,9 @@ export class ApiModule {
                 options.application,
               ),
             ]),
+        ...(options.portal === undefined
+          ? []
+          : [PortalModule.forTest(options.portal)]),
         HealthModule.register(databaseCheck),
         ...(options.analytics === undefined || options.identity === undefined
           ? []

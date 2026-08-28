@@ -6,6 +6,9 @@ import { IdentityService } from "../identity/identity.service.js";
 import { ApplicationController } from "./application.controller.js";
 import { ArtifactUploadController } from "./artifact-upload.controller.js";
 import { UnifiedUploadController } from "./unified-upload.controller.js";
+import { PortalApplicationUploadController } from "./portal-application-upload.controller.js";
+import { PortalApplicationAssetController } from "./portal-application-asset.controller.js";
+import { ApplicationUploadService } from "./application-upload.service.js";
 import { KyselyApplicationRepository } from "./application.repository.js";
 import { ApplicationService } from "./application.service.js";
 import {
@@ -13,6 +16,7 @@ import {
   ARTIFACT_MAX_SIZE_BYTES,
   ARTIFACT_PIPELINE,
   ARTIFACT_STORAGE,
+  APPLICATION_UPLOAD_SERVICE,
 } from "./application.tokens.js";
 import { ArtifactPipeline } from "./storage.pipeline.js";
 import { DiskObjectStorage } from "./storage.disk.js";
@@ -100,15 +104,43 @@ function createUploadProviders(
     { provide: ARTIFACT_STORAGE, useValue: storage },
     { provide: ARTIFACT_PIPELINE, useValue: pipeline },
     { provide: ARTIFACT_MAX_SIZE_BYTES, useValue: maxSizeBytes },
+    {
+      provide: APPLICATION_UPLOAD_SERVICE,
+      useFactory: (
+        repository: KyselyApplicationRepository,
+        resolvedStorage: ReadableObjectStoragePort,
+        resolvedPipeline: ArtifactPipeline,
+      ) =>
+        new ApplicationUploadService(
+          repository,
+          resolvedStorage,
+          resolvedPipeline,
+        ),
+      inject: [
+        KyselyApplicationRepository,
+        ARTIFACT_STORAGE,
+        ARTIFACT_PIPELINE,
+      ],
+    },
   ];
 }
 
 function createUploadControllers(
   storage: ReadableObjectStoragePort | undefined,
-): (typeof ArtifactUploadController | typeof UnifiedUploadController)[] {
+): (
+  | typeof ArtifactUploadController
+  | typeof UnifiedUploadController
+  | typeof PortalApplicationUploadController
+  | typeof PortalApplicationAssetController
+)[] {
   return storage === undefined
     ? []
-    : [ArtifactUploadController, UnifiedUploadController];
+    : [
+        ArtifactUploadController,
+        UnifiedUploadController,
+        PortalApplicationUploadController,
+        PortalApplicationAssetController,
+      ];
 }
 
 @Module({})

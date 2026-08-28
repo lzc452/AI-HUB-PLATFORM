@@ -1073,7 +1073,10 @@ export class ApplicationService {
     await this.assertAuthorized(actor, allowedActions.publish);
     const version = await this.requireVersion(applicationVersionId);
     const application = await this.requireApplication(version.applicationId);
-    if (application.ownerEmployeeId !== actor.employeeId) {
+    if (
+      application.ownerEmployeeId !== actor.employeeId &&
+      !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
     this.requireStatus(application, "approved");
@@ -1111,7 +1114,10 @@ export class ApplicationService {
   ): Promise<ApplicationRecord> {
     await this.assertAuthorized(actor, allowedActions.publish);
     const application = await this.requireApplication(applicationId);
-    if (application.ownerEmployeeId !== actor.employeeId) {
+    if (
+      application.ownerEmployeeId !== actor.employeeId &&
+      !hasPermission(actor, PERMISSIONS.APPLICATION_MANAGE)
+    ) {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
     this.requireStatus(application, "published");

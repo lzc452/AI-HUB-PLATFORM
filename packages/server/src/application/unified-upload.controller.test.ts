@@ -12,6 +12,9 @@ import type {
 import { ArtifactPipeline } from "./storage.pipeline.js";
 import type { ReadableObjectStoragePort } from "./storage.port.js";
 import { UnifiedUploadController } from "./unified-upload.controller.js";
+import { ApplicationUploadService } from "./application-upload.service.js";
+import { PortalApplicationUploadController } from "./portal-application-upload.controller.js";
+import type { AssetRecord } from "./application.types.js";
 
 const owner: ActorContext = {
   employeeId: "E100",
@@ -63,6 +66,7 @@ class MemoryUploadStorage implements ReadableObjectStoragePort {
 class MemoryApplicationRepository {
   applications = new Map<string, ApplicationRecord>();
   uploads = new Map<string, ArtifactUploadRecord>();
+  assets = new Map<string, AssetRecord>();
   versions = new Map<string, ApplicationVersionRecord>();
   validationChecks: ValidationCheckRecord[] = [];
   audits: string[] = [];
@@ -101,6 +105,20 @@ class MemoryApplicationRepository {
     const updated = { ...current, ...input };
     this.uploads.set(uploadId, updated);
     return updated;
+  }
+  async createAsset(input: Omit<AssetRecord, "assetId" | "createdAt">) {
+    const asset: AssetRecord = {
+      ...input,
+      assetId: `asset-${this.nextId++}`,
+      createdAt: new Date(),
+    };
+    this.assets.set(asset.assetId, asset);
+    return asset;
+  }
+  async listAssets(applicationId: string) {
+    return [...this.assets.values()].filter(
+      (asset) => asset.applicationId === applicationId,
+    );
   }
   async findVerifiedArtifact(input: {
     applicationId: string;
@@ -164,20 +182,13 @@ function makeHarness() {
       return true;
     },
   });
-  const identity = {
-    async getActorContext(employeeId: string, sessionId: string) {
-      return { ...owner, employeeId, sessionId };
-    },
-    async authorize() {
-      return { allowed: true, reasonCode: "ALLOW_TEST" };
-    },
-  };
-  const controller = new UnifiedUploadController(
+  const uploads = new ApplicationUploadService(
     repository as never,
-    identity as never,
     storage,
     pipeline,
   );
+  const controller = new UnifiedUploadController(uploads);
+  const portalController = new PortalApplicationUploadController(uploads);
   const service = new ApplicationService(
     repository as unknown as ApplicationRepository,
     { authorize: async () => ({ allowed: true, reasonCode: "ALLOW_TEST" }) },
@@ -187,7 +198,7 @@ function makeHarness() {
       },
     },
   );
-  return { repository, controller, service };
+  return { repository, controller, portalController, service };
 }
 
 describe("UnifiedUploadController artifact completion", () => {
@@ -210,6 +221,7 @@ describe("UnifiedUploadController artifact completion", () => {
       "app-1",
       owner.employeeId,
       owner.sessionId,
+      owner,
       {
         kind: "artifact",
         fileName: "release.zip",
@@ -222,6 +234,7 @@ describe("UnifiedUploadController artifact completion", () => {
       created.uploadId,
       owner.employeeId,
       owner.sessionId,
+      owner,
       content,
     );
     const completed = await controller.completeUpload(
@@ -229,6 +242,7 @@ describe("UnifiedUploadController artifact completion", () => {
       created.uploadId,
       owner.employeeId,
       owner.sessionId,
+      owner,
       {}, // 未提供签名
     );
 
@@ -277,6 +291,7 @@ describe("UnifiedUploadController artifact completion", () => {
       "app-2",
       owner.employeeId,
       owner.sessionId,
+      owner,
       {
         kind: "artifact",
         fileName: "release.zip",
@@ -289,6 +304,7 @@ describe("UnifiedUploadController artifact completion", () => {
       created.uploadId,
       owner.employeeId,
       owner.sessionId,
+      owner,
       content,
     );
     await controller.completeUpload(
@@ -296,6 +312,7 @@ describe("UnifiedUploadController artifact completion", () => {
       created.uploadId,
       owner.employeeId,
       owner.sessionId,
+      owner,
       { signature: "client-signed" },
     );
 
@@ -314,5 +331,50 @@ describe("UnifiedUploadController artifact completion", () => {
     await expect(
       service.createVersion(owner, application.applicationId, input),
     ).resolves.toBeDefined();
+  });
+});
+
+describe("PortalApplicationUploadController", () => {
+  it("returns a storage-safe DTO and the real assetId", async () => {
+    const { repository, portalController } = makeHarness();
+    repository.applications.set("app-portal", {
+      applicationId: "app-portal",
+      ownerEmployeeId: owner.employeeId,
+      maintainerEmployeeId: owner.employeeId,
+      departmentId: "dept-rnd",
+      name: "Portal App",
+      summary: "Portal App",
+      status: "draft",
+      currentVersionId: null,
+      pendingVersionId: null,
+    });
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const created = await portalController.createUpload(owner, "app-portal", {
+      kind: "icon",
+      fileName: "icon.png",
+      mimeType: "image/png",
+      sizeBytes: png.byteLength,
+    });
+    await portalController.uploadContent(
+      owner,
+      "app-portal",
+      created.uploadId,
+      png,
+    );
+    const completed = await portalController.completeUpload(
+      owner,
+      "app-portal",
+      created.uploadId,
+      {},
+    );
+
+    expect(completed.assetId).toBeTruthy();
+    expect(completed).not.toHaveProperty("objectKey");
+    const state = await portalController.getUpload(
+      owner,
+      "app-portal",
+      created.uploadId,
+    );
+    expect(state.assetId).toBe(completed.assetId);
   });
 });

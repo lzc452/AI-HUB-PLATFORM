@@ -36,11 +36,35 @@ export const portalLifecycleRecordedHandler: OutboxHandler = async (event) => {
   };
   if (
     typeof payload.resourceId !== "string" ||
-    !["app", "skill", "plugin", "mcp"].includes(
-      String(payload.resourceType),
-    )
+    !["app", "skill", "plugin", "mcp"].includes(String(payload.resourceType))
   ) {
     throw new Error("PORTAL_OUTBOX_PAYLOAD_INVALID");
+  }
+};
+
+/**
+ * reconciliation 已在同一事务内完成状态修复与安全审计；Worker 仅校验并确认
+ * 事件，避免没有下游订阅者的修复记录被隔离。后续可在这里附加通知或报表投递。
+ */
+export const applicationReconciliationRecordedHandler: OutboxHandler = async (
+  event,
+) => {
+  if (event.aggregateType !== "application") {
+    throw new Error("APPLICATION_RECONCILIATION_OUTBOX_INVALID");
+  }
+  if (typeof event.payload !== "object" || event.payload === null) {
+    throw new Error("APPLICATION_RECONCILIATION_OUTBOX_INVALID");
+  }
+  const payload = event.payload as {
+    batchId?: unknown;
+    applicationId?: unknown;
+  };
+  if (
+    typeof payload.batchId !== "string" ||
+    typeof payload.applicationId !== "string" ||
+    payload.applicationId !== event.aggregateId
+  ) {
+    throw new Error("APPLICATION_RECONCILIATION_OUTBOX_INVALID");
   }
 };
 
@@ -64,6 +88,12 @@ const portalOutboxHandlers = Object.fromEntries(
     ]),
   ),
 ) as OutboxHandlerMap;
+
+const applicationReconciliationOutboxHandlers: OutboxHandlerMap = {
+  "application.reconciled": applicationReconciliationRecordedHandler,
+  "application.reconciliation.rolled_back":
+    applicationReconciliationRecordedHandler,
+};
 
 const unavailableDingTalk = {
   async send() {
@@ -118,6 +148,7 @@ export function createArtifactVerificationFailedNotificationHandler(
 export const outboxHandlers: OutboxHandlerMap = {
   "system.probe.requested": systemProbeRequestedHandler,
   ...portalOutboxHandlers,
+  ...applicationReconciliationOutboxHandlers,
 };
 
 export function createOutboxHandlers(

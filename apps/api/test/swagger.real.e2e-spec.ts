@@ -7,6 +7,7 @@ import { resetDatabase } from "./reset-database.js";
 import { startPostgresTestContainer } from "@ai-hub/testing";
 import { ApiModule } from "../src/api.module.js";
 import { configureSwagger } from "../src/swagger.js";
+import { DiskObjectStorage } from "@ai-hub/server";
 
 const EXPECTED_TAGS = [
   "身份与组织",
@@ -17,6 +18,7 @@ const EXPECTED_TAGS = [
   "创作者",
   "需求",
   "分析",
+  "AI Hub Portal",
   "健康检查",
   "指标",
 ] as const;
@@ -34,7 +36,17 @@ describe("swagger API docs", () => {
     await resetDatabase(db);
 
     const moduleRef = await Test.createTestingModule({
-      imports: [ApiModule.register(container.databaseUrl)],
+      imports: [
+        ApiModule.register(
+          container.databaseUrl,
+          {},
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          new DiskObjectStorage(".tmp/swagger-storage"),
+        ),
+      ],
     }).compile();
     app = moduleRef.createNestApplication();
     configureSwagger(app, { enabled: true });
@@ -60,6 +72,11 @@ describe("swagger API docs", () => {
       info: { title: string };
       tags: readonly { name: string }[];
       paths: Readonly<Record<string, unknown>>;
+      components: {
+        schemas: Readonly<
+          Record<string, { properties?: Readonly<Record<string, unknown>> }>
+        >;
+      };
     };
 
     expect(document.info.title).toBe("AI Hub 平台 API");
@@ -67,5 +84,28 @@ describe("swagger API docs", () => {
       expect.arrayContaining([...EXPECTED_TAGS]),
     );
     expect(Object.keys(document.paths).length).toBeGreaterThanOrEqual(60);
+    expect(document.paths).toHaveProperty("/internal/portal/dashboard/publish");
+    expect(document.paths).toHaveProperty(
+      "/internal/portal/dashboard/publish/{resourceType}/{resourceId}/withdraw",
+    );
+    expect(document.paths).toHaveProperty(
+      "/internal/portal/dashboard/publish/app/{applicationId}",
+    );
+    expect(document.paths).toHaveProperty(
+      "/internal/portal/dashboard/publish/app/{applicationId}/uploads",
+    );
+    expect(document.paths).toHaveProperty(
+      "/internal/portal/dashboard/publish/app/{applicationId}/uploads/{uploadId}/content",
+    );
+    expect(document.paths).toHaveProperty(
+      "/internal/portal/apps/{applicationId}/assets/{assetId}/content",
+    );
+    const portalUpdate = document.paths[
+      "/internal/portal/dashboard/publish/{resourceType}/{resourceId}"
+    ] as { put?: { responses?: Readonly<Record<string, unknown>> } };
+    expect(portalUpdate.put?.responses).toHaveProperty("400");
+    expect(
+      document.components.schemas.ProblemDetailsDto?.properties,
+    ).toHaveProperty("issues");
   });
 });

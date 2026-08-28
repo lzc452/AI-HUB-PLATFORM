@@ -1,4 +1,4 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import type { ActorContext, ApplicationDraft } from "@ai-hub/contracts";
 import type { PortalResourceStatus } from "@ai-hub/database";
 
 export type PortalResourceType = "app" | "skill" | "plugin" | "mcp";
@@ -22,6 +22,8 @@ export interface PortalResourceItem {
   name: string;
   summary: string;
   status: PortalResourceStatus;
+  /** app 对应 Application 的当前已生效版本；Portal 自有资源不返回该字段。 */
+  currentVersionId?: string | null;
   metadata: unknown;
   favoriteCount: number;
   isFavorited: boolean;
@@ -36,12 +38,29 @@ export interface PortalListResult {
   pageSize: number;
 }
 
+export interface PortalApplicationDraftDetail {
+  resource: PortalResourceItem;
+  applicationDraft: ApplicationDraft;
+  draftUpdatedAt: string;
+}
+
 export interface PortalDraftInput {
   resourceType: PortalResourceType;
   slug: string;
   name: string;
   summary: string;
   metadata?: unknown;
+  /**
+   * Portal 写入 app 时使用的标准应用草稿。`metadata` 仅保留为旧调用方的
+   * 兼容输入；实际持久化统一委托 ApplicationService。
+   */
+  applicationDraft?: ApplicationDraft;
+}
+
+/** Portal 自有资源的写入输入；app 不得再经 PortalRepository 写入。 */
+export interface PortalNativeDraftInput
+  extends Omit<PortalDraftInput, "resourceType"> {
+  resourceType: PortalNativeResourceType;
 }
 
 export interface PortalVersionInput {
@@ -98,22 +117,25 @@ export interface PortalRepository {
     type: PortalResourceType,
     resourceId: string,
   ): Promise<PortalResourceItem | null>;
-  createDraft(actor: ActorContext, input: PortalDraftInput): Promise<PortalResourceItem>;
+  createDraft(
+    actor: ActorContext,
+    input: PortalNativeDraftInput,
+  ): Promise<PortalResourceItem>;
   updateDraft(
     actor: ActorContext,
-    type: PortalResourceType,
+    type: PortalNativeResourceType,
     resourceId: string,
-    input: Omit<PortalDraftInput, "resourceType">,
+    input: Omit<PortalNativeDraftInput, "resourceType">,
   ): Promise<PortalResourceItem>;
   saveVersion(
     actor: ActorContext,
-    type: PortalResourceType,
+    type: PortalNativeResourceType,
     resourceId: string,
     input: PortalVersionInput,
   ): Promise<void>;
   transition(
     actor: ActorContext,
-    type: PortalResourceType,
+    type: PortalNativeResourceType,
     resourceId: string,
     from: readonly PortalResourceStatus[],
     to: PortalResourceStatus,
@@ -124,8 +146,15 @@ export interface PortalRepository {
     resourceId: string,
     active: boolean,
   ): Promise<boolean>;
-  listFavorites(actor: ActorContext, page: number, pageSize: number): Promise<PortalListResult>;
-  listComments(type: PortalResourceType, resourceId: string): Promise<PortalCommentItem[]>;
+  listFavorites(
+    actor: ActorContext,
+    page: number,
+    pageSize: number,
+  ): Promise<PortalListResult>;
+  listComments(
+    type: PortalResourceType,
+    resourceId: string,
+  ): Promise<PortalCommentItem[]>;
   createComment(
     actor: ActorContext,
     type: PortalResourceType,
@@ -136,5 +165,10 @@ export interface PortalRepository {
   listDashboardComments(
     actor: ActorContext,
     input: DashboardCommentQuery,
-  ): Promise<{ items: PortalCommentItem[]; total: number; page: number; pageSize: number }>;
+  ): Promise<{
+    items: PortalCommentItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>;
 }

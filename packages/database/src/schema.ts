@@ -923,6 +923,7 @@ export interface PortalContentPagesTable {
   page_key: string;
   title: string;
   body_markdown: string;
+  summary: string;
   status: "draft" | "published" | "archived";
   updated_by_employee_id: string | null;
   published_at: Date | null;

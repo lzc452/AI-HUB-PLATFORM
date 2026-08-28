@@ -31,6 +31,10 @@ const API_TAGS: ReadonlyArray<{ name: string; description: string }> =
     { name: "通知", description: "站内通知列表与已读标记" },
     { name: "创作者", description: "创作者视角的应用数据" },
     {
+      name: "AI Hub Portal",
+      description: "Portal 兼容资源接口；app 写入复用标准 Application 生命周期",
+    },
+    {
       name: "需求",
       description: "创新需求全流程：草稿、评审、认领、协作、试点与合并",
     },
@@ -55,7 +59,7 @@ export function configureSwagger(
   const config = new DocumentBuilder()
     .setTitle("AI Hub 平台 API")
     .setDescription(
-      "AI Hub 平台内部 API 文档。所有业务接口通过 x-employee-id 与 x-session-id 请求头标识调用者身份；" +
+      "AI Hub 平台内部 API 文档。身份优先来自 HttpOnly Cookie，并兼容 x-employee-id 与 x-session-id 请求头；" +
         "错误响应统一为 RFC 7807 Problem Details 格式。",
     )
     .setVersion("1.0");

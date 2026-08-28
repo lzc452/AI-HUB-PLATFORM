@@ -99,6 +99,46 @@ function httpExceptionDetail(exception: HttpException): string | undefined {
   return undefined;
 }
 
+function httpExceptionIssues(
+  exception: HttpException,
+): ProblemDetails["issues"] | undefined {
+  const response = exception.getResponse();
+  if (
+    typeof response !== "object" ||
+    response === null ||
+    !("issues" in response) ||
+    !Array.isArray(response.issues)
+  ) {
+    return undefined;
+  }
+  const issues = response.issues.map((issue) => {
+    if (typeof issue !== "object" || issue === null) return null;
+    const candidate = issue as {
+      code?: unknown;
+      message?: unknown;
+      path?: unknown;
+    };
+    if (
+      typeof candidate.code !== "string" ||
+      !SAFE_DOMAIN_CODE.test(candidate.code) ||
+      typeof candidate.message !== "string"
+    ) {
+      return null;
+    }
+    if (candidate.path !== undefined && typeof candidate.path !== "string") {
+      return null;
+    }
+    return {
+      code: candidate.code,
+      message: candidate.message,
+      ...(candidate.path === undefined ? {} : { path: candidate.path }),
+    };
+  });
+  return issues.every((issue) => issue !== null)
+    ? (issues as NonNullable<ProblemDetails["issues"]>)
+    : undefined;
+}
+
 function zodFieldErrors(error: ZodError): Record<string, string[]> {
   const fieldErrors: Record<string, string[]> = {};
   for (const issue of error.issues) {
@@ -131,6 +171,7 @@ export function toProblemDetails(
       code: "HTTP_ERROR",
     };
     const detail = httpExceptionDetail(exception);
+    const issues = httpExceptionIssues(exception);
     const safeDetail = detail !== undefined ? escapeHtml(detail) : undefined;
     return {
       type: "about:blank",
@@ -139,6 +180,7 @@ export function toProblemDetails(
       code: httpExceptionCode(exception, details.code),
       message: safeDetail ?? details.title,
       traceId,
+      ...(issues === undefined ? {} : { issues }),
     };
   }
 

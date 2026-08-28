@@ -49,6 +49,29 @@ describe("toProblemDetails", () => {
     ).toMatchObject({ code: "BAD_REQUEST" });
   });
 
+  it("保留格式合法的字段级业务校验问题", () => {
+    expect(
+      toProblemDetails(
+        new BadRequestException({
+          code: "DRAFT_VALIDATION_FAILED",
+          detail: "草稿未通过提交校验",
+          issues: [
+            { code: "DELIVERY_REQUIRED", message: "至少配置一个交付方式" },
+          ],
+        }),
+        traceId,
+      ),
+    ).toEqual({
+      type: "about:blank",
+      title: "Bad Request",
+      status: 400,
+      code: "DRAFT_VALIDATION_FAILED",
+      message: "草稿未通过提交校验",
+      traceId,
+      issues: [{ code: "DELIVERY_REQUIRED", message: "至少配置一个交付方式" }],
+    });
+  });
+
   it("maps Zod issues to field errors", () => {
     const schema = z.object({ displayName: z.string().min(3) });
     const error = schema.safeParse({ displayName: "x" }).error;

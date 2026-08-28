@@ -50,6 +50,7 @@ import * as catalogZhHotSeed from "./migrations/0050_catalog_zh_hot_seed.js";
 import * as catalogPendingItems from "./migrations/0051_catalog_pending_items.js";
 import * as installerAssetKind from "./migrations/0052_installer_asset_kind.js";
 import * as portalFoundation from "./migrations/0053_portal_foundation.js";
+import * as portalHuntVoteSummary from "./migrations/0054_portal_hunt_vote_summary.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -105,6 +106,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0051_catalog_pending_items": catalogPendingItems,
   "0052_installer_asset_kind": installerAssetKind,
   "0053_portal_foundation": portalFoundation,
+  "0054_portal_hunt_vote_summary": portalHuntVoteSummary,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {

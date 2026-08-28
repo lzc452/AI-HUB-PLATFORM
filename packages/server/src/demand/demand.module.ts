@@ -22,12 +22,13 @@ export class DemandModule {
   static register(
     database: Kysely<DatabaseSchema>,
     storageDirectory?: string,
+    applicationModule?: DynamicModule,
   ): DynamicModule {
     return {
       module: DemandModule,
       imports: [
         IdentityModule.register(database),
-        ApplicationModule.registerService(database),
+        applicationModule ?? ApplicationModule.registerService(database),
         NotificationModule.register(database),
       ],
       controllers: [DemandController],

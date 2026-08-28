@@ -404,7 +404,14 @@
           <h2>当前判断</h2>
           <p class="note">
             <strong>Portal 一期前端与平台领域已完成，生产上线仍未切换。</strong>
-            AI-HUB-PORTAL 已独立建仓并按多笔提交推送 GitHub，SkillHub 逆向证据、响应式页面、四类资源、代码文件树、Markdown、评论双视图和发布工作流均已通过本地门禁；AI Hub Platform 同时完成 Portal 数据库、API、Worker 与 Console `/console` 基址改造。剩余上线门禁是生产网关切换、SSO/API 联调和真实 PostgreSQL 运行环境验收。详细证据见“V1 闭环审计”页签、<code>../AI-HUB-PORTAL/design-qa.md</code> 与 <code>docs/deployment/portal-console-routing.md</code>。
+            AI-HUB-PORTAL 已独立建仓并按多笔提交推送 GitHub，SkillHub
+            逆向证据、响应式页面、四类资源、代码文件树、Markdown、评论双视图和发布工作流均已通过本地门禁；AI
+            Hub Platform 同时完成 Portal 数据库、API、Worker 与 Console
+            `/console` 基址改造。剩余上线门禁是生产网关切换、SSO/API 联调和真实
+            PostgreSQL 运行环境验收。详细证据见“V1 闭环审计”页签、<code
+              >../AI-HUB-PORTAL/design-qa.md</code
+            >
+            与 <code>docs/deployment/portal-console-routing.md</code>。
           </p>
         </div>
       </section>
@@ -528,7 +535,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-25",
+        updatedAt: "2026-08-28",
         phases: [
           {
             id: "product",
@@ -568,6 +575,7 @@
             tasks: [
               "Phase 1–7 后端模块全部落地",
               "Portal App、Skill、Plugin、MCP、SkillPackage、AppHunt、评论聚合和统一发布 API 已接入平台",
+              "Portal app 写入已统一委托 ApplicationService；Portal 保留兼容 URL，原生 Skill/Plugin/MCP 生命周期不变",
               "AI-HUB-PORTAL 独立仓库已完成 Vite/React/TypeScript 分层架构、同域部署配置和 GitHub 多笔提交",
               "应用详情、版本、审核和交付工作台已接入共享应用壳与真实路由；其余未列页面仍保留静态演示数据",
               "新增本地演示账号 seed：5 个角色账号、开发 Compose 自动初始化",
@@ -577,6 +585,7 @@
               "外部集成均为 fake/unavailable adapter",
               "前端查询错误与 mutation 反馈已接入共享 Message 模块",
               "新增 ApplicationWorkspace 聚合读取接口、交付配置扩展字段和应用资源/校验/快照迁移 0017",
+              "Portal 真实联调阻塞优化：共享应用上传服务、Portal 安全上传/资产流、草稿回读、快照 metadata、Apps Hunt hasVoted、Skill owner、Content summary 与迁移 0054 已接入",
             ],
           },
           {
@@ -597,6 +606,7 @@
               "Artifact Intake 异常注入 10/10 场景 Compose 证据通过（.verify/v1/artifact/）",
               "五角色矩阵/流程 A/B/21 图四视口验收完成；Sidebar 校准 220px 并生成壳层像素矩阵（正文/图标字形逐像素比对留待人工）",
               "Portal typecheck、lint、Vitest 7/7、Sites 4/4、Playwright 桌面/移动 20/20 和 production build 全部通过",
+              "Portal app 生命周期委托、Cookie/兼容请求头、真实 PostgreSQL 双入口、reconciliation dry-run/apply/rollback 均已通过；最终审查补齐多有效审核队列拒绝、reconciliation Outbox 消费和 DRAFT_VALIDATION_FAILED.issues 透传；类型检查、定向 lint 与依赖边界通过",
               "Portal Design QA 已完成：1440/390 浏览器截图并置、代码文件树/Markdown/评论/列表切换交互验证，无 P0/P1/P2",
             ],
           },
@@ -1025,6 +1035,22 @@
         ],
         tasks: [
           {
+            id: "t-portal-app-lifecycle-unification-20260825",
+            phase: "dev",
+            status: "已完成",
+            title: "AI Hub 与 Portal app 生命周期统一",
+            owner: "Codex",
+            start: "2026-08-25",
+            end: "2026-08-27",
+            progress:
+              "Portal app 创建、编辑、版本信息、提交、审核、发布和下架已委托同一 ApplicationService；Portal 仓储 app 写路径已移除，读模型补齐 currentVersionId。负责人和 application_admin/super_admin 均按统一权限边界执行标准发布与下架。真实 PostgreSQL 已验证 AI Hub 创建→Portal 编辑/提交/审核/下架，以及 Portal 创建→AI Hub 读取；Cookie 与兼容身份请求头、旧 metadata、DRAFT_VALIDATION_FAILED.issues、OpenAPI 错误 schema、reconciliation dry-run/apply/rollback 和 Worker Outbox 消费均通过。",
+            problem:
+              "需要同时保持 Portal URL/响应兼容、Application 审核 CAS 与历史 portal.app.* Worker 消费，且不能自动修改生产数据库。",
+            solution:
+              "ApiModule 将同一 Application 动态模块注入 Portal、Catalog 和 Demand；Portal app 仅使用标准服务，负责人或 application.manage 管理员按相同生命周期权限执行，多个有效审核队列明确拒绝而不猜测，Portal app 读写立即复用标准状态与版本指针，ProblemDetailsDto 明确 issues 字段；CLI 以 --dry-run 默认只读、--apply --expected-count 显式写入并以安全审计 before/after 支持回滚；Worker 校验并确认 reconciliation 事件。",
+            skip: "未对生产数据库执行 apply。全仓 pnpm lint 与 pnpm verify 仍被既有 Web 未使用变量和既有格式问题阻断；本次涉及的 API/Server/Database 定向 lint 已通过。",
+          },
+          {
             id: "t-ai-hub-portal-phase-1-20260825",
             phase: "dev",
             status: "已完成",
@@ -1038,8 +1064,7 @@
               "Portal 需要独立仓库与 GitHub 多次提交；首次桌面路由巡检因 20 个懒加载路由累计超过默认 30 秒而超时。",
             solution:
               "建立私有 lzc452/AI-HUB-PORTAL 仓库，按研究文档、前端实现、测试、视觉证据分四次推进同一 codex 分支；路由巡检用例设置 90 秒明确预算，并重新跑通桌面/移动 20/20。",
-            skip:
-              "生产网关根路径切换、真实 SSO/API/PostgreSQL 联调和 Portal/Console 生产回滚演练需部署窗口执行；不在本地预览中伪造完成。",
+            skip: "生产网关根路径切换、真实 SSO/API/PostgreSQL 联调和 Portal/Console 生产回滚演练需部署窗口执行；不在本地预览中伪造完成。",
           },
           {
             id: "t-ai-hub-portal-visual-qa-20260825",
@@ -1055,8 +1080,7 @@
               "首页能力区最初为静态三列，窄宽度下操作链接有重叠风险；源站品牌资产不能运行时热链。",
             solution:
               "改为可滚动能力 rail，加入桌面前后控制和移动单列断点，增加卡片底部空间；使用本地 AI Hub logo 和业务首字母回退资产。",
-            skip:
-              "SkillHub 原站真实品牌图片不复制到生产运行时；后续仅在获得授权的前提下替换本地品牌资产。",
+            skip: "SkillHub 原站真实品牌图片不复制到生产运行时；后续仅在获得授权的前提下替换本地品牌资产。",
           },
           {
             id: "t-application-admin-polish-20260817b",
@@ -1729,6 +1753,18 @@
           },
         ],
         events: [
+          {
+            date: "2026-08-28",
+            phase: "dev",
+            title: "Portal 真实后端联调阻塞优化完成",
+            body: "应用上传链路提取为共享 ApplicationUploadService，新增 Portal 上传会话/内容/完成/状态与资产内容路由；草稿回读返回 applicationDraft 与 draftUpdatedAt；app metadata 按生效版本快照投影版本、图标、截图、附件、兼容性和安全状态；Apps Hunt 返回 hasVoted 并支持单票切换，Skill 包返回条目 owner，内容页迁移 0054 增加非空 summary。",
+          },
+          {
+            date: "2026-08-27",
+            phase: "dev",
+            title: "Portal app 生命周期统一完成",
+            body: "Portal app 写操作已切换到 ApplicationService，标准版本快照/审核队列/目录/审计/Outbox 不再被 Portal 绕过；负责人和 application.manage 管理员均复用标准发布/下架规则；新增 Portal app reconciliation dry-run/apply/rollback CLI。最终审查补齐多队列冲突拒绝、reconciliation Worker handler、Portal currentVersionId 读模型与 DRAFT_VALIDATION_FAILED.issues OpenAPI/HTTP 透传；服务 128 项、API 9 项（含真实一致性 2 项与 Swagger 2 项）、Worker 8 项、数据库 9 项回归通过，类型检查、定向 lint 和依赖边界通过。全仓 lint/verify 仍由未触及的既有 Web lint/format 问题阻断。",
+          },
           {
             date: "2026-08-25",
             phase: "test",

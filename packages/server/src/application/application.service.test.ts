@@ -58,6 +58,14 @@ const superAdmin: ActorContext = {
   sessionId: "session-super-admin",
   permissions: ["*"],
 };
+const applicationAdmin: ActorContext = {
+  employeeId: "E998",
+  roleCodes: ["application_admin"],
+  departmentIds: ["dept-admin"],
+  primaryDepartmentId: "dept-admin",
+  sessionId: "session-application-admin",
+  permissions: ["application.manage", "application.publish"],
+};
 
 class MemoryApplicationRepository implements ApplicationRepository {
   applications = new Map<string, ApplicationRecord>();
@@ -1866,9 +1874,9 @@ describe("ApplicationService", () => {
       await expect(
         service.saveDraft(owner, applicationId, completeDraft()),
       ).rejects.toThrow("APPLICATION_NOT_EDITABLE");
-      await expect(
-        service.submitDraft(owner, applicationId),
-      ).rejects.toThrow("INVALID_APPLICATION_TRANSITION");
+      await expect(service.submitDraft(owner, applicationId)).rejects.toThrow(
+        "INVALID_APPLICATION_TRANSITION",
+      );
     });
 
     it("下架应用经向导重新提交审核通过后自动重新上架（恢复闭环）", async () => {
@@ -1884,10 +1892,7 @@ describe("ApplicationService", () => {
           candidate.applicationId === applicationId &&
           candidate.version === "2.0.0",
       )!;
-      await service.claimReview(
-        reviewer,
-        resubmitVersion.applicationVersionId,
-      );
+      await service.claimReview(reviewer, resubmitVersion.applicationVersionId);
       const result = await service.review(
         reviewer,
         resubmitVersion.applicationVersionId,
@@ -1896,7 +1901,9 @@ describe("ApplicationService", () => {
       );
 
       expect(result.status).toBe("published");
-      expect(result.currentVersionId).toBe(resubmitVersion.applicationVersionId);
+      expect(result.currentVersionId).toBe(
+        resubmitVersion.applicationVersionId,
+      );
       expect(repository.catalogRegistrations).toContain(applicationId);
       expect(repository.events).toContain("application.published");
     });
@@ -2366,6 +2373,25 @@ describe("ApplicationService", () => {
     expect(
       repository.events.filter((event) => event === "application.published"),
     ).toHaveLength(1);
+  });
+
+  it("allows application managers to publish and withdraw another owner's app", async () => {
+    const { service, repository } = makeService();
+    const { application, version } = await prepareLegacyApprovedApplication(
+      service,
+      repository,
+    );
+
+    await expect(
+      service.publish(applicationAdmin, version.applicationVersionId),
+    ).resolves.toMatchObject({ status: "published" });
+    await expect(
+      service.withdraw(
+        applicationAdmin,
+        application.applicationId,
+        "管理员下架",
+      ),
+    ).resolves.toMatchObject({ status: "withdrawn" });
   });
 
   it("rolls back lifecycle state, catalog registration and audit when Outbox fails", async () => {

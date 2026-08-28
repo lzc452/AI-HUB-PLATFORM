@@ -90,8 +90,8 @@
 | POST | `/internal/applications/versions/:applicationVersionId/claim-review` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 只能认领可用队列项 |
 | POST | `/internal/applications/versions/:applicationVersionId/release-review` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 只能释放本人已认领队列项 |
 | GET | `/internal/applications/versions/:applicationVersionId/review-queue` | `application.review` | `application_admin`、`super_admin`（custom role 以实际权限为准） | 返回当前审核范围队列 |
-| POST | `/internal/applications/:applicationId/publish` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）、审核通过、交付渠道和扫描状态合法 |
-| POST | `/internal/applications/:applicationId/withdraw` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）且应用处于可撤回状态 |
+| POST | `/internal/applications/:applicationId/publish` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）或持有 `application.manage` 的管理员；审核通过、交付渠道和扫描状态合法 |
+| POST | `/internal/applications/:applicationId/withdraw` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）或持有 `application.manage` 的管理员；应用处于可撤回状态 |
 | POST | `/internal/applications/:applicationId/rollback` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 目标版本已发布且回滚状态合法 |
 | POST | `/internal/applications/:applicationId/archive` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | 负责人（owner）且无进行中的发布操作 |
 | DELETE | `/internal/applications/:applicationId` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | 仅删除 `status=draft` 的应用；级联清理子表并写入审计 |
@@ -110,6 +110,23 @@
 | POST | `/internal/applications/:applicationId/interactions/comments/:commentId/reports` | `interaction.interact` | 所有在职员工及其专业角色 | 只能举报可见评论 |
 | POST | `/internal/applications/:applicationId/interactions/reports/:reportId/resolve` | `interaction.moderate` | `risk_operator`、`super_admin`（custom role 以实际权限为准） | 只能处理未关闭举报并记录审计 |
 | GET | `/internal/applications/:applicationId/interactions/comments/:commentId/anonymous-author` | `interaction.anonymous_audit` | `super_admin`（custom role 以实际权限为准） | 每次查询写入审计事件 |
+
+### AI Hub Portal
+
+Portal 保留 `/internal/portal` URL 和响应模型；其中 `resourceType=app` 的写入统一委托 `ApplicationService`，因此下表的资源条件与应用 API 完全一致。`skill`、`plugin`、`mcp` 继续使用 Portal 自有生命周期和 `portal.*` 事件。
+
+| Method | Path | Guard 权限 | 可用系统角色 | 资源条件 |
+|---|---|---|---|---|
+| GET | `/internal/portal/home`、`/internal/portal/apps`、`/internal/portal/apps/:ownerEmployeeId/:slug` | Authenticated | 所有已登录角色 | 非发布 app 列表仅可按本人负责人筛选或持有 `application.review`；详情还允许负责人、维护人/维护人列表成员或 `application.review`；收藏与 AI Hub 点赞是独立概念 |
+| GET | `/internal/portal/skills`、`/plugins`、`/mcps` 及详情 | Authenticated | 所有已登录角色 | 默认只返回已发布资源；非发布状态仍需本人或 `application.review` |
+| POST | `/internal/portal/dashboard/publish` | `application.create` | `employee`、`application_admin`、`demand_operator`、`super_admin` | `app` 调用 `createApplication`；携带完整 `applicationDraft` 或兼容完整 `metadata` 时再调用 `saveDraft` |
+| PUT | `/internal/portal/dashboard/publish/:resourceType/:resourceId` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 必须提供完整草稿；`withdrawn` 可编辑，`archived` 不可编辑；不接受任意 JSON 草稿 |
+| POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/versions` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 只更新草稿中的 `version/changelog`，不会提前创建 `application_versions` 或切换版本指针 |
+| POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/submit` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 调用 `submitDraft`，原子创建版本快照、交付配置、审核队列与标准 `application.*` 事件 |
+| POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/approve`、`/request-changes` | `application.review` | `application_admin`、`super_admin` | `app` 只认领当前有效队列；禁止自审，已被他人认领时拒绝；可选 `comment`，空请求体使用 Portal 默认意见 |
+| POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/publish` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 负责人或持有 `application.manage` 的管理员可操作；已发布时幂等成功；仅遗留 `approved` 数据经标准 `publish` 处理，仍受交付门禁限制 |
+| POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/withdraw` | `application.publish` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 负责人或持有 `application.manage` 的管理员可操作并调用标准 `withdraw`；可选 `reason`，空请求体记录固定 Portal 来源说明 |
+| POST | `/internal/portal/:resourceType/:resourceId/favorite`、`/comments` | `interaction.interact` | 所有具备互动权限的已登录角色 | 仅已发布资源可收藏或评论；app 收藏写 Portal 收藏表，不影响 AI Hub 点赞 |
 
 ### Demand、Notification 和 Analytics
 

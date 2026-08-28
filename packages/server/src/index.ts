@@ -126,14 +126,22 @@ export {
 } from "./identity/password.service.js";
 export { ApplicationController } from "./application/application.controller.js";
 export { ArtifactUploadController } from "./application/artifact-upload.controller.js";
+export { UnifiedUploadController } from "./application/unified-upload.controller.js";
+export { PortalApplicationUploadController } from "./application/portal-application-upload.controller.js";
+export { PortalApplicationAssetController } from "./application/portal-application-asset.controller.js";
+export { ApplicationUploadService } from "./application/application-upload.service.js";
 export { ApplicationModule } from "./application/application.module.js";
 export { KyselyApplicationRepository } from "./application/application.repository.js";
-export { ApplicationService } from "./application/application.service.js";
+export {
+  ApplicationService,
+  DraftValidationError,
+} from "./application/application.service.js";
 export {
   APPLICATION_SERVICE,
   ARTIFACT_MAX_SIZE_BYTES,
   ARTIFACT_PIPELINE,
   ARTIFACT_STORAGE,
+  APPLICATION_UPLOAD_SERVICE,
 } from "./application/application.tokens.js";
 export type {
   ArtifactVerificationPort,
@@ -289,6 +297,7 @@ export type {
   DashboardCommentQuery,
   PortalCommentItem,
   PortalDraftInput,
+  PortalApplicationDraftDetail,
   PortalListInput,
   PortalListResult,
   PortalNativeResourceType,

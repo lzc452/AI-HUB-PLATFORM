@@ -3,6 +3,26 @@ export { createDatabaseRuntime, createDatabaseRuntimeFrom } from "./runtime.js";
 export type { DatabaseRuntime } from "./runtime.js";
 export { runMigrations } from "./migrate.js";
 export { OutboxStore } from "./outbox/outbox-store.js";
+export {
+  isPortalAppPlanRepairable,
+  planPortalAppReconciliation,
+  samePortalAppState,
+} from "./portal-app-reconciliation.js";
+export type {
+  PortalAppHistoryFact,
+  PortalAppReconciliationFact,
+  PortalAppReconciliationPlan,
+  PortalAppReviewFact,
+  PortalAppReviewQueueFact,
+  PortalAppStateSnapshot,
+  PortalAppVersionFact,
+  ReconciledApplicationStatus,
+} from "./portal-app-reconciliation.js";
+export {
+  applyPortalAppReconciliationPlans,
+  collectPortalAppReconciliationPlans,
+  rollbackPortalAppReconciliationBatch,
+} from "./portal-app-reconciliation-runner.js";
 export type {
   DatabaseSchema,
   OutboxEventsTable,

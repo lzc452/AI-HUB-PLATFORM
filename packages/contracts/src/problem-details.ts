@@ -8,4 +8,9 @@ export interface ProblemDetails {
   traceId: string;
   details?: Readonly<Record<string, unknown>>;
   fieldErrors?: Readonly<Record<string, readonly string[]>>;
+  issues?: readonly Readonly<{
+    code: string;
+    message: string;
+    path?: string;
+  }>[];
 }

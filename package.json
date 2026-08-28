@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "lint": "turbo run lint",
     "migrate": "tsx scripts/migrate.mts",
+    "reconcile:portal-apps": "tsx scripts/reconcile-portal-apps.mts",
     "seed:demo-accounts": "tsx scripts/seed-demo-accounts.mts",
     "seed:demo-business": "tsx scripts/seed-demo-business.mts",
     "seed:demo-data": "tsx scripts/seed-demo-data.mts",
