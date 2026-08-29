@@ -5,6 +5,7 @@ import {
   Card,
   Descriptions,
   Empty,
+  Image,
   Space,
   Tag,
   Typography,
@@ -96,16 +97,18 @@ export function MarketplaceDetailDescription({
             截图预览
           </Title>
           {(entry.screenshotAssetIds ?? []).length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-              {(entry.screenshotAssetIds ?? []).map((assetId) => (
-                <img
-                  alt="应用截图"
-                  className="h-40 w-full rounded-lg border border-[#f0f0f0] object-cover"
-                  key={assetId}
-                  src={`/internal/catalog/${encodeURIComponent(entry.applicationId)}/screenshots/${encodeURIComponent(assetId)}`}
-                />
-              ))}
-            </div>
+            <Image.PreviewGroup>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {(entry.screenshotAssetIds ?? []).map((assetId) => (
+                  <Image
+                    alt="应用截图"
+                    className="h-40 w-full rounded-lg border border-[#f0f0f0] object-cover"
+                    key={assetId}
+                    src={`/internal/catalog/${encodeURIComponent(entry.applicationId)}/screenshots/${encodeURIComponent(assetId)}`}
+                  />
+                ))}
+              </div>
+            </Image.PreviewGroup>
           ) : (
             <Empty
               description="该应用暂未上传截图"

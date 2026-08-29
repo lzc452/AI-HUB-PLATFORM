@@ -1,8 +1,8 @@
 import {
-  CallHandler,
-  ExecutionContext,
   Injectable,
-  NestInterceptor,
+  type CallHandler,
+  type ExecutionContext,
+  type NestInterceptor,
 } from "@nestjs/common";
 import { tap } from "rxjs";
 import type { AuthorizedRequest } from "../authorization/authorization.decorator.js";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ActorContext } from "@ai-hub/contracts";
 import { AnalyticsAssistantService } from "./assistant.service.js";
 import type {
@@ -137,6 +137,29 @@ describe("AnalyticsAssistantService", () => {
       "analytics.assistant.requested",
       "analytics.assistant.failed",
     ]);
+  });
+
+  it("queues analytics.assistant.failed to the requester when the provider fails", async () => {
+    const provider: DifyAssistantPort = {
+      ask: async () => {
+        throw new Error("DIFY_TIMEOUT");
+      },
+    };
+    const queue = vi.fn().mockResolvedValue(undefined);
+    const result = await new AnalyticsAssistantService(
+      repository(),
+      provider,
+      undefined,
+      { queue },
+    ).ask(actor, {
+      question: "Explain the metric",
+      context: { metricKey: "platform.application_views", value: 2 },
+    });
+    expect(result.status).toBe("degraded");
+    expect(queue).toHaveBeenCalledWith(actor, "analytics.assistant.failed", {
+      recipientEmployeeId: actor.employeeId,
+      aggregateId: actor.sessionId,
+    });
   });
 
   it("redacts adversarial identifiers and keeps the authorized request when telemetry fails", async () => {

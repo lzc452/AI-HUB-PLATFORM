@@ -26,16 +26,21 @@ type DeliveryStatus = Insertable<
 // ── notification plan (20: 覆盖全部权威通知类型，按 2 个演示账号分发) ────────
 //
 // 覆盖来源：
-//   - DINGTALK_NOTIFICATION_MATRIX 的 14 个官方通知场景
-//     (application.review_requested/review_decided/published/withdrawn,
-//      demand.submitted/claimed/collaborator_assigned/progress_updated/
-//      pilot_started/closed/merged,
-//      analytics.export.completed/failed, analytics.assistant.failed)
-//   - 系统级通知 3 个 (system.announcement/maintenance/audit_alert)
-//   - 互动/安全类 3 个 (application.comment_replied/rating_added/reported)
+//   - DINGTALK_NOTIFICATION_MATRIX 的 14 个官方通知场景（taxonomy 权威命名，与
+//     docs/specs/notification-system.md §1 一致）：
+//     application.review.requested/review.decided/published/withdrawn,
+//     demand.submitted/claimed/collaborator_assigned/progress_updated/
+//     pilot_started/closed/merged,
+//     analytics.export.completed/failed, analytics.assistant.failed
+//   - 系统级通知 3 个 (system.announcement/maintenance/audit_alert，非矩阵场景，
+//     仅存在于 demo 种子，标注为"系统通知"，不参与矩阵验收)
+//   - 互动/安全类 3 个 (application.comment_replied/rating_added/reported，
+//     非矩阵场景，仅存在于 demo 种子)
 // 共 20 个，正好用满 IDS.notification[0..19]。
 //
 // 每个角色收到的通知各不相同，且覆盖全部 4 种投递状态与已读/未读混合。
+// payload 提供结构化字段（title/body/detail），模拟真实通知的结构化数据，
+// 前端详情优先渲染 payload，缺省回退 message（规格 §2.3）。
 
 interface NotificationPlan {
   /** Index into IDS.notification[0..19] */
@@ -44,6 +49,12 @@ interface NotificationPlan {
   eventType: string;
   aggregateId: string;
   message: string;
+  /** 结构化负载：title/body/detail（模拟真实通知 payload） */
+  payload: {
+    title: string;
+    body?: string;
+    detail: Readonly<Record<string, string>>;
+  };
   deliveryStatus: DeliveryStatus;
   isRead: boolean;
   deliveryAttempts: number;
@@ -56,9 +67,13 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
   {
     notificationIdx: 0,
     recipientEmployeeId: EMP.employee,
-    eventType: "application.review_decided",
+    eventType: "application.review.decided",
     aggregateId: IDS.application.published[0]!,
     message: "您提交的应用「智能排班助手」评审已通过，可发布上线。",
+    payload: {
+      title: "您的应用「智能排班助手」评审已通过",
+      detail: { 应用名称: "智能排班助手", 评审结论: "通过" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -71,6 +86,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.submitted",
     aggregateId: IDS.demand.all[0]!,
     message: "您提交的需求「AI 辅助项目风险评估」已进入评审流程。",
+    payload: {
+      title: "需求「AI 辅助项目风险评估」已提交评审",
+      detail: { 需求名称: "AI 辅助项目风险评估", 当前状态: "待评审" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -83,6 +102,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.progress_updated",
     aggregateId: IDS.demand.inProgress[0]!,
     message: "需求「AI 辅助项目风险评估」的进度已更新为进行中。",
+    payload: {
+      title: "需求「AI 辅助项目风险评估」进度已更新",
+      detail: { 需求名称: "AI 辅助项目风险评估", 当前状态: "进行中" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -95,6 +118,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "application.comment_replied",
     aggregateId: IDS.application.published[2]!,
     message: "有人回复了你在「薪酬查询报表」中的评论。",
+    payload: {
+      title: "您有一条新的评论回复",
+      detail: { 应用名称: "薪酬查询报表", 互动类型: "评论回复" },
+    },
     deliveryStatus: "sent",
     isRead: false,
     deliveryAttempts: 1,
@@ -106,9 +133,13 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
   {
     notificationIdx: 4,
     recipientEmployeeId: EMP.appAdmin,
-    eventType: "application.review_requested",
+    eventType: "application.review.requested",
     aggregateId: IDS.application.inReview[0]!,
     message: "应用「智能排班助手」已提交评审，请尽快完成审核。",
+    payload: {
+      title: "应用「智能排班助手」待您审核",
+      detail: { 应用名称: "智能排班助手", 待办事项: "完成审核" },
+    },
     deliveryStatus: "pending",
     isRead: false,
     deliveryAttempts: 0,
@@ -121,6 +152,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "system.announcement",
     aggregateId: IDS.department.company,
     message: "系统将于本周六凌晨 2:00-4:00 进行维护升级，请提前保存工作。",
+    payload: {
+      title: "平台维护通知",
+      detail: { 公告类型: "维护升级", 影响范围: "全平台用户" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -133,6 +168,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "application.reported",
     aggregateId: IDS.application.published[4]!,
     message: "应用「消息推送中心」收到举报，请及时处理。",
+    payload: {
+      title: "应用「消息推送中心」收到举报",
+      detail: { 应用名称: "消息推送中心", 风险等级: "需处理" },
+    },
     deliveryStatus: "failed",
     isRead: false,
     deliveryAttempts: 3,
@@ -147,6 +186,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "application.published",
     aggregateId: IDS.application.published[1]!,
     message: "「数据分析驾驶舱」已成功发布上线。",
+    payload: {
+      title: "「数据分析驾驶舱」已成功发布",
+      detail: { 应用名称: "数据分析驾驶舱", 当前状态: "已发布" },
+    },
     deliveryStatus: "sent",
     isRead: false,
     deliveryAttempts: 1,
@@ -159,6 +202,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.claimed",
     aggregateId: IDS.demand.all[1]!,
     message: "需求「多语言文档翻译与校对系统」已被交付团队认领。",
+    payload: {
+      title: "需求「多语言文档翻译与校对系统」已被认领",
+      detail: { 需求名称: "多语言文档翻译与校对系统", 当前状态: "已认领" },
+    },
     deliveryStatus: "sent",
     isRead: false,
     deliveryAttempts: 1,
@@ -171,6 +218,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.collaborator_assigned",
     aggregateId: IDS.demand.all[2]!,
     message: "你已被分配至需求「智能合同审查助手」，请尽快介入。",
+    payload: {
+      title: "您被分配至需求「智能合同审查助手」",
+      detail: { 需求名称: "智能合同审查助手", 协作角色: "协作者" },
+    },
     deliveryStatus: "pending",
     isRead: false,
     deliveryAttempts: 0,
@@ -183,6 +234,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.pilot_started",
     aggregateId: IDS.demand.pilot[0]!,
     message: "需求「多语言文档翻译与校对系统」的试点已启动。",
+    payload: {
+      title: "需求「多语言文档翻译与校对系统」试点已启动",
+      detail: { 需求名称: "多语言文档翻译与校对系统", 当前状态: "试点中" },
+    },
     deliveryStatus: "sent",
     isRead: false,
     deliveryAttempts: 1,
@@ -197,6 +252,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "application.withdrawn",
     aggregateId: IDS.application.withdrawn[0]!,
     message: "应用「旧版报表工具」已被作者撤回。",
+    payload: {
+      title: "应用「旧版报表工具」已撤回",
+      detail: { 应用名称: "旧版报表工具", 当前状态: "已撤回" },
+    },
     deliveryStatus: "retry",
     isRead: false,
     deliveryAttempts: 2,
@@ -209,6 +268,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.closed",
     aggregateId: IDS.demand.closed[0]!,
     message: "需求「历史数据归档治理」已关闭。",
+    payload: {
+      title: "需求「历史数据归档治理」已关闭",
+      detail: { 需求名称: "历史数据归档治理", 当前状态: "已关闭" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -221,6 +284,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "analytics.export.completed",
     aggregateId: IDS.analyticsExportJob[0]!,
     message: "分析导出 job-weekly-report 已就绪（weekly-report）。",
+    payload: {
+      title: "分析导出已完成",
+      detail: { 任务编号: "job-weekly-report", 导出目标: "weekly-report" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -233,6 +300,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "system.maintenance",
     aggregateId: IDS.department.company,
     message: "例行安全扫描已完成，发现 2 个低风险项需关注。",
+    payload: {
+      title: "例行安全扫描完成",
+      detail: { 告警项: "安全扫描结果", 风险等级: "低" },
+    },
     deliveryStatus: "retry",
     isRead: false,
     deliveryAttempts: 2,
@@ -247,6 +318,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "demand.merged",
     aggregateId: IDS.demand.merged[0]!,
     message: "需求「智能会议纪要生成」已合并至主需求。",
+    payload: {
+      title: "需求「智能会议纪要生成」已合并",
+      detail: { 需求名称: "智能会议纪要生成", 当前状态: "已合并" },
+    },
     deliveryStatus: "sent",
     isRead: false,
     deliveryAttempts: 1,
@@ -259,6 +334,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "analytics.export.failed",
     aggregateId: IDS.analyticsExportJob[1]!,
     message: "分析导出 job-risk-dashboard 失败，已安全处理。",
+    payload: {
+      title: "分析导出失败",
+      detail: { 任务编号: "job-risk-dashboard", 当前状态: "失败" },
+    },
     deliveryStatus: "failed",
     isRead: false,
     deliveryAttempts: 3,
@@ -271,6 +350,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "analytics.assistant.failed",
     aggregateId: IDS.analyticsExportJob[2]!,
     message: "外部助手请求 assistant-risk-copilot 当前不可用。",
+    payload: {
+      title: "外部助手请求失败",
+      detail: { 助手任务: "assistant-risk-copilot", 当前状态: "不可用" },
+    },
     deliveryStatus: "retry",
     isRead: false,
     deliveryAttempts: 2,
@@ -283,6 +366,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "system.audit_alert",
     aggregateId: IDS.department.company,
     message: "检测到异常登录行为，来源 IP: 192.168.1.100。",
+    payload: {
+      title: "安全告警：异常登录行为",
+      detail: { 告警项: "异常登录行为", 来源IP: "192.168.1.100" },
+    },
     deliveryStatus: "failed",
     isRead: true,
     deliveryAttempts: 3,
@@ -295,6 +382,10 @@ const NOTIFICATION_PLAN: readonly NotificationPlan[] = Object.freeze([
     eventType: "application.rating_added",
     aggregateId: IDS.application.published[3]!,
     message: "应用「安全策略配置」收到了新的评分（5 星）。",
+    payload: {
+      title: "应用「安全策略配置」收到新评分",
+      detail: { 应用名称: "安全策略配置", 评分: "5 星" },
+    },
     deliveryStatus: "sent",
     isRead: true,
     deliveryAttempts: 1,
@@ -315,13 +406,17 @@ export interface NotificationFixtureData {
  * Build the notification fixture.
  *
  * Produces 20 notifications covering:
- * - All 14 official notification scenarios (DINGTALK_NOTIFICATION_MATRIX)
- * - 3 system notifications (announcement / maintenance / audit_alert)
- * - 3 interaction/security notifications (comment_replied / rating_added / reported)
+ * - 14 of the 21 official notification scenarios (DINGTALK_NOTIFICATION_MATRIX,
+ *   taxonomy aligned with docs/specs/notification-system.md §1)
+ * - 3 system notifications (announcement / maintenance / audit_alert,
+ *   non-matrix scenarios kept for demo display)
+ * - 3 interaction/security notifications (comment_replied / rating_added /
+ *   reported, non-matrix scenarios kept for demo display)
  * - Distributed across the 5 demo accounts (each role gets a distinct set)
  * - All 4 delivery statuses: pending(2), sent(12), retry(3), failed(3)
  * - A mix of read (8) and unread (12) states
- * - Idempotency keys via demoIdempotency("notification", ...)
+ * - Structured payload (title/body/detail) simulating real notification data
+ * - Idempotency keys via demoIdempotency("notification", ...) (demo:notification: 前缀)
  * - retry/failed entries include last_delivery_error and delivery_attempts > 0
  */
 export function buildNotificationFixture(
@@ -339,7 +434,11 @@ export function buildNotificationFixture(
         String(plan.notificationIdx),
       ),
       message: plan.message,
-      payload: { title: plan.eventType, body: plan.message },
+      payload: {
+        title: plan.payload.title,
+        body: plan.payload.body ?? plan.message,
+        detail: plan.payload.detail,
+      },
       read_at: plan.isRead ? daysAgo(anchor, plan.daysOffset - 1) : null,
       delivery_status: plan.deliveryStatus,
       delivery_attempts: plan.deliveryAttempts,

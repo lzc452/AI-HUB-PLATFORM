@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PERMISSIONS, type ActorContext } from "@ai-hub/contracts";
 import { AnalyticsExportService } from "./export.service.js";
 import type {
@@ -235,5 +235,62 @@ describe("AnalyticsExportService", () => {
     ).rejects.toThrow("ANALYTICS_EXPORT_FORBIDDEN");
     expect(transactionStarted).toBe(false);
     expect(actions).toEqual(["analytics.export.denied"]);
+  });
+
+  it("queues analytics.export.completed to the requester on success", async () => {
+    const queue = vi.fn().mockResolvedValue(undefined);
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => operation(repository),
+      readVisibleRows: async () => [],
+      findExportJob: async () => null,
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
+    };
+
+    await new AnalyticsExportService(repository, undefined, { queue }).run(
+      actor(["analytics_exporter"]),
+      { target: "innovation", from: "2026-08-03", to: "2026-08-04" },
+    );
+
+    expect(queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "analytics.export.completed",
+      expect.objectContaining({
+        recipientEmployeeId: "employee-1",
+        variables: { target: "innovation" },
+      }),
+    );
+  });
+
+  it("queues analytics.export.failed without masking the export error", async () => {
+    const queue = vi.fn().mockResolvedValue(undefined);
+    const repository: AnalyticsExportRepository = {
+      withTransaction: async (operation) => operation(repository),
+      readVisibleRows: async () => {
+        throw new Error("EXPORT_READ_FAILED");
+      },
+      findExportJob: async () => null,
+      recordAudit: async () => undefined,
+      appendOutbox: async () => true,
+    };
+    const service = new AnalyticsExportService(repository, undefined, {
+      queue,
+    });
+
+    await expect(
+      service.run(actor(["analytics_exporter"]), {
+        target: "innovation",
+        from: "2026-08-03",
+        to: "2026-08-04",
+      }),
+    ).rejects.toThrow("EXPORT_READ_FAILED");
+
+    expect(queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "analytics.export.failed",
+      expect.objectContaining({
+        recipientEmployeeId: "employee-1",
+      }),
+    );
   });
 });

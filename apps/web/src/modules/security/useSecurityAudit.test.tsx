@@ -61,7 +61,7 @@ describe("useAuditExport", () => {
       .mockResolvedValueOnce(
         statusOf({
           status: "completed",
-          expiresAt: "2026-08-23T00:00:00.000Z",
+          expiresAt: new Date(Date.now() + 7 * 86_400_000).toISOString(),
         }),
       );
     hoisted.downloadAuditExport.mockResolvedValue(undefined);
@@ -130,7 +130,7 @@ describe("useAuditExport", () => {
     hoisted.fetchAuditExportStatus.mockResolvedValueOnce(
       statusOf({
         status: "completed",
-        expiresAt: "2026-08-15T00:00:00.000Z",
+        expiresAt: new Date(Date.now() - 86_400_000).toISOString(),
       }),
     );
 

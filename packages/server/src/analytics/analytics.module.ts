@@ -3,6 +3,9 @@ import { Module, type DynamicModule } from "@nestjs/common";
 import type { Kysely } from "kysely";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
+import { NotificationModule } from "../notification/notification.module.js";
+import { DINGTALK_NOTIFICATION_MATRIX_SERVICE } from "../notification/notification.tokens.js";
+import type { DingTalkNotificationMatrixService } from "../notification/dingtalk-matrix.service.js";
 import { AnalyticsController } from "./analytics.controller.js";
 import {
   ANALYTICS_DASHBOARD_SERVICE,
@@ -27,7 +30,10 @@ export class AnalyticsModule {
     );
     return {
       module: AnalyticsModule,
-      imports: [IdentityModule.register(database)],
+      imports: [
+        IdentityModule.register(database),
+        NotificationModule.register(database),
+      ],
       controllers: [AnalyticsController],
       providers: [
         {
@@ -39,20 +45,24 @@ export class AnalyticsModule {
         },
         {
           provide: ANALYTICS_EXPORT_SERVICE,
-          useFactory: () =>
+          useFactory: (notifications: DingTalkNotificationMatrixService) =>
             new AnalyticsExportService(
               new KyselyAnalyticsExportRepository(database),
               analyticsEvents,
+              notifications,
             ),
+          inject: [DINGTALK_NOTIFICATION_MATRIX_SERVICE],
         },
         {
           provide: ANALYTICS_ASSISTANT_SERVICE,
-          useFactory: () =>
+          useFactory: (notifications: DingTalkNotificationMatrixService) =>
             new AnalyticsAssistantService(
               new KyselyAssistantAuditRepository(database),
               new UnavailableDifyAssistantPort(),
               analyticsEvents,
+              notifications,
             ),
+          inject: [DINGTALK_NOTIFICATION_MATRIX_SERVICE],
         },
       ],
       exports: [

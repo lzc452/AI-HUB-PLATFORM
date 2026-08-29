@@ -5,6 +5,7 @@ import { EmptyBlock } from "../../components/common/EmptyBlock";
 import { MessageError } from "../../shared/ui/message";
 import {
   useMarkAllNotificationsRead,
+  useMarkNotificationRead,
   useNotifications,
 } from "../../modules/notification/useNotification";
 import type { NotificationRecord } from "../../modules/notification/notification.client";
@@ -28,6 +29,7 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50];
 export default function NotificationsPage() {
   const { data, error, isError, isPending } = useNotifications();
   const markAllRead = useMarkAllNotificationsRead();
+  const markNotificationRead = useMarkNotificationRead();
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [page, setPage] = useState(1);
@@ -59,9 +61,18 @@ export default function NotificationsPage() {
     setPage(1);
   };
 
+  /** 点击条目：先标记已读（未读时），再打开详情（规格 §2.2/A2）。 */
+  const handleOpenNotification = (notification: NotificationRecord) => {
+    if (notification.readAt === null) {
+      markNotificationRead.mutate(notification.notificationId);
+    }
+    setSelected(notification);
+  };
+
   const handleMarkAllRead = () => {
     if (unreadIds.length === 0) return;
-    markAllRead.mutate(unreadIds);
+    // 服务端批量已读，不再逐条 POST。
+    markAllRead.mutate();
   };
 
   return (
@@ -113,10 +124,10 @@ export default function NotificationsPage() {
                   isUnread ? "bg-white" : "bg-white"
                 }`}
                 key={notification.notificationId}
-                onClick={() => setSelected(notification)}
+                onClick={() => handleOpenNotification(notification)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    setSelected(notification);
+                    handleOpenNotification(notification);
                   }
                 }}
                 role="button"

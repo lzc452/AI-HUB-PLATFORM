@@ -855,7 +855,7 @@ function TargetSelectEditor({
 
 /** 小程序渠道：平台多选 + 每平台 AppId / 二维码 / 版本说明。 */
 function MiniProgramTargetEditor({
-  applicationId,
+  applicationId: _applicationId,
   item,
   commitTargets,
   upload,
@@ -1442,7 +1442,7 @@ function BasicInfoStep({
       <Form.Item label="应用截图（1–6 张）" required>
         <ScreenshotField applicationId={applicationId} upload={upload} />
       </Form.Item>
-      
+
       <Controller
         control={control}
         name="version"

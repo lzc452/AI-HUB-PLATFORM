@@ -48,10 +48,7 @@ describe("Phase 4 market shell", () => {
     expect(
       await screen.findByRole("searchbox", { name: "搜索应用" }),
     ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("heading", { name: "发现企业内部 AI 应用" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("最新上架")).toBeInTheDocument();
+    expect(await screen.findByText("最新上架")).toBeInTheDocument();
     expect(screen.getByText("热门应用")).toBeInTheDocument();
     expect((await screen.findAllByText("已审核")).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("平台助手")).length).toBeGreaterThan(0);

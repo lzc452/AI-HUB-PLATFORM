@@ -12,6 +12,22 @@ import type {
 import type { AnalyticsBehaviorEventRecorder } from "./analytics.types.js";
 import { assertAnalyticsRange } from "./range.js";
 
+/**
+ * 导出任务通知端口（矩阵 analytics.export.completed/failed 场景）。
+ * 收件人恒为发起导出的调用者；授权由矩阵服务的收件人授权器裁决。
+ */
+export interface ExportNotificationPort {
+  queue(
+    actor: ActorContext,
+    scenario: "analytics.export.completed" | "analytics.export.failed",
+    input: {
+      recipientEmployeeId: string;
+      aggregateId: string;
+      variables?: Readonly<Record<string, string>>;
+    },
+  ): Promise<unknown>;
+}
+
 function canExport(actor: ActorContext): boolean {
   return hasPermission(actor, PERMISSIONS.ANALYTICS_EXPORT);
 }
@@ -35,6 +51,7 @@ export class AnalyticsExportService {
   constructor(
     private readonly repository: AnalyticsExportRepository,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+    private readonly notifications?: ExportNotificationPort,
   ) {}
 
   async run(
@@ -60,25 +77,67 @@ export class AnalyticsExportService {
       });
       throw new Error("ANALYTICS_EXPORT_RANGE_INVALID");
     }
-    const result = await this.repository.withTransaction((repository) =>
-      new AnalyticsExportService(repository).runInTransaction(actor, request),
-    );
-    await this.analyticsEvents?.record(actor, {
-      eventName: "export_requested",
-      aggregateType: "export",
-      aggregateId: result.exportId,
-      occurredAt: new Date().toISOString(),
-      idempotencyKey: `export-requested:${result.exportId}`,
-      metadata: { target: request.target },
-    });
-    return result;
+    // exportId 由外层生成：失败路径（事务回滚）也能定位任务并发失败通知。
+    const exportId = randomUUID();
+    try {
+      const result = await this.repository.withTransaction((repository) =>
+        new AnalyticsExportService(repository).runInTransaction(
+          actor,
+          request,
+          exportId,
+        ),
+      );
+      // 事务外站内通知（矩阵 analytics.export.completed）：失败不回滚导出结果。
+      await this.queueExportNotification(
+        actor,
+        "analytics.export.completed",
+        exportId,
+        request.target,
+      );
+      await this.analyticsEvents?.record(actor, {
+        eventName: "export_requested",
+        aggregateType: "export",
+        aggregateId: result.exportId,
+        occurredAt: new Date().toISOString(),
+        idempotencyKey: `export-requested:${result.exportId}`,
+        metadata: { target: request.target },
+      });
+      return result;
+    } catch (error) {
+      // 事务外站内通知（矩阵 analytics.export.failed）：通知失败不得掩盖原导出错误。
+      await this.queueExportNotification(
+        actor,
+        "analytics.export.failed",
+        exportId,
+        request.target,
+      );
+      throw error;
+    }
+  }
+
+  private async queueExportNotification(
+    actor: ActorContext,
+    scenario: "analytics.export.completed" | "analytics.export.failed",
+    exportId: string,
+    target: string,
+  ): Promise<void> {
+    if (this.notifications === undefined) return;
+    try {
+      await this.notifications.queue(actor, scenario, {
+        recipientEmployeeId: actor.employeeId,
+        aggregateId: exportId,
+        variables: { target },
+      });
+    } catch {
+      // 通知失败（含收件人授权拒绝）不影响导出结果。
+    }
   }
 
   private async runInTransaction(
     actor: ActorContext,
     request: AnalyticsExportRequest,
+    exportId: string,
   ): Promise<AnalyticsExportResult> {
-    const exportId = randomUUID();
     await this.repository.recordAudit({
       actorEmployeeId: actor.employeeId,
       action: "analytics.export.requested",

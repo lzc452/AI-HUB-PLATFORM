@@ -1,4 +1,4 @@
-import type { ActorContext } from "@ai-hub/contracts";
+import type { ActorContext, NotificationPayload } from "@ai-hub/contracts";
 import type { NotificationService } from "./notification.service.js";
 
 export const DINGTALK_NOTIFICATION_MATRIX = {
@@ -98,6 +98,8 @@ export interface DingTalkNotificationQueueInput {
   recipientEmployeeId: string;
   aggregateId: string;
   variables?: Readonly<Record<string, TemplateValue>>;
+  /** 可选的结构化通知载荷；未提供时由 NotificationService 生成默认 payload。 */
+  payload?: NotificationPayload;
 }
 
 export type DingTalkRecipientAuthorizer = (
@@ -158,6 +160,7 @@ export class DingTalkNotificationMatrixService {
       eventType: scenario,
       aggregateId: input.aggregateId,
       message,
+      ...(input.payload === undefined ? {} : { payload: input.payload }),
       metadata: {
         notificationScenario: scenario,
         recipientRole: entry.recipientRole,

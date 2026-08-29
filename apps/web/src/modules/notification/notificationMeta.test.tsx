@@ -120,7 +120,20 @@ const CASES: ReadonlyArray<{
   },
 ];
 
-function recordOf(eventType: string, message: string): NotificationRecord {
+/** 验收 A4：禁止残留的硬编码演示数据关键词。 */
+const DEMO_KEYWORDS = [
+  "v2.4.1",
+  "李小龙",
+  "王芳",
+  "审核部",
+  "系统（审核中心）",
+];
+
+function recordOf(
+  eventType: string,
+  message: string,
+  payload?: NotificationRecord["payload"],
+): NotificationRecord {
   return {
     aggregateId: "agg-1",
     createdAt: "2025-06-15T12:00:00.000Z",
@@ -130,6 +143,7 @@ function recordOf(eventType: string, message: string): NotificationRecord {
     notificationId: "n-1",
     readAt: null,
     recipientEmployeeId: "DEMO-EMPLOYEE",
+    ...(payload !== undefined ? { payload } : {}),
   };
 }
 
@@ -151,4 +165,58 @@ describe("resolveNotificationMeta — 前端展示完整性", () => {
       expect(meta.detailFields.length).toBeGreaterThan(0);
     });
   }
+
+  it("全部输出不含硬编码演示数据关键词（A4）", () => {
+    for (const { eventType, message } of CASES) {
+      const meta = resolveNotificationMeta(recordOf(eventType, message));
+      const outputs = [
+        meta.category,
+        meta.title,
+        meta.subtitle,
+        meta.detailLead,
+        ...meta.detailFields.map((field) => `${field.label}:${field.value}`),
+        ...meta.actions.map((action) => action.label),
+      ];
+      for (const keyword of DEMO_KEYWORDS) {
+        expect(
+          outputs.some((output) => output.includes(keyword)),
+          `${eventType} 的输出不应包含演示关键词「${keyword}」`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("详情字段由真实记录字段驱动（事件类型/聚合 ID/触发时间）", () => {
+    const meta = resolveNotificationMeta(
+      recordOf("application.published", "「数据分析驾驶舱」已成功发布上线。"),
+    );
+    const labels = meta.detailFields.map((field) => field.label);
+    expect(labels).toEqual(["事件类型", "聚合 ID", "触发时间"]);
+    const values = Object.fromEntries(
+      meta.detailFields.map((field) => [field.label, field.value]),
+    );
+    expect(values["事件类型"]).toBe("application.published");
+    expect(values["聚合 ID"]).toBe("agg-1");
+  });
+
+  it("payload.title / payload.body 优先驱动标题与正文，缺省回退 message", () => {
+    const withPayload = resolveNotificationMeta(
+      recordOf("application.published", "「数据分析驾驶舱」已成功发布上线。", {
+        body: "您的应用已通过平台审核并正式发布到应用市场。",
+        title: "「数据分析驾驶舱」已正式发布",
+      }),
+    );
+    expect(withPayload.title).toBe("「数据分析驾驶舱」已正式发布");
+    expect(withPayload.detailLead).toBe(
+      "您的应用已通过平台审核并正式发布到应用市场。",
+    );
+
+    const withoutPayload = resolveNotificationMeta(
+      recordOf("application.published", "「数据分析驾驶舱」已成功发布上线。"),
+    );
+    expect(withoutPayload.title).toBe("「数据分析驾驶舱」已成功发布上线。");
+    expect(withoutPayload.detailLead).toBe(
+      "「数据分析驾驶舱」已成功发布上线。",
+    );
+  });
 });

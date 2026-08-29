@@ -13,8 +13,7 @@ const RAW_UPLOAD_CONTENT_PATH =
  */
 function isRawUploadContentRequest(request: IncomingMessage): boolean {
   return (
-    request.method === "PUT" &&
-    RAW_UPLOAD_CONTENT_PATH.test(request.url ?? "")
+    request.method === "PUT" && RAW_UPLOAD_CONTENT_PATH.test(request.url ?? "")
   );
 }
 
@@ -25,7 +24,8 @@ function isJsonRequest(request: IncomingMessage): boolean {
     ?.trim()
     .toLowerCase();
   return (
-    contentType === "application/json" || contentType?.endsWith("+json") === true
+    contentType === "application/json" ||
+    contentType?.endsWith("+json") === true
   );
 }
 

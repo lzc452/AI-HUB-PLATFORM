@@ -6,10 +6,12 @@ import { marketplaceGuideItems } from "./marketplaceGuide";
 
 const mocks = vi.hoisted(() => ({
   useCatalogCategories: vi.fn(),
+  useCatalogSearch: vi.fn(),
 }));
 
 vi.mock("../../modules/marketplace/useCatalog", () => ({
   useCatalogCategories: mocks.useCatalogCategories,
+  useCatalogSearch: mocks.useCatalogSearch,
 }));
 
 /** 6 条分类：前 5 条热门，客户服务非热门（应被过滤）。 */
@@ -31,6 +33,13 @@ describe("市场侧边栏热门分类", () => {
     mocks.useCatalogCategories.mockReset();
     mocks.useCatalogCategories.mockReturnValue({
       data: [],
+      error: null,
+      isError: false,
+      isPending: false,
+    });
+    mocks.useCatalogSearch.mockReset();
+    mocks.useCatalogSearch.mockReturnValue({
+      data: { items: [], page: 1, pageSize: 5, total: 0 },
       error: null,
       isError: false,
       isPending: false,
@@ -57,11 +66,9 @@ describe("市场侧边栏热门分类", () => {
       "图像识别",
       "财务税务",
     ]) {
-      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+      expect(screen.getByText(name)).toBeInTheDocument();
     }
-    expect(
-      screen.queryByRole("button", { name: "客户服务" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("客户服务")).not.toBeInTheDocument();
   });
 
   it("点击热门分类触发 onSelectCategory 回调（传入分类 ID）", () => {
@@ -74,7 +81,7 @@ describe("市场侧边栏热门分类", () => {
     const onSelectCategory = vi.fn();
 
     renderSidebar(onSelectCategory);
-    fireEvent.click(screen.getByRole("button", { name: "文档办公" }));
+    fireEvent.click(screen.getByText("文档办公"));
 
     expect(onSelectCategory).toHaveBeenCalledWith("document_office");
   });

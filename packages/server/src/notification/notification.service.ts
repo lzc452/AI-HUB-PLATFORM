@@ -70,6 +70,16 @@ export class NotificationService {
     return this.repository.markRead(notificationId, actor.employeeId);
   }
 
+  async getUnreadCount(actor: ActorContext) {
+    await this.assertAllowed(actor, "read");
+    return this.repository.countUnread(actor.employeeId);
+  }
+
+  async markAllRead(actor: ActorContext) {
+    await this.assertAllowed(actor, "read");
+    return this.repository.markAllRead(actor.employeeId);
+  }
+
   async list(actor: ActorContext) {
     await this.assertAllowed(actor, "read");
     return this.repository.listForRecipient(actor.employeeId);

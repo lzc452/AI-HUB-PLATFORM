@@ -2,3 +2,10 @@
 .codex/
 docs/
 .codegraph/
+.agent-teams/
+.learnings/
+.ai-memory/
+.t6/
+.tmp/
+.verify/
+tmp/

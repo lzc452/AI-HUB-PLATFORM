@@ -12,7 +12,7 @@ import { MarketplaceFilters } from "./MarketplaceFilters";
 import { MarketplaceSidebar } from "./MarketplaceSidebar";
 import { MarketplaceHero, type MarketplaceSortMode } from "./MarketplaceHero";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 8;
 
 export default function MarketplacePage() {
   const [searchParams] = useSearchParams();

@@ -433,6 +433,15 @@ async function upsertDemandInteraction(
   }
 }
 
+/**
+ * Upsert demo notifications.
+ *
+ * 种子通知的 eventType 与 DINGTALK_NOTIFICATION_MATRIX 权威命名对齐
+ * （docs/specs/notification-system.md §1）；system.* 与互动/安全类为非矩阵
+ * 场景，仅存在于 demo 种子。幂等键保持 demo:notification: 前缀，与真实
+ * 事件（eventType:aggregateId:recipientEmployeeId）隔离；重复 seed 时同步
+ * 更新 message / payload / read_at / delivery_status。
+ */
 async function upsertNotification(
   db: Kysely<DatabaseSchema>,
   data: NotificationFixtureData,
@@ -444,6 +453,7 @@ async function upsertNotification(
       .onConflict((oc) =>
         oc.column("notification_id").doUpdateSet((eb) => ({
           message: eb.ref("excluded.message"),
+          payload: eb.ref("excluded.payload"),
           read_at: eb.ref("excluded.read_at"),
           delivery_status: eb.ref("excluded.delivery_status"),
         })),

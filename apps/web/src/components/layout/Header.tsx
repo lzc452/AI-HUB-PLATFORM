@@ -20,6 +20,7 @@ import type { NotificationRecord } from "../../modules/notification/notification
 import {
   useMarkNotificationRead,
   useNotifications,
+  useUnreadNotificationCount,
 } from "../../modules/notification/useNotification";
 import { ROUTES } from "../../router/routes";
 import logoUrl from "../../../assets/logo.png";
@@ -34,6 +35,7 @@ export interface HeaderProps {
 export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const { actor, canAccess, logout } = useAuth();
   const notifications = useNotifications({ enabled: actor !== null });
+  const unreadSummary = useUnreadNotificationCount({ enabled: actor !== null });
   const markNotificationRead = useMarkNotificationRead();
   const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] =
@@ -44,7 +46,8 @@ export function Header({ onMenuClick, showMenuButton }: HeaderProps) {
   const unread = (notifications.data ?? []).filter(
     (item) => item.readAt === null,
   );
-  const unreadCount = unread.length;
+  // 未读徽标以 summary 端点为准（规格 §3），本地列表仅用于弹层最近未读展示。
+  const unreadCount = unreadSummary.data ?? 0;
   const recentUnread = unread.slice(0, 5);
   const lastApplicationId = readLastViewedApplicationId();
   const creatorPath =

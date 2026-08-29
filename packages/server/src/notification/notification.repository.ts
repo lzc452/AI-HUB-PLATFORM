@@ -77,6 +77,26 @@ export class KyselyNotificationRepository implements NotificationRepository {
     return this.map(row);
   }
 
+  async countUnread(employeeId: string) {
+    const row = await this.db
+      .selectFrom("notifications")
+      .select((eb) => eb.fn.countAll<number>().as("count"))
+      .where("recipient_employee_id", "=", employeeId)
+      .where("read_at", "is", null)
+      .executeTakeFirst();
+    return Number(row?.count ?? 0);
+  }
+
+  async markAllRead(employeeId: string) {
+    const result = await this.db
+      .updateTable("notifications")
+      .set({ read_at: new Date() })
+      .where("recipient_employee_id", "=", employeeId)
+      .where("read_at", "is", null)
+      .executeTakeFirst();
+    return Number(result?.numUpdatedRows ?? 0n);
+  }
+
   async markRead(notificationId: string, employeeId: string) {
     const row = await this.db
       .updateTable("notifications")

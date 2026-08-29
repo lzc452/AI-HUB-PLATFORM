@@ -2,7 +2,7 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档版本 | `v1.3` |
+| 文档版本 | `v1.4` |
 | 更新日期 | `2026-08-28` |
 | 服务端仓库 | `AI-HUB-PLATFORM` |
 | 客户端仓库 | `AI-HUB-PORTAL` |
@@ -58,6 +58,7 @@ const response = await fetch(path, {
 - **缓存行为**：匿名列表/首页/详情响应带 `Cache-Control: public, max-age=300`；docs/评论/apps-hunt 为 `no-cache`；所有响应统一 `Vary: Cookie`，已登录响应为 `private, no-cache`。客户端不应覆盖这些响应头语义。
 - **限流**：匿名读端点按 IP 限流（应用层 60s/120 次，nginx 生产另按 20r/s 边缘限流）。前端不要为公开读端点做无节制的轮询。
 - 写端点（发布、收藏、评论、投票）与 `dashboard/*` 个人中心仍要求认证，未认证返回 `401`。
+- **通知端点**（`/internal/portal/notifications/*`，见 §3.4）一律要求认证并校验 `notification.read` 权限；响应不参与公开缓存（`private, no-cache`），前端不得依赖除该语义外的任何缓存头。
 
 ## 3. 通用数据结构
 
@@ -162,6 +163,39 @@ interface PortalProblem {
 | `403` | `PORTAL_PUBLISH_FORBIDDEN`、`PORTAL_REVIEW_FORBIDDEN`、`PORTAL_SELF_REVIEW_FORBIDDEN` | 显示无权限或禁止自审，不泄露额外对象信息 |
 | `404` | `PORTAL_RESOURCE_NOT_FOUND`、`PORTAL_CONTENT_PAGE_NOT_FOUND` | 显示资源不存在或内容页不存在 |
 | `401` | 未认证 | 跳转登录或重新建立会话 |
+
+### 3.4 通知接口（站内通知）
+
+通知端点面向已登录用户，返回当前调用者（`recipientEmployeeId = 当前员工`）的站内通知。全部端点要求认证与 `notification.read` 权限，并复用 `/internal/notifications` 的通知记录 DTO 与错误语义；通知响应不套用 Portal 缓存拦截器（恒为 `private, no-cache`）。
+
+| 方法 | 路由 | 请求 | 成功响应 |
+| --- | --- | --- | --- |
+| `GET` | `/internal/portal/notifications` | — | 200 `NotificationRecordDto[]`（按 `createdAt` 倒序） |
+| `GET` | `/internal/portal/notifications/summary` | — | 200 `{ "unreadCount": number }` |
+| `POST` | `/internal/portal/notifications/:notificationId/read` | — | 200 `NotificationRecordDto`（已读后的记录，`readAt` 非空） |
+| `POST` | `/internal/portal/notifications/read-all` | — | 200 `{ "updated": number }` |
+
+认证失败与权限校验由服务端统一裁决：未登录（无 Cookie 或身份请求头）返回 `401 IDENTITY_CREDENTIALS_REQUIRED`；无 `notification.read` 权限返回 `403 NOT_AUTHORIZED`；操作不存在或不属于当前调用者的通知返回 `404 NOTIFICATION_NOT_FOUND`（不泄露他人通知存在性）。其余服务端业务错误为 `400`，错误体沿用 Problem Details 风格（`code`/`detail`/`traceId`）。
+
+通知记录 DTO 字段（沿用 `NotificationRecordDto`）：
+
+```ts
+interface NotificationRecord {
+  notificationId: string;
+  recipientEmployeeId: string;
+  eventType: string;
+  aggregateId: string;
+  idempotencyKey: string;
+  message: string;
+  /** { title?, body?, detail?, deepLink? }，前端详情优先渲染 payload，缺省回退 message。 */
+  payload: Record<string, unknown>;
+  /** ISO 8601；null 表示未读。 */
+  readAt: string | null;
+  createdAt: string;
+}
+```
+
+前端轮询建议：未读徽标通过 `summary` 每 30s 轮询（React Query `refetchInterval`），点击条目即调 `:notificationId/read`，页面级“全部已读”调 `read-all`；mutation 成功后失效并重新读取列表与 summary。写请求沿用 CSRF、`x-request-nonce` 与 `x-request-timestamp` 约定。
 
 ## 4. 读取接口
 
@@ -496,14 +530,19 @@ draft ──submit──> in_review ──approve──> published
 - [ ] 未登录访问写端点（发布、收藏、评论、投票）与 `dashboard/*` 返回 `401`。
 - [ ] 匿名列表响应带 `Cache-Control: public, max-age=300` 与 `Vary: Cookie`；已登录响应为 `private, no-cache`。
 - [ ] `PORTAL_APP_DRAFT_REQUIRED`、`DRAFT_VALIDATION_FAILED`、权限拒绝、审核认领冲突和 XSS 清洗均有可见且可恢复的前端行为。
+- [ ] 登录后 `summary` 返回真实未读数；铃铛徽标与最近未读下拉随 30s 轮询更新。
+- [ ] 通知页列表/筛选/分页可用；点击条目即读（`readAt` 生效且未读数减一）；“全部已读”后 `unreadCount` 归零。
+- [ ] 未登录访问通知端点返回 `401`；无 `notification.read` 权限返回 `403`；操作他人通知返回 `404`。
 - [ ] skill/plugin/mcp 的 Portal 读取、收藏、评论和原有写入行为不被应用统一改造影响。
 - [ ] 前端完成 `npm run typecheck`、`npm run lint`、`npm test` 和 `npm run build`。
 
 ## 10. 服务端参考位置
 
 - Portal 控制器：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\portal\portal.controller.ts`
+- Portal 通知控制器：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\portal\portal-notification.controller.ts`
 - Portal DTO：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\portal\portal.dto.ts`
 - Portal 服务委托：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\portal\portal.service.ts`
+- 通知服务与错误映射：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\notification\notification.service.ts`、`...\notification\notification.controller.ts`
 - 标准应用服务：`D:\workspace\AI-HUB-PLATFORM\packages\server\src\application\application.service.ts`
 - 契约类型：`D:\workspace\AI-HUB-PLATFORM\packages\contracts\src\application.ts`
 - 真实数据库一致性 E2E：`D:\workspace\AI-HUB-PLATFORM\apps\api\test\portal-application-consistency.real.e2e-spec.ts`

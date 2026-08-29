@@ -1,11 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App as AntApp } from "antd";
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { Controller } from "react-hook-form";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
@@ -14,10 +9,7 @@ import ApplicationCreateWizardPage from "./ApplicationCreateWizardPage";
 import { FormWizard } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { ApiError } from "../../shared/api/client";
-import {
-  createWizardSteps,
-  getApplicationDraft,
-} from "../../modules/publishing";
+import { getApplicationDraft } from "../../modules/publishing";
 
 vi.mock("../../modules/auth/useIdentity", () => ({
   useDepartments: () => ({

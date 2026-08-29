@@ -58,6 +58,22 @@ class MemoryNotificationRepository implements NotificationRepository {
     this.notifications[this.notifications.indexOf(item)] = updated;
     return updated;
   }
+  async countUnread(employeeId: string) {
+    return this.notifications.filter(
+      (item) => item.recipientEmployeeId === employeeId && item.readAt === null,
+    ).length;
+  }
+  async markAllRead(employeeId: string) {
+    let updated = 0;
+    this.notifications = this.notifications.map((item) => {
+      if (item.recipientEmployeeId === employeeId && item.readAt === null) {
+        updated += 1;
+        return { ...item, readAt: new Date() };
+      }
+      return item;
+    });
+    return updated;
+  }
   async markDeliveryAttempt(
     idempotencyKey: string,
     status: "sent" | "retry" | "failed",
@@ -206,6 +222,109 @@ describe("NotificationService", () => {
     ).rejects.toThrow("DINGTALK_TIMEOUT");
     expect(repository.attempts).toContain(
       `${notification.idempotencyKey}:retry`,
+    );
+  });
+
+  it("counts only the current employee's unread notifications", async () => {
+    const repository = new MemoryNotificationRepository();
+    const service = new NotificationService(
+      repository,
+      { authorize: allowAll },
+      {
+        async send() {
+          return { delivered: true };
+        },
+      },
+    );
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "application.reviewed",
+      aggregateId: "app-unread-1",
+      message: "未读一",
+    });
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "application.published",
+      aggregateId: "app-unread-2",
+      message: "未读二",
+    });
+    const read = await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "application.withdrawn",
+      aggregateId: "app-read-1",
+      message: "已读",
+    });
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E200",
+      eventType: "demand.submitted",
+      aggregateId: "demand-other",
+      message: "他人未读",
+    });
+    await service.markRead(employee, read.notificationId);
+
+    // 当前调用者 2 条未读；他人（E200）的通知不计入。
+    await expect(service.getUnreadCount(employee)).resolves.toBe(2);
+  });
+
+  it("marks all of the current employee's notifications read and is idempotent", async () => {
+    const repository = new MemoryNotificationRepository();
+    const service = new NotificationService(
+      repository,
+      { authorize: allowAll },
+      {
+        async send() {
+          return { delivered: true };
+        },
+      },
+    );
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "application.reviewed",
+      aggregateId: "app-bulk-1",
+      message: "未读一",
+    });
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E100",
+      eventType: "application.published",
+      aggregateId: "app-bulk-2",
+      message: "未读二",
+    });
+    await service.createForEvent(employee, {
+      recipientEmployeeId: "E200",
+      eventType: "demand.submitted",
+      aggregateId: "demand-other-bulk",
+      message: "他人未读",
+    });
+
+    await expect(service.markAllRead(employee)).resolves.toBe(2);
+    // 幂等：再次调用不再更新任何行。
+    await expect(service.markAllRead(employee)).resolves.toBe(0);
+    // 他人的未读不受影响。
+    await expect(
+      service.getUnreadCount({ ...employee, employeeId: "E200" }),
+    ).resolves.toBe(1);
+  });
+
+  it("requires notification read permission for unread count and mark-all-read", async () => {
+    const deny = async (): Promise<AuthorizationDecision> => ({
+      allowed: false,
+      reasonCode: "DENY_TEST",
+    });
+    const service = new NotificationService(
+      new MemoryNotificationRepository(),
+      { authorize: deny },
+      {
+        async send() {
+          return { delivered: true };
+        },
+      },
+    );
+
+    await expect(service.getUnreadCount(employee)).rejects.toThrow(
+      "NOT_AUTHORIZED",
+    );
+    await expect(service.markAllRead(employee)).rejects.toThrow(
+      "NOT_AUTHORIZED",
     );
   });
 });

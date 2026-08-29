@@ -74,6 +74,16 @@ export class AnalyticsAssistantService {
     private readonly audit: AssistantAuditRepository,
     private readonly provider: DifyAssistantPort,
     private readonly analyticsEvents?: AnalyticsBehaviorEventRecorder,
+    private readonly notifications?: {
+      queue(
+        actor: ActorContext,
+        scenario: "analytics.assistant.failed",
+        input: {
+          recipientEmployeeId: string;
+          aggregateId: string;
+        },
+      ): Promise<unknown>;
+    },
   ) {}
 
   async ask(
@@ -197,6 +207,18 @@ export class AnalyticsAssistantService {
         });
       } catch {
         // 即使遥测不可用也保留本地降级。
+      }
+      // 站内通知（矩阵 analytics.assistant.failed，aggregateId 按授权器约定为
+      // 调用者会话）：通知失败不改变降级响应。
+      if (this.notifications !== undefined) {
+        try {
+          await this.notifications.queue(actor, "analytics.assistant.failed", {
+            recipientEmployeeId: actor.employeeId,
+            aggregateId: actor.sessionId,
+          });
+        } catch {
+          // 通知失败不影响降级结果。
+        }
       }
       return { status: "degraded", answer: FALLBACK_ANSWER };
     }

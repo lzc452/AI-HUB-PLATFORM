@@ -1308,7 +1308,7 @@ describe("DemandService demand.submitted notification", () => {
     return { repository, demand, audits, events };
   }
 
-  it("queues demand.submitted to the first demand_operator on submit", async () => {
+  it("broadcasts demand.submitted to every demand_operator on submit", async () => {
     const { repository, demand } = submitHarness();
     const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
     const service = new DemandService(
@@ -1326,10 +1326,16 @@ describe("DemandService demand.submitted notification", () => {
     await service.submitForReview(requester, demand.demandId);
 
     expect(demand.status).toBe("pending_review");
+    expect(notifications.queue).toHaveBeenCalledTimes(2);
     expect(notifications.queue).toHaveBeenCalledWith(
       requester,
       "demand.submitted",
       { recipientEmployeeId: "operator-1", aggregateId: demand.demandId },
+    );
+    expect(notifications.queue).toHaveBeenCalledWith(
+      requester,
+      "demand.submitted",
+      { recipientEmployeeId: "operator-2", aggregateId: demand.demandId },
     );
   });
 
@@ -1443,6 +1449,213 @@ describe("DemandService demand.reviewed notification", () => {
       reviewer,
       "demand.reviewed",
       expect.anything(),
+    );
+  });
+});
+
+describe("DemandService 通知场景（矩阵 11-16）", () => {
+  /** 具备 DEMAND_PROGRESS 权限的运营者（assertProgressActor 要求）。 */
+  const progressActor: ActorContext = {
+    ...requester,
+    employeeId: "E900",
+    permissions: [
+      ...(requester.permissions ?? []),
+      PERMISSIONS.DEMAND_PROGRESS,
+      PERMISSIONS.DEMAND_COLLABORATE,
+      PERMISSIONS.DEMAND_MERGE,
+      PERMISSIONS.DEMAND_CLAIM,
+    ],
+  };
+
+  function harness() {
+    const demand = baseDemand("demand-notify-scenarios");
+    demand.status = "pending_claim";
+    const repository = {
+      withTransaction: async <T>(
+        operation: (repo: DemandRepository) => Promise<T>,
+      ) => operation(repository),
+      findById: async () => demand,
+      claimOwner: async (
+        _demandId: string,
+        employeeId: string,
+        _expectedVersion: number,
+      ) => {
+        demand.ownerEmployeeId = employeeId;
+        demand.status = "claimed";
+        demand.version += 1;
+        return demand;
+      },
+      assignCollaborator: async (
+        _demandId: string,
+        employeeId: string,
+        role: string,
+        _expectedVersion: number,
+      ) => ({
+        demandId: demand.demandId,
+        employeeId,
+        role,
+        addedByEmployeeId: "E900",
+        createdAt: new Date(),
+      }),
+      createProgressUpdate: async (input: {
+        demandId: string;
+        authorEmployeeId: string;
+        status: string;
+        title: string;
+        body: string;
+      }) => ({
+        progressId: "progress-1",
+        ...input,
+        createdAt: new Date(),
+      }),
+      createPilot: async (input: {
+        demandId: string;
+        name: string;
+        startsAt: Date;
+      }) => ({
+        pilotId: "pilot-1",
+        ...input,
+        applicationId: null,
+        endsAt: null,
+        outcome: null,
+        status: "planned",
+        createdByEmployeeId: "E900",
+        createdAt: new Date(),
+      }),
+      mergeDemands: async (
+        sourceDemandId: string,
+        targetDemandId: string,
+        _sourceVersion: number,
+        _targetVersion: number,
+      ) => ({
+        source: { ...demand, demandId: sourceDemandId, status: "merged" },
+        target: { ...demand, demandId: targetDemandId, status: "closed" },
+      }),
+      transitionStatus: async (
+        _id: string,
+        status: DemandEntry["status"],
+        _expectedVersion: number,
+        reviewReason?: string | null,
+      ) => {
+        demand.status = status;
+        demand.reviewReason = reviewReason ?? null;
+        demand.version += 1;
+        return demand;
+      },
+      recordAudit: async () => undefined,
+      emitOutbox: async () => undefined,
+    } as unknown as DemandRepository;
+    const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
+    const service = new DemandService(
+      repository,
+      { authorize: allowAll },
+      undefined,
+      undefined,
+      undefined,
+      notifications,
+    );
+    return { service, demand, notifications };
+  }
+
+  it("claim 后通知提交人 demand.claimed", async () => {
+    const { service, demand, notifications } = harness();
+    await service.claim(requester, demand.demandId, 1);
+    expect(notifications.queue).toHaveBeenCalledWith(
+      requester,
+      "demand.claimed",
+      { recipientEmployeeId: "E100", aggregateId: demand.demandId },
+    );
+  });
+
+  it("addCollaborator 后通知新协作者 demand.collaborator_assigned", async () => {
+    const { service, demand, notifications } = harness();
+    demand.ownerEmployeeId = "E900";
+    await service.addCollaborator(
+      progressActor,
+      demand.demandId,
+      "E300",
+      "collaborator",
+      1,
+    );
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.collaborator_assigned",
+      { recipientEmployeeId: "E300", aggregateId: demand.demandId },
+    );
+  });
+
+  it("addProgressUpdate 后通知提交人 demand.progress_updated（含状态变量）", async () => {
+    const { service, demand, notifications } = harness();
+    await service.addProgressUpdate(progressActor, demand.demandId, {
+      title: "进度更新",
+      body: "完成数据接入。",
+    });
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.progress_updated",
+      {
+        recipientEmployeeId: "E100",
+        aggregateId: demand.demandId,
+        variables: { status: demand.status },
+      },
+    );
+  });
+
+  it("createPilot 后通知提交人 demand.pilot_started", async () => {
+    const { service, demand, notifications } = harness();
+    demand.status = "claimed";
+    await service.createPilot(progressActor, demand.demandId, {
+      name: "试点一期",
+      startsAt: new Date("2026-09-01"),
+    });
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.pilot_started",
+      { recipientEmployeeId: "E100", aggregateId: demand.demandId },
+    );
+  });
+
+  it("advanceStatus 关闭时通知提交人 demand.closed，非关闭不通知", async () => {
+    const { service, demand, notifications } = harness();
+    await service.advanceStatus(
+      progressActor,
+      demand.demandId,
+      1,
+      "closed",
+      "目标已达成",
+    );
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.closed",
+      { recipientEmployeeId: "E100", aggregateId: demand.demandId },
+    );
+    notifications.queue.mockClear();
+    // 第二次调用：重置为 claimed 后流转到 pilot（closed→pilot 非法转换）。
+    demand.status = "claimed";
+    demand.version = 2;
+    await service.advanceStatus(
+      progressActor,
+      demand.demandId,
+      2,
+      "pilot",
+      "进入试点",
+    );
+    expect(notifications.queue).not.toHaveBeenCalled();
+  });
+
+  it("merge 后通知源/目标提交人 demand.merged", async () => {
+    const { service, demand, notifications } = harness();
+    await service.merge(progressActor, demand.demandId, "demand-target", 1, 1);
+    expect(notifications.queue).toHaveBeenCalledTimes(2);
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.merged",
+      { recipientEmployeeId: "E100", aggregateId: demand.demandId },
+    );
+    expect(notifications.queue).toHaveBeenCalledWith(
+      expect.anything(),
+      "demand.merged",
+      { recipientEmployeeId: "E100", aggregateId: "demand-target" },
     );
   });
 });

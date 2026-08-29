@@ -21,6 +21,9 @@ describe("数据看板页面", () => {
             roleCodes: ["employee", "super_admin"],
           });
         }
+        if (path.includes("/internal/notifications/summary")) {
+          return Response.json({ unreadCount: 0 });
+        }
         if (path.includes("/internal/notifications")) {
           return Response.json([]);
         }

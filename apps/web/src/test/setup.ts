@@ -55,6 +55,12 @@ beforeEach(() => {
           primaryDepartmentId: "dept-1",
         });
       }
+      if (path.includes("/internal/notifications/summary")) {
+        return Response.json({ unreadCount: 0 });
+      }
+      if (path.includes("/internal/notifications/read-all")) {
+        return Response.json({ updated: 0 });
+      }
       if (path.includes("/internal/notifications")) {
         return Response.json([]);
       }

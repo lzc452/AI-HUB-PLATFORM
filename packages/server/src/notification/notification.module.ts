@@ -73,13 +73,14 @@ async function authorizeDingTalkResource(
           .executeTakeFirst()) !== undefined
       );
     case "demand_collaborator":
+      // 协作者角色含 collaborator/operator（DemandCollaboratorRole），
+      // 两者都是"被分配至需求"的成员，均应能收到协作类通知。
       return (
         (await database
           .selectFrom("ai_demand_collaborators")
           .select("demand_id")
           .where("demand_id", "=", aggregateId)
           .where("employee_id", "=", recipientEmployeeId)
-          .where("role", "=", "collaborator")
           .executeTakeFirst()) !== undefined
       );
     case "export_requester":

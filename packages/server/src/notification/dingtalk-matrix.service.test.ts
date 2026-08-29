@@ -140,4 +140,57 @@ describe("DingTalk notification matrix", () => {
     ).rejects.toThrow("NOTIFICATION_TEMPLATE_VARIABLE_FORBIDDEN");
     expect(createForEvent).not.toHaveBeenCalled();
   });
+
+  it("passes an optional payload through to createForEvent", async () => {
+    const createForEvent = vi.fn().mockResolvedValue({
+      notificationId: "notification-1",
+    });
+    const service = new DingTalkNotificationMatrixService(
+      { createForEvent },
+      async () => true,
+    );
+    const payload = {
+      title: "导出完成",
+      body: "平台分析导出已就绪",
+      detail: { rowCount: 3 },
+      deepLink: "/analytics/exports/export-1",
+    };
+
+    await service.queue(actor, "analytics.export.completed", {
+      recipientEmployeeId: "employee-2",
+      aggregateId: "export-1",
+      payload,
+    });
+
+    expect(createForEvent).toHaveBeenCalledWith(
+      actor,
+      expect.objectContaining({
+        recipientEmployeeId: "employee-2",
+        eventType: "analytics.export.completed",
+        aggregateId: "export-1",
+        payload,
+      }),
+    );
+  });
+
+  it("omits payload from createForEvent when not provided (service default applies)", async () => {
+    const createForEvent = vi.fn().mockResolvedValue({
+      notificationId: "notification-1",
+    });
+    const service = new DingTalkNotificationMatrixService(
+      { createForEvent },
+      async () => true,
+    );
+
+    await service.queue(actor, "application.published", {
+      recipientEmployeeId: "employee-2",
+      aggregateId: "app-1",
+    });
+
+    const [, input] = createForEvent.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(input.payload).toBeUndefined();
+  });
 });

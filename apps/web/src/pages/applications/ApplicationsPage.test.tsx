@@ -64,7 +64,13 @@ const hoisted = vi.hoisted(() => {
   });
   // 审核入口权限测试：可替换当前登录 actor 的权限集合。
   const actorPermissions: string[] = ["application.read"];
-  return { actorPermissions, deleteMutate: vi.fn(), draftRow, makeListMock, rows };
+  return {
+    actorPermissions,
+    deleteMutate: vi.fn(),
+    draftRow,
+    makeListMock,
+    rows,
+  };
 });
 
 vi.mock("../../modules/auth/useAuth", () => ({
@@ -153,7 +159,11 @@ describe("ApplicationsPage 审核入口权限", () => {
   });
 
   it("无 application.review 权限时不显示待审核 KPI、待我审核筛选与审核按钮", () => {
-    hoisted.actorPermissions.splice(0, hoisted.actorPermissions.length, "application.read");
+    hoisted.actorPermissions.splice(
+      0,
+      hoisted.actorPermissions.length,
+      "application.read",
+    );
     hoisted.rows.splice(0, hoisted.rows.length, {
       ...hoisted.draftRow,
       needsMyReview: true,

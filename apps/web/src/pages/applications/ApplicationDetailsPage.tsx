@@ -1,4 +1,4 @@
-import { Button, Empty, Spin, Tag, Tooltip, Typography, Image } from "antd";
+import { Button, Empty, Image, Spin, Tag, Typography } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";

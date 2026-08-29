@@ -15,10 +15,7 @@ describe("development proxy configuration", () => {
   });
 
   it("serves Console SPA and hashed assets with separate cache policies", async () => {
-    const config = await readFile(
-      "../../infra/docker/web.nginx.conf",
-      "utf8",
-    );
+    const config = await readFile("../../infra/docker/web.nginx.conf", "utf8");
 
     expect(config).toContain("location = /console/");
     expect(config).toContain("location /console/assets/");

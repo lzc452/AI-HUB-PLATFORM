@@ -296,13 +296,10 @@ describe("ApplicationReviewPage", () => {
     expect(screen.queryByText("审核任务信息")).not.toBeInTheDocument();
   });
 
-  it("未认领任务时禁用通过/驳回并提示先领取", () => {
+  it("未认领任务时禁用通过/驳回", () => {
     // 默认 mockReviewQueue 未认领（claimedByEmployeeId: null）
     renderPage();
 
-    expect(
-      screen.getByText("请先在任务信息中领取该审核任务，再进行通过/驳回操作。"),
-    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "通过审核" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "驳回" })).toBeDisabled();
   });
@@ -358,7 +355,7 @@ describe("ApplicationReviewPage", () => {
     });
     renderPage();
 
-    fireEvent.change(screen.getByLabelText("驳回原因"), {
+    fireEvent.change(screen.getByLabelText("审核意见"), {
       target: { value: "缺少必要的风险评估材料" },
     });
     fireEvent.click(screen.getByRole("button", { name: "驳回" }));
@@ -509,7 +506,7 @@ describe("审核任务信息按钮状态机", () => {
     });
   });
 
-  it("预览详情展示截图与附件资产并可下载", async () => {
+  it("预览详情展示版本资产关键信息", async () => {
     listAssetsMock.mockResolvedValueOnce([
       {
         assetId: "shot-1",
@@ -536,10 +533,10 @@ describe("审核任务信息按钮状态机", () => {
     ]);
     renderPage();
 
-    // 附件名称展示 + 下载按钮可用
-    expect(await screen.findByText("使用手册.pdf")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "下载 使用手册.pdf" }),
-    ).toBeInTheDocument();
+    // 预览详情当前展示版本资产关键信息（截图/附件下载 UI 已注释停用）
+    expect(screen.getByText("关键特性")).toBeInTheDocument();
+    expect(screen.getByText("安全扫描")).toBeInTheDocument();
+    expect(screen.getByText("SHA-256")).toBeInTheDocument();
+    expect(screen.queryByText("使用手册.pdf")).not.toBeInTheDocument();
   });
 });

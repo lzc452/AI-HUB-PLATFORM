@@ -513,18 +513,18 @@ describe("MarketplaceDetailPage", () => {
     });
   });
 
-  it("开启匿名评分开关后评分提交携带 displayAnonymously: true", async () => {
+  it("匿名评分开关已停用时评分提交固定 displayAnonymously: false", async () => {
     render(<App />);
 
     await screen.findByRole("heading", { name: "OCR 票据识别" });
-    expect(screen.getByText("匿名评分")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("switch"));
+    // 匿名评分开关 UI 已注释停用（组件注释：保留读取，onRate 第二参固定为 false）
+    expect(screen.queryByText("匿名评分")).not.toBeInTheDocument();
     const rate = screen.getByLabelText("为应用评分");
     fireEvent.click(within(rate).getAllByRole("radio")[4]!);
 
     expect(rateMutate).toHaveBeenCalledWith({
       stars: 5,
-      displayAnonymously: true,
+      displayAnonymously: false,
     });
   });
 

@@ -793,6 +793,8 @@ function makeService(
     objectStorage?: {
       get(key: string): Promise<Uint8Array | null>;
     };
+    /** application.review.requested 广播端口（未提供时广播静默跳过）。 */
+    listApplicationReviewers?: () => Promise<string[]>;
   } = {},
 ) {
   const repository = new MemoryApplicationRepository();
@@ -818,6 +820,7 @@ function makeService(
     scenario: string;
     recipientEmployeeId: string;
     aggregateId: string;
+    variables?: Readonly<Record<string, string | number>>;
   }> = [];
   const notifications = {
     queue: async (
@@ -833,6 +836,9 @@ function makeService(
         scenario,
         recipientEmployeeId: input.recipientEmployeeId,
         aggregateId: input.aggregateId,
+        ...(input.variables === undefined
+          ? {}
+          : { variables: input.variables }),
       });
       return { notificationId: `notification-${notificationCalls.length}` };
     },
@@ -859,6 +865,7 @@ function makeService(
       options.resolveWebTargetHost ??
         (async () => [{ address: "10.0.0.1", family: 4 }]),
       options.objectStorage,
+      options.listApplicationReviewers,
     ),
     analyticsEvents,
     notificationCalls,
@@ -1745,13 +1752,14 @@ describe("ApplicationService", () => {
 
     expect(repository.audits).toContain("application.withdraw.requested");
     expect(repository.events).toContain("application.withdraw.requested");
-    expect(notificationCalls).toEqual([
-      {
-        scenario: "application.withdraw.requested",
-        recipientEmployeeId: "E100",
-        aggregateId: application.applicationId,
-      },
-    ]);
+    // review 结论与自动上架通知先于下架申请入队（见本文件通知场景用例），
+    // 此处仅断言下架申请通知本身存在。
+    expect(notificationCalls).toContainEqual({
+      scenario: "application.withdraw.requested",
+      recipientEmployeeId: "E100",
+      aggregateId: application.applicationId,
+      variables: { reason: "应用已停止维护" },
+    });
   });
 
   it("keeps the withdraw-request audit when the notification queue fails", async () => {
@@ -4305,5 +4313,229 @@ describe("ApplicationService", () => {
         "nope",
       ),
     ).rejects.toThrow("PENDING_ITEM_NOT_FOUND");
+  });
+});
+
+describe("ApplicationService notification scenarios（矩阵 1/2/6/7）", () => {
+  it("broadcasts application.review.requested to every application_reviewer on submit", async () => {
+    const { service, notificationCalls } = makeService({
+      listApplicationReviewers: async () => ["E200", "E500", "E600"],
+    });
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+
+    await service.submitForReview(owner, version.applicationVersionId);
+
+    expect(notificationCalls).toEqual([
+      {
+        scenario: "application.review.requested",
+        recipientEmployeeId: "E200",
+        aggregateId: application.applicationId,
+      },
+      {
+        scenario: "application.review.requested",
+        recipientEmployeeId: "E500",
+        aggregateId: application.applicationId,
+      },
+      {
+        scenario: "application.review.requested",
+        recipientEmployeeId: "E600",
+        aggregateId: application.applicationId,
+      },
+    ]);
+  });
+
+  it("skips the broadcast when no application_reviewer exists", async () => {
+    const { service, notificationCalls } = makeService({
+      listApplicationReviewers: async () => [],
+    });
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+
+    await service.submitForReview(owner, version.applicationVersionId);
+    expect(notificationCalls).toHaveLength(0);
+  });
+
+  it("keeps broadcasting to the remaining reviewers when one queue call fails", async () => {
+    const { service, notifications } = makeService({
+      listApplicationReviewers: async () => ["E200", "E500"],
+    });
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    let calls = 0;
+    notifications.queue = async () => {
+      calls += 1;
+      // 第一个收件人失败（如被除权）不得阻断其余广播。
+      if (calls === 1) throw new Error("NOTIFICATION_RECIPIENT_NOT_AUTHORIZED");
+      return { notificationId: `notification-${calls}` };
+    };
+
+    await service.submitForReview(owner, version.applicationVersionId);
+    expect(calls).toBe(2);
+  });
+
+  it("notifies the owner with the decision and the auto-publish on first-time approval", async () => {
+    const { service, notificationCalls } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    const result = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+
+    expect(result.status).toBe("published");
+    expect(notificationCalls).toEqual([
+      {
+        scenario: "application.review.decided",
+        recipientEmployeeId: "E100",
+        aggregateId: application.applicationId,
+        variables: { decision: "approve" },
+      },
+      {
+        scenario: "application.published",
+        recipientEmployeeId: "E100",
+        aggregateId: application.applicationId,
+      },
+    ]);
+  });
+
+  it("notifies only the review decision when the review rejects", async () => {
+    const { service, notificationCalls } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+
+    await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "reject",
+      "材料不全",
+    );
+
+    expect(notificationCalls).toEqual([
+      {
+        scenario: "application.review.decided",
+        recipientEmployeeId: "E100",
+        aggregateId: application.applicationId,
+        variables: { decision: "reject" },
+      },
+    ]);
+  });
+
+  it("notifies the owner when a legacy approved application is manually published", async () => {
+    const { service, repository, notificationCalls } = makeService();
+    const { version } = await prepareLegacyApprovedApplication(
+      service,
+      repository,
+    );
+
+    await service.publish(owner, version.applicationVersionId);
+
+    expect(notificationCalls).toEqual([
+      {
+        scenario: "application.published",
+        recipientEmployeeId: "E100",
+        aggregateId: version.applicationId,
+      },
+    ]);
+  });
+
+  it("notifies the owner when an application is withdrawn", async () => {
+    const { service, notificationCalls } = makeService();
+    const { application } = await preparePublishedApplication(service);
+
+    await service.withdraw(owner, application.applicationId, "superseded");
+
+    expect(notificationCalls).toContainEqual({
+      scenario: "application.withdrawn",
+      recipientEmployeeId: "E100",
+      aggregateId: application.applicationId,
+    });
+  });
+
+  it("keeps review/publish/withdraw committed when the notification queue fails", async () => {
+    const { service, repository, notifications } = makeService();
+    const application = await service.createApplication(owner, {
+      name: "Copilot",
+      summary: "Internal assistant",
+    });
+    const version = await service.createVersion(
+      owner,
+      application.applicationId,
+      versionInput,
+    );
+    await configureAllDeliveryChannels(service, application.applicationId);
+    await service.submitForReview(owner, version.applicationVersionId);
+    await service.claimReview(reviewer, version.applicationVersionId);
+    notifications.queue = async () => {
+      throw new Error("NOT_AUTHORIZED");
+    };
+
+    // 审核结论照常提交（自动上架），通知失败不回滚业务。
+    const result = await service.review(
+      reviewer,
+      version.applicationVersionId,
+      "approve",
+      "ok",
+    );
+    expect(result.status).toBe("published");
+    expect(repository.events).toContain("application.published");
+
+    // publish 手动路径与 withdraw 同样不受通知失败影响。
+    const { service: legacyService, repository: legacyRepository } =
+      makeService();
+    const legacy = await prepareLegacyApprovedApplication(
+      legacyService,
+      legacyRepository,
+    );
+    await expect(
+      legacyService.publish(owner, legacy.version.applicationVersionId),
+    ).resolves.toMatchObject({ status: "published" });
+    await expect(
+      service.withdraw(owner, application.applicationId, "superseded"),
+    ).resolves.toMatchObject({ status: "withdrawn" });
   });
 });

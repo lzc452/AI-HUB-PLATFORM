@@ -240,7 +240,8 @@ h6 {
   box-shadow: 0 1px 4px rgba(29, 54, 89, 0.025);
   padding: 12px;
 }
-.app-admin-card .ant-card-head, .ant-card-body {
+.app-admin-card .ant-card-head,
+.ant-card-body {
   padding: 0;
 }
 

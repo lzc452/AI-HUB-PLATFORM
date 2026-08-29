@@ -76,6 +76,7 @@ function createApplicationServiceProvider(
         webTargetPolicy,
         undefined,
         objectStorage,
+        () => identity.listEmployeeIdsWithRole("application_reviewer"),
       ),
     inject: [
       KyselyApplicationRepository,

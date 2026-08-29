@@ -36,25 +36,25 @@ import { ApplicationUploadService } from "./application-upload.service.js";
 import type { ArtifactUploadRecord } from "./application.types.js";
 
 export class PortalApplicationUploadDto {
-  @ApiProperty()
+  @ApiProperty({ type: String })
   uploadId!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   kind!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   fileName!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   mimeType!: string;
-  @ApiProperty()
+  @ApiProperty({ type: Number })
   sizeBytes!: number;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   uploadStatus!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   scanStatus!: string;
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   sha256!: string | null;
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   errorCode!: string | null;
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   assetId!: string | null;
 }
 

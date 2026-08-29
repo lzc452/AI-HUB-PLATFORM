@@ -140,11 +140,16 @@ export class DemandService {
       const reviewers =
         (await this.identityPort?.listEmployeeIdsWithRole("demand_operator")) ??
         [];
-      if (reviewers.length > 0) {
-        await this.notifications.queue(actor, "demand.submitted", {
-          recipientEmployeeId: reviewers[0]!,
-          aggregateId: demandId,
-        });
+      // 矩阵 demand.submitted 语义为广播全部运营者；单条失败不阻断其余广播。
+      for (const reviewer of reviewers) {
+        try {
+          await this.notifications.queue(actor, "demand.submitted", {
+            recipientEmployeeId: reviewer,
+            aggregateId: demandId,
+          });
+        } catch {
+          // 通知失败不回滚提交。
+        }
       }
     }
     return submitted;
@@ -228,17 +233,40 @@ export class DemandService {
     ) {
       throw new Error("DEMAND_CLAIM_INVALID_STATE");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const claimed = await repository.claimOwner(
-        demandId,
-        actor.employeeId,
-        expectedVersion,
-      );
-      await this.recordMutation(repository, claimed, actor, "demand.claimed", {
-        ownerEmployeeId: actor.employeeId,
-      });
-      return claimed;
-    });
+    const claimed = await this.repository.withTransaction(
+      async (repository) => {
+        const claimed = await repository.claimOwner(
+          demandId,
+          actor.employeeId,
+          expectedVersion,
+        );
+        await this.recordMutation(
+          repository,
+          claimed,
+          actor,
+          "demand.claimed",
+          {
+            ownerEmployeeId: actor.employeeId,
+          },
+        );
+        return claimed;
+      },
+    );
+    // 事务外通知提交人（矩阵 demand.claimed）：失败不回滚认领。
+    if (
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      try {
+        await this.notifications.queue(actor, "demand.claimed", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+        });
+      } catch {
+        // 通知失败不回滚认领。
+      }
+    }
+    return claimed;
   }
 
   async submitClaimProposal(
@@ -501,25 +529,39 @@ export class DemandService {
     if (role === "owner") {
       throw new Error("DEMAND_COLLABORATOR_ROLE_INVALID");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const collaborator = await repository.assignCollaborator(
-        demandId,
-        employeeId,
-        role,
-        expectedVersion,
-      );
-      await repository.recordAudit({
-        demandId,
-        actorEmployeeId: actor.employeeId,
-        eventType: "demand.collaborator.assigned",
-        details: { employeeId, role },
-      });
-      await repository.emitOutbox({
-        demandId,
-        eventType: "demand.collaborator.assigned",
-      });
-      return collaborator;
-    });
+    const collaborator = await this.repository.withTransaction(
+      async (repository) => {
+        const collaborator = await repository.assignCollaborator(
+          demandId,
+          employeeId,
+          role,
+          expectedVersion,
+        );
+        await repository.recordAudit({
+          demandId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "demand.collaborator.assigned",
+          details: { employeeId, role },
+        });
+        await repository.emitOutbox({
+          demandId,
+          eventType: "demand.collaborator.assigned",
+        });
+        return collaborator;
+      },
+    );
+    // 事务外通知新协作者（矩阵 demand.collaborator_assigned）：失败不回滚分配。
+    if (this.notifications !== undefined) {
+      try {
+        await this.notifications.queue(actor, "demand.collaborator_assigned", {
+          recipientEmployeeId: employeeId,
+          aggregateId: demandId,
+        });
+      } catch {
+        // 通知失败不回滚协作者分配。
+      }
+    }
+    return collaborator;
   }
 
   async listCollaborators(
@@ -676,26 +718,44 @@ export class DemandService {
     if (nextStatus === "closed" && !reason?.trim()) {
       throw new Error("DEMAND_CLOSE_REASON_REQUIRED");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.transitionStatus(
-        demandId,
-        nextStatus,
-        expectedVersion,
-        reason?.trim() ?? null,
-      );
-      await this.recordMutation(
-        repository,
-        updated,
-        actor,
-        "demand.status.changed",
-        {
-          from: current.status,
-          to: nextStatus,
-          reason: reason?.trim() ?? null,
-        },
-      );
-      return updated;
-    });
+    const updated = await this.repository.withTransaction(
+      async (repository) => {
+        const transitioned = await repository.transitionStatus(
+          demandId,
+          nextStatus,
+          expectedVersion,
+          reason?.trim() ?? null,
+        );
+        await this.recordMutation(
+          repository,
+          transitioned,
+          actor,
+          "demand.status.changed",
+          {
+            from: current.status,
+            to: nextStatus,
+            reason: reason?.trim() ?? null,
+          },
+        );
+        return transitioned;
+      },
+    );
+    // 事务外通知提交人（矩阵 demand.closed，仅关闭场景）：失败不回滚状态流转。
+    if (
+      nextStatus === "closed" &&
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      try {
+        await this.notifications.queue(actor, "demand.closed", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+        });
+      } catch {
+        // 通知失败不回滚关闭。
+      }
+    }
+    return updated;
   }
 
   async addProgressUpdate(
@@ -716,26 +776,45 @@ export class DemandService {
     ) {
       throw new Error("DEMAND_PROGRESS_INVALID");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const progress = await repository.createProgressUpdate({
-        demandId,
-        authorEmployeeId: actor.employeeId,
-        status: current.status,
-        title,
-        body,
-      });
-      await repository.recordAudit({
-        demandId,
-        actorEmployeeId: actor.employeeId,
-        eventType: "demand.progress.created",
-        details: { progressId: progress.progressId },
-      });
-      await repository.emitOutbox({
-        demandId,
-        eventType: "demand.progress.created",
-      });
-      return progress;
-    });
+    const progress = await this.repository.withTransaction(
+      async (repository) => {
+        const created = await repository.createProgressUpdate({
+          demandId,
+          authorEmployeeId: actor.employeeId,
+          status: current.status,
+          title,
+          body,
+        });
+        await repository.recordAudit({
+          demandId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "demand.progress.created",
+          details: { progressId: created.progressId },
+        });
+        await repository.emitOutbox({
+          demandId,
+          eventType: "demand.progress.created",
+        });
+        return created;
+      },
+    );
+    // 事务外通知提交人（矩阵 demand.progress_updated，status 取需求当前状态）：
+    // 失败不回滚进度更新。
+    if (
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      try {
+        await this.notifications.queue(actor, "demand.progress_updated", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+          variables: { status: current.status },
+        });
+      } catch {
+        // 通知失败不回滚进度更新。
+      }
+    }
+    return progress;
   }
 
   async listProgressUpdates(
@@ -769,8 +848,8 @@ export class DemandService {
     if (input.endsAt !== undefined && input.endsAt <= input.startsAt) {
       throw new Error("DEMAND_PILOT_INVALID_DATES");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const pilot = await repository.createPilot({
+    const pilot = await this.repository.withTransaction(async (repository) => {
+      const created = await repository.createPilot({
         demandId,
         applicationId: input.applicationId ?? null,
         name,
@@ -784,14 +863,29 @@ export class DemandService {
         demandId,
         actorEmployeeId: actor.employeeId,
         eventType: "demand.pilot.created",
-        details: { pilotId: pilot.pilotId },
+        details: { pilotId: created.pilotId },
       });
       await repository.emitOutbox({
         demandId,
         eventType: "demand.pilot.created",
       });
-      return pilot;
+      return created;
     });
+    // 事务外通知提交人（矩阵 demand.pilot_started）：失败不回滚试点创建。
+    if (
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      try {
+        await this.notifications.queue(actor, "demand.pilot_started", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+        });
+      } catch {
+        // 通知失败不回滚试点创建。
+      }
+    }
+    return pilot;
   }
 
   async updatePilot(
@@ -842,8 +936,8 @@ export class DemandService {
     if (source.status === "merged" || target.status === "merged") {
       throw new Error("DEMAND_MERGE_INVALID_STATE");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const merged = await repository.mergeDemands(
+    const merged = await this.repository.withTransaction(async (repository) => {
+      const mergedResult = await repository.mergeDemands(
         sourceDemandId,
         targetDemandId,
         sourceExpectedVersion,
@@ -869,8 +963,27 @@ export class DemandService {
         demandId: targetDemandId,
         eventType: "demand.merge.received",
       });
-      return merged;
+      return mergedResult;
     });
+    // 事务外通知源/目标需求提交人（矩阵 demand.merged）：失败不回滚合并。
+    if (this.notifications !== undefined) {
+      const recipients = [
+        { demandId: sourceDemandId, employeeId: source.requesterEmployeeId },
+        { demandId: targetDemandId, employeeId: target.requesterEmployeeId },
+      ];
+      for (const recipient of recipients) {
+        if (recipient.employeeId === null) continue;
+        try {
+          await this.notifications.queue(actor, "demand.merged", {
+            recipientEmployeeId: recipient.employeeId,
+            aggregateId: recipient.demandId,
+          });
+        } catch {
+          // 通知失败不回滚合并。
+        }
+      }
+    }
+    return merged;
   }
 
   async linkApplication(

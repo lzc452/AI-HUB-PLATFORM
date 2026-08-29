@@ -1,8 +1,6 @@
 import {
   CheckCircleFilled,
   CloseCircleFilled,
-  DownloadOutlined,
-  FileTextOutlined,
   InfoCircleOutlined,
   SafetyCertificateFilled,
   WarningFilled,
@@ -25,10 +23,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import {
-  ApplicationAdminPage,
-  OcrApplicationIcon,
-} from "../../components/common/ApplicationAdminPage";
+import { ApplicationAdminPage } from "../../components/common/ApplicationAdminPage";
 import { SlaCountdown } from "../../components/common/SlaCountdown";
 import type {
   ApplicationRecord,
@@ -38,11 +33,7 @@ import type {
   ReviewRecord,
   ReviewQueueRecord,
 } from "../../modules/application/application.client";
-import {
-  downloadAssetContent,
-  getAssetContent,
-  listAssets,
-} from "../../modules/application/application.client";
+import { listAssets } from "../../modules/application/application.client";
 import {
   useApplication,
   useApplicationReviews,
@@ -53,7 +44,6 @@ import {
   useReleaseReview,
   useReviewApplicationVersion,
   useReviewQueue,
-  useAssetImage,
   useTransferReviewTask,
   useValidationChecks,
 } from "../../modules/application/useApplication";
@@ -170,7 +160,7 @@ export default function ApplicationReviewPage() {
               version={data.version}
               versionId={versionId}
             />
-            
+
             <ReviewActionCard
               canDecide={
                 data.reviewQueue?.claimedByEmployeeId === actor?.employeeId &&
@@ -185,7 +175,9 @@ export default function ApplicationReviewPage() {
                 remove={removePendingCatalogItem}
               />
             ) : null}
-            { data.checks.length ? <ValidationCard checks={data.checks} /> : null }
+            {data.checks.length ? (
+              <ValidationCard checks={data.checks} />
+            ) : null}
           </aside>
           <main className="space-y-3 flex flex-col gap-3">
             <PreviewCard
@@ -619,34 +611,9 @@ function PreviewCard({
   );
 }
 
-function formatBytes(value: number): string {
-  if (value < 1024) return `${value} B`;
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
-  return `${(value / (1024 * 1024)).toFixed(2)} MB`;
-}
-
-/** 审核预览截图（经资产内容端点读取，审核员可访问）。 */
-function ScreenshotImage({
-  applicationId,
-  assetId,
-}: {
-  applicationId: string | undefined;
-  assetId: string;
-}) {
-  const { objectUrl } = useAssetImage(applicationId, assetId);
-  if (!objectUrl) return null;
-  return (
-    <img
-      alt="应用截图"
-      className="h-32 w-full rounded-lg border border-[#e4eaf2] object-cover"
-      src={objectUrl}
-    />
-  );
-}
-
 function PreviewOverview({
   app,
-  assets,
+  assets: _assets,
   version,
 }: {
   app: ApplicationRecord | undefined;
@@ -655,12 +622,6 @@ function PreviewOverview({
 }) {
   // 预览内容使用设计稿中的中文间隔，保留信息层级。
   const status = statusMeta(app?.status ?? "unknown");
-  const screenshots = assets.filter(
-    (asset) => asset.assetType === "screenshot",
-  );
-  const attachments = assets.filter(
-    (asset) => asset.assetType === "attachment",
-  );
 
   return (
     <div className="space-y-5 p-5">
@@ -919,8 +880,11 @@ function InfoLine({
     </div>
   );
 }
-function formatDate(value: string) {
-  return new Date(value).toLocaleString("zh-CN", {
+function formatDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

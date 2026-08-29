@@ -284,11 +284,10 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "发现企业内部 AI 应用" }),
+      await screen.findByRole("searchbox", { name: "搜索应用" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("统一查找、体验与分享各部门 AI 工具"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("最新上架")).toBeInTheDocument();
+    expect(screen.getByText("热门应用")).toBeInTheDocument();
   });
 
   it("navigates to the innovation square demand page", async () => {

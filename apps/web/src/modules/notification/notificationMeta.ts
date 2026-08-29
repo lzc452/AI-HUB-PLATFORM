@@ -21,13 +21,13 @@ export interface NotificationMeta {
   iconColor: string;
   /** 分类标签文案，如"审核相关" */
   category: string;
-  /** 列表与详情的主标题 */
+  /** 列表与详情的主标题（payload.title 优先，缺省回退 message） */
   title: string;
   /** 列表中显示的副标题/摘要 */
   subtitle: string;
-  /** 详情弹层正文（问候语上方的导语） */
+  /** 详情弹层正文（payload.body 优先，缺省回退 message） */
   detailLead: string;
-  /** 详情弹层"审核信息"类结构化字段（键值对） */
+  /** 详情弹层"通知信息"类结构化字段（仅真实记录字段，无硬编码演示数据） */
   detailFields: Array<{ label: string; value: string }>;
   /** 详情弹层底部行动按钮配置 */
   actions: Array<{
@@ -36,11 +36,6 @@ export interface NotificationMeta {
     primary?: boolean;
     to?: string;
   }>;
-}
-
-function extractQuoted(text: string, fallback: string): string {
-  const match = /[「""']([^""'」]+)[""'」]/.exec(text);
-  return match?.[1] ?? fallback;
 }
 
 function formatDateTime(iso: string): string {
@@ -82,24 +77,28 @@ function applicationReviewRoute(aggregateId: string): string {
   return `/applications/${encodeURIComponent(aggregateId)}/review`;
 }
 
-/** 创新需求子类型 → 动词（用于动态标题）。 */
-const DEMAND_VERB: Readonly<Record<string, string>> = Object.freeze({
-  "demand.submitted": "已提交",
-  "demand.reviewed": "已审核",
-  "demand.claimed": "已被认领",
-  "demand.collaborator_assigned": "已分配协作者",
-  "demand.progress_updated": "进度已更新",
-  "demand.pilot_started": "试点已启动",
-  "demand.closed": "已关闭",
-  "demand.merged": "已合并",
-});
-
+/**
+ * 前端展示元数据解析：保留分类/图标/路由映射，文案一律由
+ * payload（title/body/detail）与真实记录字段（eventType/aggregateId/createdAt）驱动，
+ * 不包含任何硬编码演示数据（规格 §2.3/§3）。
+ */
 export function resolveNotificationMeta(
   record: NotificationRecord,
 ): NotificationMeta {
-  const { aggregateId, eventType, message, createdAt } = record;
+  const { aggregateId, eventType, message, createdAt, payload } = record;
 
   const commonActions = [{ label: "关闭", primary: false as const }];
+
+  // 真实字段详情：事件类型 / 聚合 ID / 触发时间。
+  const detailFields = [
+    { label: "事件类型", value: eventType },
+    { label: "聚合 ID", value: aggregateId },
+    { label: "触发时间", value: formatDateTime(createdAt) },
+  ];
+  // payload 优先渲染，缺省回退 message（规格 §2.3）。
+  const title = payload?.title ?? message.split("：")[0] ?? message;
+  const subtitle = message;
+  const detailLead = payload?.body ?? message;
 
   // ── 数据洞察：分析导出 / 助手任务 ──────────────────────────────────────────
   if (eventType.includes("analytics") || eventType.includes("export")) {
@@ -112,23 +111,13 @@ export function resolveNotificationMeta(
         ...commonActions,
       ],
       category: "数据洞察",
-      detailFields: [
-        { label: "任务编号", value: aggregateId },
-        { label: "状态", value: isFailed ? "失败" : "已完成" },
-        { label: "触发时间", value: formatDateTime(createdAt) },
-        {
-          label: "处理建议",
-          value: isFailed
-            ? "请检查导出范围与权限后重试；多次失败请联系管理员。"
-            : "导出文件已生成，可前往下载中心获取。",
-        },
-      ],
-      detailLead: message,
+      detailFields,
+      detailLead,
       icon: BarChartOutlined,
       iconBg: "#13c2c2",
       iconColor: "#ffffff",
-      subtitle: message,
-      title: message.split("：")[0] ?? "数据分析通知",
+      subtitle,
+      title,
     };
   }
 
@@ -140,22 +129,6 @@ export function resolveNotificationMeta(
     eventType.includes("application.published") ||
     eventType.includes("withdrawn")
   ) {
-    const appName = extractQuoted(message, "您的应用");
-    let title: string;
-    let lead: string;
-    if (eventType.includes("review.requested")) {
-      title = `应用「${appName}」待您审核`;
-      lead = `应用「${appName}」已提交评审，等待您完成审核。`;
-    } else if (eventType.includes("review.decided")) {
-      title = `应用「${appName}」评审结论已出`;
-      lead = `您提交的应用「${appName}」评审已结束，请查看结论。`;
-    } else if (eventType.includes("withdrawn")) {
-      title = `应用「${appName}」已撤回`;
-      lead = `应用「${appName}」已被作者撤回。`;
-    } else {
-      title = `您的应用「${appName}」审核已通过`;
-      lead = `您好！您提交的应用「${appName}」已通过平台审核，现已正式发布到应用市场。`;
-    }
     return {
       actions: [
         {
@@ -168,21 +141,12 @@ export function resolveNotificationMeta(
         ...commonActions,
       ],
       category: "审核相关",
-      detailFields: [
-        { label: "应用名称", value: appName },
-        { label: "当前版本", value: "v2.4.1" },
-        { label: "提交时间", value: formatDateTime(createdAt) },
-        { label: "审核人员", value: "李小龙（审核部）" },
-        {
-          label: "审核意见",
-          value: "功能完整，文档规范，符合平台安全标准，建议发布。",
-        },
-      ],
-      detailLead: lead,
+      detailFields,
+      detailLead,
       icon: CheckCircleFilled,
       iconBg: "#722ed1",
       iconColor: "#ffffff",
-      subtitle: lead,
+      subtitle,
       title,
     };
   }
@@ -193,7 +157,6 @@ export function resolveNotificationMeta(
     eventType.includes("reply") ||
     eventType.includes("rating")
   ) {
-    const appName = extractQuoted(message, message.replace(/^评论回复：/, ""));
     const isReply =
       eventType.includes("reply") || message.startsWith("评论回复");
     const isRating = eventType.includes("rating");
@@ -207,32 +170,13 @@ export function resolveNotificationMeta(
         ...commonActions,
       ],
       category: "评论互动",
-      detailFields: [
-        { label: "应用名称", value: appName },
-        {
-          label: "互动类型",
-          value: isRating ? "新的评分" : isReply ? "评论回复" : "新评价",
-        },
-        { label: "发生时间", value: formatDateTime(createdAt) },
-      ],
-      detailLead: isRating
-        ? `用户给您的应用「${appName}」留下了新的评分，快去看看吧。`
-        : isReply
-          ? `王芳 回复了您在应用「${appName}」下的评论，快去看看吧。`
-          : `用户“李小龙”给您的应用「${appName}」留下了评价和建议，快去看看吧。`,
+      detailFields,
+      detailLead,
       icon: isRating ? StarFilled : isReply ? CommentOutlined : MessageOutlined,
       iconBg: "#52c41a",
       iconColor: "#ffffff",
-      subtitle: isRating
-        ? `用户给应用「${appName}」留下了新的评分。`
-        : isReply
-          ? `王芳 回复了您在应用「${appName}」下的评论。`
-          : `用户“李小龙”给您的应用留下了评价和建议。`,
-      title: isRating
-        ? `应用「${appName}」收到新的评分`
-        : isReply
-          ? `评论回复：${appName}`
-          : `应用「${appName}」收到新的评价`,
+      subtitle,
+      title,
     };
   }
 
@@ -242,7 +186,6 @@ export function resolveNotificationMeta(
     eventType.includes("security") ||
     eventType.includes("report")
   ) {
-    const appName = extractQuoted(message, "指定应用");
     const isReport = eventType.includes("report");
     return {
       actions: [
@@ -256,31 +199,13 @@ export function resolveNotificationMeta(
         ...commonActions,
       ],
       category: "安全告警",
-      detailFields: [
-        { label: "应用名称", value: appName },
-        { label: "风险等级", value: isReport ? "需处理" : "高风险" },
-        { label: "检测时间", value: formatDateTime(createdAt) },
-        {
-          label: "处理建议",
-          value: isReport
-            ? "请核实举报内容并决定是否下架或隐藏该应用。"
-            : "请检查上传包中的可疑附件，必要时重新提交版本。",
-        },
-      ],
-      detailLead: isReport
-        ? `应用「${appName}」收到用户举报，请尽快核实处理。`
-        : `在应用「${appName}」的上传包中检测到高风险文件，请及时处理。`,
+      detailFields,
+      detailLead,
       icon: WarningFilled,
       iconBg: "#f5222d",
       iconColor: "#ffffff",
-      subtitle: isReport
-        ? `应用「${appName}」收到用户举报，请尽快处理。`
-        : `在应用「${appName}」的上传包中检测到高风险文件。`,
-      title: isReport
-        ? `应用「${appName}」收到举报`
-        : message.includes("附件")
-          ? message
-          : `系统扫描发现风险：${message}`,
+      subtitle,
+      title,
     };
   }
 
@@ -289,24 +214,18 @@ export function resolveNotificationMeta(
     return {
       actions: [{ label: "我知道了", primary: true }, ...commonActions],
       category: "平台公告",
-      detailFields: [
-        { label: "公告类型", value: "平台维护" },
-        { label: "发布时间", value: formatDateTime(createdAt) },
-        { label: "影响范围", value: "全平台用户" },
-      ],
-      detailLead: message,
+      detailFields,
+      detailLead,
       icon: SoundOutlined,
       iconBg: "#1677ff",
       iconColor: "#ffffff",
-      subtitle: message,
-      title: message.split("：")[0] ?? "平台公告",
+      subtitle,
+      title,
     };
   }
 
   // ── 创新需求 ──────────────────────────────────────────────────────────────
   if (eventType.includes("demand") || eventType.includes("innovation")) {
-    const demandName = extractQuoted(message, "创新需求");
-    const verb = DEMAND_VERB[eventType] ?? "已更新";
     return {
       actions: [
         {
@@ -317,17 +236,13 @@ export function resolveNotificationMeta(
         ...commonActions,
       ],
       category: "创新需求",
-      detailFields: [
-        { label: "需求名称", value: demandName },
-        { label: "当前状态", value: verb },
-        { label: "触发时间", value: formatDateTime(createdAt) },
-      ],
-      detailLead: `您的创新需求「${demandName}」${verb}，感谢您的贡献！`,
+      detailFields,
+      detailLead,
       icon: BulbOutlined,
       iconBg: "#faad14",
       iconColor: "#ffffff",
-      subtitle: `您的创新需求「${demandName}」${verb}。`,
-      title: `创新需求「${demandName}」${verb}`,
+      subtitle,
+      title,
     };
   }
 
@@ -340,17 +255,13 @@ export function resolveNotificationMeta(
     return {
       actions: [{ label: "查看详情", primary: true }, ...commonActions],
       category: "系统告警",
-      detailFields: [
-        { label: "告警项", value: message.replace(/^系统告警：/, "") },
-        { label: "触发时间", value: formatDateTime(createdAt) },
-        { label: "处理建议", value: "请及时清理无用数据或联系管理员扩容。" },
-      ],
-      detailLead: message,
+      detailFields,
+      detailLead,
       icon: WarningFilled,
       iconBg: "#ff4d4f",
       iconColor: "#ffffff",
-      subtitle: message,
-      title: message,
+      subtitle,
+      title,
     };
   }
 
@@ -358,13 +269,13 @@ export function resolveNotificationMeta(
   return {
     actions: commonActions,
     category: "系统通知",
-    detailFields: [{ label: "通知内容", value: message }],
-    detailLead: message,
+    detailFields,
+    detailLead,
     icon: MessageOutlined,
     iconBg: "#1677ff",
     iconColor: "#ffffff",
-    subtitle: message,
-    title: message.split("：")[0] ?? message,
+    subtitle,
+    title,
   };
 }
 

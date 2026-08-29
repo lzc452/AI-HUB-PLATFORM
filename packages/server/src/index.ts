@@ -289,6 +289,7 @@ export type {
 } from "./analytics/export.types.js";
 export type { AnalyticsRetentionRepository } from "./analytics/retention.types.js";
 export { PortalController } from "./portal/portal.controller.js";
+export { PortalNotificationController } from "./portal/portal-notification.controller.js";
 export { PortalModule } from "./portal/portal.module.js";
 export { KyselyPortalRepository } from "./portal/portal.repository.js";
 export { PortalService } from "./portal/portal.service.js";

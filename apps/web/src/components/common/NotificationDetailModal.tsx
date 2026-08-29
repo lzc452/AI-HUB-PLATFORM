@@ -96,7 +96,7 @@ export function NotificationDetailModal({
             <Tag bordered={false} color="processing">
               {meta.category}
             </Tag>
-            <Text type="secondary">系统（审核中心）</Text>
+            <Tag bordered={false}>{notification.eventType}</Tag>
             <Text type="secondary">{createdAt}</Text>
           </div>
         </div>
@@ -131,7 +131,7 @@ export function NotificationDetailModal({
         {meta.detailFields.length > 0 ? (
           <div>
             <Paragraph className="!mb-2">
-              <Text strong>审核信息</Text>
+              <Text strong>通知信息</Text>
             </Paragraph>
             <ul className="m-0 list-none space-y-1 p-0 text-[#595959]">
               {meta.detailFields.map((field) => (
@@ -144,10 +144,6 @@ export function NotificationDetailModal({
             </ul>
           </div>
         ) : null}
-
-        <Paragraph className="!mb-0 text-[#595959]">
-          您的应用可被平台内所有成员搜索、查看并申请使用。感谢您为平台生态做出的贡献！
-        </Paragraph>
       </div>
     </Modal>
   );

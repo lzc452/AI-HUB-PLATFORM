@@ -43,6 +43,10 @@ export interface NotificationRepository {
     notificationId: string,
     employeeId: string,
   ): Promise<NotificationRecord>;
+  /** 统计指定收件人的未读通知数。 */
+  countUnread(employeeId: string): Promise<number>;
+  /** 把指定收件人的全部未读通知置为已读，返回更新条数。 */
+  markAllRead(employeeId: string): Promise<number>;
   markDeliveryAttempt(
     idempotencyKey: string,
     status: "sent" | "retry" | "failed",

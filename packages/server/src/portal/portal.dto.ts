@@ -160,23 +160,23 @@ export class HuntVoteRequestDto {
 }
 
 export class PortalHuntEntryDto {
-  @ApiProperty()
+  @ApiProperty({ type: String })
   periodId!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   periodName!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   periodStatus!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   entryId!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   applicationId!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   name!: string;
-  @ApiProperty()
+  @ApiProperty({ type: String })
   summary!: string;
-  @ApiProperty()
+  @ApiProperty({ type: Number })
   voteCount!: number;
-  @ApiProperty()
+  @ApiProperty({ type: Boolean })
   hasVoted!: boolean;
 }
 

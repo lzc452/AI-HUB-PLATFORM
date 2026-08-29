@@ -222,7 +222,7 @@ export class ApiModule {
             ]),
         ...(options.portal === undefined
           ? []
-          : [PortalModule.forTest(options.portal)]),
+          : [PortalModule.forTest(options.portal, options.notification)]),
         HealthModule.register(databaseCheck),
         ...(options.analytics === undefined || options.identity === undefined
           ? []

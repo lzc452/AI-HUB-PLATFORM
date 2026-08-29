@@ -67,6 +67,30 @@ export class NotificationController {
     );
   }
 
+  @Get("summary")
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
+  @ApiOperation({
+    summary: "未读通知计数",
+    description: "返回当前调用者的未读通知数。",
+  })
+  @ApiIdentityHeaders()
+  @ApiOkResponse({
+    description: "未读通知计数",
+    schema: { type: "object", properties: { unreadCount: { type: "number" } } },
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async summary(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () => {
+      const unreadCount = await this.notifications.getUnreadCount(
+        await this.actor(employeeId, sessionId),
+      );
+      return { unreadCount };
+    });
+  }
+
   @Get(":notificationId")
   @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
   @ApiOperation({ summary: "通知详情" })
@@ -86,7 +110,6 @@ export class NotificationController {
       ),
     );
   }
-
   @Post(":notificationId/read")
   @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
   @ApiOperation({ summary: "标记通知已读" })
@@ -108,6 +131,27 @@ export class NotificationController {
         notificationId,
       ),
     );
+  }
+
+  @Post("read-all")
+  @RequiresPermissions(PERMISSIONS.NOTIFICATION_READ)
+  @ApiOperation({ summary: "全部标记已读" })
+  @ApiIdentityHeaders()
+  @ApiCreatedResponse({
+    description: "已更新的未读通知数",
+    schema: { type: "object", properties: { updated: { type: "number" } } },
+  })
+  @ApiProblemResponses([400, 401, 403])
+  async markAllRead(
+    @Headers("x-employee-id") employeeId: string | undefined,
+    @Headers("x-session-id") sessionId: string | undefined,
+  ) {
+    return this.call(async () => {
+      const updated = await this.notifications.markAllRead(
+        await this.actor(employeeId, sessionId),
+      );
+      return { updated };
+    });
   }
 
   @Post("retry")

@@ -131,6 +131,11 @@ export class ApplicationService {
       import("./storage.port.js").ObjectStoragePort,
       "get"
     >,
+    /**
+     * 应用审核员列表端口（application.review.requested 场景广播收件人）。
+     * 未装配时广播静默跳过（与通知端口可选语义一致）。
+     */
+    private readonly listApplicationReviewers?: () => Promise<string[]>,
   ) {}
 
   async createApplication(
@@ -570,49 +575,74 @@ export class ApplicationService {
     if (application.pendingVersionId !== null) {
       throw new Error("REVIEW_ALREADY_PENDING");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const isPublishedUpdate = application.status === "published";
-      const updated = await repository.setApplicationStatus({
-        applicationId: application.applicationId,
-        expectedStatus: application.status,
-        // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
-        // draft 提交审核才进入 in_review。
-        status: isPublishedUpdate ? "published" : "in_review",
-        pendingVersionId: isPublishedUpdate ? applicationVersionId : null,
-      });
-      await repository.createReviewQueue({
-        applicationId: application.applicationId,
-        applicationVersionId,
-        status: "available",
-        claimedByEmployeeId: null,
-        claimedAt: null,
-        slaDueAt: addBusinessDays(new Date(), 2),
-        // 记录审核前的应用状态，驳回时据其正确回滚。
-        sourceStatus: application.status,
-      });
-      await this.recordChange(
-        repository,
-        "application.submitted",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      await this.recordChange(
-        repository,
-        "application.review.requested",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      await this.recordChange(
-        repository,
-        "application.review.sla.created",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      return updated;
-    });
+    const updated = await this.repository.withTransaction(
+      async (repository) => {
+        const isPublishedUpdate = application.status === "published";
+        const updated = await repository.setApplicationStatus({
+          applicationId: application.applicationId,
+          expectedStatus: application.status,
+          // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
+          // draft 提交审核才进入 in_review。
+          status: isPublishedUpdate ? "published" : "in_review",
+          pendingVersionId: isPublishedUpdate ? applicationVersionId : null,
+        });
+        await repository.createReviewQueue({
+          applicationId: application.applicationId,
+          applicationVersionId,
+          status: "available",
+          claimedByEmployeeId: null,
+          claimedAt: null,
+          slaDueAt: addBusinessDays(new Date(), 2),
+          // 记录审核前的应用状态，驳回时据其正确回滚。
+          sourceStatus: application.status,
+        });
+        await this.recordChange(
+          repository,
+          "application.submitted",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        await this.recordChange(
+          repository,
+          "application.review.requested",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        await this.recordChange(
+          repository,
+          "application.review.sla.created",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        return updated;
+      },
+    );
+    // 事务外广播待审核通知给全部审核员（矩阵 application.review.requested）：
+    // 单条失败（如收件人被除权）不得阻断其余广播，也不得回滚已提交的审核提交。
+    if (
+      this.notifications !== undefined &&
+      this.listApplicationReviewers !== undefined
+    ) {
+      const reviewers = await this.listApplicationReviewers();
+      for (const reviewer of reviewers) {
+        try {
+          await this.notifications.queue(
+            actor,
+            "application.review.requested",
+            {
+              recipientEmployeeId: reviewer,
+              aggregateId: application.applicationId,
+            },
+          );
+        } catch {
+          // 通知失败不回滚业务；继续广播其余审核员。
+        }
+      }
+    }
+    return updated;
   }
 
   /** 待审核版本在最终结论前可以由提交人撤回（规格 §5.5）。 */
@@ -912,6 +942,35 @@ export class ApplicationService {
       idempotencyKey: `review-decided:${applicationVersionId}:${decision}`,
       metadata: { decision },
     });
+    // 事务外站内通知（矩阵 application.review.decided / application.published）：
+    // 结论通知责任人；首次发布/恢复路径审核通过自动上架时追加发布通知。
+    // 通知失败不得回滚已提交的审核结论。
+    if (this.notifications !== undefined) {
+      try {
+        await this.notifications.queue(actor, "application.review.decided", {
+          recipientEmployeeId: application.ownerEmployeeId,
+          aggregateId: application.applicationId,
+          variables: { decision },
+        });
+      } catch {
+        // 通知失败不回滚审核结论。
+      }
+      if (
+        approved &&
+        (sourceStatus === "draft" ||
+          sourceStatus === "withdrawn" ||
+          sourceStatus === "archived")
+      ) {
+        try {
+          await this.notifications.queue(actor, "application.published", {
+            recipientEmployeeId: application.ownerEmployeeId,
+            aggregateId: application.applicationId,
+          });
+        } catch {
+          // 通知失败不回滚发布结论。
+        }
+      }
+    }
     return updated;
   }
 
@@ -1086,27 +1145,41 @@ export class ApplicationService {
       this.repository,
       application.applicationId,
     );
-    return this.repository.withTransaction(async (repository) => {
-      const updated = await repository.setApplicationStatus({
-        applicationId: application.applicationId,
-        expectedStatus: "approved",
-        status: "published",
-        currentVersionId: applicationVersionId,
-      });
-      await repository.registerToCatalog({
-        applicationId: application.applicationId,
-        name: application.name,
-        summary: application.summary,
-      });
-      await this.recordChange(
-        repository,
-        "application.published",
-        application.applicationId,
-        applicationVersionId,
-        actor.employeeId,
-      );
-      return updated;
-    });
+    const updated = await this.repository.withTransaction(
+      async (repository) => {
+        const published = await repository.setApplicationStatus({
+          applicationId: application.applicationId,
+          expectedStatus: "approved",
+          status: "published",
+          currentVersionId: applicationVersionId,
+        });
+        await repository.registerToCatalog({
+          applicationId: application.applicationId,
+          name: application.name,
+          summary: application.summary,
+        });
+        await this.recordChange(
+          repository,
+          "application.published",
+          application.applicationId,
+          applicationVersionId,
+          actor.employeeId,
+        );
+        return published;
+      },
+    );
+    // 事务外通知责任人（矩阵 application.published）：通知失败不回滚发布。
+    if (this.notifications !== undefined) {
+      try {
+        await this.notifications.queue(actor, "application.published", {
+          recipientEmployeeId: application.ownerEmployeeId,
+          aggregateId: application.applicationId,
+        });
+      } catch {
+        // 通知失败不回滚已提交的发布。
+      }
+    }
+    return updated;
   }
 
   async withdraw(
@@ -1123,13 +1196,25 @@ export class ApplicationService {
       throw new Error("APPLICATION_OWNER_REQUIRED");
     }
     this.requireStatus(application, "published");
-    return this.transition(
+    const updated = await this.transition(
       application,
       "withdrawn",
       "application.withdrawn",
       reason,
       actor.employeeId,
     );
+    // 事务外通知责任人（矩阵 application.withdrawn）：通知失败不回滚下架。
+    if (this.notifications !== undefined) {
+      try {
+        await this.notifications.queue(actor, "application.withdrawn", {
+          recipientEmployeeId: application.ownerEmployeeId,
+          aggregateId: application.applicationId,
+        });
+      } catch {
+        // 通知失败不回滚已提交的下架。
+      }
+    }
+    return updated;
   }
 
   /** 责任人或维护人可以申请下架已发布应用（规格 §5.5）：仅写审计与站内通知
@@ -1920,7 +2005,11 @@ export function validateDraftCompleteness(
     !Array.isArray(draft.maintainerEmployeeIds) ||
     draft.maintainerEmployeeIds.length === 0
   ) {
-    fail("DRAFT_MAINTAINER_REQUIRED", "至少指定一名维护人", "maintainerEmployeeIds");
+    fail(
+      "DRAFT_MAINTAINER_REQUIRED",
+      "至少指定一名维护人",
+      "maintainerEmployeeIds",
+    );
   }
 
   const icon = draft.icon;
@@ -1931,11 +2020,19 @@ export function validateDraftCompleteness(
       typeof icon.backgroundColor !== "string" ||
       icon.backgroundColor.trim().length === 0
     ) {
-      fail("DRAFT_ICON_BACKGROUND_REQUIRED", "自动图标需指定背景色", "icon.backgroundColor");
+      fail(
+        "DRAFT_ICON_BACKGROUND_REQUIRED",
+        "自动图标需指定背景色",
+        "icon.backgroundColor",
+      );
     }
   } else if (icon.mode === "upload") {
     if (typeof icon.assetId !== "string" || icon.assetId.length === 0) {
-      fail("DRAFT_ICON_ASSET_REQUIRED", "上传图标需指定图标资产", "icon.assetId");
+      fail(
+        "DRAFT_ICON_ASSET_REQUIRED",
+        "上传图标需指定图标资产",
+        "icon.assetId",
+      );
     }
   } else {
     fail("DRAFT_ICON_MODE_INVALID", "图标模式非法", "icon.mode");
@@ -1946,7 +2043,11 @@ export function validateDraftCompleteness(
     draft.screenshotAssetIds.length < 1 ||
     draft.screenshotAssetIds.length > 6
   ) {
-    fail("DRAFT_SCREENSHOTS_COUNT", "截图数量需在 1–6 张之间", "screenshotAssetIds");
+    fail(
+      "DRAFT_SCREENSHOTS_COUNT",
+      "截图数量需在 1–6 张之间",
+      "screenshotAssetIds",
+    );
   }
 
   if (
@@ -1968,7 +2069,11 @@ export function validateDraftCompleteness(
     (typeof draft.examplesAssetId === "string" &&
       draft.examplesAssetId.length > 0);
   if (!hasExamples) {
-    fail("DRAFT_EXAMPLES_REQUIRED", "使用示例需提供富文本或附件", "examplesHtml");
+    fail(
+      "DRAFT_EXAMPLES_REQUIRED",
+      "使用示例需提供富文本或附件",
+      "examplesHtml",
+    );
   }
 
   // 规格 §5.4：常见问题必填，且每条须同时包含问题与答案（fail-closed：
@@ -2014,7 +2119,9 @@ export function validateDraftCompleteness(
       ["retainsConversations", risk.retainsConversations],
       ["affectsHighRiskDecisions", risk.affectsHighRiskDecisions],
     ];
-    const missingBoolean = booleanFields.find(([, value]) => typeof value !== "boolean");
+    const missingBoolean = booleanFields.find(
+      ([, value]) => typeof value !== "boolean",
+    );
     if (missingBoolean !== undefined) {
       fail(
         "DRAFT_RISK_OPTION_REQUIRED",
@@ -2026,13 +2133,21 @@ export function validateDraftCompleteness(
       !Array.isArray(risk.modelProviders) ||
       risk.modelProviders.length === 0
     ) {
-      fail("DRAFT_RISK_PROVIDER_REQUIRED", "需选择模型 / AI 提供方", "risk.modelProviders");
+      fail(
+        "DRAFT_RISK_PROVIDER_REQUIRED",
+        "需选择模型 / AI 提供方",
+        "risk.modelProviders",
+      );
     }
     if (
       typeof risk.inputRestrictionDisclaimer !== "string" ||
       risk.inputRestrictionDisclaimer.trim().length === 0
     ) {
-      fail("DRAFT_RISK_DISCLAIMER_REQUIRED", "免责声明不能为空", "risk.inputRestrictionDisclaimer");
+      fail(
+        "DRAFT_RISK_DISCLAIMER_REQUIRED",
+        "免责声明不能为空",
+        "risk.inputRestrictionDisclaimer",
+      );
     }
   }
 

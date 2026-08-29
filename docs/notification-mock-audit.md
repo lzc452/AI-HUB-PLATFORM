@@ -2,7 +2,7 @@
 
 > 目标：向数据库 mock 覆盖**全部通知类型**的系统通知，按 5 个角色分别推送不同通知，
 > 前端完整展示，并从 **数据库规范 / 后端 API / 前端展示** 三个维度完成自检。
-> 生成日期：2026-08-11
+> 生成日期：2026-08-11 ｜ 更新：2026-08-28（taxonomy 已统一至 DINGTALK_NOTIFICATION_MATRIX 21 场景权威命名）
 
 ## 一、关键发现（修复前的问题）
 
@@ -10,32 +10,45 @@
 
 | 来源 | 文件 | 内容 |
 | --- | --- | --- |
-| 后端权威场景矩阵 | `packages/server/src/notification/dingtalk-matrix.service.ts` | `DINGTALK_NOTIFICATION_MATRIX` 定义 **14 个**官方通知场景 |
+| 后端权威场景矩阵 | `packages/server/src/notification/dingtalk-matrix.service.ts` | `DINGTALK_NOTIFICATION_MATRIX` 定义 **21 个**官方通知场景 |
 | 旧 fixture 用的 eventType | `packages/database/.../notification.fixture.ts`（旧） | 一套**不同**的 15 个 eventType（如 `application.favorited`、`demand.status_changed`） |
 | 前端匹配分支 | `apps/web/.../notificationMeta.ts`（旧） | 基于 `.includes()` 的 6 个分类分支 |
 
 **直接后果**：旧 fixture 中部分 eventType 无法命中前端任何专属分支，会落到兜底分类
 「系统通知」，导致前端展示不完整。经核算，**20 个全类型中有 8 个**原本会落入兜底。
 
+**现状（2026-08-28 更新）**：taxonomy 已统一——fixture 全部 eventType 与
+`DINGTALK_NOTIFICATION_MATRIX`（21 场景，见 `docs/specs/notification-system.md` §1）权威命名
+对齐（如 `application.review_requested` → `application.review.requested`、
+`application.review_decided` → `application.review.decided`）；`system.*` 与互动/安全类
+为非矩阵场景，仅存在于 demo 种子，标注为"系统通知"，不参与矩阵验收。前端
+`notificationMeta.ts` 分类/图标/路由映射不变，文案改由 payload 驱动。
+
 ## 二、改动清单
 
 | 文件 | 改动 |
 | --- | --- |
-| `packages/database/src/demo-data/fixtures/notification.fixture.ts` | 重写为 **20 条**通知，覆盖 14 个官方场景 + 3 个系统通知 + 3 个互动/安全类，按 5 个角色分发 |
+| `packages/database/src/demo-data/fixtures/notification.fixture.ts` | 重写为 **20 条**通知，覆盖 14 个官方场景 + 3 个系统通知 + 3 个互动/安全类，按 5 个角色分发；eventType 与矩阵权威命名对齐，payload 提供结构化字段（title/body/detail） |
 | `apps/web/src/pages/notifications/notificationMeta.ts` | 扩展「审核相关/评论互动/安全告警」分支，新增「数据洞察」分支，确保 20 个类型均落入专属分类 |
-| `packages/database/src/demo-data/fixtures/notification.fixture.test.ts` | 重写为 20 条断言（类型唯一覆盖、角色分布、状态覆盖、幂等键、字段） |
-| `packages/database/src/demo-data/orchestrator.ts` | `expectedCounts.notification` 由 15 改为 **20** |
+| `packages/database/src/demo-data/fixtures/notification.fixture.test.ts` | 重写为 20 条断言（类型唯一覆盖、角色分布、状态覆盖、幂等键、字段）+ payload 结构化断言 |
+| `packages/database/src/demo-data/orchestrator.ts` | `expectedCounts.notification` 由 15 改为 **20**；`upsertNotification` 同步更新 `payload` 列 |
 | `apps/web/src/pages/notifications/notificationMeta.test.tsx`（新增） | 20 个权威类型 → 分类映射断言，且**不得**为兜底「系统通知」 |
 
 ## 三、类型覆盖矩阵（20 条 → 角色 → 前端分类 → 投递状态）
 
+> eventType 采用 DINGTALK_NOTIFICATION_MATRIX 权威命名（21 场景，规格 §1）；
+> 矩阵未接线/未纳入 demo 的 7 个场景（review.claim_expired / review.sla.reminder /
+> review.sla.overdue / withdraw.requested / demand.reviewed /
+> artifact.verification.failed / interaction.report.resolved）由业务服务/worker 真实触发，
+> 不在 demo 种子中。
+
 | # | eventType | 接收角色 | 前端分类 | 投递状态 |
 | --- | --- | --- | --- | --- |
-| 0 | application.review_decided | 普通员工 | 审核相关 | sent |
+| 0 | application.review.decided | 普通员工 | 审核相关 | sent |
 | 1 | demand.submitted | 普通员工 | 创新需求 | sent |
 | 2 | demand.progress_updated | 普通员工 | 创新需求 | sent |
 | 3 | application.comment_replied | 普通员工 | 评论互动 | sent |
-| 4 | application.review_requested | 应用管理员 | 审核相关 | pending |
+| 4 | application.review.requested | 应用管理员 | 审核相关 | pending |
 | 5 | system.announcement | 应用管理员 | 平台公告 | sent |
 | 6 | application.reported | 应用管理员 | 安全告警 | failed |
 | 7 | application.published | 创新运营 | 审核相关 | sent |
@@ -68,6 +81,7 @@
 | aggregate_id | string | ✅ 合法 ID（app/demand/export/department） | 前端跳转链接可用 |
 | idempotency_key | string | ✅ `demo:notification:...` | 唯一、demo 作用域 |
 | message | string | ✅ 非空 | |
+| payload | jsonb | ✅ 结构化 `{ title, body, detail }` | title/body 非空，detail 含真实键值对 |
 | read_at | Date \| null | ✅ 12 条为 null | 已读含合法 Date 且 ≥ created_at |
 | delivery_status | enum | ✅ pending/sent/retry/failed | 四种全覆盖 |
 | delivery_attempts | number | ✅ | pending/sent ≤1；retry/failed ≥2 |
@@ -94,9 +108,9 @@
 
 `resolveNotificationMeta` 现对每个 eventType 命中专属分支，**无一条落入兜底「系统通知」**：
 
-| 前端分类 | 覆盖的 eventType | 分支来源 |
+| 前端分类 | 覆盖的 eventType（矩阵权威命名） | 分支来源 |
 | --- | --- | --- |
-| 审核相关 | review_requested / review_decided / review_approved / published / withdrawn | 扩展原分支 + 动态标题 |
+| 审核相关 | review.requested / review.decided / review.approved / published / withdrawn | 扩展原分支 + 动态标题 |
 | 评论互动 | comment_replied / rating_added | 扩展原分支（新增 `rating`，图标 `StarFilled`） |
 | 安全告警 | scan / security / reported | 扩展原分支（新增 `report`） |
 | 平台公告 | announcement / platform | 原分支 |
@@ -129,8 +143,11 @@ pnpm --filter @ai-hub/database exec tsx scripts/check-demo-data.mts  # 校验计
 
 ## 九、已知限制 / 后续
 
-- 后端 `DINGTALK_NOTIFICATION_MATRIX` 仅定义 14 个**场景**，未涵盖 `application.favorited`、
-  互动类与 `system.*`；这些由业务事件直接 `createForEvent` 产生。本报告将二者合并视为
-  "全部通知类型"。若需严格以矩阵为准，可后续在矩阵中补齐互动/系统类场景。
-- 详情弹层的"审核意见/审核人员"等为演示文案，非来自数据库字段（现有 `notifications` 表仅存
-  `message` 文本，无结构化详情字段）。如需完整结构化展示，建议扩展表结构或关联聚合实体。
+- 后端 `DINGTALK_NOTIFICATION_MATRIX` 共定义 **21 个**场景（规格 §1）；demo 种子覆盖其中
+  14 个，其余 7 个（review.claim_expired / review.sla.reminder / review.sla.overdue /
+  withdraw.requested / demand.reviewed / artifact.verification.failed /
+  interaction.report.resolved）由业务服务/worker 在真实业务动作中触发，不写入 demo 种子。
+  `system.*` 与互动/安全类为非矩阵场景，由业务事件直接 `createForEvent` 产生，
+  本报告将二者合并视为"全部通知类型"。
+- 详情弹层文案已改为 payload 驱动：`title/body/detail` 来自 fixture/后端透传的结构化字段，
+  缺省回退 `message`，不再依赖硬编码演示文案（v2.4.1/李小龙（审核部）/固定审核意见等已移除）。

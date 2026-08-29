@@ -3,10 +3,14 @@ import { buildNotificationFixture } from "./notification.fixture.js";
 
 const ANCHOR = new Date("2025-06-15T12:00:00.000Z");
 
-/** 20 个权威通知类型（与 DINGTALK_NOTIFICATION_MATRIX + 系统/互动类一致）。 */
+/**
+ * 20 个权威通知类型（与 DINGTALK_NOTIFICATION_MATRIX 命名对齐：
+ * application.review.requested/review.decided 采用矩阵点分命名；
+ * system.* 与互动/安全类为非矩阵场景，保留用于 demo 展示）。
+ */
 const CANONICAL_EVENT_TYPES: readonly string[] = Object.freeze([
-  "application.review_requested",
-  "application.review_decided",
+  "application.review.requested",
+  "application.review.decided",
   "application.published",
   "application.withdrawn",
   "demand.submitted",
@@ -41,6 +45,35 @@ describe("buildNotificationFixture", () => {
   it("covers all 20 canonical event types exactly once", () => {
     const types = fixture.notifications.map((n) => n.event_type).sort();
     expect(types).toEqual([...CANONICAL_EVENT_TYPES].sort());
+  });
+
+  // ── structured payload ─────────────────────────────────────────────────────
+
+  /** notifications.payload 列类型为 unknown（schema.ts），断言时 cast 为结构化形状。 */
+  interface FixturePayload {
+    title?: string;
+    body?: string;
+    detail?: Record<string, unknown>;
+  }
+
+  it("every notification has a structured payload with title/body/detail", () => {
+    for (const n of fixture.notifications) {
+      const payload = n.payload as FixturePayload | null | undefined;
+      expect(payload).toBeTruthy();
+      expect(typeof payload?.title).toBe("string");
+      expect((payload!.title as string).length).toBeGreaterThan(0);
+      expect(typeof payload?.body).toBe("string");
+      expect((payload!.body as string).length).toBeGreaterThan(0);
+      expect(payload?.detail).toBeTruthy();
+      expect(Object.keys(payload!.detail ?? {}).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("payload body falls back to message when not provided", () => {
+    for (const n of fixture.notifications) {
+      const payload = n.payload as FixturePayload;
+      expect(payload.body).toBe(n.message);
+    }
   });
 
   it("distributes notifications across both demo employees", () => {
