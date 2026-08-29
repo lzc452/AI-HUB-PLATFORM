@@ -70,6 +70,48 @@ describe("PermissionGuard", () => {
     ).resolves.toBe(true);
   });
 
+  it("allows optional-auth routes without identity and leaves actor unset", async () => {
+    const guard = new PermissionGuard(new Reflector(), identity as never);
+    const request: AuthorizedRequest & Record<string, unknown> = {};
+    const allowed = await guard.canActivate(
+      context(request, { optionalAuth: true }),
+    );
+    expect(allowed).toBe(true);
+    expect(request.actor).toBeUndefined();
+  });
+
+  it("validates credentials on optional-auth routes when present", async () => {
+    const guard = new PermissionGuard(new Reflector(), identity as never);
+    const request: AuthorizedRequest & Record<string, unknown> = {
+      headers: { "x-employee-id": "E001", "x-session-id": "session-1" },
+    };
+    const allowed = await guard.canActivate(
+      context(request, { optionalAuth: true }),
+    );
+    expect(allowed).toBe(true);
+    expect(request.actor).toEqual(actor);
+  });
+
+  it("rejects invalid credentials on optional-auth routes with 401", async () => {
+    const failingIdentity = {
+      getActorContext: async () => {
+        throw new Error("SESSION_INVALID");
+      },
+    };
+    const guard = new PermissionGuard(
+      new Reflector(),
+      failingIdentity as never,
+    );
+    await expect(
+      guard.canActivate(
+        context(
+          { headers: { "x-employee-id": "E001", "x-session-id": "stale" } },
+          { optionalAuth: true },
+        ),
+      ),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it("denies endpoints without explicit authorization metadata", async () => {
     const guard = new PermissionGuard(new Reflector(), identity as never);
     await expect(

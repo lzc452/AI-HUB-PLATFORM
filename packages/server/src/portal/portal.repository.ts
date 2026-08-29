@@ -187,7 +187,7 @@ export class KyselyPortalRepository implements PortalRepository {
   constructor(private readonly database: Kysely<DatabaseSchema>) {}
 
   async listResources(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     input: PortalListInput,
   ): Promise<PortalListResult> {
@@ -201,6 +201,7 @@ export class KyselyPortalRepository implements PortalRepository {
         : input.sortBy === "score"
           ? sql`favorite_count desc, updated_at desc`
           : sql`updated_at desc`;
+    const viewerEmployeeId = actor?.employeeId ?? null;
     const rows =
       type === "app"
         ? await sql<ResourceRow>`
@@ -208,7 +209,7 @@ export class KyselyPortalRepository implements PortalRepository {
               e.display_name as owner_name, a.application_id::text as slug,
               a.name, a.summary, a.status, a.current_version_id, '{}'::jsonb as metadata,
               (select count(*) from portal_favorites f where f.resource_type = 'app' and f.resource_id = a.application_id) as favorite_count,
-              exists(select 1 from portal_favorites f where f.employee_id = ${actor.employeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
+              exists(select 1 from portal_favorites f where f.employee_id = ${viewerEmployeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
               a.created_at, a.updated_at
             from applications a join employees e on e.employee_id = a.owner_employee_id
             where a.status = ${statusFilter}
@@ -249,17 +250,18 @@ export class KyselyPortalRepository implements PortalRepository {
   }
 
   async findResource(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     ownerEmployeeId: string | null,
     slug: string,
   ): Promise<PortalResourceItem | null> {
+    const viewerEmployeeId = actor?.employeeId ?? null;
     const canReview =
-      actor.permissions?.includes("*") === true ||
-      actor.permissions?.includes("application.review") === true;
+      actor?.permissions?.includes("*") === true ||
+      actor?.permissions?.includes("application.review") === true;
     const canManage =
-      actor.permissions?.includes("*") === true ||
-      actor.permissions?.includes("application.manage") === true;
+      actor?.permissions?.includes("*") === true ||
+      actor?.permissions?.includes("application.manage") === true;
     const result =
       type === "app"
         ? await sql<ResourceRow>`
@@ -267,15 +269,15 @@ export class KyselyPortalRepository implements PortalRepository {
               e.display_name as owner_name, a.application_id::text as slug,
               a.name, a.summary, a.status, a.current_version_id, '{}'::jsonb as metadata,
               (select count(*) from portal_favorites f where f.resource_type = 'app' and f.resource_id = a.application_id) as favorite_count,
-              exists(select 1 from portal_favorites f where f.employee_id = ${actor.employeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
+              exists(select 1 from portal_favorites f where f.employee_id = ${viewerEmployeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
               a.created_at, a.updated_at
             from applications a join employees e on e.employee_id = a.owner_employee_id
             where a.application_id::text = ${slug}
               and (${ownerEmployeeId}::text is null or a.owner_employee_id = ${ownerEmployeeId})
               and (
-                a.status = 'published' or a.owner_employee_id = ${actor.employeeId}
-                or a.maintainer_employee_id = ${actor.employeeId}
-                or exists(select 1 from application_maintainers m where m.application_id = a.application_id and m.employee_id = ${actor.employeeId})
+                a.status = 'published' or a.owner_employee_id = ${viewerEmployeeId}
+                or a.maintainer_employee_id = ${viewerEmployeeId}
+                or exists(select 1 from application_maintainers m where m.application_id = a.application_id and m.employee_id = ${viewerEmployeeId})
                 or ${canReview}
                 or ${canManage}
               )
@@ -652,13 +654,17 @@ export class KyselyPortalRepository implements PortalRepository {
     return result.rows[0] ?? null;
   }
 
-  async listDepartmentApplications(actor: ActorContext, departmentId: string) {
+  async listDepartmentApplications(
+    actor: ActorContext | null,
+    departmentId: string,
+  ) {
+    const viewerEmployeeId = actor?.employeeId ?? null;
     const result = await sql<ResourceRow>`
       select a.application_id as resource_id, a.owner_employee_id,
         e.display_name as owner_name, a.application_id::text as slug,
         a.name, a.summary, a.status, a.current_version_id, '{}'::jsonb as metadata,
         (select count(*) from portal_favorites f where f.resource_type = 'app' and f.resource_id = a.application_id) as favorite_count,
-        exists(select 1 from portal_favorites f where f.employee_id = ${actor.employeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
+        exists(select 1 from portal_favorites f where f.employee_id = ${viewerEmployeeId} and f.resource_type = 'app' and f.resource_id = a.application_id) as is_favorited,
         a.created_at, a.updated_at
       from applications a join employees e on e.employee_id = a.owner_employee_id
       where a.department_id = ${departmentId} and a.status = 'published'
@@ -718,7 +724,8 @@ export class KyselyPortalRepository implements PortalRepository {
     return result.rows[0] ?? null;
   }
 
-  async listHunt(actor: ActorContext) {
+  async listHunt(actor: ActorContext | null) {
+    const viewerEmployeeId = actor?.employeeId ?? null;
     const result = await sql<{
       periodId: string;
       periodName: string;
@@ -733,7 +740,7 @@ export class KyselyPortalRepository implements PortalRepository {
       select p.period_id as "periodId", p.name as "periodName", p.status as "periodStatus",
         e.entry_id as "entryId", a.application_id as "applicationId", a.name, a.summary,
         (select count(*) from portal_app_hunt_votes v where v.entry_id = e.entry_id and v.active) as "voteCount",
-        exists(select 1 from portal_app_hunt_votes v where v.period_id = p.period_id and v.entry_id = e.entry_id and v.employee_id = ${actor.employeeId} and v.active) as "hasVoted"
+        exists(select 1 from portal_app_hunt_votes v where v.period_id = p.period_id and v.entry_id = e.entry_id and v.employee_id = ${viewerEmployeeId} and v.active) as "hasVoted"
       from portal_app_hunt_periods p
       join portal_app_hunt_entries e on e.period_id = p.period_id
       join applications a on a.application_id = e.application_id and a.status = 'published'
@@ -875,7 +882,7 @@ export class KyselyPortalRepository implements PortalRepository {
   }
 
   private async listNativeRows(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalNativeResourceType,
     query: string,
     owner: string,
@@ -885,12 +892,13 @@ export class KyselyPortalRepository implements PortalRepository {
     offset: number,
   ) {
     const config = nativeConfig[type];
+    const viewerEmployeeId = actor?.employeeId ?? null;
     return sql<ResourceRow>`
       select r.${sql.ref(config.id)} as resource_id, r.owner_employee_id,
         e.display_name as owner_name, r.${sql.ref(config.slug)} as slug,
         r.name, r.summary, r.status, r.metadata,
         (select count(*) from portal_favorites f where f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as favorite_count,
-        exists(select 1 from portal_favorites f where f.employee_id = ${actor.employeeId} and f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as is_favorited,
+        exists(select 1 from portal_favorites f where f.employee_id = ${viewerEmployeeId} and f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as is_favorited,
         r.created_at, r.updated_at
       from ${sql.table(config.table)} r join employees e on e.employee_id = r.owner_employee_id
       where r.status = ${status}
@@ -916,30 +924,31 @@ export class KyselyPortalRepository implements PortalRepository {
   }
 
   private async findNative(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalNativeResourceType,
     owner: string | null,
     slug: string,
     canReview: boolean,
   ) {
     const config = nativeConfig[type];
+    const viewerEmployeeId = actor?.employeeId ?? null;
     return sql<ResourceRow>`
       select r.${sql.ref(config.id)} as resource_id, r.owner_employee_id,
         e.display_name as owner_name, r.${sql.ref(config.slug)} as slug,
         r.name, r.summary, r.status, r.metadata,
         (select count(*) from portal_favorites f where f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as favorite_count,
-        exists(select 1 from portal_favorites f where f.employee_id = ${actor.employeeId} and f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as is_favorited,
+        exists(select 1 from portal_favorites f where f.employee_id = ${viewerEmployeeId} and f.resource_type = ${type} and f.resource_id = r.${sql.ref(config.id)}) as is_favorited,
         r.created_at, r.updated_at
       from ${sql.table(config.table)} r join employees e on e.employee_id = r.owner_employee_id
       where r.${sql.ref(config.slug)} = ${slug}
         and (${owner}::text is null or r.owner_employee_id = ${owner})
-        and (r.status = 'published' or r.owner_employee_id = ${actor.employeeId} or ${canReview})
+        and (r.status = 'published' or r.owner_employee_id = ${viewerEmployeeId} or ${canReview})
       limit 1
     `.execute(this.database);
   }
 
   async findResourceById(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     id: string,
   ): Promise<PortalResourceItem | null> {

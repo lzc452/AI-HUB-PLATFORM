@@ -51,6 +51,15 @@ export class PermissionGuard implements CanActivate {
       cookies["aihub_eid"] ?? this.readHeader(request, "x-employee-id");
     const sessionId =
       cookies["aihub_sid"] ?? this.readHeader(request, "x-session-id");
+
+    // 可选认证：无凭据时以匿名身份放行（不设置 actor）；有凭据则必须校验通过。
+    if (
+      metadata.optionalAuth === true &&
+      (employeeId === undefined || sessionId === undefined)
+    ) {
+      return true;
+    }
+
     if (employeeId === undefined || sessionId === undefined) {
       throw new UnauthorizedException("IDENTITY_CREDENTIALS_REQUIRED");
     }

@@ -10,12 +10,15 @@ import {
   Post,
   Put,
   Query,
+  UseInterceptors,
 } from "@nestjs/common";
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { ActorContext } from "@ai-hub/contracts";
 import {
   Authenticated,
   CurrentActor,
+  CurrentActorOrNull,
+  OptionalAuth,
 } from "../authorization/authorization.decorator.js";
 import {
   DraftValidationError,
@@ -40,90 +43,112 @@ import {
   toPortalListInput,
 } from "./portal.dto.js";
 import { PortalService } from "./portal.service.js";
+import { PortalCacheControlInterceptor } from "./portal-cache-control.interceptor.js";
 import { PORTAL_SERVICE } from "./portal.tokens.js";
 
 @ApiTags("AI Hub Portal")
 @Controller("/internal/portal")
 @Authenticated()
+@UseInterceptors(PortalCacheControlInterceptor)
 export class PortalController {
   constructor(@Inject(PORTAL_SERVICE) private readonly portal: PortalService) {}
 
   @Get("home")
   @ApiOperation({ summary: "门户首页聚合数据" })
-  home(@CurrentActor() actor: ActorContext) {
-    return this.call(() => this.portal.home(actor));
+  @OptionalAuth()
+  home(@CurrentActorOrNull() actor: ActorContext | undefined) {
+    return this.call(() => this.portal.home(actor ?? null));
   }
 
   @Get("apps")
+  @OptionalAuth()
   apps(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Query() query: PortalListQueryDto,
   ) {
     return this.call(() =>
-      this.portal.list(actor, "app", toPortalListInput(query)),
+      this.portal.list(actor ?? null, "app", toPortalListInput(query)),
     );
   }
 
   @Get("apps/:ownerEmployeeId/:slug")
+  @OptionalAuth()
   app(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Param("ownerEmployeeId") owner: string,
     @Param("slug") slug: string,
   ) {
-    return this.call(() => this.portal.detail(actor, "app", owner, slug));
+    return this.call(() =>
+      this.portal.detail(actor ?? null, "app", owner, slug),
+    );
   }
 
   @Get("skills")
+  @OptionalAuth()
   skills(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Query() query: PortalListQueryDto,
   ) {
     return this.call(() =>
-      this.portal.list(actor, "skill", toPortalListInput(query)),
+      this.portal.list(actor ?? null, "skill", toPortalListInput(query)),
     );
   }
 
   @Get("skills/:ownerEmployeeId/:slug")
+  @OptionalAuth()
   skill(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Param("ownerEmployeeId") owner: string,
     @Param("slug") slug: string,
   ) {
-    return this.call(() => this.portal.detail(actor, "skill", owner, slug));
+    return this.call(() =>
+      this.portal.detail(actor ?? null, "skill", owner, slug),
+    );
   }
 
   @Get("plugins")
+  @OptionalAuth()
   plugins(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Query() query: PortalListQueryDto,
   ) {
     return this.call(() =>
-      this.portal.list(actor, "plugin", toPortalListInput(query)),
+      this.portal.list(actor ?? null, "plugin", toPortalListInput(query)),
     );
   }
 
   @Get("plugins/:ownerEmployeeId/:slug")
+  @OptionalAuth()
   plugin(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Param("ownerEmployeeId") owner: string,
     @Param("slug") slug: string,
   ) {
-    return this.call(() => this.portal.detail(actor, "plugin", owner, slug));
+    return this.call(() =>
+      this.portal.detail(actor ?? null, "plugin", owner, slug),
+    );
   }
 
   @Get("mcps")
+  @OptionalAuth()
   mcps(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Query() query: PortalListQueryDto,
   ) {
     return this.call(() =>
-      this.portal.list(actor, "mcp", toPortalListInput(query)),
+      this.portal.list(actor ?? null, "mcp", toPortalListInput(query)),
     );
   }
 
   @Get("mcps/:slug")
-  mcp(@CurrentActor() actor: ActorContext, @Param("slug") slug: string) {
-    return this.call(() => this.portal.detail(actor, "mcp", null, slug));
+  @OptionalAuth()
+  mcp(
+    @CurrentActorOrNull() actor: ActorContext | undefined,
+    @Param("slug") slug: string,
+  ) {
+    return this.call(() =>
+      this.portal.detail(actor ?? null, "mcp", null, slug),
+    );
   }
 
   @Post("dashboard/publish")
@@ -293,13 +318,14 @@ export class PortalController {
   }
 
   @Get(":resourceType/:resourceId/comments")
+  @OptionalAuth()
   comments(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Param("resourceType") type: string,
     @Param("resourceId") id: string,
   ) {
     return this.call(() =>
-      this.portal.listComments(actor, parseResourceType(type), id),
+      this.portal.listComments(actor ?? null, parseResourceType(type), id),
     );
   }
 
@@ -348,32 +374,37 @@ export class PortalController {
   }
 
   @Get("departments")
+  @OptionalAuth()
   departments() {
     return this.call(() => this.portal.departments());
   }
 
   @Get("departments/:departmentId")
+  @OptionalAuth()
   department(
-    @CurrentActor() actor: ActorContext,
+    @CurrentActorOrNull() actor: ActorContext | undefined,
     @Param("departmentId") departmentId: string,
   ) {
-    return this.call(() => this.portal.department(actor, departmentId));
+    return this.call(() => this.portal.department(actor ?? null, departmentId));
   }
 
   @Get("skill-packages")
+  @OptionalAuth()
   skillPackages() {
     return this.call(() => this.portal.skillPackages());
   }
 
   @Get("skill-packages/:packageSlug")
+  @OptionalAuth()
   skillPackage(@Param("packageSlug") packageSlug: string) {
     return this.call(() => this.portal.skillPackage(packageSlug));
   }
 
   @Get("apps-hunt")
   @ApiOkResponse({ type: PortalHuntEntryDto, isArray: true })
-  hunt(@CurrentActor() actor: ActorContext) {
-    return this.call(() => this.portal.hunt(actor));
+  @OptionalAuth()
+  hunt(@CurrentActorOrNull() actor: ActorContext | undefined) {
+    return this.call(() => this.portal.hunt(actor ?? null));
   }
 
   @Post("apps-hunt/votes")
@@ -387,6 +418,7 @@ export class PortalController {
   }
 
   @Get("docs/:pageKey")
+  @OptionalAuth()
   doc(@Param("pageKey") pageKey: string) {
     if (
       pageKey !== "tutorials" &&

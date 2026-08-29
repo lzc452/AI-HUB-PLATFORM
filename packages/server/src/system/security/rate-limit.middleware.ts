@@ -1,6 +1,6 @@
 // rate-limit.middleware.ts
 export interface RateLimitRule {
-  matcher: (path: string) => boolean;
+  matcher: (path: string, method: string) => boolean;
   windowMs: number;
   max: number;
   keySource: "ip" | "ip+account";
@@ -109,13 +109,13 @@ export function createRateLimitMiddleware(options: RateLimitOptions) {
     return "unknown";
   };
   return (req: unknown, res: unknown, next: () => void) => {
-    const request = req as { path: string; ip: string };
+    const request = req as { path: string; ip: string; method?: string };
     const response = res as {
       status: (code: number) => { json: (body: unknown) => void };
     };
     const nowMs = now();
     for (const [ruleIndex, rule] of options.limits.entries()) {
-      if (!rule.matcher(request.path)) continue;
+      if (!rule.matcher(request.path, request.method ?? "GET")) continue;
       // 每条规则独立命名空间（rule:<i>:…）：password 与 challenge 等规则互不消耗配额。
       const dimensionKey =
         rule.keySource === "ip+account"

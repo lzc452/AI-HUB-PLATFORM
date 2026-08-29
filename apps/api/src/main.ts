@@ -150,6 +150,13 @@ async function bootstrap() {
           max: 20,
           keySource: "ip+account",
         },
+        // Portal 匿名只读端点：无身份可追责，按 IP 限流防爬（nginx 生产另有 20r/s 边缘限流）。
+        {
+          matcher: (p, m) => m === "GET" && p.startsWith("/internal/portal/"),
+          windowMs: 60_000,
+          max: 120,
+          keySource: "ip",
+        },
       ],
     }),
   );

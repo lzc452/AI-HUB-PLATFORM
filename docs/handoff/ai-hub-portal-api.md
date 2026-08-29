@@ -2,12 +2,12 @@
 
 | 项目 | 内容 |
 | --- | --- |
-| 文档版本 | `v1.2` |
+| 文档版本 | `v1.3` |
 | 更新日期 | `2026-08-28` |
 | 服务端仓库 | `AI-HUB-PLATFORM` |
 | 客户端仓库 | `AI-HUB-PORTAL` |
 | API 前缀 | `/internal/portal` |
-| 认证方式 | HttpOnly Cookie（首选）或兼容身份请求头 |
+| 认证方式 | 读端点可选认证（无凭据匿名放行）；写端点必选 HttpOnly Cookie（首选）或兼容身份请求头 |
 | 数据事实 | `app` 的写入、版本、审核、发布和下架统一由 `ApplicationService` 管理 |
 
 本文档是 Portal 前端联调的接口事实来源。后端仍保留 Portal URL，应用（`resourceType=app`）的持久化和生命周期不再由 Portal 专属表直接驱动。`skill`、`plugin`、`mcp` 继续使用 Portal 自有资源生命周期。
@@ -22,7 +22,7 @@
 
 ## 2. 认证与请求约定
 
-所有 Portal 控制器默认要求认证（未认证返回 `401`）。前端 API 客户端必须携带同源凭据：
+**写端点（发布、收藏、评论、投票等）默认要求认证**，未认证返回 `401`。**公开读端点（列表、详情、首页、部门、技能包、内容页、评论读取）使用可选认证**：无凭据时以匿名身份放行，携带凭据时按常规校验（无效会话返回 `401`，不降级为匿名）。前端 API 客户端建议始终携带同源凭据，未登录时不携带 Cookie 即可匿名访问公开读端点：
 
 ```ts
 const response = await fetch(path, {
@@ -47,6 +47,17 @@ const response = await fetch(path, {
 `GET /internal/identity/login/options` 始终包含 `password`；仅在服务端注入 DingTalk SSO 服务时才额外包含 `dingtalk_sso`。客户端只有收到该 method 才展示入口。
 
 完整流程为：客户端调用 `GET /internal/identity/login/dingtalk/start?returnTo=...`，其中 `returnTo` 必须是 Portal 的回调页，例如 `/login?dingtalk=complete&returnTo=%2Fdashboard`；服务端完成 OAuth 回调后写入短时 HttpOnly `dingtalk_handoff` cookie 并重定向至该地址；Portal 立即 `POST /internal/identity/login/dingtalk/complete` 消费 handoff、取得正式会话，再跳转安全校验后的 `returnTo`。不要把 handoff token 暴露到 URL 或 localStorage。
+
+### 2.2 匿名访问（公开读端点）
+
+门户公开浏览支持匿名调用，未登录用户无需携带任何凭据即可读取：
+
+- **匿名可用端点**：`home`、四类资源（app/skill/plugin/mcp）列表与详情、`comments`（GET）、`departments`(+详情)、`skill-packages`(+详情)、`apps-hunt`（GET）、`docs/:pageKey`。
+- **匿名语义**：只返回 `status=published` 的资源；`isFavorited`、`hasVoted` 恒为 `false`；owner/maintainer 特权对匿名一律不生效。
+- **可选认证**：请求携带有效会话时，上述端点返回与已登录一致的个人化数据（如 `isFavorited`）；携带**无效**会话返回 `401`，不会静默降级为匿名。
+- **缓存行为**：匿名列表/首页/详情响应带 `Cache-Control: public, max-age=300`；docs/评论/apps-hunt 为 `no-cache`；所有响应统一 `Vary: Cookie`，已登录响应为 `private, no-cache`。客户端不应覆盖这些响应头语义。
+- **限流**：匿名读端点按 IP 限流（应用层 60s/120 次，nginx 生产另按 20r/s 边缘限流）。前端不要为公开读端点做无节制的轮询。
+- 写端点（发布、收藏、评论、投票）与 `dashboard/*` 个人中心仍要求认证，未认证返回 `401`。
 
 ## 3. 通用数据结构
 
@@ -480,6 +491,10 @@ draft ──submit──> in_review ──approve──> published
 - [ ] `withdrawn → 编辑 → submit → approve → published` 在两套入口下结果一致。
 - [ ] 提交后能看到版本快照和审核队列；审核通过前 `currentVersionId` 不提前变化。
 - [ ] Cookie 认证和 `x-employee-id`/`x-session-id` 兼容认证均能完成受保护请求。
+- [ ] 未登录（无 Cookie）时公开读端点（首页、列表、详情、评论读取）返回 200 且只含 `published` 资源；`isFavorited` 为 `false`。
+- [ ] 携带无效会话访问公开读端点返回 `401`，不降级为匿名。
+- [ ] 未登录访问写端点（发布、收藏、评论、投票）与 `dashboard/*` 返回 `401`。
+- [ ] 匿名列表响应带 `Cache-Control: public, max-age=300` 与 `Vary: Cookie`；已登录响应为 `private, no-cache`。
 - [ ] `PORTAL_APP_DRAFT_REQUIRED`、`DRAFT_VALIDATION_FAILED`、权限拒绝、审核认领冲突和 XSS 清洗均有可见且可恢复的前端行为。
 - [ ] skill/plugin/mcp 的 Portal 读取、收藏、评论和原有写入行为不被应用统一改造影响。
 - [ ] 前端完成 `npm run typecheck`、`npm run lint`、`npm test` 和 `npm run build`。
@@ -493,5 +508,6 @@ draft ──submit──> in_review ──approve──> published
 - 契约类型：`D:\workspace\AI-HUB-PLATFORM\packages\contracts\src\application.ts`
 - 真实数据库一致性 E2E：`D:\workspace\AI-HUB-PLATFORM\apps\api\test\portal-application-consistency.real.e2e-spec.ts`
 - 认证兼容 E2E：`D:\workspace\AI-HUB-PLATFORM\apps\api\test\portal-auth.e2e-spec.ts`
+- 匿名访问 E2E：`D:\workspace\AI-HUB-PLATFORM\apps\api\test\portal-anonymous.e2e-spec.ts`
 
 如服务端契约发生变化，应先更新本文档和后端 OpenAPI，再由 Portal 适配层同步修改。

@@ -102,18 +102,18 @@ export interface DashboardCommentQuery {
 
 export interface PortalRepository {
   listResources(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     input: PortalListInput,
   ): Promise<PortalListResult>;
   findResource(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     ownerEmployeeId: string | null,
     slug: string,
   ): Promise<PortalResourceItem | null>;
   findResourceById(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     resourceId: string,
   ): Promise<PortalResourceItem | null>;

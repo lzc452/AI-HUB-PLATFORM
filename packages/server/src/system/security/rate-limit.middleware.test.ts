@@ -10,10 +10,12 @@ function callMw(
   path: string,
   ip: string,
   employeeNumber?: string,
+  method?: string,
 ) {
   const req = {
     path,
     ip,
+    method,
     headers: {},
     body: employeeNumber === undefined ? undefined : { employeeNumber },
   };
@@ -124,6 +126,57 @@ describe("rate limit middleware", () => {
     );
     expect(blockedChallenge.nexted).toBe(false);
     expect(blockedChallenge.status).toBe(429);
+  });
+
+  it("matches rules by HTTP method and limits anonymous portal reads by IP", () => {
+    const mw = createRateLimitMiddleware({
+      limits: [
+        {
+          matcher: (p, m) => m === "GET" && p.startsWith("/internal/portal/"),
+          windowMs: 60_000,
+          max: 3,
+          keySource: "ip",
+        },
+      ],
+    });
+    // GET 读端点计数并触发限流
+    for (let i = 0; i < 3; i++) {
+      const r = callMw(
+        mw,
+        "/internal/portal/apps",
+        "10.0.0.1",
+        undefined,
+        "GET",
+      );
+      expect(r.nexted).toBe(true);
+    }
+    const blocked = callMw(
+      mw,
+      "/internal/portal/apps",
+      "10.0.0.1",
+      undefined,
+      "GET",
+    );
+    expect(blocked.nexted).toBe(false);
+    expect(blocked.status).toBe(429);
+    // 写端点不受该规则影响（同一 IP、同一路径前缀）
+    const write = callMw(
+      mw,
+      "/internal/portal/dashboard/publish",
+      "10.0.0.1",
+      undefined,
+      "POST",
+    );
+    expect(write.nexted).toBe(true);
+    // 其他 IP 独立计数
+    const otherIp = callMw(
+      mw,
+      "/internal/portal/apps",
+      "10.0.0.2",
+      undefined,
+      "GET",
+    );
+    expect(otherIp.nexted).toBe(true);
   });
 });
 

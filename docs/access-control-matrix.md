@@ -115,10 +115,13 @@
 
 Portal 保留 `/internal/portal` URL 和响应模型；其中 `resourceType=app` 的写入统一委托 `ApplicationService`，因此下表的资源条件与应用 API 完全一致。`skill`、`plugin`、`mcp` 继续使用 Portal 自有生命周期和 `portal.*` 事件。
 
+Portal 公开读端点使用**可选认证**（`@OptionalAuth()`）：无凭据时以匿名身份放行，只能看到 `published` 资源且个性化字段（`isFavorited`、`hasVoted`）恒为 `false`；携带有效会话时与已登录行为一致；携带无效会话返回 `401`。匿名响应带分级 `Cache-Control`（列表/详情 `public, max-age=300`，docs/评论/apps-hunt `no-cache`）并统一 `Vary: Cookie`；已登录响应为 `private, no-cache`。
+
 | Method | Path | Guard 权限 | 可用系统角色 | 资源条件 |
 |---|---|---|---|---|
-| GET | `/internal/portal/home`、`/internal/portal/apps`、`/internal/portal/apps/:ownerEmployeeId/:slug` | Authenticated | 所有已登录角色 | 非发布 app 列表仅可按本人负责人筛选或持有 `application.review`；详情还允许负责人、维护人/维护人列表成员或 `application.review`；收藏与 AI Hub 点赞是独立概念 |
-| GET | `/internal/portal/skills`、`/plugins`、`/mcps` 及详情 | Authenticated | 所有已登录角色 | 默认只返回已发布资源；非发布状态仍需本人或 `application.review` |
+| GET | `/internal/portal/home`、`/internal/portal/apps`、`/internal/portal/apps/:ownerEmployeeId/:slug` | OptionalAuth（匿名可读） | 所有已登录角色 + 匿名访客 | 匿名仅见 `published`；登录后非发布 app 列表仅可按本人负责人筛选或持有 `application.review`；详情还允许负责人、维护人/维护人列表成员或 `application.review`；收藏与 AI Hub 点赞是独立概念 |
+| GET | `/internal/portal/skills`、`/plugins`、`/mcps` 及详情、`/departments`(+详情)、`/skill-packages`(+详情)、`/apps-hunt`、`/docs/:pageKey`、`/:resourceType/:resourceId/comments` | OptionalAuth（匿名可读） | 所有已登录角色 + 匿名访客 | 匿名仅见 `published` 资源；非发布状态仍需本人或 `application.review` |
+| GET | `/internal/portal/dashboard`、`/dashboard/stars`、`/dashboard/comments` | Authenticated | 所有已登录角色 | 个人收藏、评论与发布概览，仅返回本人数据 |
 | POST | `/internal/portal/dashboard/publish` | `application.create` | `employee`、`application_admin`、`demand_operator`、`super_admin` | `app` 调用 `createApplication`；携带完整 `applicationDraft` 或兼容完整 `metadata` 时再调用 `saveDraft` |
 | PUT | `/internal/portal/dashboard/publish/:resourceType/:resourceId` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 必须提供完整草稿；`withdrawn` 可编辑，`archived` 不可编辑；不接受任意 JSON 草稿 |
 | POST | `/internal/portal/dashboard/publish/:resourceType/:resourceId/versions` | `application.update` | `employee`（负责人）、`application_admin`、`super_admin` | `app` 只更新草稿中的 `version/changelog`，不会提前创建 `application_versions` 或切换版本指针 |

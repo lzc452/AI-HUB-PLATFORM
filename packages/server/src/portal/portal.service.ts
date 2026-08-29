@@ -69,7 +69,7 @@ export class PortalService {
     private readonly applications?: ApplicationLifecycleService,
   ) {}
 
-  async home(actor: ActorContext) {
+  async home(actor: ActorContext | null) {
     const [apps, skills, plugins, mcps, departments, packages, updates] =
       await Promise.all([
         this.repository.listResources(actor, "app", this.featuredQuery()),
@@ -91,12 +91,17 @@ export class PortalService {
     };
   }
 
-  list(actor: ActorContext, type: PortalResourceType, input: PortalListInput) {
+  list(
+    actor: ActorContext | null,
+    type: PortalResourceType,
+    input: PortalListInput,
+  ) {
     if (
       input.status !== undefined &&
       input.status !== "published" &&
-      input.ownerEmployeeId !== actor.employeeId &&
-      !hasPermission(actor, PERMISSIONS.APPLICATION_REVIEW)
+      (actor === null ||
+        (input.ownerEmployeeId !== actor.employeeId &&
+          !hasPermission(actor, PERMISSIONS.APPLICATION_REVIEW)))
     ) {
       throw new Error("PORTAL_RESOURCE_LIST_FORBIDDEN");
     }
@@ -104,7 +109,7 @@ export class PortalService {
   }
 
   async detail(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     ownerEmployeeId: string | null,
     slug: string,
@@ -445,7 +450,7 @@ export class PortalService {
   }
 
   async listComments(
-    actor: ActorContext,
+    actor: ActorContext | null,
     type: PortalResourceType,
     resourceId: string,
   ) {
@@ -505,7 +510,7 @@ export class PortalService {
     return this.repository.listDepartments();
   }
 
-  async department(actor: ActorContext, departmentId: string) {
+  async department(actor: ActorContext | null, departmentId: string) {
     const [profile, applications] = await Promise.all([
       this.repository.getDepartment(departmentId),
       this.repository.listDepartmentApplications(actor, departmentId),
@@ -524,7 +529,7 @@ export class PortalService {
     return value;
   }
 
-  hunt(actor: ActorContext) {
+  hunt(actor: ActorContext | null) {
     return this.repository.listHunt(actor);
   }
 
