@@ -9,7 +9,7 @@
 | 关联分支 | `feature/api-platform` |
 | 需求基线 | 已按 `docs/requirements/README.md` 变更规则登记为 REQ-MDL-01~06（见该文件 §3.8） |
 
-**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）→ v1.3（2026-10-13）落地形态**实证验证**后修订：配额 SQL 两项验证通过，nginx 结论纠偏（`proxy_read_timeout` 升级为已验证 P0、`proxy_buffering` 降为建议），并更正一处错误表述 → v1.4（2026-10-13）定稿 → **v1.4.1（2026-10-13）M1 交付状态回写**（仅更新里程碑与 RTM 状态，需求与契约无变更；另修正数据模型一处笔误：`employee_id` 为 `varchar(64)` 而非 uuid，须与 `employees` 主键一致）。
+**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）→ v1.3（2026-10-13）落地形态**实证验证**后修订：配额 SQL 两项验证通过，nginx 结论纠偏（`proxy_read_timeout` 升级为已验证 P0、`proxy_buffering` 降为建议），并更正一处错误表述 → v1.4（2026-10-13）定稿 → **v1.4.2（2026-10-13）M2 交付状态回写**（网关面落地：错误表新增 5 项实现期契约、M2 里程碑与 RTM 状态更新、A2 关闭）→ v1.4.1（2026-10-13）M1 交付状态回写（仅更新里程碑与 RTM 状态，需求与契约无变更；另修正数据模型一处笔误：`employee_id` 为 `varchar(64)` 而非 uuid，须与 `employees` 主键一致）。
 
 **定稿声明**：本文自 v1.4 起为「本地 vLLM API Key 管理与统一网关」的实现基线。范围、接口契约、数据模型、权限码与部署前置以本文为准；实现阶段的偏差须记录在代码评审或变更评估表中并回写本文。已落地的部署前置项（nginx `/v1/` 路由、`/v1` 中间件豁免）见 8.3 落地状态。
 
@@ -85,7 +85,7 @@ R1/R2 明细见 `docs/audit/api-platform-prd-review-2026-10-13.md`；R3/R4 明�
 | 编号 | 假设 | 定稿结论 | 依据 |
 | --- | --- | --- | --- |
 | A1 | 复用平台现有登录态与员工体系，Key 绑定登录用户 | ✅ **已关闭（成立）** | `authorization/permission.guard.ts`：会话 Cookie（`aihub_eid`/`aihub_sid`）→ `ActorContext` → `@RequiresPermissions` 链路可直接复用，控制面据此挂权限码 |
-| A2 | vLLM 部署于 GPU 服务器，暴露 OpenAI 兼容 HTTP 端口（默认 8000） | ⏳ **挂 M2 前置**（不阻塞 M1：M1 仅控制面，不触达上游） | 需确认主机/端口/模型名/上下文上限后方可联调 |
+| A2 | vLLM 部署于 GPU 服务器，暴露 OpenAI 兼容 HTTP 端口 | ✅ **已关闭（2026-10-13 由用户提供）**：基址 `http://10.10.181.82:3040/v1`；模型 `Qwen3.5 35B A3B`；上下文上限 **256k tokens** | 已写入 compose 与 `.env.example`。**开发机不通内网**（实测 `curl` 8s 超时、`http_code=000`），因此 M2 用上游桩完成验证，真实联调待内网环境；模型 id 联调时以 `GET /v1/models` 实际返回为准（名称含空格需核对） |
 | A3 | 配额为限流 + 软限额，超额拒绝并提示，不扣费 | ✅ **已关闭（成立）** | 本文 4.2 明确不做计费；后续引入计费须先补资金安全三件套 |
 | A4 | API 单实例部署（模块化单体，Compose 无 Redis） | ✅ **已关闭（成立）** | `compose.yaml` 服务清单无 Redis；限流按进程内计数设计（9.4），多实例演进时迁移共享存储 |
 
@@ -312,15 +312,23 @@ active ──disable──► disabled ──enable──► active
 
 | HTTP | type | code | 场景 |
 | --- | --- | --- | --- |
-| 401 | invalid_request_error | `invalid_api_key` | Key 不存在/格式错误 |
-| 403 | invalid_request_error | `key_disabled` / `key_expired` / `key_revoked` | 状态不允许 |
-| 429 | rate_limit_error | `rate_limit_exceeded` | RPM/TPM/日配额超限（附 `Retry-After` 头） |
 | 400 | invalid_request_error | `invalid_request_error` | 请求体非法（含上游返回的上下文超限，message 附中文说明） |
+| 400 | invalid_request_error | `streaming_not_enabled` | `stream=true`；**M3 开放流式后移除该项**（实现期新增，避免把 SSE 整段读成 JSON 静默返回） |
+| 401 | invalid_request_error | `invalid_api_key` | Key 不存在/格式错误 |
+| 403 | invalid_request_error | `key_disabled` / `key_expired` / `key_revoked` | 存储状态不允许 |
+| 403 | invalid_request_error | `employee_inactive` | 所属员工已停用（实现期新增，对应 §10.2 在职校验） |
 | 404 | invalid_request_error | `model_not_found` | 模型不存在 |
-| 502 | upstream_error | `upstream_error` | 上游连接/响应错误 |
-| 504 | upstream_error | `upstream_timeout` | 首 token 30s 或整体 120s 超时 |
-| 503 | service_unavailable | `circuit_open` | 熔断打开中 |
-| 413 | invalid_request_error | `payload_too_large` | 请求体超过平台上限（评审 R1-09 新增） |
+| 413 | invalid_request_error | `payload_too_large` | 请求体超过平台上限（评审 R1-09 新增；上限由 `LLM_JSON_BODY_LIMIT_BYTES` 决定） |
+| 429 | rate_limit_error | `rate_limit_exceeded` | 平台侧 RPM/TPM/日配额超限（附 `Retry-After` 头；M3 实现） |
+| 429 | rate_limit_error | `upstream_rate_limited` | 上游 vLLM 自身限流（实现期新增，与平台配额区分开） |
+| 500 | api_error | `internal_error` | 网关内部错误（不向外泄露内部细节；实现期新增兜底项） |
+| 502 | upstream_error | `upstream_error` | 上游连接/响应错误（5xx、网络不可达） |
+| 503 | service_unavailable | `circuit_open` | 熔断打开中（M3 实现） |
+| 503 | service_unavailable | `gateway_not_configured` | 未配置 `LLM_GATEWAY_HMAC_SECRET` 或上游地址（实现期新增） |
+| 504 | upstream_error | `upstream_timeout` | 上游超时（`LLM_UPSTREAM_TIMEOUT_MS`；流式另加首 token 超时） |
+
+
+> 实现期回写说明：表中标注「实现期新增」的 5 项是 M1/M2 落地时补充的契约，均已在 `packages/server/src/llm-gateway/llm-gateway.errors.ts` 的 `GATEWAY_ERRORS` 中登记并由单测覆盖（信封形状 + 状态码）。`streaming_not_enabled` 是**临时项**，M3 落地流式后必须删除。
 
 `Retry-After` 口径（评审 R1-09）：整数秒；RPM/TPM 超限为当前窗口剩余秒数（1–60）；日配额超限为距次日 00:00（Asia/Shanghai）的剩余秒数，上限 86400。
 
@@ -368,7 +376,8 @@ location /v1/ {
 **落地状态（2026-10-13）**：
 
 - ✅ **已落地**：① 两份 nginx 配置的 `/v1/` location（含 `proxy_read_timeout 300s` / `proxy_send_timeout 300s` / `proxy_buffering off`）；② 生产安全中间件对 `/v1` 的 CSRF/重放豁免（`API_KEY_AUTH_PATH_PREFIXES`，含前缀边界匹配，`/v1-evil` 不放过；配套 9 个单测）；③ `/v1` **刻意不套** nginx `limit_req`（其 503 + HTML 会破坏 OpenAI 错误信封，配额统一由网关按 Key 维度执行并返回 429 + OpenAI 信封）。
-- ⏳ **待 M2（依赖网关模块存在）**：控制器级 `LlmGatewayExceptionFilter`；`/v1` 的 JSON body 上限 carve-out（当前全局 `1mb`）；网关侧对「无效 Key 洪泛」的 IP 级预检。
+- ✅ **M2 已落地**：控制器级 `LlmGatewayExceptionFilter`（覆盖全局 ProblemDetails，含 `headersSent` 分流）、`/v1` 的 JSON body 上限 carve-out（`LLM_JSON_BODY_LIMIT_BYTES`）、上游适配器不转发任何客户端头（含 `Authorization`）。
+- ⏳ **待 M3**：网关侧对「无效 Key 洪泛」的 IP 级预检（与限流同一套进程内计数器一并实现）。
 - **已取证**：`nginx -t` 两份配置语法通过；活体 HTTP 验证 `/v1/*` 正常放行、`/v1-evil/*` 与 `/internal/*` 仍返回 403、豁免路径不触达重放存储。
 
 ## 九、数据模型
@@ -550,8 +559,8 @@ where employee_id = $1
 | --- | --- | --- | --- | --- |
 | M0 需求确认 | 本 PRD 评审；关键假设 A1–A4 关闭 | 评审记录；假设逐条确认 | ✅ 完成（v1.4 定稿；A1/A3/A4 关闭，A2 挂 M2） | 1 |
 | M1 基础骨架 | 迁移 0056、配置项、模块装配、Key CRUD 控制面 + 单测 | 类型检查 + 单测绿；真实 PG 应用迁移 | ✅ **完成**（2026-10-13，证据见下） | 5 |
-| M2 网关连通 | `/v1/models` + 非流式 chat、Bearer 鉴权、错误映射 + e2e | OpenAI SDK 对真实 vLLM 调通（含 401/404 负向） | 未开始（依赖 A2 关闭 + `/v1` 豁免已就绪） | 5 |
-| M3 流式与配额 | streaming、RPM/TPM/日配额、429 语义、熔断 | 限流与熔断用例绿；断流取消验证 | 未开始 | 5 |
+| M2 网关连通 | `/v1/models` + 非流式 chat、Bearer 鉴权、错误映射 + e2e | OpenAI SDK 对真实 vLLM 调通（含 401/404 负向） | ✅ **代码与桩验证完成**（2026-10-13）；**真实 vLLM 联调待内网环境**（开发机不可达 10.10.181.82:3040） | 5 |
+| M3 流式与配额 | streaming、RPM/TPM/日配额、429 语义、熔断、无效 Key 的 IP 级预检 | 限流与熔断用例绿；断流取消验证 | 未开始 | 5 |
 | M4 用量与看板 | call_logs 落库、usage_daily 聚合 worker、Console 页面 | 看板数字与 call_logs 对账一致；页面四态齐全 | 未开始（管理面 `/admin/*` 一并落地） | 5 |
 | M5 监控与上线 | 指标、告警规则、灰度、runbook | 告警演练送达；上线后验证清单执行 | 未开始 | 3 |
 
@@ -568,11 +577,26 @@ where employee_id = $1
 
 **M1 未含（按范围显式推迟）**：`/admin/*` 全平台管理面（M4）、`/v1` 转发与配额执行（M2/M3）、Console 页面（M4）。
 
+**M2 交付记录（2026-10-13）**：
+
+| 交付物 | 落点 | 证据 |
+| --- | --- | --- |
+| 网关面控制器与路由（`GET /v1/models`、`POST /v1/chat/completions`） | `packages/server/src/llm-gateway/llm-gateway.controller.ts` | 端到端 10 项通过；**发现并修复真实缺陷**：Nest 对 POST 默认 201，已显式覆盖为 OpenAI 要求的 200 |
+| Bearer 鉴权守卫（双密钥候选、状态/在职校验、`last_used_at`） | `api-key.guard.ts` | 守卫单测 11 项；端到端覆盖 401/403（disabled/revoked） |
+| 上游适配器（不转发客户端头、超时/网络/HTTP 分类） | `vllm-upstream.adapter.ts` | 适配器单测 6 项（含真实本地 HTTP 桩断言「不转发 Authorization」） |
+| 服务层错误映射与透传 | `llm-gateway.service.ts`、`llm-gateway.errors.ts` | 服务单测 10 项；端到端覆盖 400/404/429/502/504 |
+| 控制器级 OpenAI 错误信封过滤器 | `llm-gateway.exception.filter.ts` | 过滤器单测 9 项（含 `headersSent` 分流） |
+| `/v1` body 上限 carve-out 与 413 信封 | `apps/api/src/body-parser.ts` | 端到端断言 413 为 OpenAI 信封 |
+| 配置与编排 | `compose.yaml`、`.env.example`、`main.ts`、`api.module.ts` | 上游基址/超时/限额全部可配 |
+| 质量闸口 | — | typecheck 5 包通过；llm-gateway 单测 61；控制面集成 13；网关集成 10；boundaries 702 模块 0 违规；lint 干净 |
+
+**M2 遗留（如实记录）**：真实 vLLM 联调未做（开发机不通内网 10.10.181.82:3040，实测 8s 超时）；模型 id 与 256k 上下文上限需在联调时以 `GET /v1/models` 核对（名称含空格）。
+
 **依赖评估**：
 
 | 依赖 | 所属 | 分级 | 说明 |
 | --- | --- | --- | --- |
-| vLLM 服务部署与网络连通 | 基础设施 | 阻塞 | 未就绪则 M2 无法开始；需确认 GPU 服务器端口与域名 |
+| vLLM 服务部署与网络连通 | 基础设施 | **联调阻塞（非开发阻塞）** | 地址/模型/上下文上限已提供（见 4.3 A2）；**开发机不通内网**，故 M2 用上游桩验证，真实联调与 256k 上限核对待内网环境 |
 | Alertmanager 告警通道 | 运维 | 并行 | 缺位时降级为看板+日志，不阻塞上线 |
 | 多模型配置 | 平台配置 | 可绕过 | 单模型也可上线，`/v1/models` 透传当前模型 |
 
@@ -594,7 +618,7 @@ where employee_id = $1
 | RK-06 | 范围蔓延（计费/多租户/多模型源） | 中 | 本期显式不做；变更走评估表 | 跟踪中 |
 | RK-07 | 限流窗口重启清零 | 低 | V1 接受；多实例演进时迁移共享存储 | 已记录 |
 
-**遗留问题**：① Alertmanager 通道是否存在待运维确认；② vLLM 实际模型名与上下文上限需部署后回填配置（M2 前置，见 4.3 A2）；③ ✅ 基线回填已完成（登记为 REQ-MDL-01~06，见 `docs/requirements/README.md` §3.8）；④ **多 Key 放大**：RPM/TPM 按 Key 维度计算，用户可通过创建多个 Key 放大并发（每人活跃上限 10 已缓解）；用户级 RPM 兜底列入后续版本（评审 R1-10 连带，本轮未纳入范围）；⑤ `char(64)` 定长哈希列与 `trace_id` 索引两条低优意见不予采纳，理由见评审记录。
+**遗留问题**：① Alertmanager 通道是否存在待运维确认；② ✅ 已回填：`Qwen3.5 35B A3B`、256k tokens、基址 `http://10.10.181.82:3040/v1`（见 4.3 A2）；联调时仍需以 `GET /v1/models` 核对模型 id；③ ✅ 基线回填已完成（登记为 REQ-MDL-01~06，见 `docs/requirements/README.md` §3.8）；④ **多 Key 放大**：RPM/TPM 按 Key 维度计算，用户可通过创建多个 Key 放大并发（每人活跃上限 10 已缓解）；用户级 RPM 兜底列入后续版本（评审 R1-10 连带，本轮未纳入范围）；⑤ `char(64)` 定长哈希列与 `trace_id` 索引两条低优意见不予采纳，理由见评审记录。
 
 ## 十六、附录
 
@@ -607,14 +631,14 @@ where employee_id = $1
 | FR-03 | 禁用/启用（立即生效） | 7.5/8.1/8.2 | TC-03 | ✅ M1 已实现（控制面；网关侧生效待 M2） |
 | FR-04 | 轮换（旧钥立即失效） | 7.5/8.1 | TC-04 | ✅ M1 已实现（同事务撤销，真库已验） |
 | FR-05 | 删除（revoked 终态） | 7.5/8.1 | TC-05 | ✅ M1 已实现（软删幂等） |
-| FR-06 | Bearer 鉴权与 401/403 语义 | 8.2/10.2 | TC-06 | 待开发 |
-| FR-07 | `/v1/models` 透传 | 8.2 | TC-07 | 待开发 |
-| FR-08 | chat/completions（流式+非流式） | 8.2 | TC-08 | 待开发 |
-| FR-09 | embeddings | 8.2 | TC-09 | 待开发 |
-| FR-10 | OpenAI 错误信封映射 | 8.2 | TC-10 | 待开发 |
+| FR-06 | Bearer 鉴权与 401/403 语义 | 8.2/10.2 | TC-06 | ✅ M2 已实现（六类负向 + 双密钥过渡，端到端已验） |
+| FR-07 | `/v1/models` 透传 | 8.2 | TC-07 | ✅ M2 已实现（端到端已验） |
+| FR-08 | chat/completions（流式+非流式） | 8.2 | TC-08 | 部分：非流式 ✅ M2；流式待 M3 |
+| FR-09 | embeddings | 8.2 | TC-09 | 待开发（M3 与流式一并） |
+| FR-10 | OpenAI 错误信封映射 | 8.2 | TC-10 | ✅ M2 已实现（14 项错误表 + headersSent 分流，端到端已验） |
 | FR-11 | RPM/TPM 限流 | 8.2/9.4 | TC-11 | 待开发 |
 | FR-12 | 日 token 配额 | 8.2/9.4 | TC-12 | 待开发 |
-| FR-13 | 熔断与恢复 | 8.2/十三 | TC-13 | 待开发 |
+| FR-13 | 熔断与恢复 | 8.2/十三 | TC-13 | 待开发（M3） |
 | FR-14 | 100% 调用记录 | 9.2/11.3 | TC-14 | 待开发 |
 | FR-15 | 用量汇总与明细 | 8.1/9.3 | TC-15 | 待开发 |
 | FR-16 | 管理面（全平台视图与代禁用） | 8.1/10.2 | TC-16 | 待开发 |
@@ -622,7 +646,7 @@ where employee_id = $1
 | FR-18 | 配置化默认值 | 8.1/十三 | TC-18 | 部分（配置项已落地；默认值消费在 M3） |
 | FR-19 | Key 属性变更（名称/限额/过期） | 8.1 | TC-19 | ✅ M1 已实现 |
 | FR-20 | 幂等与并发语义（CAS、同名防重、活跃上限） | 7.5/8.1/9.1 | TC-20 | ✅ M1 已实现（真库 CAS/部分唯一索引已验） |
-| FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发 |
+| FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发（M3） |
 | FR-22 | 网关面边界（无 CORS、413、`Retry-After` 口径、版本兼容） | 8.2 | TC-22 | 待开发 |
 | FR-23 | 网关与平台既有中间件交互（CSRF 豁免、请求体透传、控制器级错误过滤器、`@Public()` 约束、body 上限、指标口径） | 8.3 | TC-23 | 部分落地（豁免已落地；过滤器与 body carve-out 待 M2） |
 | FR-24 | SSE 端到端链路（nginx 关缓冲与放宽超时，逐块到达验收） | 8.3/十四 | TC-24 | 部分落地（路由与超时已落地并语法校验；端到端验收待 M2） |
