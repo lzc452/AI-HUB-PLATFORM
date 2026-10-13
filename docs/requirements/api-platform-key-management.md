@@ -2,14 +2,23 @@
 
 | 文档信息 | |
 | --- | --- |
-| 版本 | v1.0（完整版；v0.1 精简版经确认后展开） |
+| 版本 | v1.1（接口规范与数据模型细化评审后修订） |
 | 日期 | 2026-10-13 |
 | 作者 | 司南（产品经理 Agent） |
-| 状态 | 待评审 |
+| 状态 | 待复审（本轮评审意见已收敛并修订，见评审记录） |
 | 关联分支 | `feature/api-platform` |
 | 需求基线参考 | `docs/requirements/README.md`（本文不修改基线，评审通过后按基线变更规则回填） |
 
-**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑。
+**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）。
+
+**评审记录**：
+
+| 轮次 | 聚焦区 | 意见数 | 收敛结果 |
+| --- | --- | --- | --- |
+| R1 | 接口规范（第 8 章） | 10 | 全部采纳（P0 2 条 / P1 7 条 / P2 1 条） |
+| R2 | 数据模型（第 9 章） | 10 | 采纳 9、部分采纳 1（P0 2 条） |
+
+明细、依据与冲突裁决见 `docs/audit/api-platform-prd-review-2026-10-13.md`。
 
 ## 二、背景与目标
 
@@ -187,6 +196,13 @@ active ──disable──► disabled ──enable──► active
 过期（expires_at < now）在鉴权时按 disabled 处理，状态列不变，详情页标注「已过期」
 ```
 
+**状态规则（评审 R1-02 / R1-03 补充）**：
+
+- **轮换无宽限期**：`rotate` 在同一事务内创建新 Key 并把旧 Key 置 `revoked`，旧 Key 立即不可用；需要并行过渡时，用户应先创建新 Key、切换完成后再禁用旧 Key。
+- **revoked 是终态**：对 revoked Key 调 `enable` 返回 409 `MODEL_KEY_STATE_CONFLICT`；`disable`/`delete` 幂等（重复调用返回 200 与当前状态）。
+- **派生状态**：接口统一返回 `effectiveStatus`（`active`/`disabled`/`revoked`/`expired`），由服务端时钟计算，避免前端各自实现过期判断造成时钟口径不一致。
+- **员工在职校验**：鉴权时同时校验所属员工为在职（复用平台既有校验），员工停用即其全部 Key 不可用，不新增级联状态列。
+
 ## 八、接口规范
 
 > 控制面错误统一走平台既有 ProblemDetails（`type/title/status/code/message/detail/traceId`）；网关面错误统一走 OpenAI 错误信封。两者不混用。
@@ -196,17 +212,20 @@ active ──disable──► disabled ──enable──► active
 | 方法 | 路径 | 权限 | 说明 |
 | --- | --- | --- | --- |
 | POST | `/keys` | `model_service.key.manage` | 创建 Key；响应含一次性明文 |
-| GET | `/keys` | `model_service.key.read` | 本人 Key 列表（分页，不含明文） |
+| GET | `/keys` | `model_service.key.read` | 本人 Key 列表（分页，不含明文；默认排除 revoked，`includeRevoked=true` 可查） |
 | GET | `/keys/:keyId` | `model_service.key.read` | 详情（含限额与最近用量摘要） |
+| PATCH | `/keys/:keyId` | `model_service.key.manage` | 变更名称/限额/过期（评审 R1-01 新增；不承载状态变更） |
 | POST | `/keys/:keyId/disable` | `model_service.key.manage` | 禁用 |
-| POST | `/keys/:keyId/enable` | `model_service.key.manage` | 启用 |
-| POST | `/keys/:keyId/rotate` | `model_service.key.manage` | 轮换；响应含新一次性明文 |
-| DELETE | `/keys/:keyId` | `model_service.key.manage` | 删除（置 revoked） |
+| POST | `/keys/:keyId/enable` | `model_service.key.manage` | 启用（revoked 返回 409） |
+| POST | `/keys/:keyId/rotate` | `model_service.key.manage` | 轮换（旧钥同事务置 revoked，无宽限期）；响应含新一次性明文 |
+| DELETE | `/keys/:keyId` | `model_service.key.manage` | 删除（置 revoked，不物理删除，保留调用明细可查） |
 | GET | `/keys/:keyId/calls` | `model_service.usage.read` | 调用明细（分页 + 时间/状态/模型筛选） |
 | GET | `/usage` | `model_service.usage.read` | 本人用量汇总（今日/近 7 日/近 30 日序列） |
-| GET | `/admin/keys` | `model_service.key.manage_all` | 全平台 Key 列表 |
+| GET | `/admin/keys` | `model_service.key.manage_all` | 全平台 Key 列表（项含 `owner`） |
 | POST | `/admin/keys/:keyId/disable` | `model_service.key.manage_all` | 代禁用 |
 | GET | `/admin/usage` | `model_service.usage.read_all` | 全平台用量（按用户/按模型 Top） |
+
+分页与筛选复用平台既有 `packages/server/src/system/http/pagination.dto.ts` 的口径与响应形状，不新增第二套分页契约。
 
 创建请求/响应示例：
 
@@ -220,15 +239,64 @@ active ──disable──► disabled ──enable──► active
 
 限额字段均可空：为空时用平台默认（配置项 `LLM_DEFAULT_RPM/TPM/DAILY_TOKENS`）。列表/详情响应一律只含 `prefix`，不含明文与哈希。
 
+**Key 响应 DTO（列表项与详情同构，详情额外含 `usageSummary`）**（评审 R1-05）：
+
+| 字段 | 类型 | 口径 |
+| --- | --- | --- |
+| `keyId` | string | 主键 |
+| `name` | string | 用户命名 |
+| `prefix` | string | 明文前 16 字符（不含明文与哈希） |
+| `status` | string | 存储状态：`active`/`disabled`/`revoked` |
+| `effectiveStatus` | string | 派生状态，另含 `expired`（服务端时钟计算） |
+| `limits` | object | `{ rpm, tpm, dailyTokens }`，`null` 表示使用平台默认 |
+| `owner` | object? | 仅管理面返回：`{ employeeId, employeeName }` |
+| `lastUsedAt` / `expiresAt` / `createdAt` / `disabledAt` | string? | ISO 8601；`disabledAt` 在启用后为 `null` |
+
+**创建/变更请求校验规则**（越界返回 400 `MODEL_KEY_INVALID_LIMIT`）（评审 R1-05 / R2-06）：
+
+| 字段 | 规则 |
+| --- | --- |
+| `name` | 必填，1–64 字符；同一用户内未撤销 Key 名称唯一 |
+| `rpmLimit` | 可空；1–6000 且不高于平台上限 `LLM_MAX_RPM` |
+| `tpmLimit` | 可空；1–10,000,000 且不高于 `LLM_MAX_TPM` |
+| `dailyTokenLimit` | 可空；1–1,000,000,000 且不高于 `LLM_MAX_DAILY_TOKENS` |
+| `expiresInDays` | 可空；1–365 |
+| 活跃 Key 数量 | 每人 `active` + `disabled` 的 Key 数 ≤ `LLM_MAX_KEYS_PER_USER`（默认 10），超限返回 409 `MODEL_KEY_LIMIT_REACHED` |
+
+**幂等与并发语义**（评审 R1-03 / R1-04）：
+
+| 操作 | 重复调用 | 并发保护 |
+| --- | --- | --- |
+| disable / enable / delete | 幂等：重复调用返回 200 与当前状态；enable 对 revoked 返回 409 | 状态变更按 CAS 执行（`update … where key_id = ? and status = 期望前置状态`），未命中返回 409 `MODEL_KEY_STATE_CONFLICT`（沿用 `system/http/domain-error.ts` 的冲突映射） |
+| rotate | 不支持重放：每次调用产生新 Key | 同上，旧钥 CAS 置 revoked |
+| create | 同名（未撤销）返回 409 `MODEL_KEY_NAME_DUPLICATED` | 部分唯一索引兜底（见 9.1），不引入独立幂等键 |
+
+**控制面错误码**（ProblemDetails 的 `code`，SCREAMING_SNAKE，与平台既有风格一致）（评审 R1-06）：
+
+| 错误码 | HTTP | 场景 |
+| --- | --- | --- |
+| `MODEL_KEY_NOT_FOUND` | 404 | Key 不存在；**访问他人 Key 同样返回此码**，不泄露存在性 |
+| `MODEL_KEY_STATE_CONFLICT` | 409 | 状态机不允许当前操作 / CAS 未命中 / 并发冲突 |
+| `MODEL_KEY_NAME_DUPLICATED` | 409 | 同名未撤销 Key 已存在 |
+| `MODEL_KEY_LIMIT_REACHED` | 409 | 活跃 Key 数量达上限 |
+| `MODEL_KEY_INVALID_LIMIT` | 400 | 限额或有效期越界 |
+
 ### 8.2 网关面（`/v1`，Bearer 鉴权，OpenAI 兼容）
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | `/v1/models` | 模型列表（透传上游，附权限过滤后的可用模型） |
+| GET | `/v1/models` | 模型列表（透传上游）；**同样需 Bearer 鉴权并计入调用记录**（`endpoint=models`，tokens 记 0） |
 | POST | `/v1/chat/completions` | 对话补全；`stream=true` 时 SSE 透传 |
 | POST | `/v1/embeddings` | 向量化 |
 
-鉴权链：`Authorization: Bearer sk-aihub-...` → HMAC-SHA256 计算 → 唯一索引查库 → 校验 `status=active` 且未过期 → 限额预检（RPM/TPM 窗口 + 日配额）→ 放行转发。任一步失败即拒绝并记账（`status_code` 为 401/403/429，tokens 记 0）。
+**鉴权链**：`Authorization: Bearer sk-aihub-...` → HMAC-SHA256 计算 → 唯一索引查库 → 校验 `effectiveStatus=active` 且所属员工在职 → 限额预检（RPM/TPM 窗口 + 日配额）→ 放行转发。任一步失败即拒绝并记账（`status_code` 为 401/403/429，tokens 记 0）。
+
+**边界约定（评审 R1-07 / R1-09）**：
+
+- **不开放 CORS**：网关面不返回 CORS 响应头，API Key 禁止用于浏览器端直连（避免 Key 暴露在前端），仅限服务端与本地脚本调用；
+- **熔断粒度**：本期为上游整体全局熔断（单上游），不做按模型粒度；
+- **请求体上限**：沿用平台 body-parser 配置，超限返回 413 + OpenAI 信封；
+- **版本兼容**：网关面语义对齐 OpenAI；未来破坏性变更须启用新前缀（如 `/v2`），不得原地破坏 `/v1` 契约。
 
 网关错误信封（OpenAI 格式）：
 
@@ -246,8 +314,11 @@ active ──disable──► disabled ──enable──► active
 | 502 | upstream_error | `upstream_error` | 上游连接/响应错误 |
 | 504 | upstream_error | `upstream_timeout` | 首 token 30s 或整体 120s 超时 |
 | 503 | service_unavailable | `circuit_open` | 熔断打开中 |
+| 413 | invalid_request_error | `payload_too_large` | 请求体超过平台上限（评审 R1-09 新增） |
 
-流式约束：SSE 事件格式与 OpenAI 一致（`data: {...}` / `data: [DONE]`）；客户端断连时取消上游请求并记账为已取消；熔断对流式同样生效。
+`Retry-After` 口径（评审 R1-09）：整数秒；RPM/TPM 超限为当前窗口剩余秒数（1–60）；日配额超限为距次日 00:00（Asia/Shanghai）的剩余秒数，上限 86400。
+
+流式约束（评审 R1-08 / R1-09）：SSE 事件格式与 OpenAI 一致（`data: {...}` / `data: [DONE]`）；**网关在调用方未显式设置时自动注入 `stream_options.include_usage = true`**，保证末块返回 usage 用于计量；上游仍未返回 usage 时按本地估算并置 `usage_estimated = true`（见 9.2）；**流式已下发 200 与部分块后上游失败**时不再改 HTTP 状态码，改为下发 `data: {"error": {...}}` 事件且**不发送 `[DONE]`**，调用方据此判定流异常结束；客户端断连时取消上游请求并记账为已取消；熔断对流式同样生效。
 
 ## 九、数据模型
 
@@ -268,9 +339,9 @@ active ──disable──► disabled ──enable──► active
 | `expires_at` | timestamptz | 可空；过期按禁用处理 |
 | `last_used_at` | timestamptz | 可空；最近一次成功调用 |
 | `rotated_from_key_id` | uuid | 可空，自引用；轮换谱系 |
-| `created_at` / `updated_at` / `disabled_at` | timestamptz | NOT NULL DEFAULT now()（disabled_at 可空） |
+| `created_at` / `updated_at` / `disabled_at` | timestamptz | NOT NULL DEFAULT now()（`disabled_at` 可空：仅记录最近一次禁用时刻，**启用时清空为 NULL**，评审 R2-08） |
 
-索引：`key_hash` 唯一索引（查找主路径）；`(employee_id, status, created_at desc)`（列表）。
+索引：`key_hash` 唯一索引（查找主路径）；`(employee_id, status, created_at desc)`（列表）；**部分唯一索引 `(employee_id, name) where status <> 'revoked'`**（同名防重，允许撤销后复用名称，评审 R2-05；由数据库约束兜底，不依赖 check-then-insert）。
 
 ### 9.2 `llm_api_call_logs`（100% 调用记录，同步单行写入）
 
@@ -279,14 +350,15 @@ active ──disable──► disabled ──enable──► active
 | `call_id` | uuid | PK |
 | `key_id` / `employee_id` | uuid | NOT NULL |
 | `endpoint` | varchar(32) | `chat_completions`/`embeddings`/`models` |
-| `model` | varchar(64) | 请求模型名 |
+| `model` | varchar(64) | 归一化模型名：取上游响应 `model`，缺省回退请求值并截断至 64（评审 R2-03；防止调用方伪造任意模型字符串撑爆聚合表主键） |
 | `stream` | boolean | NOT NULL DEFAULT false |
 | `prompt_tokens` / `completion_tokens` / `total_tokens` | int | 上游返回口径；失败/拒绝记 0 |
 | `duration_ms` | int | 网关侧耗时 |
 | `status_code` | int | 网关返回给调用方的状态码 |
 | `error_code` | varchar(32) | 可空（见 8.2 code 表） |
+| `usage_estimated` | boolean | NOT NULL DEFAULT false；上游未返回 usage 时按本地估算并置 true（评审 R2-04）；看板与对账须能区分估算值与上游实测值 |
 | `trace_id` | varchar(64) | 关联请求追踪 |
-| `requested_at` | timestamptz | NOT NULL DEFAULT now() |
+| `requested_at` | timestamptz | 请求**开始时刻**（记账时显式传入 `startedAt`，非记账时刻），用于业务日归属（评审 R2-09） |
 
 索引：`(employee_id, requested_at desc)`、`(key_id, requested_at desc)`、`(requested_at)`（保留清理）。
 
@@ -304,7 +376,19 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 
 ### 9.4 口径与保留策略
 
-- **日配额判定**：`sum(total_tokens)` over 当日 `llm_api_call_logs`（employee 维度）+ 进程内当日放行修正（防重启漂移）；软限额，异步极小窗口内可能少量超额，PRD 明确接受。
+- **业务日定义**（评审 R2-02）：业务日 = `Asia/Shanghai` 自然日；服务器与数据库可能运行于 UTC，必须显式换算，**禁止依赖数据库会话时区隐式切分**。
+- **日配额判定**：按员工维度累计当日 token：
+
+```sql
+select coalesce(sum(total_tokens), 0)
+from llm_api_call_logs
+where employee_id = $1
+  and requested_at >= date_trunc('day', now() at time zone 'Asia/Shanghai') at time zone 'Asia/Shanghai'
+```
+
+  叠加进程内当日已放行修正（防重启漂移）；软限额，并发窗口内可能少量超额，PRD 明确接受。
+- **性能与演进**（评审 R2-01，部分采纳）：该查询走 `(employee_id, requested_at)` 索引，估算 P95 < 10ms（每日 10 万行以内）；超过该量级时改为读 `llm_usage_daily` + 进程内修正，把「鉴权口径」与「看板口径」分离。不改为纯异步聚合，理由是配额判定需可对账、口径唯一。
+- **归属日**：以请求开始时刻（`startedAt`）归属业务日，跨零点长请求不重复计入次日。
 - **保留**：`llm_api_call_logs` 保留 180 天（与行为事件一致），`llm_usage_daily` 长期保留；清理任务入 worker（复用现有 retention runner 模式）。
 - **幂等**：Key 创建/轮换/禁用均以数据库约束与状态机保证，无资金操作，不涉及对账。
 
@@ -315,6 +399,8 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 - 生成：`sk-aihub-` + 32 位 base62 随机串（`crypto.randomBytes`，约 190 bit 熵）；
 - 存储：仅存 HMAC-SHA256 哈希（服务端密钥经配置注入，不入库）；明文仅在创建/轮换响应体返回一次，不落库、不入日志（logger 脱敏 `sk-aihub-` 前缀）；
 - 查找：按哈希唯一索引 O(1) 定位；响应只回前缀。
+- **密钥管理**（评审 R2-07）：HMAC 密钥来自配置 `LLM_GATEWAY_HMAC_SECRET`（不入库）；支持 `LLM_GATEWAY_HMAC_SECRET_PREVIOUS` 双密钥过渡——校验时先新后旧，过渡期结束后移除旧密钥，避免密钥轮换导致全部 Key 一次性失效（应急 runbook 同步更新）。
+- **响应缓存**（评审 R1-10）：含一次性明文的响应必须携带 `Cache-Control: no-store`；前端不得把明文写入 localStorage 或任何持久化缓存（沿用平台「不持久化会话凭据」的既有约定），明文仅存在于当前页面内存，离开页面即清除。
 
 ### 10.2 鉴权与权限模型
 
@@ -331,6 +417,7 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 | `model_service.gateway.config.manage` | 网关配置管理 | super_admin |
 
 - 数据权限：所有查询强制 `employee_id = 当前actor`，管理面显式切换全平台条件；越权访问按 404 处理（不泄露存在性，沿用平台口径）。
+- 在职校验（评审 R2-09 连带）：网关鉴权与控制面访问均校验员工在职状态，停用员工全部 Key 立即不可用；不引入额外的 Key 状态列。
 
 ### 10.3 传输、审计与应急
 
@@ -434,7 +521,7 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 | RK-06 | 范围蔓延（计费/多租户/多模型源） | 中 | 本期显式不做；变更走评估表 | 跟踪中 |
 | RK-07 | 限流窗口重启清零 | 低 | V1 接受；多实例演进时迁移共享存储 | 已记录 |
 
-**遗留问题**：① Alertmanager 通道是否存在待运维确认；② vLLM 实际模型名与上下文上限需部署后回填配置；③ 基线回填（本文评审通过后按 `docs/requirements/README.md` 变更规则登记 REQ ID）。
+**遗留问题**：① Alertmanager 通道是否存在待运维确认；② vLLM 实际模型名与上下文上限需部署后回填配置；③ 基线回填（本文评审通过后按 `docs/requirements/README.md` 变更规则登记 REQ ID）；④ **多 Key 放大**：RPM/TPM 按 Key 维度计算，用户可通过创建多个 Key 放大并发（每人活跃上限 10 已缓解）；用户级 RPM 兜底列入后续版本（评审 R1-10 连带，本轮未纳入范围）；⑤ `char(64)` 定长哈希列与 `trace_id` 索引两条低优意见不予采纳，理由见评审记录。
 
 ## 十六、附录
 
@@ -460,6 +547,10 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 | FR-16 | 管理面（全平台视图与代禁用） | 8.1/10.2 | TC-16 | 待开发 |
 | FR-17 | 生命周期审计 | 10.3 | TC-17 | 待开发 |
 | FR-18 | 配置化默认值 | 8.1/十三 | TC-18 | 待开发 |
+| FR-19 | Key 属性变更（名称/限额/过期） | 8.1 | TC-19 | 待开发 |
+| FR-20 | 幂等与并发语义（CAS、同名防重、活跃上限） | 7.5/8.1/9.1 | TC-20 | 待开发 |
+| FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发 |
+| FR-22 | 网关面边界（无 CORS、413、`Retry-After` 口径、版本兼容） | 8.2 | TC-22 | 待开发 |
 
 ### 16.2 参考材料
 
@@ -467,6 +558,14 @@ PK `(usage_date, employee_id, key_id, model)`；worker 每 5 分钟从 `llm_api_
 - 分支与交付规范：`docs/development/git-branching.md`
 - 错误与限流现状：`packages/server/src/system/http/`、`packages/server/src/system/security/rate-limit.middleware.ts`
 - 指标现状：`packages/server/src/system/observability/metrics.ts`
+- 本轮评审记录：`docs/audit/api-platform-prd-review-2026-10-13.md`
+
+### 16.3 可测性要求（评审 R2-10）
+
+- **时钟与上游可注入**：沿用 `rate-limit.middleware.ts` 的 `now()` 注入模式，限流窗口、配额重置、过期判定、熔断计时均可在单测中确定性验证，不依赖真实等待；
+- **上游桩**：提供可配置的 vLLM 桩（固定 usage 返回、可注入延迟与 5xx/超时），e2e 不依赖真实 GPU 服务；
+- **必测边界用例**：流式中途失败（TC-13）、客户端断流（TC-08）、跨零点归属日（TC-12）、上游不返回 usage 的估算路径（TC-21）、HMAC 双密钥过渡校验（TC-17）；
+- **对账用例**：看板聚合数字与 `llm_api_call_logs` 逐日对账（TC-15），差异必须为 0（除 `usage_estimated=true` 的估算行单独标注）。
 
 ---
 
