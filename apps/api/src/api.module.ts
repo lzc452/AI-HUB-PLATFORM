@@ -11,6 +11,7 @@ import type { Kysely } from "kysely";
 import {
   HealthModule,
   ApplicationModule,
+  ArtifactPipeline,
   CatalogModule,
   CatalogService,
   InteractionModule,
@@ -155,7 +156,15 @@ export class ApiModule {
         FeedbackModule.register(database),
         NotificationModule.register(database),
         CreatorModule.register(database),
-        DemandModule.register(database, storageDirectory, applicationModule),
+        DemandModule.register(
+          database,
+          storageDirectory,
+          applicationModule,
+          artifactVerification instanceof ArtifactPipeline
+            ? artifactVerification
+            : undefined,
+          artifactStorage,
+        ),
         AnalyticsModule.register(database),
         PortalModule.register(database, applicationModule),
         HealthModule.register(createProductionDatabaseCheck(database, metrics)),

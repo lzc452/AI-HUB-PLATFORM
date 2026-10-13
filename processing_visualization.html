@@ -535,7 +535,7 @@
     <script>
       const storageKey = "ai-hub-processing-visualization-v2";
       const seedData = {
-        updatedAt: "2026-08-28",
+        updatedAt: "2026-10-08",
         phases: [
           {
             id: "product",
@@ -543,16 +543,16 @@
             progress: 85,
             goal: "V1 范围、路线、阶段门禁和验收口径",
             tasks: [
-              "规格与 roadmap 已存在",
-              "Phase 1–7 详细计划/台账均已完备",
-              "新增需求默认进入 V1.1",
+              "docs/requirements 统一 41 项需求、实现/测试追踪与 17 组验收案例",
+              "原设计、路线图与阶段台账按历史批次保留",
+              "GAP-01–10 分开记录功能差异、外部装配与生产验证门禁",
             ],
           },
           {
             id: "ui",
             name: "UI 设计",
             progress: 100,
-            goal: "Web 壳、核心页面、组件与交互状态",
+            goal: "历史界面设计与实现记录；当前双端联调及业务 UAT 尚未签核",
             tasks: [
               "Phase 1 应用壳已存在（纯静态）",
               "SkillHub 1440/768/390 逆向截图、DOM、交互与设计规格已归档",
@@ -570,9 +570,12 @@
           {
             id: "dev",
             name: "开发",
-            progress: 100,
-            goal: "按八阶段逐步实现身份、应用、市场、需求、分析与运维",
+            progress: 33,
+            goal: "当前按六项 P0 门禁计进度，已通过两项；其余门禁及后续一致性/集成仍在推进",
             tasks: [
+              "当前实施顺序与退出证据统一见 docs/requirements/gates.md，不沿用历史阶段完成率作为签核",
+              "GAP-01/03 已修复并通过真实 PostgreSQL/HTTP 定向门禁；六项 P0 中其余四项仍未关闭",
+              "submitDraft 与 confirmClaim 通知入口已补齐，旧角色授权/广播及实际通知落库仍待验证",
               "Phase 1–7 后端模块全部落地",
               "Portal App、Skill、Plugin、MCP、SkillPackage、AppHunt、评论聚合和统一发布 API 已接入平台",
               "Portal app 写入已统一委托 ApplicationService；Portal 保留兼容 URL，原生 Skill/Plugin/MCP 生命周期不变",
@@ -592,8 +595,9 @@
             id: "test",
             name: "测试",
             progress: 98,
-            goal: "每阶段 TDD、类型、边界、集成、Compose 和验收证据",
+            goal: "历史测试资产与当前门禁验证；当前结果统一见 docs/requirements/gates.md",
             tasks: [
+              "2026-10-08：49 项身份/通知矩阵单测、146 项应用/需求单测、3 项真实 PostgreSQL/HTTP 回归通过；完整双业务链及21场景未通过",
               "server 98 tests, API 19 tests, DB 24 tests 通过",
               "server 106 tests, API 31 tests, DB 28 tests 通过",
               "Web 全量 43 tests 通过（含权限恢复、菜单过滤、路由守卫、角色切换和页面回归）",
@@ -614,7 +618,7 @@
             id: "ops",
             name: "部署运维",
             progress: 48,
-            goal: "Compose、CI、监控、生产安全、备份恢复和上线演练",
+            goal: "历史基础设施建设记录；当前真实生产部署、恢复演练及签核未执行",
             tasks: [
               "开发/测试 Compose 和 CI/CD 已存在",
               "Phase 7 生产契约为本地验证通过",
@@ -1035,6 +1039,38 @@
         ],
         tasks: [
           {
+            id: "t-p0-business-boundaries-20261008",
+            phase: "dev",
+            status: "进行中",
+            title: "P0 业务、权限与文件边界门禁",
+            owner: "Codex",
+            start: "2026-10-08",
+            end: "",
+            progress:
+              "PEM 私钥加载与停用角色运行撤权已修复：49 项身份/通知矩阵单测、146 项应用/需求单测、3 项真实 PostgreSQL/HTTP 用例通过。完整草稿及方案确认通知入口已补齐。",
+            problem:
+              "通知仍使用旧角色授权/广播；制品向导、需求附件安全扫描与 Portal 受众边界尚未关闭，完整双业务链、21 场景及后续生产门禁未通过。",
+            solution:
+              "每项先复现失败，再修复并取得对应范围证据；当前结果集中在 docs/requirements/gates.md 和 .verify/v1/p0-gates-20261008/results.json。",
+            skip: "尚未执行真实外部投递、跨仓双端 UAT、生产部署/恢复及签核；单项通过不代替完整阶段退出。",
+          },
+          {
+            id: "t-document-cleanup-20261007",
+            phase: "product",
+            status: "已完成",
+            title: "需求链路统一、测试文档合并与临时文件清理",
+            owner: "Codex",
+            start: "2026-10-07",
+            end: "2026-10-08",
+            progress:
+              "按当前源码/契约/测试整理 docs/requirements：41 项需求、实现数据链、17 组验收与 10 个差异；合并/迁移/清理 19 份旧文档和 48 个临时文件。server 两批 200/237 项（部分重叠）及 Web 92 项定向测试通过；收尾校正分析 HTTP 权限和下载登记语义。",
+            problem:
+              "变更后角色、审核发布、渠道、需求状态、通知与测试结论不统一；源码仍有私钥加载、通知角色/新入口、制品向导、附件扫描及 Portal 受众等差异。",
+            solution:
+              "统一当前基线、追踪矩阵、验收手册和 GAP 门禁；旧设计/路线图/报告标历史，保留 .verify 证据及原有未提交修改；文档链接、需求映射和格式分别检查。",
+            skip: "本轮不改业务逻辑；未执行迁移/seed、全量 CI、真库/浏览器、外部发送和生产签核，历史全绿不代替当前验收。",
+          },
+          {
             id: "t-portal-app-lifecycle-unification-20260825",
             phase: "dev",
             status: "已完成",
@@ -1303,7 +1339,7 @@
             problem:
               "GitHub integration is read-only; remote development bootstrap, archive tags, branch cleanup, PR creation, and branch protection remain external actions.",
             solution:
-              "Recorded the exact remote migration sequence and required settings in docs/development/branch-migration-2026-08-05.md while keeping local changes safe and reversible.",
+              "远端迁移顺序、归档映射与必需设置已合并至 docs/development/git-branching.md 的历史迁移记录，保留当时的远端治理待办。",
             skip: "Production hosts, GHCR credentials, protected environment approvers, and remote ref mutation are not configured in this workspace.",
           },
           {
@@ -1753,6 +1789,18 @@
           },
         ],
         events: [
+          {
+            date: "2026-10-08",
+            phase: "dev",
+            title: "进入 P0 门禁实施，取得首批真库证据",
+            body: "用户授权业务修复后，复现并修复生产 PEM 导出失败及停用角色仍授权；真实 Cookie 会话撤权/恢复与记录保留通过。通知两入口服务回归通过，当前权限及实际落库继续推进，全部五步目标仍在实施。",
+          },
+          {
+            date: "2026-10-08",
+            phase: "product",
+            title: "完整需求与验收口径归一",
+            body: "docs/requirements 连接业务目标→角色→功能流程→接口数据→测试→后续门禁；19 份旧文档合并去向已列明、48 个临时文件已清理；收尾校正分析权限及导出接口口径。定向单测通过，真环境验收及十项差异继续保留。",
+          },
           {
             date: "2026-08-28",
             phase: "dev",

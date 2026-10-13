@@ -35,6 +35,20 @@ export interface ApplicationAssetContent {
 }
 
 /**
+ * 应用受众可见性端口。
+ *
+ * 资产内容（图标/截图/附件）与应用详情共享同一份受众判定：详情不可见时，
+ * 直接按 applicationId + assetId 拉取二进制内容就是同一个越权洞的另一种形态。
+ * 端口化而不是直接依赖 Kysely，是为了让上传服务保持可单测。
+ */
+export interface AudienceVisibilityPort {
+  isApplicationVisible(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<boolean>;
+}
+
+/**
  * 应用资产与制品上传的共享业务边界。
  *
  * ApplicationController 与 PortalApplicationUploadController 只负责路由和
@@ -45,6 +59,11 @@ export class ApplicationUploadService {
     private readonly repository: ApplicationRepository,
     private readonly storage: ReadableObjectStoragePort,
     private readonly pipeline: ArtifactPipeline,
+    /**
+     * 受众门禁。未装配时**不放行**（fail-closed）：资产内容与详情页共享同一
+     * 份受众判定，缺少判定端口就等于默认所有人可见，属于静默的越权默认值。
+     */
+    private readonly audienceVisibility?: AudienceVisibilityPort,
   ) {}
 
   async createUpload(
@@ -262,6 +281,17 @@ export class ApplicationUploadService {
     const application = await this.repository.findApplication(applicationId);
     if (application === null)
       throw new NotFoundException("APPLICATION_NOT_FOUND");
+    // 受众门禁先于一切资产读取：附件里可能包含受众外不该看到的文件，
+    // 放在后面判等于「先读到内容再决定给不给」。
+    if (
+      this.audienceVisibility === undefined ||
+      !(await this.audienceVisibility.isApplicationVisible(
+        actor,
+        applicationId,
+      ))
+    ) {
+      throw new NotFoundException("APPLICATION_ASSET_NOT_FOUND");
+    }
     const asset = await this.repository.findAsset(assetId);
     if (
       asset === null ||

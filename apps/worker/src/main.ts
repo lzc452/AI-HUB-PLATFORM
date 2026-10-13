@@ -146,8 +146,10 @@ async function bootstrap() {
       return [...new Set([...admins, ...superAdmins])];
     },
     listApplicationReviewers: () =>
-      runtime.identityRepository.listEmployeeIdsWithRole(
-        "application_reviewer",
+      // 按权限码而非角色码：application_reviewer 这个角色码在
+      // SYSTEM_ROLE_DEFINITIONS 里并不存在，写死它会让 SLA 提醒永远发给空集。
+      runtime.identityRepository.listEmployeeIdsWithPermission(
+        "application.review",
       ),
     createNotification: async (input) => {
       await runtime.notifications.createForEvent(systemActor, input);

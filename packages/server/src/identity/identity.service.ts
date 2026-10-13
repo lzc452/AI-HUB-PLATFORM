@@ -18,9 +18,11 @@ import type {
   CreateEmployeeInput,
   DingTalkDirectoryPort,
   DingTalkSyncMode,
+  EmployeeRecord,
   IdentityRepository,
   IdentityRoleRecord,
   LoginResult,
+  RoleRecord,
   AudienceEvaluator,
 } from "./identity.types.js";
 import type {
@@ -815,53 +817,56 @@ export class IdentityService {
       });
     }
 
-    const preview = await Promise.all(
-      normalized.map(async (incoming) => {
-        const existing = await this.repository.findEmployee(
-          incoming.employeeId,
-        );
-        const conflicts: Record<string, { current: string; incoming: string }> =
-          {};
-        if (existing !== null) {
-          compareIfDifferent(
-            conflicts,
-            "displayName",
-            existing.displayName,
-            incoming.displayName,
-          );
-          compareIfDifferent(
-            conflicts,
-            "primaryDepartmentId",
-            existing.primaryDepartmentId,
-            incoming.primaryDepartmentId,
-          );
-          const existingRoles = [
-            ...(await this.repository.listEmployeeRoles(incoming.employeeId)),
-          ]
-            .map((role) => role.roleCode)
-            .sort();
-          compareIfDifferent(
-            conflicts,
-            "roleCodes",
-            existingRoles.join(","),
-            [...incoming.roleCodes].sort().join(","),
-          );
-          compareIfDifferent(
-            conflicts,
-            "status",
-            existing.status,
-            incoming.status,
-          );
-        }
-        return {
-          ...incoming,
-          passwordProvided: incoming.password !== null,
-          password: incoming.password,
-          exists: existing !== null,
-          conflicts,
-        };
-      }),
+    // 预取一次，供所有行复用。仓储支持批量时2 次查询搞定，
+    // 否则退回逐行查询（测试替身没有批量方法）。
+    const existingById = await this.prefetchEmployees(
+      normalized.map((incoming) => incoming.employeeId),
     );
+    const rolesByEmployeeId = await this.prefetchRoles(
+      normalized.map((incoming) => incoming.employeeId),
+    );
+
+    const preview = normalized.map((incoming) => {
+      const existing = existingById.get(incoming.employeeId) ?? null;
+      const conflicts: Record<string, { current: string; incoming: string }> =
+        {};
+      if (existing !== null) {
+        compareIfDifferent(
+          conflicts,
+          "displayName",
+          existing.displayName,
+          incoming.displayName,
+        );
+        compareIfDifferent(
+          conflicts,
+          "primaryDepartmentId",
+          existing.primaryDepartmentId,
+          incoming.primaryDepartmentId,
+        );
+        const existingRoles = (rolesByEmployeeId.get(incoming.employeeId) ?? [])
+          .map((role) => role.roleCode)
+          .sort();
+        compareIfDifferent(
+          conflicts,
+          "roleCodes",
+          existingRoles.join(","),
+          [...incoming.roleCodes].sort().join(","),
+        );
+        compareIfDifferent(
+          conflicts,
+          "status",
+          existing.status,
+          incoming.status,
+        );
+      }
+      return {
+        ...incoming,
+        passwordProvided: incoming.password !== null,
+        password: incoming.password,
+        exists: existing !== null,
+        conflicts,
+      };
+    });
 
     return {
       rows: preview,
@@ -873,6 +878,57 @@ export class IdentityService {
       },
       errors,
     };
+  }
+
+  /**
+   * 批量预取导入预览所需的员工记录。
+   *
+   * 原实现是 `Promise.all(rows.map(findEmployee))` —— N 行 N 次查询，
+   * 且**并发**发起，一批 5000 行会瞬间占满连接池把整个服务拖垮。
+   * 仓储支持批量时只发一次 `where id in (...)`。
+   */
+  private async prefetchEmployees(
+    employeeIds: readonly string[],
+  ): Promise<Map<string, EmployeeRecord>> {
+    const unique = [...new Set(employeeIds)];
+    const result = new Map<string, EmployeeRecord>();
+    if (unique.length === 0) return result;
+    if (this.repository.findEmployeesByIds !== undefined) {
+      for (const employee of await this.repository.findEmployeesByIds(unique)) {
+        result.set(employee.employeeId, employee);
+      }
+      return result;
+    }
+    // 降级：串行而非并发，避免仓储没提供批量能力时把连接池打满。
+    for (const employeeId of unique) {
+      const employee = await this.repository.findEmployee(employeeId);
+      if (employee !== null) result.set(employeeId, employee);
+    }
+    return result;
+  }
+
+  /** 批量预取导入预览所需的角色，语义与逐行 `listEmployeeRoles` 一致。 */
+  private async prefetchRoles(
+    employeeIds: readonly string[],
+  ): Promise<Map<string, readonly RoleRecord[]>> {
+    const unique = [...new Set(employeeIds)];
+    const result = new Map<string, readonly RoleRecord[]>();
+    if (unique.length === 0) return result;
+    if (this.repository.listEmployeeRolesByEmployeeIds !== undefined) {
+      for (const entry of await this.repository.listEmployeeRolesByEmployeeIds(
+        unique,
+      )) {
+        result.set(entry.employeeId, entry.roles);
+      }
+      return result;
+    }
+    for (const employeeId of unique) {
+      result.set(
+        employeeId,
+        await this.repository.listEmployeeRoles(employeeId),
+      );
+    }
+    return result;
   }
 
   async applyEmployeeImport(
@@ -1291,6 +1347,11 @@ export class IdentityService {
       repository.listEmployeeRoles(employeeId),
     ]);
 
+    // 停用角色仍然出现在 roleCodes 里（记录保留，便于审计「曾授予过」），
+    // 但它的权限不计入 actor.permissions —— 否则管理员停用一个角色后，
+    // 已登录用户的会话会继续凭该角色操作，停用形同虚设。
+    const effectiveRoles = roles.filter((role) => role.active);
+
     return {
       employeeId,
       displayName: employee.displayName,
@@ -1302,7 +1363,7 @@ export class IdentityService {
           return left.localeCompare(right);
         }),
       permissions: [
-        ...new Set(roles.flatMap((role) => role.permissions)),
+        ...new Set(effectiveRoles.flatMap((role) => role.permissions)),
       ].sort(),
       departmentIds,
       primaryDepartmentId: employee.primaryDepartmentId,
@@ -1320,9 +1381,14 @@ export class IdentityService {
     const roleRecords = await this.repository.listEmployeeRoles(
       request.actor.employeeId,
     );
+    // 同样只取有效角色：这里重新读库并与 actor.permissions 合并，
+    // 若不按 active 过滤，就绕过了 getActorContext 的停用角色收敛，
+    // 停用角色仍能通过 authorize() 拿到权限。
     const persistedPermissions = [
       ...(request.actor.permissions ?? []),
-      ...roleRecords.flatMap((role) => role.permissions),
+      ...roleRecords
+        .filter((role) => role.active)
+        .flatMap((role) => role.permissions),
     ];
     if (persistedPermissions.includes("*")) {
       return { allowed: true, reasonCode: "ALLOW_ROLE_PERMISSION" };
@@ -1355,6 +1421,18 @@ export class IdentityService {
 
   listEmployeeIdsWithRole(roleCode: string) {
     return this.repository.listEmployeeIdsWithRole(roleCode);
+  }
+
+  /**
+   * 解析持有指定权限码的员工（审核决策广播等按权限而非按角色分派的场景）。
+   * 仓储未实现时返回空数组：广播收件人为空属于「无人可通知」，
+   * 与通知端口整体可选的既有语义一致，不应让审核主流程失败。
+   */
+  async listEmployeeIdsWithPermission(permission: string) {
+    if (this.repository.listEmployeeIdsWithPermission === undefined) {
+      return [];
+    }
+    return this.repository.listEmployeeIdsWithPermission(permission);
   }
 
   listAuditEvents(input?: { eventType?: string; limit?: number }) {

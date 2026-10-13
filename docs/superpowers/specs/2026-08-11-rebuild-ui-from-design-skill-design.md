@@ -1,5 +1,7 @@
 # `rebuild-ui-from-design` 项目技能设计
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 ## 背景与目标
 
 `packages/ui/src` 保存 AI Hub Platform 的页面设计图，当前共有 21 张 PNG，多数为 1672×941，另有 2730×1536。前端实现位于 `apps/web`，采用 React 19、React Router、Ant Design 6、TailwindCSS 4、TanStack Query 和 Vitest；`packages/ui/src/theme.ts` 通过 `ConfigProvider` 提供全局主题。

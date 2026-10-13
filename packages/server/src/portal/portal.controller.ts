@@ -375,8 +375,8 @@ export class PortalController {
 
   @Get("departments")
   @OptionalAuth()
-  departments() {
-    return this.call(() => this.portal.departments());
+  departments(@CurrentActorOrNull() actor: ActorContext | undefined) {
+    return this.call(() => this.portal.departments(actor ?? null));
   }
 
   @Get("departments/:departmentId")

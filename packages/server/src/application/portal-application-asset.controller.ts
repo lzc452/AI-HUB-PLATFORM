@@ -53,9 +53,21 @@ export class PortalApplicationAssetController {
       disposition?: string;
     };
     if (asset.assetType === "attachment") {
-      const safeName = asset.fileName.replace(/["\r\n]/g, "_");
-      options.disposition = `attachment; filename="${safeName}"`;
+      options.disposition = contentDisposition(asset.fileName);
     }
     return new StreamableFile(stream, options);
   }
+}
+
+/**
+ * 构造附件下载的 Content-Disposition。
+ *
+ * HTTP 头只允许 ASCII，中文文件名直接写进 `filename="…"` 会让 Node 抛
+ * `Invalid character in header content ["Content-Disposition"]`，整个下载 500。
+ * 按 RFC 6266 / RFC 5987：ASCII `filename` 给旧客户端兜底（非 ASCII 字符
+ * 替换为下划线），`filename*=UTF-8''<percent-encoded>` 给现代客户端完整名称。
+ */
+function contentDisposition(fileName: string): string {
+  const fallback = fileName.replace(/[^\x20-\x7e]/gu, "_").replace(/["\\]/g, "_");
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }

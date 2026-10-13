@@ -137,9 +137,13 @@ export class DemandService {
       },
     );
     if (this.notifications !== undefined) {
+      // 按权限码而非角色码取收件人：`demand_operator` 只是恰好包含该权限的
+      // 一个系统角色，实际部署里审核职责常由自定义角色承担。
+      // 若这里写死角色码，这些审核员会永远收不到通知。
       const reviewers =
-        (await this.identityPort?.listEmployeeIdsWithRole("demand_operator")) ??
-        [];
+        (await this.identityPort?.listEmployeeIdsWithPermission?.(
+          PERMISSIONS.DEMAND_REVIEW,
+        )) ?? [];
       // 矩阵 demand.submitted 语义为广播全部运营者；单条失败不阻断其余广播。
       for (const reviewer of reviewers) {
         try {
@@ -396,29 +400,52 @@ export class DemandService {
     if (current.status !== "pending_claim") {
       throw new Error("DEMAND_CLAIM_INVALID_STATE");
     }
-    return this.repository.withTransaction(async (repository) => {
-      const claimed = await repository.confirmClaim(
-        demandId,
-        proposal.ownerEmployeeId,
-        proposal.collaboratorEmployeeIds,
-        expectedVersion,
-      );
-      await repository.updateClaimProposalStatus(proposalId, "selected");
-      await repository.recordAudit({
-        demandId,
-        actorEmployeeId: actor.employeeId,
-        eventType: "demand.claim.confirmed",
-        details: {
-          proposalId,
-          ownerEmployeeId: proposal.ownerEmployeeId,
-        },
-      });
-      await repository.emitOutbox({
-        demandId,
-        eventType: "demand.claim.confirmed",
-      });
-      return claimed;
-    });
+    const claimed = await this.repository.withTransaction(
+      async (repository) => {
+        const claimed = await repository.confirmClaim(
+          demandId,
+          proposal.ownerEmployeeId,
+          proposal.collaboratorEmployeeIds,
+          expectedVersion,
+        );
+        await repository.updateClaimProposalStatus(proposalId, "selected");
+        await repository.recordAudit({
+          demandId,
+          actorEmployeeId: actor.employeeId,
+          eventType: "demand.claim.confirmed",
+          details: {
+            proposalId,
+            ownerEmployeeId: proposal.ownerEmployeeId,
+          },
+        });
+        await repository.emitOutbox({
+          demandId,
+          eventType: "demand.claim.confirmed",
+        });
+        return claimed;
+      },
+    );
+    // 事务外通知提交人：方案确认意味着需求已被交付团队接手，
+    // 提交人是最需要知道结果的人。
+    //
+    // 此前 `claim()` 有这一步而 `confirmClaim()` 没有——两条路径都通向
+    // 「需求已被认领」的同一业务事实，却只有一条会通知提交人。
+    // 这样的遗漏不会被任何单测发现：单测只断言 recordChange，
+    // 而 queue() 失败又被静默catch，两个盲区叠加就成了长期缺陷。
+    if (
+      this.notifications !== undefined &&
+      current.requesterEmployeeId !== null
+    ) {
+      try {
+        await this.notifications.queue(actor, "demand.claimed", {
+          recipientEmployeeId: current.requesterEmployeeId,
+          aggregateId: demandId,
+        });
+      } catch {
+        // 规格 §5.8：通知失败不回滚已完成的认领确认。
+      }
+    }
+    return claimed;
   }
 
   async releaseClaim(
@@ -1116,6 +1143,30 @@ export class DemandService {
       throw new Error("DEMAND_PAGINATION_INVALID");
     }
     await this.assertAllowed(actor, "read");
+    // 仓储支持 SQL 分页时把 limit/offset 下推，避免把全部可见需求捞回内存再slice。
+    // 内存替身（测试）没有该方法，退回全量 + 应用层切片，语义完全一致。
+    if (this.repository.listVisiblePage !== undefined) {
+      const paged = await this.repository.listVisiblePage({
+        actor,
+        ...(input.status === undefined ? {} : { status: input.status }),
+        ...(input.query === undefined ? {} : { query: input.query }),
+        ...(input.requesterDepartmentId === undefined
+          ? {}
+          : { requesterDepartmentId: input.requesterDepartmentId }),
+        ...(input.audienceType === undefined
+          ? {}
+          : { audienceType: input.audienceType }),
+        ...(input.sort === undefined ? {} : { sort: input.sort }),
+        page: input.page,
+        pageSize: input.pageSize,
+      });
+      return {
+        items: paged.items.map((demand) => this.projectDemand(actor, demand)),
+        total: paged.total,
+        page: input.page,
+        pageSize: input.pageSize,
+      };
+    }
     const visible = await this.repository.listVisible({
       actor,
       ...(input.status === undefined ? {} : { status: input.status }),

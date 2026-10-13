@@ -86,3 +86,25 @@ development -> release/vX.Y -> full gates -> release PR -> main -> tag vX.Y
 - 已合并进 `development` 的变更通过 revert PR 回滚。
 - 已发布的生产修复使用 `hotfix/*`，随后分别向 `main` 与 `development` 提交经评审的 PR。
 - 绝不要通过 reset 或强推共享分支来回滚变更。
+
+## 2026-08-05 迁移与治理记录
+
+本节合并原独立迁移记录，保留历史基线与归档映射；本次文档整理未核查远端分支、标签和保护设置是否已经执行。
+
+治理工作从 `fix/nest-dynamic-config-error` 的 `cc38a494bc99b8717619c80618b53650c7b310ba` 开始，其父提交为阶段 7 顶端。该记录描述了从 `development` 经阶段 2、4、5、6、7 到修复分支的线性历史，治理候选顶端用于当时的单次 `development` 引导。
+
+当时建议在删除已完成阶段分支前创建以下不可变标签：
+
+| 分支 | 顶端 | 归档标签 |
+| --- | --- | --- |
+| `codex/phase-01-continuation` | `9fc43a0` | `archive/codex-phase-01` |
+| `feature/phase-02-identity-organization-authorization` | `d3b99e9` | `archive/phase-02` |
+| `feature/phase-04-market-search-interaction` | `f60def6` | `archive/phase-04` |
+| `feature/phase-05-ai-demand-innovation` | `4a6e9e4` | `archive/phase-05` |
+| `feature/phase-06-analytics-dashboard-export-assistant` | `e8255b3` | `archive/phase-06` |
+| `feature/phase-07-production-security-deployment-operations` | `c31b1f5` | `archive/phase-07` |
+| `fix/nest-dynamic-config-error` | 当时的治理候选顶端 | `archive/pre-development-bootstrap` |
+
+引导时不得强推已有引用；若远端已有 `development`，应先与维护者协调。若尚不存在，则在已验证的候选顶端创建一次，并在继续功能开发前启用本指南的分支保护。
+
+原记录中的 GitHub 集成为只读且未返回 PR，远端标签、分支创建或删除、PR 与保护设置当时仍待维护者处理。此项为历史待办，不能据文档合并认定远端治理已完成。

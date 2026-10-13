@@ -35,6 +35,34 @@ class MemoryIdentityRepository implements IdentityRepository {
     return operation(this);
   }
   readonly audits: string[] = [];
+  /** 逐行查询的调用次数，用于断言导入预览不再 N+1。 */
+  readonly perRowQueryCounts = { findEmployee: 0, listEmployeeRoles: 0 };
+  /** 批量查询的调用次数；存在即为 0 说明退回了逐行路径。 */
+  readonly batchQueryCounts = {
+    findEmployeesByIds: 0,
+    listEmployeeRolesByEmployeeIds: 0,
+  };
+
+  /**
+   * 批量取员工。这是仓储在真实 SQL 下的能力，
+   * 内存替身实现它以验证服务层优先走批量路径。
+   */
+  async findEmployeesByIds(employeeIds: readonly EmployeeId[]) {
+    this.batchQueryCounts.findEmployeesByIds += 1;
+    return employeeIds
+      .map((employeeId) => this.employees.get(employeeId))
+      .filter((record): record is EmployeeRecord => record !== undefined);
+  }
+
+  async listEmployeeRolesByEmployeeIds(employeeIds: readonly EmployeeId[]) {
+    this.batchQueryCounts.listEmployeeRolesByEmployeeIds += 1;
+    return employeeIds
+      .map((employeeId) => ({
+        employeeId,
+        roles: this.roles.get(employeeId) ?? [],
+      }))
+      .filter((entry) => (entry.roles ?? []).length > 0);
+  }
 
   async createDepartment(input: DepartmentSummary): Promise<void> {
     this.departments.set(input.departmentId, input);
@@ -55,11 +83,12 @@ class MemoryIdentityRepository implements IdentityRepository {
   async assignRole(employeeId: EmployeeId, roleCode: string): Promise<void> {
     this.roles.set(employeeId, [
       ...(this.roles.get(employeeId) ?? []),
-      { roleCode, permissions: [] },
+      { roleCode, permissions: [], active: true },
     ]);
   }
 
   async findEmployee(employeeId: EmployeeId): Promise<EmployeeRecord | null> {
+    this.perRowQueryCounts.findEmployee += 1;
     return this.employees.get(employeeId) ?? null;
   }
 
@@ -98,6 +127,7 @@ class MemoryIdentityRepository implements IdentityRepository {
   async listEmployeeRoles(
     employeeId: EmployeeId,
   ): Promise<readonly RoleRecord[]> {
+    this.perRowQueryCounts.listEmployeeRoles += 1;
     return this.roles.get(employeeId) ?? [];
   }
 
@@ -177,7 +207,11 @@ class MemoryIdentityRepository implements IdentityRepository {
   ): Promise<void> {
     this.roles.set(
       employeeId,
-      roleCodes.map((roleCode) => ({ roleCode, permissions: [] })),
+      roleCodes.map((roleCode) => ({
+        roleCode,
+        permissions: [],
+        active: true,
+      })),
     );
   }
 
@@ -547,7 +581,11 @@ describe("IdentityService", () => {
   it("uses persisted role permissions for custom authorization", async () => {
     const repository = new MemoryIdentityRepository();
     repository.roles.set("E003", [
-      { roleCode: "catalog_editor", permissions: ["catalog.publish"] },
+      {
+        roleCode: "catalog_editor",
+        permissions: ["catalog.publish"],
+        active: true,
+      },
     ]);
     const service = new IdentityService(repository);
 
@@ -580,7 +618,7 @@ describe("IdentityService", () => {
     ];
     const repository = new MemoryIdentityRepository();
     repository.roles.set("E020", [
-      { roleCode: "employee", permissions: employeePermissions },
+      { roleCode: "employee", permissions: employeePermissions, active: true },
     ]);
     const service = new IdentityService(repository);
 
@@ -606,7 +644,11 @@ describe("IdentityService", () => {
   it("denies authorization when the audience evaluator rejects the request", async () => {
     const repository = new MemoryIdentityRepository();
     repository.roles.set("E004", [
-      { roleCode: "catalog_editor", permissions: ["catalog.publish"] },
+      {
+        roleCode: "catalog_editor",
+        permissions: ["catalog.publish"],
+        active: true,
+      },
     ]);
     const service = new IdentityService(
       repository,
@@ -1096,5 +1138,68 @@ describe("IdentityService", () => {
       }),
     ).rejects.toThrow("ROLE_NOT_ASSIGNABLE_IN_V1");
     expect(await repository.findEmployee("E204")).toBeNull();
+  });
+
+  // 导入预览曾是 N+1：`Promise.all(rows.map(findEmployee))` + 逐行 listEmployeeRoles，
+  // 一批 5000 行 = 1万次查询，且并发发起会占满连接池。
+  // 用「查询次数与行数无关」把它钉死——只看返回值的话改回N+1 也照样通过。
+  it("导入预览走批量查询，查询次数不随行数增长", async () => {
+    const repository = new MemoryIdentityRepository();
+    await repository.createDepartment({
+      departmentId: "dept-batch",
+      name: "批量导入部门",
+      parentDepartmentId: null,
+      source: "local",
+    });
+    const rows = Array.from({ length: 30 }, (_, index) => {
+      const employeeId = `BATCH-${String(index).padStart(3, "0")}`;
+      return {
+        employeeId,
+        displayName: `批量员工${index}`,
+        primaryDepartmentId: "dept-batch",
+      };
+    });
+
+    const service = new IdentityService(repository);
+    const result = await service.previewEmployeeImport(rows);
+
+    expect(result.rows).toHaveLength(30);
+    // 逐行查询一次都不该发生。
+    expect(repository.perRowQueryCounts).toEqual({
+      findEmployee: 0,
+      listEmployeeRoles: 0,
+    });
+    // 员工与角色各一次批量查询，与行数无关。
+    expect(repository.batchQueryCounts.findEmployeesByIds).toBe(1);
+    expect(repository.batchQueryCounts.listEmployeeRolesByEmployeeIds).toBe(1);
+  });
+
+  it("导入预览在仓储无批量能力时退回逐行，但仍然串行不并发", async () => {
+    const bare = new (class extends MemoryIdentityRepository {
+      // 覆盖为 undefined 模拟「仓储未实现批量能力」——
+      // 不能用 delete：批量方法在原型上，删实例字段不会让它消失。
+      override findEmployeesByIds = undefined as never;
+      override listEmployeeRolesByEmployeeIds = undefined as never;
+    })();
+    await bare.createDepartment({
+      departmentId: "dept-fallback",
+      name: "降级部门",
+      parentDepartmentId: null,
+      source: "local",
+    });
+
+    const service = new IdentityService(bare);
+    const result = await service.previewEmployeeImport([
+      {
+        employeeId: "FALLBACK-001",
+        displayName: "降级员工",
+        primaryDepartmentId: "dept-fallback",
+      },
+    ]);
+
+    // 降级路径必须仍然给出正确结果——不能因为「没有批量方法」就报错或漏判 exists。
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.exists).toBe(false);
+    expect(bare.perRowQueryCounts.findEmployee).toBeGreaterThan(0);
   });
 });

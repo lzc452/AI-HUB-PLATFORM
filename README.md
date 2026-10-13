@@ -38,12 +38,16 @@ GitHub Actions 是权威的 CI/CD 平台。PR 必须通过 `verify` 与 `contain
 
 ## 项目文档
 
-- [已批准的设计规格说明](docs/superpowers/specs/2026-07-31-ai-application-sharing-platform-design.md)
-- [V1 项目路线图](docs/superpowers/plans/2026-07-31-ai-hub-v1-program-roadmap.md)
+- [文档总索引](docs/README.md)
+- [当前完整需求基线与业务链路](docs/requirements/README.md)
+- [需求—实现—测试追踪矩阵](docs/requirements/traceability.md)
+- [统一验收手册与发布门禁](docs/requirements/acceptance.md)
+- [开发指南](docs/development/README.md)
+- [历史设计与阶段计划](docs/superpowers/README.md)
 - [阶段 1 基础计划](docs/superpowers/plans/2026-07-31-ai-hub-phase-01-foundation.md)
 - [Windows Docker Compose 指南](docs/development/windows-docker-compose.md)
 - [跨设备开发指南](docs/development/cross-device-development.md)
-- [分支迁移与 GitHub 治理记录](docs/development/branch-migration-2026-08-05.md)
+- [分支、交付与历史迁移](docs/development/git-branching.md)
 - [ADR 0001：React SPA 与 NestJS 模块化单体](docs/adr/0001-modular-monolith.md)
 - [ADR 0002：PostgreSQL 事务性 outbox](docs/adr/0002-postgres-outbox.md)
 - [ADR 0003：Garage 对象存储](docs/adr/0003-garage-object-storage.md)

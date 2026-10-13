@@ -1,5 +1,7 @@
 # 普通员工路由权限恢复设计
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 ## 背景与根因
 
 `DEMO-EMPLOYEE` 登录后没有任何可见菜单，访问基础页面也会被拒绝。真实 PostgreSQL 数据显示，运行库只执行到 `0012_request_replay_nonces`，`employee` 角色仍保存旧权限 `marketplace.read`；当前前端路由和后端 `PermissionGuard` 已统一使用 `catalog.read`、`demand.read`、`notification.read` 等点号权限。代码与数据库权限版本错位导致前端过滤全部菜单，后端也无法授权基础 API。

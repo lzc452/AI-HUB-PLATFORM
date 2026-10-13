@@ -1,0 +1,91 @@
+{
+  "capturedAt": "2026-10-08T01:59:54.729Z",
+  "objective": "关闭 P0 → 真实数据库双业务链与通知 → P1 一致性/集成 → 双端联调/UAT → 真实生产部署/恢复/签核",
+  "status": "进行中",
+  "level": "L1/L2",
+  "environment": {
+    "database": "仓库工具创建的独立 PostgreSQL 测试容器",
+    "configuredImage": "postgres:18.4-bookworm",
+    "sharedDatabaseUrlConfigured": false,
+    "productionOperations": false,
+    "realExternalDelivery": false
+  },
+  "regressions": [
+    {
+      "scope": "PEM 私钥加载",
+      "before": "InvalidAccessError: key is not extractable",
+      "after": "公钥派生与浏览器加密协议往返通过，公开 JWK 不含私钥参数"
+    },
+    {
+      "scope": "停用角色与员工",
+      "before": [
+        "原 Cookie 会话期待 403，实际返回 200",
+        "停用员工仍出现在角色广播名单"
+      ],
+      "after": "停用后 403、恢复后 200、原分配保留、停用员工广播过滤通过"
+    },
+    {
+      "scope": "新业务通知入口",
+      "before": "3 个定向用例失败：完整草稿和方案确认均没有 queue 调用",
+      "after": "3 个新增回归通过，确认方案在事务提交后通知，通知失败不回滚；真实广播授权与落库尚未通过"
+    }
+  ],
+  "runs": [
+    {
+      "cwd": "packages/server",
+      "command": "pnpm exec vitest run --pool=threads --reporter=dot src/identity/login-encryption.service.test.ts src/identity/identity.service.test.ts src/identity/session-cookie.spec.ts src/notification/dingtalk-matrix.service.test.ts",
+      "exitCode": 0,
+      "files": 4,
+      "tests": 49,
+      "level": "L1"
+    },
+    {
+      "cwd": "packages/server",
+      "command": "pnpm exec vitest run --pool=threads --reporter=dot src/application/application.service.test.ts src/demand/demand.service.test.ts",
+      "exitCode": 0,
+      "files": 2,
+      "tests": 146,
+      "level": "L1"
+    },
+    {
+      "cwd": ".",
+      "command": "pnpm exec vitest run --config apps/api/vitest.api-data.config.ts apps/api/test/identity-role-status.real.e2e-spec.ts --pool=threads --reporter=dot",
+      "exitCode": 0,
+      "files": 1,
+      "tests": 3,
+      "level": "L2"
+    },
+    {
+      "cwd": ".",
+      "command": "pnpm exec tsc --noEmit --project packages/server/tsconfig.json",
+      "exitCode": 0
+    },
+    {
+      "cwd": ".",
+      "command": "pnpm exec tsc --noEmit --project apps/api/tsconfig.json",
+      "exitCode": 0
+    }
+  ],
+  "sourceSha256": {
+    "packages/server/src/identity/login-encryption.service.ts": "59d086d2ff16f186deb222154d13e8a9602730bee5fc6197e0d44d9cd3f63659",
+    "packages/server/src/identity/login-encryption.service.test.ts": "400ec6f9e5ff7feeb60ba5ae389901b77488423602e60d5e3a846649a4f457f7",
+    "packages/server/src/identity/identity.repository.ts": "0a7040a721c09b149c96f0e664f891bd585bdec4ad892df41fb579a0a89ec4bd",
+    "packages/server/src/identity/identity.service.ts": "134f41bbbed2e4cb5d106bf7f11164f9e29f0523aad4bf0e123082ca18b2d19e",
+    "packages/server/src/identity/identity.types.ts": "8e0590bbabd511a6bf699f24f3f1205ecf2134801c0c2633be7d4d03ec2e54c8",
+    "packages/server/src/notification/notification.module.ts": "e7c0a699824bdecc8661d6d03fb34617d8dfc564ffc0408ee15ab9ad3deefac6",
+    "packages/server/src/application/application.service.ts": "3000ce08c7d6d9fce5bd017bc8c0502e3bdeb98a9ff7a9bf7c9051558e5622dc",
+    "packages/server/src/application/application.service.test.ts": "cb2588decbde5908fc83de81fa9447988b2ea01de8048d69454f555c7b8372f3",
+    "packages/server/src/demand/demand.service.ts": "a09a0a7281c5b20127d2147f8e18300bd14229dcec7b919ed52592e2d9c4d3b9",
+    "packages/server/src/demand/demand.service.test.ts": "1d4321f6351fe4683f040b4a965f1e8e597d7c3e8583969848a51ebba563ef5f",
+    "apps/api/test/identity-role-status.real.e2e-spec.ts": "1fc8d72b8ba7f6ff5a5acd97fe1b364fc6919ad59cff05bbb5245a980af6d7da"
+  },
+  "remaining": [
+    "通知当前权限授权/广播及21场景真实落库",
+    "桌面/移动制品向导衔接",
+    "需求附件扫描",
+    "Portal受众",
+    "P1一致性与集成",
+    "双端浏览器/UAT",
+    "生产部署/恢复/签核"
+  ]
+}

@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     host: true,
     proxy: {
-      "/internal": "http://localhost:3000",
+      "/internal": "http://localhost:3001",
     },
   },
   test: {

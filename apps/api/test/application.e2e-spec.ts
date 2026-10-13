@@ -49,6 +49,7 @@ const identityRepository = {
           "application.publish",
           "application.review",
         ],
+        active: true,
       },
     ];
   },

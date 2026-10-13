@@ -75,6 +75,7 @@ const identityRepository = {
           "analytics.assistant.use",
           "analytics.scope.all",
         ],
+        active: true,
       },
     ];
   },

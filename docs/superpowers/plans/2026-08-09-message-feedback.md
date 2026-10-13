@@ -1,5 +1,7 @@
 # 前端 Message 反馈 Implementation Plan
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 将 `apps/web` 的运行时错误、警告和操作结果统一迁移到 Ant Design `message`，消除页面布局内的错误提示占位。

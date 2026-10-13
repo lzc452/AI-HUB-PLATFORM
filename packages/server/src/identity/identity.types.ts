@@ -18,6 +18,15 @@ export interface EmployeeRecord extends EmployeeSummary {
 export interface RoleRecord {
   roleCode: string;
   permissions: readonly string[];
+  /**
+   * 角色当前是否有效（`roles.status = 'active'`）。
+   *
+   * 必须与角色记录分开表达：停用角色**不解绑**，`listEmployeeRoles` 仍需返回它
+   * （审计/展示需要知道「曾授予过」），但它的权限**不得**计入 actor.permissions。
+   * 把两者混为一谈会导致两种错误——要么停用角色仍能操作（越权），
+   * 要么为了修越权而把角色记录一起藏掉，丢失审计事实。
+   */
+  active: boolean;
 }
 
 export interface IdentityRoleRecord extends RoleRecord {
@@ -120,6 +129,25 @@ export interface IdentityRepository {
   createEmployee(input: CreateEmployeeInput): Promise<void>;
   assignRole(employeeId: EmployeeId, roleCode: string): Promise<void>;
   findEmployee(employeeId: EmployeeId): Promise<EmployeeRecord | null>;
+  /**
+   * 批量取员工（可选）。
+   *
+   * 导入预览需要逐行比对差异，若用 `findEmployee` + `listEmployeeRoles`逐行调用，
+   * N 行就是 2N 次查询；配合 `Promise.all` 并发发起还会一次性占满连接池。
+   * 仓储支持批量查询时应优先用它，查询次数从 2N 降到 2。
+   *
+   * 声明为可选是为了兼容既有内存替身，服务层按
+   * `findEmployeesByIds !== undefined` 决定是否走批量路径。
+   */
+  findEmployeesByIds?(
+    employeeIds: readonly EmployeeId[],
+  ): Promise<readonly EmployeeRecord[]>;
+  /** 批量取员工的角色（可选）。语义与 `listEmployeeRoles` 一致，未提供的员工不出现在结果中。 */
+  listEmployeeRolesByEmployeeIds?(
+    employeeIds: readonly EmployeeId[],
+  ): Promise<
+    ReadonlyArray<{ employeeId: EmployeeId; roles: readonly RoleRecord[] }>
+  >;
   /** Lookup employee by standardized employee_number (already uppercase-trimmed). */
   findEmployeeByEmployeeNumber(
     employeeNumber: string,
@@ -134,6 +162,11 @@ export interface IdentityRepository {
   listEmployeeRoles(employeeId: EmployeeId): Promise<readonly RoleRecord[]>;
   /** List employee IDs that currently hold the given role code. */
   listEmployeeIdsWithRole(roleCode: string): Promise<string[]>;
+  /**
+   * List employee IDs holding any role that grants the given permission code.
+   * Optional:装配方未实现时，依赖权限码解析收件人的通知场景会静默跳过。
+   */
+  listEmployeeIdsWithPermission?(permission: string): Promise<string[]>;
   listRoles?(): Promise<readonly IdentityRoleRecord[]>;
   createRole?(input: {
     roleCode: string;

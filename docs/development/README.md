@@ -28,14 +28,14 @@ pnpm seed:demo-accounts
 
 # 4. 终端 A：启动后端
 pnpm dev:api
-# → http://localhost:3000
+# → http://localhost:3001
 # → tsx watch 监听源码变更，自动重启
 
 # 5. 终端 B：启动前端
 pnpm dev:web
 # → http://localhost:5173
 # → Vite HMR 即时热更新，改代码浏览器自动刷新
-# → /internal 请求代理到 localhost:3000
+# → /internal 请求代理到 localhost:3001
 
 # 6. 终端 C（可选）：启动 Worker
 pnpm dev:worker
@@ -136,7 +136,7 @@ pnpm verify          # 完整质量管道
 
 ```
 apps/
-  api/          NestJS API 服务（端口 3000）
+  api/          NestJS API 服务（端口 3001）
   web/          React SPA（端口 5173 开发）
   worker/       NestJS 后台 Worker
 packages/
@@ -155,8 +155,8 @@ docs/
 
 ## API 代理说明
 
-前后端分离模式下，Vite 开发服务器自动将 `/internal` 开头的请求代理到 `localhost:3000`（API 服务）。不需要额外配置 nginx。
+前后端分离模式下，Vite 开发服务器自动将 `/internal` 开头的请求代理到 `localhost:3001`（API 服务）。不需要额外配置 nginx。
 
 全 Docker 模式下，nginx 负责路由：
-- `/internal/*` → API 容器 `api:3000`
+- `/internal/*` → API 容器 `api:3001`
 - `/*` → 前端 Web 容器

@@ -1,5 +1,7 @@
 # 阶段 6 分析、仪表盘、导出与助手实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **目标：** 在已接受的阶段 5 平台上，交付可复现的分析、固定仪表盘、可审计导出、受限的 Dify 助手边界与完整的钉钉工作通知矩阵。

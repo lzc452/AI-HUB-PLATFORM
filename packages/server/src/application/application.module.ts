@@ -33,6 +33,9 @@ import {
   DENY_ALL_WEB_TARGETS,
   type WebTargetPolicy,
 } from "../system/security/web-url-policy.js";
+import { AuditService } from "../system/security/audit.service.js";
+import { KyselyAuditRepository } from "../system/security/audit.repository.js";
+import { isApplicationVisible } from "../authorization/audience-visibility.js";
 
 const unavailableArtifactVerifier: ArtifactVerificationPort = {
   async verifyArtifact() {
@@ -76,7 +79,9 @@ function createApplicationServiceProvider(
         webTargetPolicy,
         undefined,
         objectStorage,
-        () => identity.listEmployeeIdsWithRole("application_reviewer"),
+        () => identity.listEmployeeIdsWithPermission("application.review"),
+        // 审核决策与自动发布写入 security_audit_events（安全审计面）。
+        new AuditService(new KyselyAuditRepository(database)),
       ),
     inject: [
       KyselyApplicationRepository,
@@ -86,7 +91,12 @@ function createApplicationServiceProvider(
   };
 }
 
+/**
+ * @param database 未提供时不装配受众门禁——资产内容读取随之fail-closed。
+ *   仅用于不装配存储的测试装配路径（storage 为 undefined 时本就不产出 provider）。
+ */
 function createUploadProviders(
+  database: Kysely<DatabaseSchema> | undefined,
   artifactVerifier: ArtifactVerificationPort,
   storage: ReadableObjectStoragePort | undefined,
   maxSizeBytes: number,
@@ -116,6 +126,13 @@ function createUploadProviders(
           repository,
           resolvedStorage,
           resolvedPipeline,
+          {
+            isApplicationVisible:
+              database === undefined
+                ? async () => false
+                : (actor, applicationId) =>
+                    isApplicationVisible(database, actor, applicationId),
+          },
         ),
       inject: [
         KyselyApplicationRepository,
@@ -204,6 +221,7 @@ export class ApplicationModule {
           storage,
         ),
         ...createUploadProviders(
+          database,
           artifactVerifier,
           storage,
           artifactMaxSizeBytes,
@@ -230,7 +248,12 @@ export class ApplicationModule {
         { provide: APPLICATION_SERVICE, useValue: application },
         { provide: IdentityService, useValue: identity },
         { provide: "ARTIFACT_VERIFIER", useValue: artifactVerifier },
-        ...createUploadProviders(artifactVerifier, storage, 64 * 1024 * 1024),
+        ...createUploadProviders(
+          undefined,
+          artifactVerifier,
+          storage,
+          64 * 1024 * 1024,
+        ),
       ],
       exports: [APPLICATION_SERVICE],
     };

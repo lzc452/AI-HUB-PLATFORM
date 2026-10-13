@@ -182,4 +182,57 @@ describe("ArtifactPipeline", () => {
       reason: "ARTIFACT_SECURITY_UNAVAILABLE",
     });
   });
+
+  // scanContent 的 fail-closed 语义是本轮修复的核心不变量：
+  // 需求附件上传曾完全绕过扫描（控制器未注入扫描器），
+  // 导致 EICAR 被正常入库。这里锁死三种情形都不放行。
+  describe("scanContent（落盘前扫描）", () => {
+    it("放行干净内容", async () => {
+      const pipeline = new ArtifactPipeline(new MemoryObjectStorage(), {
+        async scan() {
+          return "clean" as const;
+        },
+        async verify() {
+          return true;
+        },
+      });
+
+      await expect(pipeline.scanContent(bytes("clean"))).resolves.toEqual({
+        scanStatus: "passed",
+      });
+    });
+
+    it("检出恶意内容", async () => {
+      const pipeline = new ArtifactPipeline(new MemoryObjectStorage(), {
+        async scan() {
+          return "infected" as const;
+        },
+        async verify() {
+          return true;
+        },
+      });
+
+      await expect(pipeline.scanContent(bytes("eicar"))).resolves.toEqual({
+        scanStatus: "failed",
+        reason: "MALWARE_DETECTED",
+      });
+    });
+
+    it("扫描器不可用时失败关闭而非放行", async () => {
+      const pipeline = new ArtifactPipeline(new MemoryObjectStorage(), {
+        async scan() {
+          throw new Error("CLAMAV_UNAVAILABLE");
+        },
+        async verify() {
+          return true;
+        },
+      });
+
+      // 门禁不可用时若返回 passed，等于没有门禁——这正是修复前的 fail-open。
+      await expect(pipeline.scanContent(bytes("payload"))).resolves.toEqual({
+        scanStatus: "failed",
+        reason: "ARTIFACT_SECURITY_UNAVAILABLE",
+      });
+    });
+  });
 });

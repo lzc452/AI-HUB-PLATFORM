@@ -32,12 +32,18 @@ import {
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
 import type { ReadableObjectStoragePort } from "../application/storage.port.js";
+import { ArtifactPipeline } from "../application/storage.pipeline.js";
 import {
   assertMagicMatches,
   assertUploadAllowed,
   fileExtension,
 } from "../application/upload-policy.js";
-import { DEMAND_SERVICE, DEMAND_STORAGE } from "./demand.tokens.js";
+import { toDomainHttpException } from "../system/http/domain-error.js";
+import {
+  DEMAND_ATTACHMENT_PIPELINE,
+  DEMAND_SERVICE,
+  DEMAND_STORAGE,
+} from "./demand.tokens.js";
 import { DemandService } from "./demand.service.js";
 import {
   DemandApplicationLinkDto,
@@ -94,6 +100,9 @@ export class DemandController {
     @Optional()
     @Inject(DEMAND_STORAGE)
     private readonly storage?: ReadableObjectStoragePort,
+    @Optional()
+    @Inject(DEMAND_ATTACHMENT_PIPELINE)
+    private readonly attachmentPipeline?: ArtifactPipeline,
   ) {}
 
   @Post()
@@ -384,6 +393,20 @@ export class DemandController {
       }
       const sha256 = createHash("sha256").update(rawBody).digest("hex");
       const storageKey = `demands/attachments/${randomUUID()}`;
+      // 扫描必须在落盘**之前**：先写对象存储再判定的做法，
+      // 即使随后拒绝也已在磁盘留下恶意文件（测试明确要求拒绝后不留残留）。
+      //
+      // **fail-closed**：扫描器缺失或抛错一律拒绝。门禁不可用时放行
+      // 等于没有门禁——这正是修复前的行为，EICAR 会被正常入库。
+      if (this.attachmentPipeline === undefined) {
+        throw new BadRequestException("ARTIFACT_SECURITY_UNAVAILABLE");
+      }
+      const scan = await this.attachmentPipeline.scanContent(rawBody);
+      if (scan.scanStatus !== "passed") {
+        throw new BadRequestException(
+          scan.reason ?? "ARTIFACT_SECURITY_UNAVAILABLE",
+        );
+      }
       await this.storage.putStream(storageKey, Readable.from(rawBody));
       return this.demands.createAttachment(actor, {
         storageKey,
@@ -1209,7 +1232,9 @@ export class DemandController {
       ) {
         throw new ForbiddenException(code);
       }
-      throw new BadRequestException(code);
+      // 乐观锁冲突与状态机已迁移统一走 409：客户端重新读取状态后重试有意义，
+      // 而 400 会让它当成参数错误、永不重试（P1-5）。
+      throw toDomainHttpException(code, () => new BadRequestException(code));
     }
   }
 

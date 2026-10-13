@@ -1,8 +1,10 @@
 # 两周冲刺实施计划 — PRD2APP 报告 P0/P1 整改
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在两周（Sprint 1 = P0 + 审核核心，Sprint 2 = P1 其余）内关闭 PRD2APP.md §9 的 P0×5 与 P1 大部分缺口，使 V1 达到可进入 Phase 8（试点）的状态。
+**Goal:** 在两周（Sprint 1 = P0 + 审核核心，Sprint 2 = P1 其余）内关闭 docs/audit/prd2app-gap-analysis-2026-08-18.md §9 的 P0×5 与 P1 大部分缺口，使 V1 达到可进入 Phase 8（试点）的状态。
 
 **Architecture:** 全部整改基于现有模块化单体：服务层改在 `packages/server/src/<domain>`，HTTP 入口在 `apps/api`，定时任务按 `apps/worker/src/main.ts:106-131` 的 `createRetentionRunner + setInterval` 模式新增。新表一律用新编号 migration（0040 起），不重编号既有迁移。前端改动仅限报告标记的前端缺口。
 
@@ -2237,4 +2239,4 @@ git commit -m "fix(identity): migrate dept content on delete, revoke sessions on
 corepack pnpm verify
 ```
 
-Sprint 2 结束追加：`corepack pnpm migrate`（确认 0040–0047 全部应用）→ 更新 PRD2APP.md 的状态标注（§9 中已关闭项打 ✅）→ 与项目方确认钉钉降级口径、备份介质、双机环境（Phase 8 前置）。
+Sprint 2 结束追加：`corepack pnpm migrate`（确认 0040–0047 全部应用）→ 更新 docs/audit/prd2app-gap-analysis-2026-08-18.md 的状态标注（§9 中已关闭项打 ✅）→ 与项目方确认钉钉降级口径、备份介质、双机环境（Phase 8 前置）。

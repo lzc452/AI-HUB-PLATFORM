@@ -663,15 +663,49 @@ export class KyselyApplicationRepository implements ApplicationRepository {
       );
     if (input.mode === "review")
       query = query.where("application.status", "=", "in_review");
-    const rows = await query
-      .orderBy(
-        input.sort === "name"
-          ? "application.name"
-          : input.sort === "status"
-            ? "application.status"
-            : "application.updated_at",
-        "desc",
-      )
+    // channel 过滤必须**下推成 EXISTS**。
+    //
+    // 原来它在应用层做：先查全部应用，再用 applicationIds 去查
+    // application_deliveries、在内存里过滤 channel、最后才 slice。
+    // 若只把 limit/offset 下推而 channel 仍在应用层，
+    // 翻页会拿到「这一页的前 N 条里恰好有 channel 的」——
+    // 条数不足、总数也不对。过滤与分页的先后顺序必须与语义一致。
+    if (input.channel !== undefined) {
+      query = query.where((eb) =>
+        eb.exists(
+          eb
+            .selectFrom("application_deliveries as delivery")
+            .select("delivery.delivery_id")
+            .whereRef(
+              "delivery.application_id",
+              "=",
+              "application.application_id",
+            )
+            .where("delivery.channel", "=", input.channel as never)
+            .where("delivery.enabled", "=", true),
+        ),
+      );
+    }
+
+    const countRow = await this.db
+      .selectFrom(query.as("visible_applications"))
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .executeTakeFirst();
+    const total = Number(countRow?.count ?? 0);
+
+    const ordered = query.orderBy(
+      input.sort === "name"
+        ? "application.name"
+        : input.sort === "status"
+          ? "application.status"
+          : "application.updated_at",
+      "desc",
+    );
+    // 并列时以 application_id 升序收尾，避免同一条记录跨页重复或遗漏。
+    const rows = await ordered
+      .orderBy("application.application_id", "asc")
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize)
       .execute();
     const applicationIds = rows.map((row) => row.applicationId);
     const [deliveries, versions, reviewQueues] = await Promise.all([
@@ -740,45 +774,38 @@ export class KyselyApplicationRepository implements ApplicationRepository {
     const reviewByApp = new Map(
       reviewQueues.map((queue) => [queue.application_id, queue]),
     );
-    const items = rows
-      .filter(
-        (row) =>
-          input.channel === undefined ||
-          channelsByApp.get(row.applicationId)?.includes(input.channel),
-      )
-      .map((row) => ({
-        applicationId: row.applicationId,
-        name: row.name,
-        summary: row.summary,
-        categoryId: row.categoryId ?? "",
-        status: row.status,
-        currentVersion:
-          row.currentVersionId === null
-            ? (latestVersionByApplication.get(row.applicationId)?.version ?? "")
-            : (versionById.get(row.currentVersionId) ?? ""),
-        currentVersionId:
-          row.currentVersionId ??
-          latestVersionByApplication.get(row.applicationId)
-            ?.applicationVersionId ??
-          null,
-        ownerName: row.ownerName,
-        departmentName: row.departmentName,
-        deliveryChannels: channelsByApp.get(row.applicationId) ?? [],
-        updatedAt: row.updatedAt.toISOString(),
-        isMine:
-          row.ownerEmployeeId === actor.employeeId ||
-          row.maintainerEmployeeId === actor.employeeId,
-        needsMyReview:
-          row.status === "in_review" &&
-          reviewByApp.get(row.applicationId)?.claimed_by_employee_id !==
-            actor.employeeId,
-      }));
-    const start = (input.page - 1) * input.pageSize;
+    const items = rows.map((row) => ({
+      applicationId: row.applicationId,
+      name: row.name,
+      summary: row.summary,
+      categoryId: row.categoryId ?? "",
+      status: row.status,
+      currentVersion:
+        row.currentVersionId === null
+          ? (latestVersionByApplication.get(row.applicationId)?.version ?? "")
+          : (versionById.get(row.currentVersionId) ?? ""),
+      currentVersionId:
+        row.currentVersionId ??
+        latestVersionByApplication.get(row.applicationId)
+          ?.applicationVersionId ??
+        null,
+      ownerName: row.ownerName,
+      departmentName: row.departmentName,
+      deliveryChannels: channelsByApp.get(row.applicationId) ?? [],
+      updatedAt: row.updatedAt.toISOString(),
+      isMine:
+        row.ownerEmployeeId === actor.employeeId ||
+        row.maintainerEmployeeId === actor.employeeId,
+      needsMyReview:
+        row.status === "in_review" &&
+        reviewByApp.get(row.applicationId)?.claimed_by_employee_id !==
+          actor.employeeId,
+    }));
     return {
-      items: items.slice(start, start + input.pageSize),
+      items,
       page: input.page,
       pageSize: input.pageSize,
-      total: items.length,
+      total,
     };
   }
 
@@ -1526,12 +1553,25 @@ export class KyselyApplicationRepository implements ApplicationRepository {
   async completeReviewQueue(
     applicationVersionId: string,
   ): Promise<ReviewQueueRecord> {
+    // CAS：只有「已被该审核员认领且仍处于 claimed」的队列才能被完成。
+    //
+    // 缺这个条件时，两个并发 approve 都能通过服务层的事务外状态检查，
+    // 各写一条 application_reviews（表格无唯一约束保护不了不同 reviewer），
+    // 导致 published 事件触发两次、目录重复注册、责任人收到两条通知。
+    //
+    // 对齐 claimReviewQueue 的 CAS 写法（同文件 :1485）。
+    // 未命中即抛 REVIEW_QUEUE_CLAIM_REQUIRED —— 这是预期内的业务拒绝，
+    // 由 domain-error 映射为 409，让客户端重新拉取状态而非当成 400。
     const row = await this.db
       .updateTable("application_review_queue")
       .set({ status: "completed" })
       .where("application_version_id", "=", applicationVersionId)
+      .where("status", "=", "claimed")
       .returningAll()
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
+    if (row === undefined) {
+      throw new Error("REVIEW_QUEUE_CLAIM_REQUIRED");
+    }
     return this.mapReviewQueue(row);
   }
 
@@ -1657,7 +1697,9 @@ export class KyselyApplicationRepository implements ApplicationRepository {
           `${input.eventType}:${input.applicationId}:${input.applicationVersionId ?? "none"}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
-        available_at: new Date(),
+        // available_at 用数据库默认值 now()，与 claim 的时钟基准保持一致
+        // （写入用应用时钟、判断用数据库时钟会导致事件被永久跳过）。
+        available_at: sql`now()`,
         claimed_by: null,
         claimed_at: null,
         last_error: null,

@@ -1,5 +1,7 @@
 # 应用管理详情工作台全栈还原 Implementation Plan
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 在不改变现有四条路由与权限语义的前提下，将应用详情、版本管理、审核工作台和交付配置完整还原为四张 `1672×941` 设计图，并补齐真实可用的资料、比较、审核和交付数据流。

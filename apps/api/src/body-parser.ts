@@ -8,12 +8,15 @@ const RAW_UPLOAD_CONTENT_PATH =
 
 /**
  * 文件 MIME 在浏览器中由 Blob/File 决定，不能只接受 octet-stream。
- * raw parser 只在内容上传 PUT 路由启用；上传会话随后仍校验声明的 MIME、
+ * raw parser 只在内容上传 PUT 与需求附件 POST 路由启用；随后仍校验声明的 MIME、
  * 文件扩展名、大小和魔数，避免把任意业务 JSON 路由扩展为大 body 入口。
  */
 function isRawUploadContentRequest(request: IncomingMessage): boolean {
   return (
-    request.method === "PUT" && RAW_UPLOAD_CONTENT_PATH.test(request.url ?? "")
+    (request.method === "PUT" &&
+      RAW_UPLOAD_CONTENT_PATH.test(request.url ?? "")) ||
+    (request.method === "POST" &&
+      /^\/internal\/demands\/uploads(?:\?.*)?$/.test(request.url ?? ""))
   );
 }
 

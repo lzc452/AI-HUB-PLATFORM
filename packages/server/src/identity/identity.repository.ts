@@ -19,6 +19,21 @@ import type {
   IdentitySyncRunItemRecord,
 } from "./identity.types.js";
 
+/**
+ * 把 `string[]` 序列化为 jsonb 值表达式。
+ *
+ * Kysely 不会为 jsonb 列自动 `JSON.stringify`：把 `readonly string[]` 直接塞进
+ * `.values()` 会被 pg 的类型推断当成**数组字面量**，到 jsonb 列上就报
+ * `invalid input syntax for type json`。所有写 jsonb 列的值都必须过这里。
+ *
+ * 返回 `sql` 表达式而非裸 string：schema 把这些列声明为 `readonly string[]`，
+ * 裸 string 过不了 `ValueExpression` 的类型检查；`sql<...>` 是唯一同时满足
+ * 「PG 侧是合法 jsonb」与「TS 侧符合声明类型」的形态。
+ */
+function toJsonb<T>(value: readonly unknown[]): T {
+  return sql<T>`${JSON.stringify(value)}::jsonb` as unknown as T;
+}
+
 export class KyselyIdentityRepository implements IdentityRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
 
@@ -115,6 +130,63 @@ export class KyselyIdentityRepository implements IdentityRepository {
     };
   }
 
+  async findEmployeesByIds(
+    employeeIds: readonly EmployeeId[],
+  ): Promise<readonly EmployeeRecord[]> {
+    if (employeeIds.length === 0) return [];
+    const rows = await this.db
+      .selectFrom("employees")
+      .selectAll()
+      .where("employee_id", "in", [...new Set(employeeIds)])
+      .execute();
+    return rows.map((row) => ({
+      employeeId: row.employee_id,
+      employeeNumber: row.employee_number,
+      displayName: row.display_name,
+      status: row.status,
+      primaryDepartmentId: row.primary_department_id,
+      passwordHash: row.password_hash,
+      passwordResetRequired: row.password_reset_required,
+    }));
+  }
+
+  async listEmployeeRolesByEmployeeIds(
+    employeeIds: readonly EmployeeId[],
+  ): Promise<
+    ReadonlyArray<{ employeeId: EmployeeId; roles: readonly RoleRecord[] }>
+  > {
+    const unique = [...new Set(employeeIds)];
+    if (unique.length === 0) return [];
+    const rows = await this.db
+      .selectFrom("employee_roles")
+      .innerJoin("roles", "roles.role_code", "employee_roles.role_code")
+      .select([
+        "employee_roles.employee_id",
+        "roles.role_code",
+        "roles.permissions",
+        "roles.status",
+      ])
+      .where("employee_roles.employee_id", "in", unique)
+      .execute();
+    const byEmployee = new Map<
+      string,
+      { employeeId: EmployeeId; roles: readonly RoleRecord[] }
+    >();
+    for (const row of rows) {
+      const bucket = byEmployee.get(row.employee_id) ?? {
+        employeeId: row.employee_id,
+        roles: [],
+      };
+      (bucket.roles as RoleRecord[]).push({
+        roleCode: row.role_code,
+        permissions: row.permissions,
+        active: row.status === "active",
+      });
+      byEmployee.set(row.employee_id, bucket);
+    }
+    return [...byEmployee.values()];
+  }
+
   async listEmployees(): Promise<readonly EmployeeSummary[]> {
     const rows = await this.db
       .selectFrom("employees")
@@ -195,20 +267,96 @@ export class KyselyIdentityRepository implements IdentityRepository {
     const rows = await this.db
       .selectFrom("employee_roles")
       .innerJoin("roles", "roles.role_code", "employee_roles.role_code")
-      .select(["roles.role_code", "roles.permissions"])
+      .select(["roles.role_code", "roles.permissions", "roles.status"])
       .where("employee_roles.employee_id", "=", employeeId)
       .execute();
     return rows.map((row) => ({
       roleCode: row.role_code,
       permissions: row.permissions,
+      active: row.status === "active",
     }));
   }
 
+  /**
+   * 列出当前**有效持有**指定角色的员工。
+   *
+   * 「有效」= 角色未被停用 **且** 员工未被停用。两者都可以在不解绑的情况下
+   * 被停用（角色停用后 `employee_roles` 记录仍在，员工离职后角色记录同样保留）。
+   *
+   * 这个方法用于把角色解析成收件人/ 受众名单，若不过滤就会把待办推给
+   * 一个实际上既不能登录、也没有该角色权限的人——通知里带着应用名与版本号，
+   * 这本身就是信息泄露。与 `listEmployeeIdsWithPermission` 的过滤条件保持一致。
+   */
   async listEmployeeIdsWithRole(roleCode: string): Promise<string[]> {
     const rows = await this.db
       .selectFrom("employee_roles")
-      .select("employee_id")
-      .where("role_code", "=", roleCode)
+      .innerJoin("roles", "roles.role_code", "employee_roles.role_code")
+      .innerJoin(
+        "employees",
+        "employees.employee_id",
+        "employee_roles.employee_id",
+      )
+      .select("employee_roles.employee_id")
+      .distinct()
+      .where("employee_roles.role_code", "=", roleCode)
+      .where("roles.status", "=", "active")
+      .where("employees.status", "=", "active")
+      .execute();
+    return rows.map((row) => row.employee_id);
+  }
+
+  /**
+   * 列出持有指定权限码的员工。
+   *
+   * 权限码存在角色的 jsonb 数组里，没有独立的反范式表，所以这里下推到
+   * `permissions @> '["<code>"]'`，让 jsonb 的 GIN 索引参与过滤，
+   * 而不是在应用层把全部角色成员捞出来再 `some()`。
+   *
+   * **`"*"` 通配符必须一起匹配**：超级管理员角色的 permissions 是 `["*"]`，
+   * 表示拥有全部权限——这是 `hasPermission()`（contracts/identity.ts）的既定语义。
+   * 若只查字面量命中，超级管理员会被静默排除在审核广播之外，
+   * 表现为「超管收不到审核待办」——一个只在真实 PG 集成测试里才暴露的缺陷。
+   * 两个条件是 OR：任一角色授予该权限，或任一角色是通配符，即命中。
+   *
+   * **必须限定 `roles.status = 'active'`**：与 `listEmployees`（同文件）一致。
+   * 角色可以被停用（status='disabled'）而不解绑——此时 `hasPermission()`
+   * 不会把它算进 actor.permissions，因为那边已按active 过滤。
+   * 广播收件人若不过滤，就会把通知发给一个实际无权审核的人：
+   * 通知里带着应用名与版本号，这本身就是信息泄露。
+   *
+   * **同理必须 join `employees` 并限定 `status = 'active'`**：角色可以被停用，
+   * 员工自己也可以被停用（离职/冻结）而不解绑角色。`getActorContext` 在登录时
+   * 会拒绝停用员工，但一个已被停用的账号仍可能持有 admin 角色并出现在
+   * `employee_roles` 里。若不排除，收件人列表会包含一个根本登录不进来的幽灵账号，
+   * 通知永远不会被领取，而广播方看到的「已通知 N 人」是虚假的。
+   */
+  async listEmployeeIdsWithPermission(permission: string): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom("employee_roles")
+      .innerJoin("roles", "roles.role_code", "employee_roles.role_code")
+      .innerJoin(
+        "employees",
+        "employees.employee_id",
+        "employee_roles.employee_id",
+      )
+      .select("employee_roles.employee_id")
+      .distinct()
+      .where("roles.status", "=", "active")
+      .where("employees.status", "=", "active")
+      .where((expression) =>
+        expression.or([
+          expression(
+            "roles.permissions",
+            "@>",
+            toJsonb<readonly string[]>([permission]),
+          ),
+          expression(
+            "roles.permissions",
+            "@>",
+            toJsonb<readonly string[]>(["*"]),
+          ),
+        ]),
+      )
       .execute();
     return rows.map((row) => row.employee_id);
   }
@@ -249,6 +397,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       permissions: row.permissions,
       isSystem: row.is_system,
       status: row.status,
+      active: row.status === "active",
       createdByEmployeeId: row.created_by_employee_id,
       creatorName: row.creator_name,
       memberCount: countByRole.get(row.role_code) ?? 0,
@@ -268,7 +417,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .values({
         role_code: input.roleCode,
         name: input.name,
-        permissions: input.permissions,
+        permissions: toJsonb(input.permissions),
         is_system: false,
         status: "active",
         created_by_employee_id: input.createdByEmployeeId,
@@ -290,7 +439,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
         ...(input.name === undefined ? {} : { name: input.name }),
         ...(input.permissions === undefined
           ? {}
-          : { permissions: input.permissions }),
+          : { permissions: toJsonb(input.permissions) }),
         ...(input.status === undefined ? {} : { status: input.status }),
         updated_at: new Date(),
       })
@@ -331,6 +480,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       permissions: row.permissions,
       isSystem: row.is_system,
       status: row.status,
+      active: row.status === "active",
       createdByEmployeeId: row.created_by_employee_id,
       creatorName: row.creator_name,
       memberCount: Number(countRow?.member_count ?? 0),
@@ -357,7 +507,7 @@ export class KyselyIdentityRepository implements IdentityRepository {
       .values({
         role_code: input.roleCode,
         name: input.name,
-        permissions: input.permissions,
+        permissions: toJsonb(input.permissions),
         is_system: false,
         status: "active",
         created_by_employee_id: input.createdByEmployeeId,

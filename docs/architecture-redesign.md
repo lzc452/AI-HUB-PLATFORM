@@ -1,5 +1,7 @@
 # AI Hub 平台 · 架构重设计与长期发展规划
 
+> 架构演进提案：保留原 V1/V2/V3 规划；当前交付范围与已实现/未验证边界见[需求基线](requirements/README.md)。
+
 > 角色视角：软件架构师（Software Architect）
 > 配套可视化：`docs/flowchart/00-architecture-redesign.*`（整体架构与 V1→V2→V3 演进总览）、`docs/flowchart/01-09-*`（九条核心业务流程）
 > 基线约束：企业内网部署 · 单实例运行（无 `tenant_id`）· 双机 Docker Compose（无 K8s）· 已确立 ADR 0001/0002/0003

@@ -66,9 +66,15 @@ export interface DemandApplicationBridge {
   ): Promise<{ applicationId: string }>;
 }
 
-/** 按角色查询员工 ID 列表（由 identity 模块实现）。 */
 export interface DemandIdentityPort {
-  listEmployeeIdsWithRole(roleCode: string): Promise<string[]>;
+  /**
+   * 按权限码取收件人。可选：装配的 identity 端口若未实现（如内存替身），
+   * 广播收件人为空属于「无人可通知」，不应让需求提交失败。
+   *
+   * 刻意不提供按角色码取收件人的入口：审核职责常由自定义角色承担，
+   * 按角色码取会把这些审核员整体漏掉，而按权限码取天然覆盖所有授权路径。
+   */
+  listEmployeeIdsWithPermission?(permission: string): Promise<string[]>;
 }
 
 /** 钉钉通知矩阵队列端口（由 notification 模块的矩阵服务实现）。 */
@@ -119,6 +125,26 @@ export interface DemandRepository {
     audienceType?: CreateDemandInput["audienceType"];
     sort?: "recent" | "priority" | "hot";
   }): Promise<readonly DemandEntry[]>;
+  /**
+   * 分页版可见需求查询（可选）。
+   *
+   * 存在的理由与 catalog 的 `listVisiblePage` 相同：`listVisible` 会把**全部**
+   * 可见需求捞回内存再由服务层 `slice`，数据量上来后每次翻页都要搬运整表。
+   *
+   * 声明为可选是为了不破坏既有内存替身（测试里手写的 repository 没有这个方法），
+   * 服务层按`repository.listVisiblePage !== undefined` 决定走哪条路——
+   * 有 SQL 实现时把 limit/offset 下推，没有时退回原行为。
+   */
+  listVisiblePage?(input: {
+    actor: ActorContext;
+    status?: DemandStatus;
+    query?: string;
+    requesterDepartmentId?: string;
+    audienceType?: CreateDemandInput["audienceType"];
+    sort?: "recent" | "priority" | "hot";
+    page: number;
+    pageSize: number;
+  }): Promise<DemandListResult>;
   findVisible(
     actor: ActorContext,
     demandId: string,

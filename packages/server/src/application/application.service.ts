@@ -41,6 +41,7 @@ import {
   type WebTargetPolicy,
 } from "../system/security/web-url-policy.js";
 import { validateMiniProgramQr } from "./qr-code-validator.js";
+import type { AuditEventInput } from "../system/security/audit.types.js";
 
 export interface CreateApplicationInput {
   name: string;
@@ -136,6 +137,19 @@ export class ApplicationService {
      * 未装配时广播静默跳过（与通知端口可选语义一致）。
      */
     private readonly listApplicationReviewers?: () => Promise<string[]>,
+    /**
+     * 安全审计写入端口（审核决策）。
+     *
+     * 复用 `AuditService` 的既有 `AuditEventInput` 契约而非自定义形状：
+     * 审计表的列（module/action/result/details）是既定 schema，另起一套字段名
+     * 只会让写入方与查询方对不上，且导出任务按 module/action 过滤会漏掉。
+     *
+     * 未装配时审计记录静默跳过，而不是让审核/发布失败——审计是「出事能查」的
+     * 副产物，不该成为主流程的可用性依赖；但装配了就必须真写进去。
+     */
+    private readonly securityAudit?: {
+      recordEvent(input: AuditEventInput): Promise<void>;
+    },
   ) {}
 
   async createApplication(
@@ -304,108 +318,117 @@ export class ApplicationService {
 
     const plainSummary = draft.summaryHtml.replace(/<[^>]*>/g, "").trim();
 
-    return this.repository.withTransaction(async (repository) => {
-      await repository.updateApplicationContent(applicationId, {
-        name: draft.name,
-        summary: plainSummary,
-      });
-      // 功能 5c：自定义分类/标签（重名自动复用现有，其余写入 pending 待审表）。
-      // 重名命中的现有分类/标签 id 立即关联：分类命中时元数据不再落 productivity
-      // 兜底（catalog_categories 外键必填；审核通过后由 applyPendingCatalogItems
-      // 覆盖为新建分类的 id，与 registerToCatalog 的兜底语义一致）；标签命中时
-      // 并入 tagIds，命中的 id 不写 pending。
-      const matchedCatalog = await this.persistPendingCatalogItems(
-        repository,
-        applicationId,
-        sanitizedDraft,
-      );
-      await repository.upsertCatalogMetadata(applicationId, {
-        categoryId:
-          draft.categoryId.trim().length > 0
-            ? draft.categoryId
-            : (matchedCatalog.categoryId ?? "productivity"),
-        applicationType: draft.applicationType,
-      });
-      // 去重合并：draft.tagIds 与重名命中的标签 id 可能重叠，
-      // 重复 (application_id, tag_id) 会触发复合主键冲突。
-      await repository.replaceTagLinks(applicationId, [
-        ...new Set([...draft.tagIds, ...matchedCatalog.tagIds]),
-      ]);
-      await repository.replaceAudiences(applicationId, draft.audience);
-      // 维护人列表随提交落库（先删后插）；提交门禁已保证非空。
-      await repository.setMaintainers(
-        applicationId,
-        draft.maintainerEmployeeIds,
-      );
-      // 草稿交付配置落库为已启用渠道（功能 4：向导多选渠道直接落库，
-      // 目录渠道不再依赖独立交付页逐渠道 PUT；静态校验已在事务外完成）。
-      await this.persistDraftDeliveries(
-        repository,
-        applicationId,
-        validatedDeliveries,
-      );
+    const submitted = await this.repository.withTransaction(
+      async (repository) => {
+        await repository.updateApplicationContent(applicationId, {
+          name: draft.name,
+          summary: plainSummary,
+        });
+        // 功能 5c：自定义分类/标签（重名自动复用现有，其余写入 pending 待审表）。
+        // 重名命中的现有分类/标签 id 立即关联：分类命中时元数据不再落 productivity
+        // 兜底（catalog_categories 外键必填；审核通过后由 applyPendingCatalogItems
+        // 覆盖为新建分类的 id，与 registerToCatalog 的兜底语义一致）；标签命中时
+        // 并入 tagIds，命中的 id 不写 pending。
+        const matchedCatalog = await this.persistPendingCatalogItems(
+          repository,
+          applicationId,
+          sanitizedDraft,
+        );
+        await repository.upsertCatalogMetadata(applicationId, {
+          categoryId:
+            draft.categoryId.trim().length > 0
+              ? draft.categoryId
+              : (matchedCatalog.categoryId ?? "productivity"),
+          applicationType: draft.applicationType,
+        });
+        // 去重合并：draft.tagIds 与重名命中的标签 id 可能重叠，
+        // 重复 (application_id, tag_id) 会触发复合主键冲突。
+        await repository.replaceTagLinks(applicationId, [
+          ...new Set([...draft.tagIds, ...matchedCatalog.tagIds]),
+        ]);
+        await repository.replaceAudiences(applicationId, draft.audience);
+        // 维护人列表随提交落库（先删后插）；提交门禁已保证非空。
+        await repository.setMaintainers(
+          applicationId,
+          draft.maintainerEmployeeIds,
+        );
+        // 草稿交付配置落库为已启用渠道（功能 4：向导多选渠道直接落库，
+        // 目录渠道不再依赖独立交付页逐渠道 PUT；静态校验已在事务外完成）。
+        await this.persistDraftDeliveries(
+          repository,
+          applicationId,
+          validatedDeliveries,
+        );
 
-      const version = await repository.createVersion({
-        applicationVersionId: randomUUID(),
-        applicationId,
-        version: draft.version,
-        changelog: draft.changelog,
-        artifactKey: null,
-        artifactSha256: null,
-        artifactSignature: null,
-        scanStatus: "passed",
-        createdByEmployeeId: actor.employeeId,
-      });
-      await repository.snapshotVersionContent(
-        version.applicationVersionId,
-        sanitizedDraft,
-      );
+        const version = await repository.createVersion({
+          applicationVersionId: randomUUID(),
+          applicationId,
+          version: draft.version,
+          changelog: draft.changelog,
+          artifactKey: null,
+          artifactSha256: null,
+          artifactSignature: null,
+          scanStatus: "passed",
+          createdByEmployeeId: actor.employeeId,
+        });
+        await repository.snapshotVersionContent(
+          version.applicationVersionId,
+          sanitizedDraft,
+        );
 
-      const isPublishedUpdate = application.status === "published";
-      const updated = await repository.setApplicationStatus({
-        applicationId,
-        expectedStatus: application.status,
-        // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
-        // draft/withdrawn 提交审核进入 in_review（下架应用审核通过后自动重新上架，
-        // 见 review 的 sourceStatus 恢复路径）。
-        status: isPublishedUpdate ? "published" : "in_review",
-        pendingVersionId: isPublishedUpdate
-          ? version.applicationVersionId
-          : null,
-      });
-      await repository.createReviewQueue({
-        applicationId,
-        applicationVersionId: version.applicationVersionId,
-        status: "available",
-        claimedByEmployeeId: null,
-        claimedAt: null,
-        slaDueAt: addBusinessDays(new Date(), 2),
-        // 记录审核前的应用状态，驳回时据其正确回滚。
-        sourceStatus: application.status,
-      });
-      await this.recordChange(
-        repository,
-        "application.submitted",
-        applicationId,
-        version.applicationVersionId,
-        actor.employeeId,
-      );
-      await this.recordChange(
-        repository,
-        "application.review.requested",
-        applicationId,
-        version.applicationVersionId,
-        actor.employeeId,
-      );
-      await this.recordChange(
-        repository,
-        "application.review.sla.created",
-        applicationId,
-        version.applicationVersionId,
-        actor.employeeId,
-      );
-      return updated;
-    });
+        const isPublishedUpdate = application.status === "published";
+        const updated = await repository.setApplicationStatus({
+          applicationId,
+          expectedStatus: application.status,
+          // 已发布应用提交更新审核时，保持 published（继续在目录可见）；
+          // draft/withdrawn 提交审核进入 in_review（下架应用审核通过后自动重新上架，
+          // 见 review 的 sourceStatus 恢复路径）。
+          status: isPublishedUpdate ? "published" : "in_review",
+          pendingVersionId: isPublishedUpdate
+            ? version.applicationVersionId
+            : null,
+        });
+        await repository.createReviewQueue({
+          applicationId,
+          applicationVersionId: version.applicationVersionId,
+          status: "available",
+          claimedByEmployeeId: null,
+          claimedAt: null,
+          slaDueAt: addBusinessDays(new Date(), 2),
+          // 记录审核前的应用状态，驳回时据其正确回滚。
+          sourceStatus: application.status,
+        });
+        await this.recordChange(
+          repository,
+          "application.submitted",
+          applicationId,
+          version.applicationVersionId,
+          actor.employeeId,
+        );
+        await this.recordChange(
+          repository,
+          "application.review.requested",
+          applicationId,
+          version.applicationVersionId,
+          actor.employeeId,
+        );
+        await this.recordChange(
+          repository,
+          "application.review.sla.created",
+          applicationId,
+          version.applicationVersionId,
+          actor.employeeId,
+        );
+        return updated;
+      },
+    );
+    // 事务外广播待审核通知（见 broadcastReviewRequested）。
+    // 向导提交（saveDraft → submitDraft）与独立版本提交（submitForReview）
+    // 是两条独立路径，但都必须让审核员收到待办——曾经只有后者广播，
+    // 导致向导提交的应用从不对审核员可见，且没有任何单测能发现
+    // （单测只断言 recordChange，不断言广播）。
+    await this.broadcastReviewRequested(actor, applicationId);
+    return submitted;
   }
 
   async createVersion(
@@ -620,29 +643,47 @@ export class ApplicationService {
         return updated;
       },
     );
-    // 事务外广播待审核通知给全部审核员（矩阵 application.review.requested）：
-    // 单条失败（如收件人被除权）不得阻断其余广播，也不得回滚已提交的审核提交。
+    // 事务外广播待审核通知（见 broadcastReviewRequested）。
+    await this.broadcastReviewRequested(actor, application.applicationId);
+    return updated;
+  }
+
+  /**
+   * 事务外广播「待审核」通知给全部有效审核员。
+   *
+   * 收敛为单一方法而非在submitDraft / submitForReview 各写一份：
+   * 两条提交路径的受众、事件类型、容错语义完全相同，重复实现必然漂移——
+   * 事实上历史上正是「只在 submitForReview 写了、submitDraft 漏了」导致
+   * 向导提交的应用从不对审核员发出待办，而这类缺失没有任何测试会发现
+   * （单测只断言 recordChange，不断言广播）。
+   *
+   * 三条语义约束：
+   * 1. **必须在事务外**：广播是通知副作用，失败不得回滚已提交的审核提交。
+   * 2. **逐条 try/catch**：单个收件人被除权/停用不得阻断其余广播。
+   * 3. **端口未装配即整体跳过**：与通知端口整体可选的既有语义一致，
+   *    不因为「找不到审核员」而让提交失败。
+   */
+  private async broadcastReviewRequested(
+    actor: ActorContext,
+    applicationId: string,
+  ): Promise<void> {
     if (
-      this.notifications !== undefined &&
-      this.listApplicationReviewers !== undefined
+      this.notifications === undefined ||
+      this.listApplicationReviewers === undefined
     ) {
-      const reviewers = await this.listApplicationReviewers();
-      for (const reviewer of reviewers) {
-        try {
-          await this.notifications.queue(
-            actor,
-            "application.review.requested",
-            {
-              recipientEmployeeId: reviewer,
-              aggregateId: application.applicationId,
-            },
-          );
-        } catch {
-          // 通知失败不回滚业务；继续广播其余审核员。
-        }
+      return;
+    }
+    const reviewers = await this.listApplicationReviewers();
+    for (const reviewer of reviewers) {
+      try {
+        await this.notifications.queue(actor, "application.review.requested", {
+          recipientEmployeeId: reviewer,
+          aggregateId: applicationId,
+        });
+      } catch {
+        // 通知失败不回滚业务；继续广播其余审核员。
       }
     }
-    return updated;
   }
 
   /** 待审核版本在最终结论前可以由提交人撤回（规格 §5.5）。 */
@@ -848,6 +889,17 @@ export class ApplicationService {
     const nextStatus: ApplicationStatus = approved ? "published" : sourceStatus;
     const updated = await this.repository.withTransaction(
       async (repository) => {
+        // CAS 前置：先把队列从 claimed 推进到 completed，且要求当前仍是 claimed。
+        //
+        // **必须排在 createReview 之前**。原先放在事务末尾，
+        // 并发下两个事务都能通过前面的状态检查、各自写入一条评审记录，
+        // 到最后一步才发现冲突——那时 application_reviews 里已经多了一行，
+        // 而且事务回滚会把它一起撤掉，等于「靠 DB 回滚兜住并发」：
+        // 唯一约束是按 (version, reviewer) 建的，两个不同 reviewer 各写一条不冲突，
+        // 于是两条记录与两次 published 事件都会成立。
+        //
+        // 前置 CAS 让第二个事务在写任何东西之前就失败。
+        await repository.completeReviewQueue(applicationVersionId);
         await repository.createReview({
           applicationId: application.applicationId,
           applicationVersionId,
@@ -929,8 +981,8 @@ export class ApplicationService {
             actor.employeeId,
           );
         }
-        // 关闭审核队列，避免其以 available/claimed 残留。
-        await repository.completeReviewQueue(applicationVersionId);
+        // 队列已在事务开头用 CAS 推进到 completed（见上方注释），
+        // 此处不再重复调用——重复调用会因 CAS 失败而误报。
         return updated;
       },
     );
@@ -941,6 +993,27 @@ export class ApplicationService {
       occurredAt: new Date().toISOString(),
       idempotencyKey: `review-decided:${applicationVersionId}:${decision}`,
       metadata: { decision },
+    });
+    // 审核决策写入安全审计面（security_audit_events）。
+    //
+    // 放在事务之外：审计是「出事能查」的副产物，不能反过来成为审核主流程的
+    // 可用性依赖；写失败只由 AuditService 内部吞掉并记 warn，绝不回滚已提交的
+    // 结论。放在事务之外也避免审计写失败把整个审核事务一起拖回滚。
+    await this.securityAudit?.recordEvent({
+      module: "application",
+      action: `application.review.${decision}`,
+      actorEmployeeId: actor.employeeId,
+      subject: application.applicationId,
+      result: "success",
+      risk: approved ? "medium" : "high",
+      details: {
+        applicationVersionId,
+        decision,
+        comment,
+        sourceStatus,
+        nextStatus,
+        autoPublished: approved && nextStatus === "published",
+      },
     });
     // 事务外站内通知（矩阵 application.review.decided / application.published）：
     // 结论通知责任人；首次发布/恢复路径审核通过自动上架时追加发布通知。

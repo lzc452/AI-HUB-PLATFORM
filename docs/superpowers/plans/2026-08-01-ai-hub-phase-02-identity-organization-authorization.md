@@ -1,5 +1,7 @@
 # AI Hub 阶段 2 身份、组织与授权实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 > **执行状态（2026-08-03）：** 阶段 2 V1 范围已完成。在 Docker/Testcontainers 可用环境下完整 `pnpm verify` 通过。剩余风险为外部钉钉 OAuth 凭据与部署相关的安全策略。

@@ -22,3 +22,15 @@ apps/api/.storage/
 tmp/
 .verify/**/*.png
 .verify/**/*.log
+
+# 一次性浏览器抓取与沙箱验证设施
+.playwright-mcp/
+.t6/
+/packages/server/vitest.local.config.*
+/packages/database/.tmp-vitest.config.mjs
+
+# AI 工具内部状态（与 .workbuddy/、.claude/ 一致，不入库）
+.workbuddy-ai/
+.dsh/
+# 本地技能管理器软链（指向本机主目录，跨机为死链）
+.codex/skills/ask-matt

@@ -14,6 +14,7 @@ import type {
   PortalResourceType,
   PortalVersionInput,
 } from "./portal.types.js";
+import { audienceVisibilityCondition } from "../authorization/audience-visibility.js";
 
 interface ResourceRow {
   resource_id: string;
@@ -202,6 +203,13 @@ export class KyselyPortalRepository implements PortalRepository {
           ? sql`favorite_count desc, updated_at desc`
           : sql`updated_at desc`;
     const viewerEmployeeId = actor?.employeeId ?? null;
+    // 受众隔离：应用级 EXISTS 条件，不改变行数，可直接嵌入 where。
+    // 总数查询必须用同一个条件，否则分页 total 与 items 会不一致。
+    const visible = audienceVisibilityCondition({
+      applicationIdRef: "a.application_id",
+      statusRef: "a.status",
+      actor,
+    });
     const rows =
       type === "app"
         ? await sql<ResourceRow>`
@@ -215,6 +223,7 @@ export class KyselyPortalRepository implements PortalRepository {
             where a.status = ${statusFilter}
               and (${queryFilter} = '' or a.name ilike ${`%${queryFilter}%`} or a.summary ilike ${`%${queryFilter}%`})
               and (${ownerFilter} = '' or a.owner_employee_id = ${ownerFilter})
+              and ${visible}
             order by ${order} limit ${input.pageSize} offset ${offset}
           `.execute(this.database)
         : await this.listNativeRows(
@@ -234,6 +243,7 @@ export class KyselyPortalRepository implements PortalRepository {
             where a.status = ${statusFilter}
               and (${queryFilter} = '' or a.name ilike ${`%${queryFilter}%`} or a.summary ilike ${`%${queryFilter}%`})
               and (${ownerFilter} = '' or a.owner_employee_id = ${ownerFilter})
+              and ${visible}
           `.execute(this.database)
         : await this.countNative(type, queryFilter, ownerFilter, statusFilter);
     return {
@@ -262,6 +272,14 @@ export class KyselyPortalRepository implements PortalRepository {
     const canManage =
       actor?.permissions?.includes("*") === true ||
       actor?.permissions?.includes("application.manage") === true;
+    // 受众隔离对详情同样生效，且**不因管理权限而豁免**：受众是「谁能看到
+    // 这个应用」的访问控制，若owner/审核员可绕过，受众就退化成装饰。
+    // 不可见时返回 null → 上层映射为 404，与资源不存在的语义一致。
+    const visible = audienceVisibilityCondition({
+      applicationIdRef: "a.application_id",
+      statusRef: "a.status",
+      actor,
+    });
     const result =
       type === "app"
         ? await sql<ResourceRow>`
@@ -274,6 +292,7 @@ export class KyselyPortalRepository implements PortalRepository {
             from applications a join employees e on e.employee_id = a.owner_employee_id
             where a.application_id::text = ${slug}
               and (${ownerEmployeeId}::text is null or a.owner_employee_id = ${ownerEmployeeId})
+              and ${visible}
               and (
                 a.status = 'published' or a.owner_employee_id = ${viewerEmployeeId}
                 or a.maintainer_employee_id = ${viewerEmployeeId}
@@ -617,7 +636,14 @@ export class KyselyPortalRepository implements PortalRepository {
     };
   }
 
-  async listDepartments() {
+  async listDepartments(actor: ActorContext | null) {
+    // applicationCount 必须与列表走同一套受众判定，否则首页/部门卡片上的数字
+    // 会泄露「该部门有多少个你看不到的受限应用」——数字本身就是信息泄露面。
+    const visible = audienceVisibilityCondition({
+      applicationIdRef: "counted.application_id",
+      statusRef: "counted.status",
+      actor,
+    });
     const result = await sql<{
       departmentId: string;
       name: string;
@@ -628,7 +654,13 @@ export class KyselyPortalRepository implements PortalRepository {
       select d.department_id as "departmentId", d.name,
         coalesce(p.description, '') as description,
         (select count(*) from department_memberships m where m.department_id = d.department_id) as "memberCount",
-        (select count(*) from applications a where a.department_id = d.department_id and a.status = 'published') as "applicationCount"
+        (
+          select count(*)
+          from applications counted
+          where counted.department_id = d.department_id
+            and counted.status = 'published'
+            and ${visible}
+        ) as "applicationCount"
       from departments d left join portal_department_profiles p on p.department_id = d.department_id
       where d.status = 'active' order by d.name asc
     `.execute(this.database);
@@ -659,6 +691,13 @@ export class KyselyPortalRepository implements PortalRepository {
     departmentId: string,
   ) {
     const viewerEmployeeId = actor?.employeeId ?? null;
+    // 部门聚合页与全局列表必须一致：同一受众判定，否则「部门详情能看到、
+    // 列表里看不到」或反之，都会成为探测入口。
+    const visible = audienceVisibilityCondition({
+      applicationIdRef: "a.application_id",
+      statusRef: "a.status",
+      actor,
+    });
     const result = await sql<ResourceRow>`
       select a.application_id as resource_id, a.owner_employee_id,
         e.display_name as owner_name, a.application_id::text as slug,
@@ -668,6 +707,7 @@ export class KyselyPortalRepository implements PortalRepository {
         a.created_at, a.updated_at
       from applications a join employees e on e.employee_id = a.owner_employee_id
       where a.department_id = ${departmentId} and a.status = 'published'
+        and ${visible}
       order by favorite_count desc, a.updated_at desc limit 48
     `.execute(this.database);
     return Promise.all(
@@ -726,6 +766,13 @@ export class KyselyPortalRepository implements PortalRepository {
 
   async listHunt(actor: ActorContext | null) {
     const viewerEmployeeId = actor?.employeeId ?? null;
+    // 投票活动同样按受众过滤：活动页会把受限应用的名字与摘要公开展示，
+    // 只在 voteHunt 写路径校验是不够的（读路径本身就是泄露面）。
+    const visible = audienceVisibilityCondition({
+      applicationIdRef: "a.application_id",
+      statusRef: "a.status",
+      actor,
+    });
     const result = await sql<{
       periodId: string;
       periodName: string;
@@ -745,6 +792,7 @@ export class KyselyPortalRepository implements PortalRepository {
       join portal_app_hunt_entries e on e.period_id = p.period_id
       join applications a on a.application_id = e.application_id and a.status = 'published'
       where p.status in ('active', 'closed')
+        and ${visible}
       order by p.starts_at desc, "voteCount" desc, e.created_at asc
     `.execute(this.database);
     return result.rows.map((row) => ({
@@ -763,7 +811,13 @@ export class KyselyPortalRepository implements PortalRepository {
       const entry = await trx
         .selectFrom("portal_app_hunt_entries as e")
         .innerJoin("portal_app_hunt_periods as p", "p.period_id", "e.period_id")
-        .select(["e.entry_id", "p.status", "p.starts_at", "p.ends_at"])
+        .select([
+          "e.entry_id",
+          "e.application_id",
+          "p.status",
+          "p.starts_at",
+          "p.ends_at",
+        ])
         .where("e.entry_id", "=", entryId)
         .where("e.period_id", "=", periodId)
         .executeTakeFirst();
@@ -775,6 +829,24 @@ export class KyselyPortalRepository implements PortalRepository {
         entry.ends_at <= now
       ) {
         throw new Error("PORTAL_HUNT_PERIOD_NOT_ACTIVE");
+      }
+      // 受众隔离必须在写库之前判定：投票是写操作，若先落库再校验，
+      // 即使随后抛错也已在 portal_app_hunt_votes 留下记录。
+      // 不可见时复用 404 语义——不向调用方泄露「该应用存在但你无权访问」。
+      // join applications 并限定 published：与 listHunt 同一口径（活动只收录
+      // 已发布应用），未发布应用不进入受众判定，直接视为不可投票。
+      const visible = audienceVisibilityCondition({
+        applicationIdRef: "e.application_id",
+        actor,
+      });
+      const allowed = await sql<{ allowed: boolean }>`
+        select ${visible} as allowed
+        from portal_app_hunt_entries e
+        join applications a on a.application_id = e.application_id
+        where e.entry_id = ${entryId} and a.status = 'published'
+      `.execute(trx);
+      if (allowed.rows[0]?.allowed !== true) {
+        throw new Error("PORTAL_HUNT_ENTRY_NOT_FOUND");
       }
       await trx
         .updateTable("portal_app_hunt_votes")
@@ -1421,7 +1493,9 @@ export class KyselyPortalRepository implements PortalRepository {
         idempotency_key: `portal:${type}:${resourceId}:${event}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
-        available_at: new Date(),
+        // available_at 用数据库默认值 now()，与 claim 的时钟基准保持一致
+        // （写入用应用时钟、判断用数据库时钟会导致事件被永久跳过）。
+        available_at: sql`now()`,
         claimed_by: null,
         claimed_at: null,
         last_error: null,

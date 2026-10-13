@@ -46,6 +46,11 @@ export class ClamAvMalwareScanner implements MalwareScannerPort {
           .trim();
         if (/FOUND$/u.test(response)) finish(undefined, "infected");
         else if (/^stream: OK$/iu.test(response)) finish(undefined, "clean");
+        // 零字节响应说明 clamd 在给出结论前就断开了连接（过载、崩溃、
+        // 或病毒库不可用）。这属于「扫描器不可用」而非「协议被破坏」——
+        // 两者混为一谈会让运维把服务故障误判成代码缺陷。
+        else if (response.length === 0)
+          finish(new Error("CLAMAV_UNAVAILABLE:连接在返回结论前关闭"));
         else finish(new Error(`CLAMAV_INVALID_RESPONSE:${response}`));
       });
       socket.connect(this.port, this.host, () => {
@@ -58,8 +63,16 @@ export class ClamAvMalwareScanner implements MalwareScannerPort {
           socket.write(length);
           socket.write(chunk);
         }
+        // 终止块必须用 write 而不是 end：
+        // `socket.end(data)` 在发完数据后会关闭写侧（发送 FIN），
+        // clamd 把 FIN 视为流的结束，于是直接回空响应并关闭连接——
+        // 表现为 CLAMAV_INVALID_RESPONSE（响应为空字符串），
+        // 看起来像协议实现错误，实际是过早半关闭。
+        // 保持连接打开以读取 `stream: OK` / `... FOUND` 应答，
+        // 应答读到的同时再由上面的 data/end 处理里finish。
         const terminator = Buffer.alloc(4);
-        socket.end(terminator);
+        terminator.writeUInt32BE(0, 0);
+        socket.write(terminator);
       });
     });
   }

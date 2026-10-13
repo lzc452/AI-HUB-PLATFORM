@@ -64,8 +64,14 @@ export function FormWizard({
   const [submitting, setSubmitting] = useState(false);
   // 下一步进行中（onNextSuccess 未完成）：驱动按钮 loading。
   const [advancing, setAdvancing] = useState(false);
+  // 存草稿进行中：驱动按钮 loading（saveState 由业务方控制时作为叠加保护）。
+  const [savingDraft, setSavingDraft] = useState(false);
   // 同步守卫：连续点击 / 校验等待期间的重复点击直接拦截，避免跳过步骤或重复副作用。
   const advancingRef = useRef(false);
+  // 提交与存草稿各自独立的同步守卫——两者都含await 校验，必须在任何 await
+  // 之前置位，否则校验窗口内的重复点击会并发提交。
+  const submittingRef = useRef(false);
+  const savingDraftRef = useRef(false);
   const form = useForm<FieldValues>({
     defaultValues,
     mode: "onChange",
@@ -109,28 +115,43 @@ export function FormWizard({
   const handlePrev = () => setCurrent((index) => Math.max(index - 1, 0));
 
   const handleSaveDraft = async () => {
-    // 存草稿与「下一步」采用一致的当前步校验；校验不通过则不保存（错误已在表单展示）。
-    if (!(await validateStep(current))) return;
-    await onSaveDraft(form.getValues());
+    // 守卫必须在任何 await 之前置位：存草稿含当前步校验，校验期间连点会并发发多次 PATCH。
+    if (savingDraftRef.current) return;
+    savingDraftRef.current = true;
+    setSavingDraft(true);
+    try {
+      // 存草稿与「下一步」采用一致的当前步校验；校验不通过则不保存（错误已在表单展示）。
+      if (!(await validateStep(current))) return;
+      await onSaveDraft(form.getValues());
+    } finally {
+      savingDraftRef.current = false;
+      setSavingDraft(false);
+    }
   };
 
   const handleSubmit = async () => {
-    // 按顺序校验每个步骤：任一不通过则跳转到该步并中止提交。
-    for (let index = 0; index < steps.length; index += 1) {
-      const ok = await validateStep(index);
-      if (!ok) {
-        setCurrent(index);
-        return;
-      }
-    }
+    // 守卫必须在任何 await 之前置位：提交需串行校验全部步骤（zod 解析富文本耗时可观），
+    // 该窗口内按钮若仍可点，会并发启动两条校验链并各自提交一次。
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    // loading 覆盖整个校验期：校验中按钮转圈比保持可点更符合直觉。
     setSubmitting(true);
     try {
+      // 按顺序校验每个步骤：任一不通过则跳转到该步并中止提交。
+      for (let index = 0; index < steps.length; index += 1) {
+        const ok = await validateStep(index);
+        if (!ok) {
+          setCurrent(index);
+          return;
+        }
+      }
       await onSubmit(form.getValues());
     } catch (error) {
       // 提交失败必须用户可见：恢复按钮状态并通过全局消息提示。
       // 调用方若已自行捕获并展示详情（如业务错误码映射），此处不会重复触发。
       showErrorMessage(error, "提交失败");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -169,7 +190,11 @@ export function FormWizard({
         }}
       >
         <Space>
-          <Button onClick={handleSaveDraft} loading={saveState === "saving"}>
+          <Button
+            onClick={handleSaveDraft}
+            loading={savingDraft || saveState === "saving"}
+            disabled={savingDraft}
+          >
             {saveState === "saved" ? "已保存" : "存草稿"}
           </Button>
           {!isFirst && <Button onClick={handlePrev}>上一步</Button>}
@@ -182,7 +207,7 @@ export function FormWizard({
             <Button
               type="primary"
               loading={submitting}
-              disabled={submitDisabled}
+              disabled={submitDisabled || submitting}
               onClick={handleSubmit}
             >
               {submitLabel}

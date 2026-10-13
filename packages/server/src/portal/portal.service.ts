@@ -76,7 +76,7 @@ export class PortalService {
         this.repository.listResources(actor, "skill", this.featuredQuery()),
         this.repository.listResources(actor, "plugin", this.featuredQuery()),
         this.repository.listResources(actor, "mcp", this.featuredQuery()),
-        this.repository.listDepartments(),
+        this.repository.listDepartments(actor),
         this.repository.listSkillPackages(),
         this.repository.getContentPage("updates"),
       ]);
@@ -506,8 +506,8 @@ export class PortalService {
     return this.repository.listFavorites(actor, page, pageSize);
   }
 
-  departments() {
-    return this.repository.listDepartments();
+  departments(actor: ActorContext | null) {
+    return this.repository.listDepartments(actor);
   }
 
   async department(actor: ActorContext | null, departmentId: string) {

@@ -54,7 +54,7 @@ const identityRepository = {
     return ["dept-portal-consistency"];
   },
   async listEmployeeRoles() {
-    return [{ roleCode: "super_admin", permissions: ["*"] }];
+    return [{ roleCode: "super_admin", permissions: ["*"], active: true }];
   },
 } as unknown as IdentityRepository;
 

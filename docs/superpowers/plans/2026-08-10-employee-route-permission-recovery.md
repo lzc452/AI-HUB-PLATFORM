@@ -274,14 +274,14 @@ Expected: migration 命令先成功退出，再出现 NestJS API listening 日�
 
 ```powershell
 $taskLoginBody = @{ employeeId = 'DEMO-EMPLOYEE'; password = 'Demo-Employee-2026!' } | ConvertTo-Json
-$taskLogin = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3000/internal/identity/login/password' -ContentType 'application/json' -Body $taskLoginBody
+$taskLogin = Invoke-RestMethod -Method Post -Uri 'http://127.0.0.1:3001/internal/identity/login/password' -ContentType 'application/json' -Body $taskLoginBody
 $taskRequired = @('catalog.read', 'demand.read', 'notification.read')
 foreach ($taskPermission in $taskRequired) { if ($taskLogin.actor.permissions -notcontains $taskPermission) { throw "PERMISSION_MISSING:$taskPermission" } }
 $taskHeaders = @{ 'x-employee-id' = $taskLogin.actor.employeeId; 'x-session-id' = $taskLogin.actor.sessionId }
-$taskCatalog = Invoke-WebRequest -UseBasicParsing -Headers $taskHeaders -Uri 'http://127.0.0.1:3000/internal/catalog'
+$taskCatalog = Invoke-WebRequest -UseBasicParsing -Headers $taskHeaders -Uri 'http://127.0.0.1:3001/internal/catalog'
 if ($taskCatalog.StatusCode -ne 200) { throw "CATALOG_STATUS:$($taskCatalog.StatusCode)" }
 try {
-  Invoke-WebRequest -UseBasicParsing -Headers $taskHeaders -Uri 'http://127.0.0.1:3000/internal/identity/employees'
+  Invoke-WebRequest -UseBasicParsing -Headers $taskHeaders -Uri 'http://127.0.0.1:3001/internal/identity/employees'
   throw 'EMPLOYEE_ADMIN_ROUTE_UNEXPECTEDLY_ALLOWED'
 } catch {
   if ($_.Exception.Response.StatusCode.value__ -ne 403) { throw }

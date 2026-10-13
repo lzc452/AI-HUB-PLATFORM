@@ -1,5 +1,7 @@
 # AI Hub Platform V1 本地全闭环整改审计
 
+> 历史审计/整改快照：本文结论仅适用于原日期，当前实现、未关闭差异与验收见[需求基线](../requirements/README.md)。
+
 审计日期：2026-08-14  
 分支：`codex/v1-local-runnable-remediation`  
 基准：当前 `development` 工作树，保留用户已有 dirty diff，不执行 reset。

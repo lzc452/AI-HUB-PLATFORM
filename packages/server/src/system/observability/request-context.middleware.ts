@@ -4,6 +4,7 @@ import { isValid, ulid } from "ulid";
 
 import type { HttpMetricLabels } from "./metrics.js";
 import { OBSERVABILITY_METRICS } from "./tokens.js";
+import { normalizeRouteLabel } from "./route-normalizer.js";
 
 const TRACE_ID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 const requestContext = new AsyncLocalStorage<{ traceId: string }>();
@@ -17,6 +18,12 @@ interface RequestLike {
   method?: string;
   originalUrl?: string;
   url?: string;
+  /**
+   * Express 在路由匹配完成后填入的路由对象，`path` 是形如
+   * `/api/applications/:applicationId` 的模板——比原始 URL 更适合做指标标签。
+   * 声明为可选：中层与单测用的鸭子类型请求对象上没有它。
+   */
+  route?: { path?: unknown };
 }
 
 interface ResponseLike {
@@ -60,10 +67,12 @@ export class RequestContextMiddleware {
       recorded = true;
       finish({
         method: request.method ?? "UNKNOWN",
-        route: (request.originalUrl ?? request.url ?? "unknown").split(
-          "?",
-          1,
-        )[0]!,
+        // route 必须归一化：原始 URL 里的 uuid/自增 id/日期串是无限取值，
+        // 直接当Prometheus 标签会让时间序列无界增长（见 route-normalizer）。
+        route: normalizeRouteLabel(
+          request.originalUrl ?? request.url,
+          typeof request.route?.path === "string" ? request.route.path : undefined,
+        ),
         statusCode: response.statusCode,
       });
     };

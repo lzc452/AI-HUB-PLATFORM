@@ -24,6 +24,7 @@ import {
   createIdentityCookieBridge,
   createRateLimitMiddleware,
   ArtifactPipeline,
+  ClamAvMalwareScanner,
   DiskObjectStorage,
   GarageObjectStorage,
   type ReadableObjectStoragePort,
@@ -90,6 +91,11 @@ async function bootstrap() {
         : createArtifactVerification(
             artifactStorage,
             config.nodeEnv !== "production",
+            new ClamAvMalwareScanner(
+              config.clamavHost,
+              config.clamavPort,
+              config.clamavTimeoutMs,
+            ),
           ),
       identityOptions,
       config.objectStorageDriver === "disk" && config.artifactUploadEnabled
@@ -178,27 +184,16 @@ async function bootstrap() {
   await app.listen(config.apiPort);
 }
 
-/** 本地直传仅保留隔离链路；生产环境未接入真实扫描与签名 adapter 时必须失败关闭。
- * 非生产环境（本地开发/验证）使用接受桩，使发布链可在无安全适配器时跑通。 */
+/** 复用真实 ClamAV 扫描；生产环境未接入签名校验时仍失败关闭。 */
 function createArtifactVerification(
   storage: import("@ai-hub/server").ObjectStoragePort,
   acceptInDevelopment: boolean,
+  scanner: ClamAvMalwareScanner,
 ): ArtifactPipeline {
-  if (acceptInDevelopment) {
-    return new ArtifactPipeline(storage, {
-      async scan() {
-        return "clean";
-      },
-      async verify() {
-        return true;
-      },
-    });
-  }
   return new ArtifactPipeline(storage, {
-    async scan() {
-      throw new Error("ARTIFACT_SECURITY_UNAVAILABLE");
-    },
+    scan: (content) => scanner.scan(content),
     async verify() {
+      if (acceptInDevelopment) return true;
       throw new Error("ARTIFACT_SECURITY_UNAVAILABLE");
     },
   });

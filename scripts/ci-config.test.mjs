@@ -24,6 +24,18 @@ test("GitHub Actions owns the verification contract", async () => {
   assert.match(config, /development/);
 });
 
+test("CI 为真实依赖套件提供 PostgreSQL，而不只是声明透传变量", async () => {
+  const config = await readFile(".github/workflows/verify.yml", "utf8");
+
+  // 此前这条契约是假的：只断言 turbo 声明了 TEST_DATABASE_URL，
+  // 但 CI 实际既没有 services: 也没有设置该变量，
+  // 导致 verify 即使跑test:api-data 也只会静默跳过。
+  assert.match(config, /services:\s*\n\s*postgres:/);
+  assert.match(config, /postgres:\d+\.\d+-bookworm/);
+  assert.match(config, /TEST_DATABASE_URL:\s*postgres:\/\//);
+  assert.match(config, /--health-cmd/);
+});
+
 test("GitHub Actions owns immutable GHCR release publication", async () => {
   const config = await readFile(".github/workflows/release.yml", "utf8");
 

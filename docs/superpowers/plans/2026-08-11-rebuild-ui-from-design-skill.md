@@ -1,5 +1,7 @@
 # `rebuild-ui-from-design` Skill Implementation Plan
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 创建并验证项目级 `rebuild-ui-from-design` 技能，使 Agent 能把 `packages/ui/src` 的设计图按像素级标准还原到现有前端架构。

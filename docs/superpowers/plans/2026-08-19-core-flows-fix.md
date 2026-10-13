@@ -1,5 +1,7 @@
 # 核心链路修复计划 — 3 链路验收 + V1 双角色收敛
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 关闭 3 条核心链路验收核查发现的 2 P0 + 17 P1 问题，并实施 V1 双角色收敛（employee + super_admin 分发，其余 19 个预置角色保留定义不实施分发）。
@@ -941,5 +943,5 @@ git commit -m "feat(web): FAQ editor, full preview rendering, zh scan labels, se
 
 1. 跑 `corepack pnpm verify`（全量门禁）。
 2. 用演示账号（DEMO-EMPLOYEE / DEMO-SUPER-ADMIN）走 3 条链路手工/脚本验收：员工市场→详情→互动→创新广场→认领方案→通知→创作者中心；管理员审核/治理全流程；应用新增编辑版本上传使用全链路。
-3. 更新 PRD2APP.md 与三份链路报告的状态标注（已修复项打 ✅）。
+3. 更新 docs/audit/prd2app-gap-analysis-2026-08-18.md 与三份链路报告的状态标注（已修复项打 ✅）。
 4. 提交并推送 GitHub（用户已授权）。

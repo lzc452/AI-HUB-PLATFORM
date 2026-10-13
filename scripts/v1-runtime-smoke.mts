@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-const baseUrl = process.env.V1_SMOKE_BASE_URL ?? "http://127.0.0.1:3000";
+const baseUrl = process.env.V1_SMOKE_BASE_URL ?? "http://127.0.0.1:3001";
 const passwords = {
   "DEMO-SUPER-ADMIN": "Demo-SuperAdmin-2026!",
 } as const;

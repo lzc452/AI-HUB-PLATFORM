@@ -62,6 +62,7 @@ const identityRepository = {
       {
         roleCode: "employee",
         permissions: ["catalog.read", "interaction.interact"],
+        active: true,
       },
     ];
   },

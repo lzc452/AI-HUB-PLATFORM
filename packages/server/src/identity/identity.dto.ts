@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsArray,
+  ArrayMaxSize,
   IsBoolean,
   IsIn,
   ValidateIf,
@@ -650,9 +651,23 @@ export class DepartmentImportRowDto {
 }
 
 /** 员工/部门导入提交请求。 */
+/**
+ * 单批上限。
+ *
+ * 预览与提交都是每行至少 2 次数据库查询（查员工 + 查角色），
+ * 5000 行 = 1 万次查询。旧实现用 `Promise.all` 并发发起，
+ * 会一次性打满连接池把整个服务拖垮。真正的解法是把查询改成批量
+ * （见 IdentityService 的批量预取），上限只是**第二道**防线，
+ * 避免超大批次在批量查询之后仍然耗尽内存。
+ */
+const EMPLOYEE_IMPORT_MAX_ROWS = 500;
+
 export class EmployeeImportCommitRequestDto {
   @ApiProperty({ type: [EmployeeImportRowDto] })
   @IsArray()
+  @ArrayMaxSize(EMPLOYEE_IMPORT_MAX_ROWS, {
+    message: `单批最多导入 ${EMPLOYEE_IMPORT_MAX_ROWS} 行，请分批提交`,
+  })
   @ValidateNested()
   @Type(() => EmployeeImportRowDto)
   rows!: EmployeeImportRowDto[];
@@ -661,6 +676,9 @@ export class EmployeeImportCommitRequestDto {
 export class DepartmentImportCommitRequestDto {
   @ApiProperty({ type: [DepartmentImportRowDto] })
   @IsArray()
+  @ArrayMaxSize(EMPLOYEE_IMPORT_MAX_ROWS, {
+    message: `单批最多导入 ${EMPLOYEE_IMPORT_MAX_ROWS} 行，请分批提交`,
+  })
   @ValidateNested()
   @Type(() => DepartmentImportRowDto)
   rows!: DepartmentImportRowDto[];

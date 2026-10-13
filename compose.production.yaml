@@ -2,7 +2,7 @@ name: ai-hub-production
 
 x-production-environment: &production-environment
   NODE_ENV: production
-  API_PORT: "3000"
+  API_PORT: "3001"
   PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
   DATABASE_URL_FILE: /run/secrets/database_url
   COOKIE_SECRET_FILE: /run/secrets/cookie_secret
@@ -75,14 +75,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    expose: ["3000"]
+    expose: ["3001"]
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3001/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 5s
@@ -184,7 +184,7 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-    expose: ["3000"]
+    expose: ["3001"]
     networks: [application]
 
   loki:

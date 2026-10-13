@@ -1,5 +1,7 @@
 # AI Hub 阶段 5 AI 需求与创新广场实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **目标：** 交付受治理、可审计的 AI 需求生命周期，从结构化请求一路到创新广场协作、优先级排序、试点、应用关联与正式应用发布，且不绕过阶段 3 应用生命周期门禁。

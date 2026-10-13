@@ -49,6 +49,7 @@ const identityRepository = {
           "interaction.interact",
           "feedback.read",
         ],
+        active: true,
       },
     ];
   },

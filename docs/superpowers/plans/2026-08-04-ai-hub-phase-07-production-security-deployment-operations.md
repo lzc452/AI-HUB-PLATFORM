@@ -1,5 +1,7 @@
 # 阶段 7 生产安全、部署与运维实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **目标：** 产出可部署、可审计的双 Ubuntu 生产 Compose 运行模型，包含安全控制、故障恢复证据，以及 99.5% 可用性、15 分钟 RPO、2 小时 RTO 目标的显式证明，且不进入阶段 8 试点或上线工作。

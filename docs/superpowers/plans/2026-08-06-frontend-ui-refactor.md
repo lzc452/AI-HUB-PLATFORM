@@ -1,5 +1,7 @@
 # 前端页面样式与布局重构实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能： superpowers:subagent-driven-development（推荐） 或 superpowers:executing-plans 逐任务实施本计划。 步骤使用复选框（`- [ ]`）语法跟踪。
 
 **Goal:** 将 `apps/web` 重构为 `docs/ui-design/frontend-ui-design.md`（v1.0，权威 spec）要求的"固定 56px Header + 可收起 Sidebar + 面包屑内容区"管理后台布局，全页面统一简体中文与设计语言，并新增 AI 助手页骨架。

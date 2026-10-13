@@ -1,5 +1,7 @@
 # AI Hub Platform V1 收尾实施路径（全栈）
 
+> 历史审计/整改快照：本文结论仅适用于原日期，当前实现、未关闭差异与验收见[需求基线](../requirements/README.md)。
+
 > 基准日期：2026-08-12
 > 输入基线：`docs/audit/v1-flow-gap-matrix.md`（缺口矩阵）+ `docs/audit/v1-local-runnable-audit.md`（本地台账）
 > 目标：**关闭两条核心业务链（发布链/消费链）+ 组织与安全管理 + 验证视觉收口**，V1 达到"本地真实可运行、前端真实接线、证据可验收"。

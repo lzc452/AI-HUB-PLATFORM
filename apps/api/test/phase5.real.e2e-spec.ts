@@ -56,8 +56,8 @@ const identityRepository = {
           : "dept-rnd",
     ];
   },
-  async listEmployeeIdsWithRole(roleCode: string) {
-    return roleCode === "demand_operator" ? ["E900"] : [];
+  async listEmployeeIdsWithPermission(permission: string) {
+    return permission === "demand.review" ? ["E900"] : [];
   },
   async listEmployeeRoles(employeeId: string) {
     return [
@@ -90,6 +90,7 @@ const identityRepository = {
                 "application.read",
                 "application.review",
               ],
+        active: true,
       },
     ];
   },
@@ -415,8 +416,11 @@ describe("real Phase 5 demand API", () => {
           .send({ expectedVersion: published.body.version }),
       ),
     );
+    // 乐观锁冲突（expectedVersion 过期）必须返回 409 而不是 400（P1-5）：
+    // 400 会被客户端当成「参数写错了」，而这里参数完全正确——
+    // 是别人先一步改了状态。409 才能让客户端重新拉取状态并重试。
     expect(claimResponses.map((response) => response.status).sort()).toEqual([
-      201, 400,
+      201, 409,
     ]);
     const claimed = claimResponses.find((response) => response.status === 201);
     expect(claimed?.body.ownerEmployeeId).toBeTruthy();
@@ -438,7 +442,8 @@ describe("real Phase 5 demand API", () => {
     );
     expect(
       collaboratorResponses.map((response) => response.status).sort(),
-    ).toEqual([201, 400]);
+      // 与上方认领同理：expectedVersion 过期是并发冲突，必须 409 而非 400（P1-5）。
+    ).toEqual([201, 409]);
     const operators = await db
       .selectFrom("ai_demand_collaborators")
       .select(["employee_id"])

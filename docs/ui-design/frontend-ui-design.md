@@ -1,5 +1,7 @@
 # AI Hub Platform 前端 UI 设计文档
 
+> 历史视觉设计（2026-08-06）：当前菜单、角色、业务状态和验收统一见[需求基线](../requirements/README.md)；布局与设计图仍可作为视觉参照。
+
 > **版本**: 1.0
 > **日期**: 2026-08-06
 > **基于**: [V1 设计规格](../superpowers/specs/2026-07-31-ai-application-sharing-platform-design.md)

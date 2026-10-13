@@ -1308,7 +1308,7 @@ describe("DemandService demand.submitted notification", () => {
     return { repository, demand, audits, events };
   }
 
-  it("broadcasts demand.submitted to every demand_operator on submit", async () => {
+  it("broadcasts demand.submitted to every demand reviewer on submit", async () => {
     const { repository, demand } = submitHarness();
     const notifications = { queue: vi.fn().mockResolvedValue(undefined) };
     const service = new DemandService(
@@ -1317,8 +1317,8 @@ describe("DemandService demand.submitted notification", () => {
       undefined,
       undefined,
       {
-        listEmployeeIdsWithRole: async (roleCode: string) =>
-          roleCode === "demand_operator" ? ["operator-1", "operator-2"] : [],
+        listEmployeeIdsWithPermission: async (permission: string) =>
+          permission === "demand.review" ? ["operator-1", "operator-2"] : [],
       },
       notifications,
     );
@@ -1339,7 +1339,7 @@ describe("DemandService demand.submitted notification", () => {
     );
   });
 
-  it("skips the notification when no demand_operator exists", async () => {
+  it("skips the notification when no demand reviewer exists", async () => {
     const { repository, demand } = submitHarness();
     const notifications = { queue: vi.fn() };
     const service = new DemandService(
@@ -1347,7 +1347,7 @@ describe("DemandService demand.submitted notification", () => {
       { authorize: allowAll },
       undefined,
       undefined,
-      { listEmployeeIdsWithRole: async () => [] },
+      { listEmployeeIdsWithPermission: async () => [] },
       notifications,
     );
 

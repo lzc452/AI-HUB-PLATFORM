@@ -1,5 +1,5 @@
 import type { EncryptedLoginEnvelope } from "@ai-hub/contracts";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createPublicKey, randomBytes } from "node:crypto";
 
 function sha256hex(input: string): string {
   return createHash("sha256").update(input, "utf8").digest("hex");
@@ -76,6 +76,10 @@ export class LoginEncryptionService {
 
   static async fromPem(pem: string): Promise<LoginEncryptionService> {
     const der = pemToDer(pem);
+    // extractable 必须为 false：私钥一旦可导出，进程内任何拿到 CryptoKey
+    // 的代码都能把它还原成 PEM 带出进程。代价是不能再 exportKey 导出公钥，
+    // 因此公钥改从同一份 PEM 用 Node 的 createPublicKey 派生——
+    // 公开信息从公开输入推导，不削弱私钥保护。
     const privateKey = await crypto.subtle.importKey(
       "pkcs8",
       der.buffer as ArrayBuffer,
@@ -84,14 +88,7 @@ export class LoginEncryptionService {
       ["unwrapKey"],
     );
 
-    const jwk = await crypto.subtle.exportKey("jwk", privateKey);
-    const publicJwk: JwkPublic = {
-      kty: jwk.kty ?? "RSA",
-      n: jwk.n ?? "",
-      e: jwk.e ?? "",
-      alg: "RSA-OAEP-256",
-      key_ops: ["wrapKey"],
-    };
+    const publicJwk = publicJwkFromPem(pem);
     const keyId = sha256hex(publicJwk.n).slice(0, 16);
 
     return new LoginEncryptionService(privateKey, publicJwk, keyId);
@@ -170,6 +167,24 @@ export class LoginEncryptionService {
 }
 
 // ── helpers ──────────────────────────────────────────────────────
+
+/**
+ * 从私钥 PEM 派生公钥 JWK。
+ *
+ * `createPublicKey` 能直接从私钥 PEM 取出公钥部分，因此公钥材料来自
+ * 公开的 PEM 文本本身，无需对 WebCrypto 的私钥对象做 exportKey
+ * （那需要 extractable=true，会让私钥可被还原带出进程）。
+ */
+function publicJwkFromPem(pem: string): JwkPublic {
+  const jwk = createPublicKey(pem).export({ format: "jwk" });
+  return {
+    kty: jwk.kty ?? "RSA",
+    n: jwk.n ?? "",
+    e: jwk.e ?? "",
+    alg: "RSA-OAEP-256",
+    key_ops: ["wrapKey"],
+  };
+}
 
 function pemToDer(pem: string): Uint8Array<ArrayBuffer> {
   const lines = pem.split("\n").filter((line) => !line.startsWith("-----"));

@@ -42,6 +42,7 @@ const identityRepository = {
           "analytics.export",
           "analytics.assistant.use",
         ],
+        active: true,
       },
     ];
   },

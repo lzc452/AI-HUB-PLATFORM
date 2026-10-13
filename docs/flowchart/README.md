@@ -1,5 +1,7 @@
 # AI Hub 平台设计流程图
 
+> 设计图保留原批次流程与排期；当前完整业务链、角色、状态和未实现条件见[需求基线](../requirements/README.md)，不从原图推导真实外部接入或上线验收。
+
 本目录归档 AI Hub 平台 V1 的整体设计流程图，覆盖**整体架构重设计（00）**、系统架构、核心业务流程、V1 路线图与部署运维。每张图同时提供 draw.io 源文件（`.drawio`）、矢量预览（`.svg`）与高清位图（`.png`）；源文件可在 [draw.io](https://app.diagrams.net) 或 draw.io 桌面版中直接打开、编辑和重新导出。
 
 > 整体架构重设计与长期发展规划（分层、C4 上下文映射、V1→V2→V3 演进、待补充 ADR）见 [《AI Hub 平台 · 架构重设计与长期发展规划》](../architecture-redesign.md)。
@@ -26,3 +28,13 @@
 - 校验防回归：`node docs/flowchart/tools/generate-flowcharts.mjs --check` 检查重叠 / 越界 / 连线穿节点，建议在文档 PR 中执行。
 - 高清导出（位图）：`node docs/flowchart/tools/export-png.mjs` 基于 SVG 以 2x 经 `@resvg/resvg-js` 导出全部 `.png`。
 - 内容依据：V1 [设计规格](../superpowers/specs/2026-07-31-ai-application-sharing-platform-design.md)、[V1 项目路线图](../superpowers/plans/2026-07-31-ai-hub-v1-program-roadmap.md) 与当前仓库代码结构；整体架构见 [《架构重设计与长期发展规划》](../architecture-redesign.md)。
+
+## 架构与流程图交付记录
+
+本节合并原根目录的架构重设计交付总览，记录该批次成果：
+
+- 架构文档覆盖现状、风险、分层与上下文映射、V1→V2→V3 演进、3–5 年规划与 ADR 候选；新增 00 总览图并重生成 01–09。
+- 生成引擎加入自动折行、字号与高度自适应、`borderAnchor(tol=2)` 容差锚点、清晰连线与 marker，以及重叠、越界、waypoint 穿节点校验。
+- 图数据拆分到 `flowcharts-data.mjs`；修正 00 图的 e8 等穿节点 waypoint，新增 `export-png.mjs` 的 2x 高清导出，并清理一次性调试文件。
+- 原批次记录：几何校验 10/10 通过，10 张 PNG 导出成功（00 图为 3080×2240），00 图中文、布局与连线完成目视检查。
+- 后续事项：建议将 `--check` 纳入文档 CI；V2/V3 与候选 ADR 按实际业务需要推进。

@@ -166,6 +166,19 @@ export default function ApplicationReviewPage() {
                 data.reviewQueue?.claimedByEmployeeId === actor?.employeeId &&
                 data.reviewQueue?.status === "claimed"
               }
+              // 按钮禁用有多个成因（自审禁止、未认领、无版本），仅靠一个布尔
+              // 无法给出解释。此处显式传入原因，避免用户面对灰按钮无解。
+              disabledReason={
+                versionId == null
+                  ? "当前应用没有待审核版本"
+                  : data.app?.ownerEmployeeId === actor?.employeeId
+                    ? "禁止审核自己提交的应用"
+                    : data.reviewQueue?.claimedByEmployeeId !==
+                          actor?.employeeId ||
+                        data.reviewQueue?.status !== "claimed"
+                      ? "请先在「审核任务信息」中点击「领取任务」，再进行通过/驳回操作"
+                      : undefined
+              }
               reviewAction={reviewAction}
               versionId={versionId}
             />
@@ -438,11 +451,14 @@ function ValidationCard({ checks }: { checks: Check[] }) {
 
 function ReviewActionCard({
   canDecide,
+  disabledReason,
   reviewAction,
   versionId,
 }: {
   /** 当前审核员是否已认领该任务（未认领时禁用操作，避免 REVIEW_QUEUE_CLAIM_REQUIRED 400）。 */
   canDecide: boolean;
+  /** 禁用原因；为undefined 表示可操作。用于在按钮上方给出可读解释。 */
+  disabledReason: string | undefined;
   reviewAction: ReturnType<typeof useReviewApplicationVersion>;
   versionId: string | undefined;
 }) {
@@ -453,11 +469,14 @@ function ReviewActionCard({
       styles={{ body: { padding: 0 } }}
       title={<span className="font-semibold">审核操作</span>}
     >
-      {/* {!canDecide && versionId ? (
-        <div className="mb-3 rounded-md bg-[#fff7e6] px-3 py-2 text-[12px] text-[#ad6800]">
-          请先在任务信息中领取该审核任务，再进行通过/驳回操作。
+      {disabledReason !== undefined ? (
+        <div
+          role="status"
+          className="mb-3 rounded-md bg-[#fff7e6] px-3 py-2 text-[12px] text-[#ad6800]"
+        >
+          {disabledReason}
         </div>
-      ) : null} */}
+      ) : null}
       <label
         className="text-[13px] font-medium text-[#374151]"
         htmlFor="reject-reason"

@@ -1,5 +1,7 @@
 # 应用管理改进 6 项实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 修复应用管理 3 个已定位根因的 bug（删除弹窗连弹、校验未过仍建草稿、维护人不随部门联动），并实现交付类型多选落库、自定义分类/标签审核流转、分类标签中文化与热门分类面板。

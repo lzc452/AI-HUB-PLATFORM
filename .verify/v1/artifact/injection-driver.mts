@@ -12,7 +12,7 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const baseUrl = process.env.V1_INJECT_BASE_URL ?? "http://127.0.0.1:3000";
+const baseUrl = process.env.V1_INJECT_BASE_URL ?? "http://127.0.0.1:3001";
 const outDir =
   process.env.V1_INJECT_OUT_DIR ?? "/workspace/.verify/v1/artifact";
 const statePath = `${outDir}/state.json`;

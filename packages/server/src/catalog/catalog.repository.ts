@@ -11,6 +11,7 @@ import type {
   CatalogSearchInput,
 } from "./catalog.types.js";
 import type { DeliveryChannel } from "../application/application.types.js";
+import { audienceVisibilityCondition } from "../authorization/audience-visibility.js";
 
 type CatalogRow = {
   applicationId: string;
@@ -47,7 +48,6 @@ export class KyselyCatalogRepository implements CatalogRepository {
     input: CatalogSearchInput,
     applicationId?: string,
   ): Promise<import("./catalog.types.js").CatalogListResult> {
-    const departmentIds = input.actor.departmentIds;
     let query = this.db
       .selectFrom("application_catalog_metadata as metadata")
       .innerJoin(
@@ -106,24 +106,15 @@ export class KyselyCatalogRepository implements CatalogRepository {
       ])
       .where("application.status", "=", "published")
       .where("application.current_version_id", "is not", null)
-      .where((eb) =>
-        eb.exists(
-          eb
-            .selectFrom("application_audiences as audience")
-            .select("audience.audience_id")
-            .whereRef(
-              "audience.application_id",
-              "=",
-              "application.application_id",
-            )
-            .where((audienceEb) =>
-              audienceEb.or([
-                audienceEb("audience.audience_type", "=", "all"),
-                audienceEb("audience.employee_id", "=", input.actor.employeeId),
-                audienceEb("audience.department_id", "in", departmentIds),
-              ]),
-            ),
-        ),
+      // 受众可见性与 Portal 侧共用同一份判定（authorization/audience-visibility）。
+      // 原先此处是独立实现且只看**直属**部门，导致「include_children 受众的应用
+      // 在市场不可见、在部门列表可见」这类跨模块不一致——两处判定必须同源。
+      .where(
+        audienceVisibilityCondition({
+          applicationIdRef: "application.application_id",
+          statusRef: "application.status",
+          actor: input.actor,
+        }),
       );
 
     if (applicationId !== undefined) {

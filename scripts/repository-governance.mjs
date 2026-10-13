@@ -41,6 +41,15 @@ export function findCodexViolations(relativePath, content) {
 async function collectFiles(directory, root, files = []) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const absolute = path.join(directory, entry.name);
+    // 符号链接必须跳过，有两个独立原因：
+    // 1. readdir 的 withFileTypes 走 lstat 语义，链接的 isDirectory() 恒为 false，
+    //    于是它会被当成文件塞进列表，后面 readFile 抛 EISDIR 让整个检查崩掉；
+    // 2. 更本质的是越界——链接指向机器本地状态（如 ~/.skills-manager），
+    //    本次治理要扫的是仓库内受版本控制的文件，跟进链接既扫不到有效内容，
+    //    又会把个人环境的绝对路径判成违规。
+    if (entry.isSymbolicLink()) {
+      continue;
+    }
     if (entry.isDirectory()) {
       await collectFiles(absolute, root, files);
       continue;

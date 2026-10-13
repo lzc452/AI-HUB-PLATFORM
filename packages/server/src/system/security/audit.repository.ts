@@ -127,7 +127,9 @@ export class KyselyAuditRepository implements AuditRepository {
           idempotency_key: `security-audit-export:${row.export_job_id}:${randomUUID()}`,
           status: "pending",
           attempts: 0,
-          available_at: new Date(),
+          // available_at 用数据库默认值 now()，与 claim 的时钟基准保持一致
+          // （写入用应用时钟、判断用数据库时钟会导致事件被永久跳过）。
+          available_at: sql`now()`,
           claimed_by: null,
           claimed_at: null,
           last_error: null,

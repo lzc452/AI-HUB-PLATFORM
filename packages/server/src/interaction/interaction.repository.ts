@@ -1,6 +1,6 @@
 import type { DatabaseSchema } from "@ai-hub/database";
 import { randomUUID } from "node:crypto";
-import { type Kysely, type Selectable } from "kysely";
+import { sql, type Kysely, type Selectable } from "kysely";
 import type {
   ApplicationTeamRecord,
   CommentRecord,
@@ -386,7 +386,9 @@ export class KyselyInteractionRepository implements InteractionRepository {
           `${input.eventType}:${input.applicationId}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
-        available_at: new Date(),
+        // available_at 用数据库默认值 now()，与 claim 的时钟基准保持一致
+        // （写入用应用时钟、判断用数据库时钟会导致事件被永久跳过）。
+        available_at: sql`now()`,
         claimed_by: null,
         claimed_at: null,
         last_error: null,

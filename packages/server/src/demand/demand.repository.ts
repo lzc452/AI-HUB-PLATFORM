@@ -16,6 +16,7 @@ import type {
   DemandApplicationLinkRecord,
   DemandAttachmentRecord,
   DemandEntry,
+  DemandListResult,
   DemandPilotRecord,
   DemandProgressRecord,
   DemandReportRecord,
@@ -41,6 +42,17 @@ type ProgressRow = Selectable<DatabaseSchema["ai_demand_progress_updates"]>;
 type PilotRow = Selectable<DatabaseSchema["ai_demand_pilots"]>;
 type ClaimProposalRow = Selectable<DatabaseSchema["ai_demand_claim_proposals"]>;
 type AttachmentRow = Selectable<DatabaseSchema["ai_demand_attachments"]>;
+
+/**
+ * 把字符串数组写成 jsonb 列值。
+ *
+ * schema 把 jsonb 列声明为 `string[]`，但直接塞裸数组时Kysely 会按PG 数组
+ * 字面量生成参数，最终报 `invalid input syntax for type json`——空数组时更隐蔽，
+ * 因为 `{}` 恰好是合法 json。只有显式 `::jsonb` 才是正确写法。
+ */
+function toJsonb<T>(value: readonly string[]): T {
+  return sql<T>`${JSON.stringify(value)}::jsonb` as unknown as T;
+}
 
 export class KyselyDemandRepository implements DemandRepository {
   constructor(private readonly db: Kysely<DatabaseSchema>) {}
@@ -143,15 +155,44 @@ export class KyselyDemandRepository implements DemandRepository {
     audienceType?: CreateDemandInput["audienceType"];
     sort?: "recent" | "priority" | "hot";
   }): Promise<readonly DemandEntry[]> {
-    let query = this.selectDemand(input.actor).where(
+    const query = this.selectDemand(input.actor).where(
       this.audiencePredicate(input.actor),
     );
+    const ordered = this.applyDemandOrder(
+      this.applyVisibleFilters(query, input),
+      input.sort,
+    );
+    const rows = await ordered.execute();
+    return rows.map((row) => this.mapRow(row));
+  }
+
+  /**
+   * 可见需求的筛选条件（不含排序）。
+   *
+   * 抽出来是因为 `listVisible` 与 `listVisiblePage` 必须给出**完全一致**的
+   * 行集——一旦两份过滤逻辑各自演进，分页版就会漏行或重复，
+   * 而且这种偏差不会让任何单测失败，只会表现为「翻页时某条需求不见了」。
+   *
+   * 返回类型由 Kysely 自身推导（不写泛型）：SelectQueryBuilder 的类型
+   * 带完整的表结构与 where 累积信息，用泛型参数化会在 `.where()` 之后
+   * 丢失这些信息，反而逼出一堆类型断言。
+   */
+  private applyVisibleFilters(
+    query: ReturnType<KyselyDemandRepository["selectDemand"]>,
+    input: {
+      status?: DemandEntry["status"];
+      query?: string;
+      requesterDepartmentId?: string;
+      audienceType?: CreateDemandInput["audienceType"];
+    },
+  ): ReturnType<KyselyDemandRepository["selectDemand"]> {
+    let filtered = query;
     if (input.status !== undefined) {
-      query = query.where("ai_demands.status", "=", input.status);
+      filtered = filtered.where("ai_demands.status", "=", input.status);
     }
     if (input.query !== undefined && input.query.trim().length > 0) {
       const pattern = `%${input.query.trim()}%`;
-      query = query.where(
+      filtered = filtered.where(
         sql<boolean>`(
           ai_demands.title ilike ${pattern}
           or ai_demands.problem_statement ilike ${pattern}
@@ -160,7 +201,7 @@ export class KyselyDemandRepository implements DemandRepository {
       );
     }
     if (input.requesterDepartmentId !== undefined) {
-      query = query.where(
+      filtered = filtered.where(
         sql`(
           select primary_department_id from employees requester
           where requester.employee_id = ai_demands.requester_employee_id
@@ -170,12 +211,27 @@ export class KyselyDemandRepository implements DemandRepository {
       );
     }
     if (input.audienceType !== undefined) {
-      query = query.where("ai_demands.audience_type", "=", input.audienceType);
+      filtered = filtered.where(
+        "ai_demands.audience_type",
+        "=",
+        input.audienceType,
+      );
     }
-    const ordered =
-      input.sort === "priority"
+    return filtered;
+  }
+
+  /**
+   * 排序。**并列时一律以 demand_id 升序收尾**，保证翻页时
+   * 同一条记录不会同时出现在两页或两页都漏掉。
+   */
+  private applyDemandOrder(
+    query: ReturnType<KyselyDemandRepository["selectDemand"]>,
+    sort: "recent" | "priority" | "hot" | undefined,
+  ): ReturnType<KyselyDemandRepository["selectDemand"]> {
+    const primary =
+      sort === "priority"
         ? query.orderBy(sql`ai_demands.priority_score desc nulls last`)
-        : input.sort === "hot"
+        : sort === "hot"
           ? query.orderBy(
               sql`(
                 (select count(*) from ai_demand_likes l where l.demand_id = ai_demands.demand_id)
@@ -183,11 +239,52 @@ export class KyselyDemandRepository implements DemandRepository {
               ) desc`,
             )
           : query.orderBy("ai_demands.updated_at", "desc");
-    const rows = await ordered
+    return primary
       .orderBy("ai_demands.updated_at", "desc")
-      .orderBy("ai_demands.demand_id", "asc")
+      .orderBy("ai_demands.demand_id", "asc");
+  }
+
+  /**
+   * 分页版可见需求查询：把 limit/offset 与 count 都下推到 SQL。
+   *
+   * 与 `listVisible` 的差别只在取数方式，**结果集与顺序完全一致**，
+   * 因为可见性判定（audiencePredicate）与排序都在 SQL 里，
+   * 服务层的 `slice` 不承载任何业务语义。
+   */
+  async listVisiblePage(input: {
+    actor: Parameters<DemandRepository["listVisible"]>[0]["actor"];
+    status?: DemandEntry["status"];
+    query?: string;
+    requesterDepartmentId?: string;
+    audienceType?: CreateDemandInput["audienceType"];
+    sort?: "recent" | "priority" | "hot";
+    page: number;
+    pageSize: number;
+  }): Promise<DemandListResult> {
+    const filtered = this.applyVisibleFilters(
+      this.selectDemand(input.actor).where(this.audiencePredicate(input.actor)),
+      input,
+    );
+    const ordered = this.applyDemandOrder(filtered, input.sort);
+
+    // count 只需主键：复用带 6 个相关子查询的完整 select 会让
+    // 「数一数有多少行」把点赞数、评论数全部算一遍，纯属浪费。
+    const countRow = await this.db
+      .selectFrom(ordered.as("visible_demands"))
+      .select(sql<number>`count(*)::int`.as("count"))
+      .executeTakeFirst();
+    const total = Number(countRow?.count ?? 0);
+
+    const rows = await ordered
+      .limit(input.pageSize)
+      .offset((input.page - 1) * input.pageSize)
       .execute();
-    return rows.map((row) => this.mapRow(row));
+    return {
+      items: rows.map((row) => this.mapRow(row)),
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+    };
   }
 
   async findVisible(
@@ -1045,7 +1142,9 @@ export class KyselyDemandRepository implements DemandRepository {
         demand_id: input.demandId,
         proposer_employee_id: input.proposerEmployeeId,
         owner_employee_id: input.ownerEmployeeId,
-        collaborator_employee_ids: input.collaboratorEmployeeIds,
+        collaborator_employee_ids: toJsonb<string[]>(
+          input.collaboratorEmployeeIds,
+        ),
         approach: input.approach,
         estimated_validation_duration: input.estimatedValidationDuration,
         resource_needs: input.resourceNeeds,
@@ -1187,7 +1286,9 @@ export class KyselyDemandRepository implements DemandRepository {
           `${input.eventType}:${input.demandId}:${randomUUID()}`,
         status: "pending",
         attempts: 0,
-        available_at: new Date(),
+        // available_at 用数据库默认值 now()，与 claim 的时钟基准保持一致
+        // （写入用应用时钟、判断用数据库时钟会导致事件被永久跳过）。
+        available_at: sql`now()`,
         claimed_by: null,
         claimed_at: null,
         last_error: null,

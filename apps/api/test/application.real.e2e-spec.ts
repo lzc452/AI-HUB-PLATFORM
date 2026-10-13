@@ -49,7 +49,7 @@ const identityRepository = {
   },
   async listEmployeeRoles(employeeId: string) {
     if (employeeId === "E300") {
-      return [{ roleCode: "super_admin", permissions: ["*"] }];
+      return [{ roleCode: "super_admin", permissions: ["*"], active: true }];
     }
     return [
       {
@@ -64,6 +64,7 @@ const identityRepository = {
                 "application.publish",
               ]
             : ["application.read", "application.review"],
+        active: true,
       },
     ];
   },

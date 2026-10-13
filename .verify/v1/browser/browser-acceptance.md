@@ -1,5 +1,7 @@
 # V1 浏览器流程与五角色矩阵验收证据
 
+> 历史验收证据：五角色 fixture 与 migration 0032 只代表 2026-08-16 环境，不等同当前两角色分发、后续需求变更及 Portal 模型验收；当前案例见[统一验收手册](../../../docs/requirements/acceptance.md)。
+
 执行时间：2026-08-16（Asia/Shanghai）
 工具：本地 Playwright 1.57 + Chromium 143（headless，`deviceScaleFactor=1`）
 目标：重建后的本地应用 `http://127.0.0.1:8080`（8/8 healthy，migration 0032）

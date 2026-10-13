@@ -143,7 +143,11 @@ export class KyselyNotificationRepository implements NotificationRepository {
         idempotency_key: input.idempotencyKey,
         status: "pending",
         attempts: 0,
-        available_at: new Date(),
+        // available_at 交给数据库默认值（now()）生成，**不要**用应用侧
+        // new Date()：写入与 claim 的时钟基准必须一致，否则应用时钟与
+        // 数据库时钟一旦有偏差（容器/虚拟化环境下可差数十秒），
+        // 事件会被 claim 当作「仍在未来」而永久跳过 ——
+        // 表现为 outbox 一直 pending、通知永不投递，且不报任何错。
         claimed_by: null,
         claimed_at: null,
         last_error: null,

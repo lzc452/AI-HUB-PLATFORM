@@ -8,7 +8,6 @@ import {
   Form,
   Input,
   message,
-  Modal,
   Radio,
   Select,
   Space,
@@ -17,7 +16,6 @@ import {
   Typography,
   Upload,
 } from "antd";
-import type { UploadFile } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -27,13 +25,12 @@ import type {
   AudienceRule,
   DeliveryChannel,
   DeliveryDraftItem,
-  UploadKind,
 } from "@ai-hub/contracts";
 import { useDepartmentMembers } from "../auth";
 import type { WizardStepConfig } from "../../shared/forms/FormWizard";
 import { RichTextEditor } from "../../shared/ui/RichTextEditor";
 import { RichTextView } from "../../shared/ui/RichTextView";
-import { getAssetContent, useAssetImage } from "../application";
+import { deleteAsset, listAssets, uploadAsset } from "./publishing.client";
 import {
   formatAudienceParts,
   rulesToSelection,
@@ -44,7 +41,10 @@ import {
   deriveApplicationTypeFromChannels,
   deriveDeliveriesFromChannels,
 } from "./schema";
-import { deleteAsset, listAssets, uploadAsset } from "./publishing.client";
+import { IconField, ScreenshotField } from "./asset-fields";
+import type { WizardUploadFn } from "./upload-types";
+
+export type { WizardUploadFn } from "./upload-types";
 
 const { Text } = Typography;
 
@@ -159,339 +159,6 @@ const DISCLAIMER_TEMPLATE =
 // ---------------------------------------------------------------------------
 // 图标 / 截图上传（对接统一上传 client）
 // ---------------------------------------------------------------------------
-
-/** 向导上传回调：由页面注入（先确保草稿创建再上传，避免 applicationId 为空时 404）。 */
-export type WizardUploadFn = (
-  kind: UploadKind,
-  file: File,
-) => Promise<{ assetId: string }>;
-
-function IconField({
-  applicationId,
-  upload,
-}: {
-  applicationId: string;
-  upload: WizardUploadFn;
-}) {
-  const { control, watch, setValue, trigger } = useFormContext<FieldValues>();
-  const mode = watch("icon.mode");
-  const name = watch("name");
-  const bg = watch("icon.backgroundColor");
-  const [iconUrl, setIconUrl] = useState<string | null>(null);
-  const watchedAssetId = watch("icon.assetId");
-  const { objectUrl: assetImageUrl } = useAssetImage(
-    applicationId,
-    typeof watchedAssetId === "string" && watchedAssetId.length > 0
-      ? watchedAssetId
-      : undefined,
-  );
-
-  // 首字母预览自动取自应用名称，无需重新输入。
-  const letter =
-    typeof name === "string" && name.trim().length > 0
-      ? name.trim().slice(0, 1)
-      : "A";
-
-  return (
-    <Controller
-      control={control}
-      name="icon.mode"
-      render={({ field, fieldState }) => (
-        <div>
-          <Radio.Group
-            {...field}
-            onChange={(event) => {
-              field.onChange(event);
-              void trigger(["icon.mode", "icon.assetId"]);
-            }}
-            optionType="button"
-            options={[
-              { value: "upload", label: "上传图标图片" },
-              { value: "auto", label: "自动生成（首字母预览）" },
-            ]}
-            style={{ marginBottom: 12 }}
-          />
-          {fieldState.error !== undefined && (
-            <div style={{ color: "#ff4d4f", fontSize: 12, marginBottom: 8 }}>
-              {fieldState.error.message}
-            </div>
-          )}
-          {/* 预览 / 上传组件统一放在选择器下方，而非右侧。 */}
-          <div style={{ marginTop: 4 }}>
-            {mode === "auto" ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 8,
-                    background: bg ?? "#185FA5",
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                  }}
-                >
-                  {letter}
-                </div>
-                <span style={{ color: "#8c8c8c", fontSize: 12 }}>
-                  预览取自应用名称首字
-                </span>
-              </div>
-            ) : (
-              <Controller
-                control={control}
-                name="icon.assetId"
-                render={({ field: assetField }) => (
-                  <Upload
-                    maxCount={1}
-                    listType="picture-card"
-                    showUploadList={false}
-                    beforeUpload={(file) => {
-                      const uid = `${Date.now()}-${Math.random()
-                        .toString(36)
-                        .slice(2)}`;
-                      setIconUrl(URL.createObjectURL(file as File));
-                      setValue("icon.assetId", uid, {
-                        shouldDirty: true,
-                        shouldValidate: true,
-                      });
-                      void upload("icon", file as File)
-                        .then((asset) => {
-                          setValue("icon.assetId", asset.assetId, {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                          void trigger(["icon.mode", "icon.assetId"]);
-                        })
-                        .catch((error: unknown) => {
-                          setValue("icon.assetId", "", {
-                            shouldDirty: true,
-                            shouldValidate: true,
-                          });
-                          void trigger(["icon.mode", "icon.assetId"]);
-                          message.error(
-                            `图标上传失败：${
-                              error instanceof Error
-                                ? error.message
-                                : "上传服务或存储配置异常"
-                            }`,
-                          );
-                        });
-                      return false;
-                    }}
-                  >
-                    {assetField.value ? (
-                      <img
-                        src={iconUrl ?? assetImageUrl ?? ""}
-                        alt="应用图标"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          borderRadius: 8,
-                        }}
-                      />
-                    ) : (
-                      <div>
-                        <UploadOutlined />
-                        <div style={{ marginTop: 8 }}>上传图标</div>
-                      </div>
-                    )}
-                  </Upload>
-                )}
-              />
-            )}
-          </div>
-        </div>
-      )}
-    />
-  );
-}
-
-interface ScreenshotFile {
-  uid: string;
-  assetId: string;
-  url: string;
-  name: string;
-}
-
-function ScreenshotField({
-  applicationId,
-  upload,
-}: {
-  applicationId: string;
-  upload: WizardUploadFn;
-}) {
-  const { control, setValue, trigger } = useFormContext<FieldValues>();
-  const watchedScreenshotIds = useWatch({
-    control,
-    name: "screenshotAssetIds",
-  }) as string[] | undefined;
-  const watchedScreenshotKey = Array.isArray(watchedScreenshotIds)
-    ? watchedScreenshotIds.join(",")
-    : "";
-  // 本地保存已上传图片的预览地址，保证步骤间切换（组件常驻挂载）后缩略图不丢失。
-  const filesRef = useRef<ScreenshotFile[]>([]);
-  const [files, setFiles] = useState<ScreenshotFile[]>([]);
-  const [preview, setPreview] = useState<{ url: string; name: string } | null>(
-    null,
-  );
-
-  const syncFiles = (next: ScreenshotFile[]) => {
-    filesRef.current = next;
-    setFiles(next);
-  };
-
-  // 编辑模式回显：草稿中的截图资产拉取图片并生成预览。
-  useEffect(() => {
-    if (!applicationId || !Array.isArray(watchedScreenshotIds)) {
-      return;
-    }
-    const existing = new Set(filesRef.current.map((file) => file.assetId));
-    const missing = watchedScreenshotIds.filter(
-      (assetId) =>
-        typeof assetId === "string" &&
-        assetId.length > 0 &&
-        !existing.has(assetId),
-    );
-    if (missing.length === 0) {
-      return;
-    }
-    let cancelled = false;
-    void Promise.all(
-      missing.map(async (assetId) => {
-        const blob = await getAssetContent(applicationId, assetId);
-        return {
-          assetId,
-          name: "历史截图",
-          uid: assetId,
-          url: URL.createObjectURL(blob),
-        };
-      }),
-    )
-      .then((added) => {
-        if (cancelled) return;
-        syncFiles([...filesRef.current, ...added].slice(0, 6));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [applicationId, watchedScreenshotKey]);
-
-  return (
-    <Controller
-      control={control}
-      name="screenshotAssetIds"
-      render={({ fieldState }) => {
-        const commit = (next: ScreenshotFile[]) => {
-          syncFiles(next);
-          setValue(
-            "screenshotAssetIds",
-            next.map((f) => f.assetId),
-            { shouldDirty: true, shouldValidate: true },
-          );
-          void trigger("screenshotAssetIds");
-        };
-        const handleUpload = (file: File) => {
-          const uid = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-          const url = URL.createObjectURL(file);
-          const optimistic = [
-            ...filesRef.current,
-            { uid, assetId: uid, url, name: file.name },
-          ].slice(0, 6);
-          commit(optimistic);
-          void upload("screenshot", file)
-            .then((asset) => {
-              commit(
-                filesRef.current.map((p) =>
-                  p.uid === uid ? { ...p, assetId: asset.assetId } : p,
-                ),
-              );
-            })
-            .catch((error: unknown) => {
-              commit(filesRef.current.filter((p) => p.uid !== uid));
-              message.error(
-                `截图上传失败：${
-                  error instanceof Error
-                    ? error.message
-                    : "上传服务或存储配置异常"
-                }`,
-              );
-            });
-        };
-        const handleRemove = (uid: string) => {
-          const target = filesRef.current.find((f) => f.uid === uid);
-          commit(filesRef.current.filter((f) => f.uid !== uid));
-          // 同步删除服务端资产（失败仅忽略，前端已移除）。
-          if (target && target.assetId) {
-            void deleteAsset(applicationId, target.assetId).catch(() => {});
-          }
-        };
-
-        const fileList: UploadFile[] = files.map((f) => ({
-          uid: f.uid,
-          name: f.name,
-          status: "done",
-          url: f.url,
-          thumbUrl: f.url,
-        }));
-        const showUpload = files.length < 6;
-
-        return (
-          <>
-            <Upload
-              multiple
-              maxCount={6}
-              listType="picture-card"
-              fileList={fileList}
-              beforeUpload={(file) => {
-                handleUpload(file as File);
-                return false;
-              }}
-              onRemove={(file) => {
-                handleRemove(file.uid);
-                return true;
-              }}
-              onPreview={(file) =>
-                setPreview({ url: file.url ?? "", name: file.name })
-              }
-            >
-              {showUpload ? (
-                <div>
-                  <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>上传截图</div>
-                </div>
-              ) : null}
-            </Upload>
-            <Text type="secondary" style={{ display: "block" }}>
-              已上传 {files.length}/6 张（点击图片可预览，右上角可删除）
-            </Text>
-            {fieldState.error !== undefined && (
-              <Text type="danger">{fieldState.error.message}</Text>
-            )}
-            <Modal
-              open={preview !== null}
-              footer={null}
-              title={preview?.name}
-              onCancel={() => setPreview(null)}
-            >
-              {preview ? (
-                <img
-                  src={preview.url}
-                  alt={preview.name}
-                  style={{ width: "100%", borderRadius: 8 }}
-                />
-              ) : null}
-            </Modal>
-          </>
-        );
-      }}
-    />
-  );
-}
 
 /** 从 RHF 嵌套错误结构中提取第一条错误（数组级或条目级；受众 / FAQ 共用）。 */
 function firstNestedError(error: unknown): { message?: string } | undefined {
@@ -1691,8 +1358,71 @@ function DeliveryTargetsPreview({
 
 /** 预览步：纯展示所有字段，无输入。 */
 function PreviewStep({ options }: { options: PublishingOptions }) {
-  const { watch } = useFormContext<FieldValues>();
-  const draft = watch();
+  // 精确订阅预览实际读取的字段：原先无参watch() 订阅整个表单，
+  // 导致在任意步骤每敲一个字符都会重渲染预览并触发三次 DOMPurify 清洗
+  // （而此时富文本字段多半还是空串）。useWatch 支持传入字段名数组，
+  // 只有这些字段变化才会重渲染。
+  // 注意：useWatch 传入字段名数组时返回的是**按顺序排列的元组**而非对象，
+  // 因此这里显式重建为draft 对象，保持下游draft.xxx 的读取方式不变。
+  const watchedFields = useWatch({
+    name: [
+      "name",
+      "applicationType",
+      "categoryId",
+      "departmentId",
+      "tagIds",
+      "icon",
+      "screenshotAssetIds",
+      "version",
+      "changelog",
+      "faq",
+      "maintainerEmployeeIds",
+      "audience",
+      "risk",
+      "deliveries",
+      "summaryHtml",
+      "manualHtml",
+      "examplesHtml",
+    ],
+  });
+  const [
+    watchedName,
+    watchedApplicationType,
+    watchedCategoryId,
+    watchedDepartmentId,
+    watchedTagIds,
+    watchedIcon,
+    watchedScreenshotAssetIds,
+    watchedVersion,
+    watchedChangelog,
+    watchedFaq,
+    watchedMaintainerEmployeeIds,
+    watchedAudience,
+    watchedRisk,
+    watchedDeliveries,
+    watchedSummaryHtml,
+    watchedManualHtml,
+    watchedExamplesHtml,
+  ] = watchedFields;
+  const draft = {
+    name: watchedName,
+    applicationType: watchedApplicationType,
+    categoryId: watchedCategoryId,
+    departmentId: watchedDepartmentId,
+    tagIds: watchedTagIds,
+    icon: watchedIcon,
+    screenshotAssetIds: watchedScreenshotAssetIds,
+    version: watchedVersion,
+    changelog: watchedChangelog,
+    faq: watchedFaq,
+    maintainerEmployeeIds: watchedMaintainerEmployeeIds,
+    audience: watchedAudience,
+    risk: watchedRisk,
+    deliveries: watchedDeliveries,
+    summaryHtml: watchedSummaryHtml,
+    manualHtml: watchedManualHtml,
+    examplesHtml: watchedExamplesHtml,
+  };
   const audienceText =
     formatAudienceParts(draft.audience, {
       departments: Object.fromEntries(

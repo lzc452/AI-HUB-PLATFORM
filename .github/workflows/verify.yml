@@ -25,7 +25,26 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    # test:api-data 走真实 PostgreSQL（testcontainers 或 TEST_DATABASE_URL）。
+    # 不提供该service 的话 verify 会检测不到容器运行时并跳过该套件——
+    # 也就是回到2026-10-08 之前的状态：授权类缺陷长期无人发现。
+    services:
+      postgres:
+        image: postgres:18.4-bookworm
+        env:
+          POSTGRES_DB: ai_hub_test
+          POSTGRES_USER: ai_hub
+          POSTGRES_PASSWORD: ai_hub_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ai_hub -d ai_hub_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://ai_hub:ai_hub_test@localhost:5432/ai_hub_test
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6

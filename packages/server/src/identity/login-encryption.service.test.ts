@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeAll } from "vitest";
-import { createHash } from "node:crypto";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { LoginEncryptionService } from "./login-encryption.service.js";
 
 // Generate a test RSA-3072 key for the service, then simulate the browser side
@@ -194,5 +194,52 @@ describe("LoginEncryptionService", () => {
     await expect(
       service.decryptEnvelope(envelope, "wrong-nonce-value"),
     ).rejects.toThrow("LOGIN_CHALLENGE_EXPIRED");
+  });
+
+  // fromPem 此前没有任何单测覆盖，导致「以 extractable:false 导入私钥后
+  // 又去 exportKey」的矛盾长期隐身，直到真实 PG 集成测试才暴露。
+  describe("fromPem（生产私钥路径）", () => {
+    const { privateKey } = generateKeyPairSync("rsa", {
+      modulusLength: 3072,
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+      publicKeyEncoding: { type: "spki", format: "pem" },
+    });
+
+    it("派生的公钥参数与generateDev 同构", async () => {
+      const fromPem = await LoginEncryptionService.fromPem(privateKey);
+      const dev = await LoginEncryptionService.generateDev();
+
+      expect(fromPem.createChallenge().jwk.kty).toBe(
+        dev.createChallenge().jwk.kty,
+      );
+      expect(fromPem.createChallenge().jwk.alg).toBe("RSA-OAEP-256");
+      expect(fromPem.createChallenge().jwk.key_ops).toEqual(["wrapKey"]);
+      // keyId 由公钥 n 派生，同一 PEM 必须得到稳定 keyId，否则前端缓存的
+      // 旧 challenge 会在服务重启后全部失效。
+      expect(fromPem.createChallenge().keyId).toBe(
+        fromPem.createChallenge().keyId,
+      );
+    });
+
+    it("PEM 路径的加解密与 generateDev 等价", async () => {
+      const fromPem = await LoginEncryptionService.fromPem(privateKey);
+      const challenge = fromPem.createChallenge();
+      const plaintext = JSON.stringify({
+        employeeId: "E001",
+        password: "p",
+        deviceLabel: "b",
+      });
+      const envelope = await encryptAndWrap(plaintext, {
+        jwk: challenge.jwk as unknown as JsonWebKey,
+        keyId: challenge.keyId,
+        nonce: challenge.nonce,
+      });
+
+      expect(await fromPem.decryptEnvelope(envelope, challenge.nonce)).toEqual({
+        employeeId: "E001",
+        password: "p",
+        deviceLabel: "b",
+      });
+    });
   });
 });

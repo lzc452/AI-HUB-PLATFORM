@@ -132,6 +132,30 @@ export class ArtifactPipeline implements ArtifactVerificationPort {
     return result;
   }
 
+  /**
+   * 扫描**尚未落盘**的内容。
+   *
+   * 与 `scanStoredAsset` 的区别是时机：附件上传这类「一次请求内收完整内容」
+   * 的场景，必须先扫描再落盘，否则恶意文件会先落盘、即使随后拒绝也已产生
+   * 残留（测试用例明确要求拒绝后存储目录不留文件）。
+   *
+   * **异常一律 fail-closed**：扫描器不可用时返回 failed，
+   * 调用方必须拒绝上传——安全门禁不可用时放行等于没有门禁。
+   */
+  async scanContent(content: Uint8Array): Promise<{
+    scanStatus: "passed" | "failed";
+    reason?: string;
+  }> {
+    try {
+      if ((await this.security.scan(content)) === "infected") {
+        return { scanStatus: "failed", reason: "MALWARE_DETECTED" };
+      }
+      return { scanStatus: "passed" };
+    } catch {
+      return { scanStatus: "failed", reason: "ARTIFACT_SECURITY_UNAVAILABLE" };
+    }
+  }
+
   /** 扫描已落盘的资产内容（用于把资产置为 passed）。
    * 生产环境无真实安全适配器时 scan 抛错，被捕获为失败关闭；
    * 非生产环境（createArtifactVerification 注入接受桩）scan 恒返回 clean。 */

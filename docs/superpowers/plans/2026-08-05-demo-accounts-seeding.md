@@ -1,5 +1,7 @@
 # 演示账号与组织架构初始化实施计划
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 > **给智能体工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实施本计划。步骤使用复选框（`- [ ]`）语法跟踪。
 
 **Goal:** 在本地/测试环境中提供五个按组织架构设计可登录的演示账号，并以幂等 seed 初始化部门、角色、员工和关系数据。

@@ -121,12 +121,12 @@ pnpm seed:demo-accounts
 
 # 2. 终端 A：启动后端 API
 pnpm dev:api
-# API 运行在 http://localhost:3000，tsx watch 监听文件变更自动重启
+# API 运行在 http://localhost:3001，tsx watch 监听文件变更自动重启
 
 # 3. 终端 B：启动前端
 pnpm dev:web
 # Vite 开发服务器运行在 http://localhost:5173
-# /internal 请求由 Vite 代理 → localhost:3000（API）
+# /internal 请求由 Vite 代理 → localhost:3001（API）
 # 修改代码后浏览器即时热更新（HMR）
 
 # 4. 终端 C（可选）：启动 Worker
@@ -136,7 +136,7 @@ pnpm dev:worker
 ### 访问
 
 - 前端：`http://localhost:5173`（Vite 开发服务器，支持 HMR）
-- API：`http://localhost:3000/internal/health/live`
+- API：`http://localhost:3001/internal/health/live`
 - 完整栈（含 nginx）：`http://127.0.0.1:8080`（需先启动 proxy 容器）
 
 ### 热更新对比

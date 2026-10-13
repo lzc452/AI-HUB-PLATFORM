@@ -1,5 +1,7 @@
 # 前端 Message 反馈设计
 
+> 历史设计/阶段材料（2026-10-07 归类）：保留原批次设计、步骤、状态及验证；当前完整需求与后续门禁统一见[需求基线](../../requirements/README.md)、[验收手册](../../requirements/acceptance.md)。
+
 ## 目标
 
 将 `apps/web` 中运行时错误、警告和操作结果从页面布局内的 `Alert`/`ErrorBlock` 占位迁移到 Ant Design `message`，让页面内容区保持稳定，同时保留字段校验、空状态和业务状态标签。

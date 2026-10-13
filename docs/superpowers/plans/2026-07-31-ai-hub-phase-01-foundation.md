@@ -373,7 +373,7 @@ describe('parseRuntimeConfig', () => {
     expect(() =>
       parseRuntimeConfig({
         NODE_ENV: 'test',
-        API_PORT: '3000',
+        API_PORT: '3001',
         COOKIE_SECRET: '12345678901234567890123456789012',
       }),
     ).toThrow(/DATABASE_URL/);
@@ -465,7 +465,7 @@ import { z } from 'zod';
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']),
-  API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   DATABASE_URL: z.string().url(),
   COOKIE_SECRET: z.string().min(32),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),

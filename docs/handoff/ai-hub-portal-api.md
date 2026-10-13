@@ -12,6 +12,8 @@
 
 本文档是 Portal 前端联调的接口事实来源。后端仍保留 Portal URL，应用（`resourceType=app`）的持久化和生命周期不再由 Portal 专属表直接驱动。`skill`、`plugin`、`mcp` 继续使用 Portal 自有资源生命周期。
 
+> 2026-10-07 核对：本文维护接口细节，完整业务范围与验收以[当前需求基线](../requirements/README.md)为准。app 写入已共享标准链路，但公开读取尚未复用 Catalog 受众过滤；安装包向导、当前角色通知授权与真实外部投递也存在 GAP-02/04/08，不能据接口存在声称端到端全部完成。
+
 ## 1. 接入边界
 
 - Portal 页面只调用同源 `/internal/portal/*`，不访问数据库，也不依赖 Worker 或 Outbox 的内部结构。

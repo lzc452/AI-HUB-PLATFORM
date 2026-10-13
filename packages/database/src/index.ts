@@ -1,4 +1,5 @@
-export { createDatabase } from "./database.js";
+export { createDatabase, resolvePoolOptions } from "./database.js";
+export type { DatabasePoolOptions } from "./database.js";
 export { createDatabaseRuntime, createDatabaseRuntimeFrom } from "./runtime.js";
 export type { DatabaseRuntime } from "./runtime.js";
 export { runMigrations } from "./migrate.js";

@@ -60,11 +60,18 @@ class ApiIdentityRepository implements IdentityRepository {
           "identity.role.read",
           "identity.session.manage",
         ],
+        active: true,
       },
     ];
   }
   async listEmployeeIdsWithRole(roleCode: string) {
     return roleCode === "organization_admin" ? ["E001"] : [];
+  }
+  async listEmployeeIdsWithPermission(permission: string) {
+    const roles = await this.listEmployeeRoles();
+    return roles.some((role) => role.permissions.includes(permission))
+      ? ["E001"]
+      : [];
   }
   async listEmployeesPage() {
     return { items: await this.listEmployees(), total: 1 };

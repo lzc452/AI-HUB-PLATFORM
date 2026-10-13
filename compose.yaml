@@ -1,6 +1,6 @@
 x-runtime-environment: &runtime-environment
   NODE_ENV: ${NODE_ENV:-development}
-  API_PORT: 3000
+  API_PORT: 3001
   DATABASE_URL: postgres://${POSTGRES_USER:-ai_hub}:${POSTGRES_PASSWORD:-ai_hub_local_only}@postgres:5432/${POSTGRES_DB:-ai_hub}
   COOKIE_SECRET: ${COOKIE_SECRET:-ai-hub-local-cookie-secret-change-me}
   LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -91,14 +91,14 @@ services:
       clamav:
         condition: service_healthy
     expose:
-      - "3000"
+      - "3001"
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:3001/internal/health/live').then((response)=>{if(!response.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 5s

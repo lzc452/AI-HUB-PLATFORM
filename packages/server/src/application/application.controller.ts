@@ -28,6 +28,7 @@ import {
   RequiresPermissions,
 } from "../authorization/authorization.decorator.js";
 import { IdentityService } from "../identity/identity.service.js";
+import { toDomainHttpException } from "../system/http/domain-error.js";
 import { APPLICATION_SERVICE } from "./application.tokens.js";
 import {
   ApplicationService,
@@ -921,6 +922,8 @@ export class ApplicationController {
     if (code.endsWith("_NOT_FOUND")) throw new NotFoundException(code);
     if (code === "NOT_AUTHORIZED" || code === "SELF_REVIEW_FORBIDDEN")
       throw new ForbiddenException(code);
-    throw new BadRequestException(code);
+    // 并发冲突（乐观锁、状态机已迁移）走 409，客户端据此重新拉取状态并重试；
+    // 降级成 400 会让它当成参数错误、永不重试（P1-5）。
+    throw toDomainHttpException(code, () => new BadRequestException(code));
   }
 }
