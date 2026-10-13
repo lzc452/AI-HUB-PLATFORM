@@ -59,8 +59,41 @@ export interface ListApiKeysInput {
   offset: number;
 }
 
+/** 管理面行：Key 记录 + 归属人信息（列表要显示「谁的 Key」）。 */
+export interface AdminKeyRecord extends ApiKeyRecord {
+  owner: {
+    employeeId: string;
+    displayName: string;
+    status: string;
+  };
+}
+
+export interface ListAllKeysInput {
+  /** 不传 = 全平台。 */
+  employeeId?: string | undefined;
+  status?: LlmApiKeyStatus | undefined;
+  limit: number;
+  offset: number;
+}
+
 export interface ModelServiceKeyRepository {
   insert(input: InsertApiKeyInput): Promise<ApiKeyRecord>;
+  /**
+   * 管理面读取：**不按员工过滤**（权限校验已在服务层用 `manage_all` 完成）。
+   * 与本人视角的 `findById` 分开命名，避免有人误用带员工过滤的方法做管理操作。
+   */
+  findByIdAnyOwner(keyId: string): Promise<ApiKeyRecord | null>;
+  /** 管理面状态变更（CAS 语义与本人视角一致，只是不做员工过滤）。 */
+  updateStatusCasAnyOwner(input: {
+    keyId: string;
+    expectedStatus: LlmApiKeyStatus;
+    nextStatus: "active" | "disabled";
+    now: Date;
+  }): Promise<ApiKeyRecord | null>;
+  /** 管理面列表：可按员工/状态过滤，带归属人显示名与在职状态。 */
+  listAllWithOwner(
+    input: ListAllKeysInput,
+  ): Promise<{ items: AdminKeyRecord[]; total: number }>;
   findById(keyId: string, employeeId: string): Promise<ApiKeyRecord | null>;
   findByHash(keyHash: string): Promise<ApiKeyRecord | null>;
   /**
@@ -230,6 +263,106 @@ export class KyselyModelServiceKeyRepository
       .set({ last_used_at: at })
       .where("key_id", "=", keyId)
       .execute();
+  }
+
+  public async findByIdAnyOwner(keyId: string): Promise<ApiKeyRecord | null> {
+    const row = await this.executor
+      .selectFrom("llm_api_keys")
+      .selectAll()
+      .where("key_id", "=", keyId)
+      .executeTakeFirst();
+    return row === undefined ? null : toRecord(row as KeyRow);
+  }
+
+  public async updateStatusCasAnyOwner(input: {
+    keyId: string;
+    expectedStatus: LlmApiKeyStatus;
+    nextStatus: "active" | "disabled";
+    now: Date;
+  }): Promise<ApiKeyRecord | null> {
+    const patch: Record<string, unknown> = {
+      status: input.nextStatus,
+      updated_at: input.now,
+      disabled_at: input.nextStatus === "disabled" ? input.now : null,
+    };
+    const row = await this.executor
+      .updateTable("llm_api_keys")
+      .set(patch as never)
+      .where("key_id", "=", input.keyId)
+      .where("status", "=", input.expectedStatus)
+      // 终态不可回滚：管理面同样不允许「启用」一个已撤销的 Key
+      .where("status", "in", ["active", "disabled"])
+      .returningAll()
+      .executeTakeFirst();
+    return row === undefined ? null : toRecord(row as KeyRow);
+  }
+
+  public async listAllWithOwner(
+    input: ListAllKeysInput,
+  ): Promise<{ items: AdminKeyRecord[]; total: number }> {
+    const scope =
+      input.employeeId === undefined
+        ? this.executor.selectFrom("llm_api_keys")
+        : this.executor
+            .selectFrom("llm_api_keys")
+            .where("llm_api_keys.employee_id", "=", input.employeeId);
+    const filtered =
+      input.status === undefined
+        ? scope
+        : scope.where("llm_api_keys.status", "=", input.status);
+
+    const [rows, countRow] = await Promise.all([
+      filtered
+        .innerJoin(
+          "employees",
+          "employees.employee_id",
+          "llm_api_keys.employee_id",
+        )
+        .select([
+          "llm_api_keys.key_id",
+          "llm_api_keys.employee_id",
+          "llm_api_keys.name",
+          "llm_api_keys.key_prefix",
+          "llm_api_keys.key_hash",
+          "llm_api_keys.status",
+          "llm_api_keys.rpm_limit",
+          "llm_api_keys.tpm_limit",
+          "llm_api_keys.daily_token_limit",
+          "llm_api_keys.expires_at",
+          "llm_api_keys.last_used_at",
+          "llm_api_keys.rotated_from_key_id",
+          "llm_api_keys.created_at",
+          "llm_api_keys.updated_at",
+          "llm_api_keys.disabled_at",
+          "employees.display_name",
+          "employees.status as owner_status",
+        ])
+        .orderBy("llm_api_keys.created_at", "desc")
+        .limit(input.limit)
+        .offset(input.offset)
+        .execute(),
+      filtered
+        .select(({ fn }) => fn.countAll<string>().as("count"))
+        .executeTakeFirst(),
+    ]);
+
+    return {
+      items: rows.map((row) => {
+        const { display_name, owner_status, ...keyRow } = row as KeyRow & {
+          display_name: string;
+          owner_status: string;
+        };
+        return {
+          ...toRecord(keyRow as KeyRow),
+          owner: {
+            employeeId: keyRow.employee_id,
+            displayName: display_name,
+            status: owner_status,
+          },
+        };
+      }),
+      total: Number(countRow?.count ?? 0),
+    };
   }
 
   public async findHoldingByName(

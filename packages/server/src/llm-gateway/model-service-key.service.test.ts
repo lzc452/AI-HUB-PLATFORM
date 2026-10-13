@@ -6,6 +6,7 @@ import {
   type ModelServiceKeyServiceConfig,
 } from "./model-service-key.service.js";
 import type {
+  AdminKeyRecord,
   InsertApiKeyInput,
   ListApiKeysInput,
   ModelServiceKeyRepository,
@@ -90,6 +91,54 @@ class FakeRepository implements ModelServiceKeyRepository {
       (key) => key.keyId === keyId && key.employeeId === employeeId,
     );
     return found === undefined ? null : { ...found };
+  }
+
+  public async findByIdAnyOwner(keyId: string): Promise<ApiKeyRecord | null> {
+    const found = this.keys.find((key) => key.keyId === keyId);
+    return found === undefined ? null : { ...found };
+  }
+
+  public async updateStatusCasAnyOwner(input: {
+    keyId: string;
+    expectedStatus: "active" | "disabled" | "revoked";
+    nextStatus: "active" | "disabled";
+    now: Date;
+  }): Promise<ApiKeyRecord | null> {
+    const found = this.keys.find(
+      (key) => key.keyId === input.keyId && key.status === input.expectedStatus,
+    );
+    if (found === undefined) return null;
+    found.status = input.nextStatus;
+    found.updatedAt = input.now;
+    found.disabledAt = input.nextStatus === "disabled" ? input.now : null;
+    return { ...found };
+  }
+
+  public async listAllWithOwner(input: {
+    employeeId?: string | undefined;
+    status?: "active" | "disabled" | "revoked" | undefined;
+    limit: number;
+    offset: number;
+  }): Promise<{ items: AdminKeyRecord[]; total: number }> {
+    const matched = this.keys.filter(
+      (key) =>
+        (input.employeeId === undefined ||
+          key.employeeId === input.employeeId) &&
+        (input.status === undefined || key.status === input.status),
+    );
+    return {
+      items: matched
+        .slice(input.offset, input.offset + input.limit)
+        .map((key) => ({
+          ...key,
+          owner: {
+            employeeId: key.employeeId,
+            displayName: key.employeeId,
+            status: "active",
+          },
+        })),
+      total: matched.length,
+    };
   }
 
   public async findByHash(keyHash: string): Promise<ApiKeyRecord | null> {

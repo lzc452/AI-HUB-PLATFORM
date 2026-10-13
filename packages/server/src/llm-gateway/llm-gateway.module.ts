@@ -19,9 +19,17 @@ import {
   LLM_GATEWAY_API_SERVICE,
   LLM_GATEWAY_SERVICE,
   LLM_QUOTA_SERVICE,
+  LLM_USAGE_REPOSITORY,
+  LLM_USAGE_SERVICE,
   MODEL_SERVICE_KEY_REPOSITORY,
   UPSTREAM_CIRCUIT_BREAKER,
 } from "./llm-gateway.tokens.js";
+import {
+  KyselyLlmUsageRepository,
+  type LlmUsageRepository,
+} from "./llm-usage.repository.js";
+import { ModelServiceUsageController } from "./model-service-usage.controller.js";
+import { ModelServiceUsageService } from "./model-service-usage.service.js";
 import {
   LlmGatewayService,
   type LlmGatewayServiceOptions,
@@ -81,11 +89,16 @@ export class LlmGatewayModule {
     return {
       module: LlmGatewayModule,
       imports: [IdentityModule.register(database)],
-      controllers: [ModelServiceKeyController, LlmGatewayController],
+      controllers: [
+        ModelServiceKeyController,
+        ModelServiceUsageController,
+        LlmGatewayController,
+      ],
       providers: buildProviders(
         new KyselyModelServiceKeyRepository(database),
         new AuditService(new KyselyAuditRepository(database)),
         new KyselyLlmCallLogRepository(database),
+        new KyselyLlmUsageRepository(database),
         options,
       ),
       exports: [LLM_GATEWAY_SERVICE, LLM_GATEWAY_API_SERVICE],
@@ -97,17 +110,23 @@ export class LlmGatewayModule {
     repository: ModelServiceKeyRepository;
     audit: ModelServiceAuditPort;
     callLogs?: LlmCallLogRepository;
+    usage?: LlmUsageRepository;
     options: LlmGatewayModuleOptions;
     identity: IdentityService;
   }): DynamicModule {
     return {
       module: LlmGatewayModule,
-      controllers: [ModelServiceKeyController, LlmGatewayController],
+      controllers: [
+        ModelServiceKeyController,
+        ModelServiceUsageController,
+        LlmGatewayController,
+      ],
       providers: [
         ...buildProviders(
           input.repository,
           input.audit,
           input.callLogs ?? emptyCallLogRepository(),
+          input.usage ?? emptyUsageRepository(),
           input.options,
         ),
         { provide: IdentityService, useValue: input.identity },
@@ -121,6 +140,7 @@ function buildProviders(
   repository: ModelServiceKeyRepository,
   audit: ModelServiceAuditPort,
   callLogs: LlmCallLogRepository,
+  usageRepository: LlmUsageRepository,
   options: LlmGatewayModuleOptions,
 ) {
   const hasher =
@@ -171,9 +191,60 @@ function buildProviders(
     { provide: INVALID_KEY_THROTTLE, useValue: createInvalidKeyThrottle() },
     // 以下三个供测试按令牌取用，也便于未来把配额/熔断接到指标
     { provide: LLM_CALL_LOG_REPOSITORY, useValue: callLogs },
+    { provide: LLM_USAGE_REPOSITORY, useValue: usageRepository },
+    {
+      provide: LLM_USAGE_SERVICE,
+      useValue: new ModelServiceUsageService(usageRepository),
+    },
     { provide: LLM_QUOTA_SERVICE, useValue: quota },
     { provide: UPSTREAM_CIRCUIT_BREAKER, useValue: breaker },
   ];
+}
+
+/** 测试缺省：用量读模型返回空值（真库集成测试覆盖实际查询）。 */
+function emptyUsageRepository(): LlmUsageRepository {
+  return {
+    async aggregateDay(at) {
+      return {
+        usageDate: at.toISOString().slice(0, 10),
+        sourceCalls: 0,
+        rows: 0,
+      };
+    },
+    async listDailyTotals() {
+      return [];
+    },
+    async listByModel() {
+      return [];
+    },
+    async listByKey() {
+      return [];
+    },
+    async sumDaily() {
+      return {
+        calls: 0,
+        errorCalls: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      };
+    },
+    async sumCallsLive() {
+      return {
+        calls: 0,
+        errorCalls: 0,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      };
+    },
+    async listCalls() {
+      return { items: [], total: 0 };
+    },
+    async findUnaggregatedDays() {
+      return [];
+    },
+  };
 }
 
 /** 测试缺省：不落台账（调用日志由真库集成测试覆盖）。 */

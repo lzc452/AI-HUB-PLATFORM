@@ -15,6 +15,9 @@ import { createDatabase } from "@ai-hub/database";
 import {
   createApplicationLogger,
   createOutboxCountCollector,
+  createUsageAggregationRunner,
+  KyselyLlmUsageRepository,
+  LlmUsageAggregator,
   ObservabilityMetrics,
   PinoNestLogger,
   ArtifactVerificationWorker,
@@ -32,6 +35,15 @@ import {
 import { startWorkerMetricsServer } from "./metrics-server.js";
 import { createRetentionRunner, WorkerModule } from "./worker.module.js";
 import { runOutboxPollingLoop } from "./outbox-poller.js";
+
+/**
+ * 模型用量聚合间隔。
+ *
+ * 选 5 分钟的理由：聚合是「读事实表 → 重写当日读模型」的汇总，成本可控；
+ * 而**日配额判定直接读事实表、不依赖聚合**，所以这个间隔只影响看板新鲜度，
+ * 不影响配额准确性（把这条写进注释，是为了避免后人误以为调大间隔会放松配额）。
+ */
+const USAGE_AGGREGATION_INTERVAL_MS = 5 * 60 * 1000;
 
 async function bootstrap() {
   const config = parseRuntimeConfig(process.env);
@@ -175,12 +187,45 @@ async function bootstrap() {
             });
         }, config.outboxLeaseDurationMs);
 
+  const usageAggregator = new LlmUsageAggregator(
+    new KyselyLlmUsageRepository(database),
+    { logger },
+  );
+  const usageRunner = createUsageAggregationRunner(usageAggregator, {
+    lookbackDays: 2,
+    gapScanDays: 30,
+    maxGapDaysPerRun: 10,
+  });
+  const runUsageAggregation = (): void => {
+    void usageRunner()
+      .then((result) => {
+        logger.info(
+          {
+            aggregatedDays: result.days.length,
+            gaps: result.gaps.length,
+            skippedGaps: result.skippedGaps,
+          },
+          "模型用量聚合完成",
+        );
+      })
+      .catch((error: unknown) => {
+        logger.error({ error }, "模型用量聚合失败");
+      });
+  };
+  // 启动即跑一次：否则重启后当日看板要等到下一个周期才有数据
+  runUsageAggregation();
+  const usageAggregationTimer = setInterval(
+    runUsageAggregation,
+    USAGE_AGGREGATION_INTERVAL_MS,
+  );
+
   await runOutboxPollingLoop(
     {
       outboxWorker: runtime.outboxWorker,
       close: async () => {
         clearInterval(retentionTimer);
         clearInterval(slaTimer);
+        clearInterval(usageAggregationTimer);
         if (artifactRecoveryTimer !== undefined)
           clearInterval(artifactRecoveryTimer);
         await metricsListener.close();

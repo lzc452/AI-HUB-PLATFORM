@@ -6,6 +6,7 @@ import {
   type InsertApiKeyInput,
   type ModelServiceKeyRepository,
 } from "./model-service-key.repository.js";
+import type { LlmApiKeyStatus } from "@ai-hub/database";
 import {
   MODEL_SERVICE_ERROR_CODES,
   ModelServiceError,
@@ -31,6 +32,18 @@ export interface ModelServiceKeyServiceConfig {
   maxTpm: number;
   maxDailyTokens: number;
   maxKeysPerUser: number;
+}
+
+/** 管理面分页结果：在本人视角字段上追加归属人信息。 */
+export interface AdminKeyPage {
+  items: Array<
+    ApiKeySummary & {
+      owner: { employeeId: string; displayName: string; status: string };
+    }
+  >;
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface CreateApiKeyResult {
@@ -312,6 +325,97 @@ export class ModelServiceKeyService {
       throw new ModelServiceError(MODEL_SERVICE_ERROR_CODES.STATE_CONFLICT);
     }
     await this.auditEvent(actor, "api_key.revoke", revoked, {});
+  }
+
+  // ---- 管理面（全平台；权限由控制器用 manage_all 校验）------------------
+
+  /**
+   * 管理面列表：跨员工查看 Key（含归属人显示名与在职状态）。
+   * 管理面**不返回明文**（与本人视角一致），也不提供创建——管理员应为员工开通自助能力，
+   * 而不是代持凭据（代持会让「谁在用这个 Key」永久失真）。
+   */
+  public async listKeysAsAdmin(
+    actor: ActorContext,
+    query: {
+      employeeId?: string | undefined;
+      status?: LlmApiKeyStatus | undefined;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<AdminKeyPage> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const { items, total } = await this.repository.listAllWithOwner({
+      ...(query.employeeId === undefined
+        ? {}
+        : { employeeId: query.employeeId }),
+      ...(query.status === undefined ? {} : { status: query.status }),
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+    const at = this.now();
+    return {
+      items: items.map((record) => ({
+        ...this.toSummary(record, at),
+        owner: record.owner,
+      })),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  /** 管理面代禁用：审计里同时记录操作人与 Key 归属人（谁动了谁的 Key 必须可查）。 */
+  public async disableKeyAsAdmin(
+    actor: ActorContext,
+    keyId: string,
+  ): Promise<ApiKeySummary> {
+    return this.setStatusAsAdmin(actor, keyId, "disabled");
+  }
+
+  public async enableKeyAsAdmin(
+    actor: ActorContext,
+    keyId: string,
+  ): Promise<ApiKeySummary> {
+    return this.setStatusAsAdmin(actor, keyId, "active");
+  }
+
+  private async setStatusAsAdmin(
+    actor: ActorContext,
+    keyId: string,
+    next: "active" | "disabled",
+  ): Promise<ApiKeySummary> {
+    const record = await this.repository.findByIdAnyOwner(keyId);
+    if (record === null) {
+      throw new ModelServiceError(
+        MODEL_SERVICE_ERROR_CODES.ADMIN_TARGET_NOT_FOUND,
+      );
+    }
+    // 幂等：已是目标状态直接返回（管理面重复点击不该报错）
+    if (record.status === next) return this.toSummary(record, this.now());
+    if (record.status === "revoked") {
+      throw new ModelServiceError(MODEL_SERVICE_ERROR_CODES.STATE_CONFLICT);
+    }
+    const at = this.now();
+    const updated = await this.repository.updateStatusCasAnyOwner({
+      keyId,
+      expectedStatus: record.status,
+      nextStatus: next,
+      now: at,
+    });
+    if (updated === null) {
+      throw new ModelServiceError(MODEL_SERVICE_ERROR_CODES.STATE_CONFLICT);
+    }
+    await this.auditEvent(
+      actor,
+      next === "disabled" ? "api_key.admin_disable" : "api_key.admin_enable",
+      updated,
+      {
+        targetEmployeeId: record.employeeId,
+        via: "admin_console",
+      },
+    );
+    return this.toSummary(updated, at);
   }
 
   // ---- 内部 ----

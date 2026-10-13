@@ -218,8 +218,44 @@ export {
   INVALID_KEY_THROTTLE,
   LLM_CALL_LOG_REPOSITORY,
   LLM_QUOTA_SERVICE,
+  LLM_USAGE_REPOSITORY,
+  LLM_USAGE_SERVICE,
   UPSTREAM_CIRCUIT_BREAKER,
 } from "./llm-gateway/llm-gateway.tokens.js";
+export { KyselyLlmUsageRepository } from "./llm-gateway/llm-usage.repository.js";
+export type {
+  AggregationResult,
+  CallDetailRow,
+  DailyTotalRow,
+  DailyUsageTotal,
+  KeyUsageRow,
+  ListCallsInput,
+  LlmUsageRepository,
+  ModelUsageRow,
+} from "./llm-gateway/llm-usage.repository.js";
+export {
+  createUsageAggregationRunner,
+  LlmUsageAggregator,
+} from "./llm-gateway/llm-usage-aggregator.js";
+export type {
+  UsageAggregationOptions,
+  UsageAggregationRunResult,
+} from "./llm-gateway/llm-usage-aggregator.js";
+export { ModelServiceUsageService } from "./llm-gateway/model-service-usage.service.js";
+export type {
+  CallPage,
+  ListCallsQuery,
+  UsageRangeKey,
+  UsageSummary,
+  UsageSummaryQuery,
+} from "./llm-gateway/model-service-usage.service.js";
+export { ModelServiceUsageController } from "./llm-gateway/model-service-usage.controller.js";
+export { toControlPlaneHttpException } from "./llm-gateway/model-service-error.mapper.js";
+export type { AdminKeyPage } from "./llm-gateway/model-service-key.service.js";
+export type {
+  AdminKeyRecord,
+  ListAllKeysInput,
+} from "./llm-gateway/model-service-key.repository.js";
 export { KyselyLlmCallLogRepository } from "./llm-gateway/llm-call-log.repository.js";
 export type {
   CallLogInput,

@@ -1,19 +1,15 @@
 import {
-  BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
   HttpCode,
   HttpStatus,
   Inject,
-  NotFoundException,
   Param,
   Patch,
   Post,
   Query,
-  ServiceUnavailableException,
 } from "@nestjs/common";
 import {
   ApiCreatedResponse,
@@ -33,7 +29,7 @@ import {
   ApiIdentityHeaders,
   ApiProblemResponses,
 } from "../system/http/api-docs.decorator.js";
-import { toDomainHttpException } from "../system/http/domain-error.js";
+import { toControlPlaneHttpException } from "./model-service-error.mapper.js";
 import {
   CreateApiKeyRequestDto,
   CreateApiKeyResponseDto,
@@ -44,10 +40,6 @@ import {
 } from "./llm-gateway.dto.js";
 import { LLM_GATEWAY_SERVICE } from "./llm-gateway.tokens.js";
 import { ModelServiceKeyService } from "./model-service-key.service.js";
-import {
-  MODEL_SERVICE_ERROR_CODES,
-  ModelServiceError,
-} from "./llm-gateway.types.js";
 
 /**
  * 模型服务控制面（PRD 8.1）：Key 生命周期 + 用量入口占位。
@@ -223,29 +215,8 @@ export class ModelServiceKeyController {
     }
   }
 
-  /**
-   * 领域错误 → HTTP 语义的单一落点。
-   *
-   * 三个冲突语义的码（状态冲突/同名/数量上限）已登记在 `system/http/domain-error.ts`，
-   * 走平台统一映射产出 409；404/400/503 在平台没有通用映射，就地显式处理，避免
-   * 「未登记的错误码被降级成 400」这类历史问题（见 domain-error.ts 的说明）。
-   */
+  /** 领域错误 → HTTP 语义（共享映射器，避免与用量控制器各写一份）。 */
   private mapError(error: unknown): never {
-    if (error instanceof ModelServiceError) {
-      if (error.code === MODEL_SERVICE_ERROR_CODES.NOT_FOUND) {
-        throw new NotFoundException(error.code);
-      }
-      if (error.code === MODEL_SERVICE_ERROR_CODES.INVALID_LIMIT) {
-        throw new BadRequestException(error.code);
-      }
-      if (error.code === MODEL_SERVICE_ERROR_CODES.NOT_CONFIGURED) {
-        throw new ServiceUnavailableException(error.code);
-      }
-      throw toDomainHttpException(
-        error.code,
-        () => new ConflictException(error.code),
-      );
-    }
-    throw error;
+    return toControlPlaneHttpException(error);
   }
 }

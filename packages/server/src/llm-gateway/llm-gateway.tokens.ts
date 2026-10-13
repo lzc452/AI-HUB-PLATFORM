@@ -33,3 +33,9 @@ export const LLM_QUOTA_SERVICE = Symbol("LLM_QUOTA_SERVICE");
 
 /** 上游熔断器（M3）。 */
 export const UPSTREAM_CIRCUIT_BREAKER = Symbol("UPSTREAM_CIRCUIT_BREAKER");
+
+/** 用量读模型仓储（M4：聚合与查询）。 */
+export const LLM_USAGE_REPOSITORY = Symbol("LLM_USAGE_REPOSITORY");
+
+/** 用量查询服务（M4：控制台用量视图）。 */
+export const LLM_USAGE_SERVICE = Symbol("LLM_USAGE_SERVICE");
