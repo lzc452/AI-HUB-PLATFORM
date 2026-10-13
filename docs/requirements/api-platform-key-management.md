@@ -9,7 +9,7 @@
 | 关联分支 | `feature/api-platform` |
 | 需求基线 | 已按 `docs/requirements/README.md` 变更规则登记为 REQ-MDL-01~06（见该文件 §3.8） |
 
-**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）→ v1.3（2026-10-13）落地形态**实证验证**后修订：配额 SQL 两项验证通过，nginx 结论纠偏（`proxy_read_timeout` 升级为已验证 P0、`proxy_buffering` 降为建议），并更正一处错误表述 → v1.4（2026-10-13）定稿 → **v1.4.2（2026-10-13）M2 交付状态回写**（网关面落地：错误表新增 5 项实现期契约、M2 里程碑与 RTM 状态更新、A2 关闭）→ v1.4.1（2026-10-13）M1 交付状态回写（仅更新里程碑与 RTM 状态，需求与契约无变更；另修正数据模型一处笔误：`employee_id` 为 `varchar(64)` 而非 uuid，须与 `employees` 主键一致）。
+**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）→ v1.3（2026-10-13）落地形态**实证验证**后修订：配额 SQL 两项验证通过，nginx 结论纠偏（`proxy_read_timeout` 升级为已验证 P0、`proxy_buffering` 降为建议），并更正一处错误表述 → v1.4（2026-10-13）定稿 → **v1.4.3（2026-10-13）M3 交付状态回写**（流式 / 配额 / 熔断 / 记账落地；范围调整：调用记录写入前移 M3、日配额去掉进程内修正项、移除临时错误码 streaming_not_enabled）→ v1.4.2（2026-10-13）M2 交付状态回写（网关面落地：错误表新增 5 项实现期契约、M2 里程碑与 RTM 状态更新、A2 关闭）→ v1.4.1（2026-10-13）M1 交付状态回写（仅更新里程碑与 RTM 状态，需求与契约无变更；另修正数据模型一处笔误：`employee_id` 为 `varchar(64)` 而非 uuid，须与 `employees` 主键一致）。
 
 **定稿声明**：本文自 v1.4 起为「本地 vLLM API Key 管理与统一网关」的实现基线。范围、接口契约、数据模型、权限码与部署前置以本文为准；实现阶段的偏差须记录在代码评审或变更评估表中并回写本文。已落地的部署前置项（nginx `/v1/` 路由、`/v1` 中间件豁免）见 8.3 落地状态。
 
@@ -313,7 +313,6 @@ active ──disable──► disabled ──enable──► active
 | HTTP | type | code | 场景 |
 | --- | --- | --- | --- |
 | 400 | invalid_request_error | `invalid_request_error` | 请求体非法（含上游返回的上下文超限，message 附中文说明） |
-| 400 | invalid_request_error | `streaming_not_enabled` | `stream=true`；**M3 开放流式后移除该项**（实现期新增，避免把 SSE 整段读成 JSON 静默返回） |
 | 401 | invalid_request_error | `invalid_api_key` | Key 不存在/格式错误 |
 | 403 | invalid_request_error | `key_disabled` / `key_expired` / `key_revoked` | 存储状态不允许 |
 | 403 | invalid_request_error | `employee_inactive` | 所属员工已停用（实现期新增，对应 §10.2 在职校验） |
@@ -328,7 +327,9 @@ active ──disable──► disabled ──enable──► active
 | 504 | upstream_error | `upstream_timeout` | 上游超时（`LLM_UPSTREAM_TIMEOUT_MS`；流式另加首 token 超时） |
 
 
-> 实现期回写说明：表中标注「实现期新增」的 5 项是 M1/M2 落地时补充的契约，均已在 `packages/server/src/llm-gateway/llm-gateway.errors.ts` 的 `GATEWAY_ERRORS` 中登记并由单测覆盖（信封形状 + 状态码）。`streaming_not_enabled` 是**临时项**，M3 落地流式后必须删除。
+> 实现期回写说明：标注「实现期新增」的 5 项是 M1/M2 落地时补充的契约，均已在 `packages/server/src/llm-gateway/llm-gateway.errors.ts` 的 `GATEWAY_ERRORS` 中登记并由单测覆盖。临时项 `streaming_not_enabled` 已随 M3 流式落地**按约删除**。
+>
+> M3 新增的 429 `rate_limit_exceeded` 同时覆盖三个维度（日配额 / RPM / TPM），并在响应头带 `Retry-After`；诊断信息进入 `message` 而不新增信封字段，保持 OpenAI 形状不变。
 
 `Retry-After` 口径（评审 R1-09）：整数秒；RPM/TPM 超限为当前窗口剩余秒数（1–60）；日配额超限为距次日 00:00（Asia/Shanghai）的剩余秒数，上限 86400。
 
@@ -377,7 +378,7 @@ location /v1/ {
 
 - ✅ **已落地**：① 两份 nginx 配置的 `/v1/` location（含 `proxy_read_timeout 300s` / `proxy_send_timeout 300s` / `proxy_buffering off`）；② 生产安全中间件对 `/v1` 的 CSRF/重放豁免（`API_KEY_AUTH_PATH_PREFIXES`，含前缀边界匹配，`/v1-evil` 不放过；配套 9 个单测）；③ `/v1` **刻意不套** nginx `limit_req`（其 503 + HTML 会破坏 OpenAI 错误信封，配额统一由网关按 Key 维度执行并返回 429 + OpenAI 信封）。
 - ✅ **M2 已落地**：控制器级 `LlmGatewayExceptionFilter`（覆盖全局 ProblemDetails，含 `headersSent` 分流）、`/v1` 的 JSON body 上限 carve-out（`LLM_JSON_BODY_LIMIT_BYTES`）、上游适配器不转发任何客户端头（含 `Authorization`）。
-- ⏳ **待 M3**：网关侧对「无效 Key 洪泛」的 IP 级预检（与限流同一套进程内计数器一并实现）。
+- ✅ **M3 已落地**：无效 Key 的 IP 级预检（只统计「凭据无效」，不牵连合法 Key 的状态问题）；`/v1` 的错误码表新增 429 `rate_limit_exceeded`（含 `Retry-After`）。
 - **已取证**：`nginx -t` 两份配置语法通过；活体 HTTP 验证 `/v1/*` 正常放行、`/v1-evil/*` 与 `/internal/*` 仍返回 403、豁免路径不触达重放存储。
 
 ## 九、数据模型
@@ -455,7 +456,7 @@ where employee_id = $1
   - 时区表达式在仓储层封装为**单一常量**，禁止各调用点各写一份；业务日切换点 = UTC 16:00 已实测确认（四项边界断言全部通过）；
   - `(employee_id, requested_at)` 索引命中已实测确认（参数化查询走 Bitmap Index Scan，2.19ms；无索引退化为 Parallel Seq Scan，41.78ms，约 19 倍差距；两次结果对账一致）——集成测试仍须断言计划形态，防后续迁移或统计信息变化导致退化；
   - **配额口径纠偏**：若误用 UTC 日切分，配额窗口重置发生在北京时间 **08:00**（非零点），并漏算当日 00:00–08:00 的用量（实测该窗口命中 0 行）；
-  - 进程内修正按 **Asia/Shanghai 业务日为 key** 缓存，跨日即清零（不依赖进程重启）；多实例演进时移除该机制；
+  - **日配额去掉了进程内修正项**（范围调整）：该修正原本是为「记账异步」准备的，而 M3 采用同步单行记账（PRD 9.2 的决定），调用一结束就已入库，修正项反而成为第二个不一致来源。口径因此唯一：**DB 即事实**；
   - 预检语义：**只比对已用量，不做预留**；并发窗口内的少量超额由下一次请求被拒自愈，禁止引入预留导致复杂度与死锁风险；
   - 看板口径：`llm_usage_daily` 聚合延迟上界 5 分钟，页面须标注「非实时配额余量」，避免与鉴权口径混淆。
 
@@ -560,8 +561,8 @@ where employee_id = $1
 | M0 需求确认 | 本 PRD 评审；关键假设 A1–A4 关闭 | 评审记录；假设逐条确认 | ✅ 完成（v1.4 定稿；A1/A3/A4 关闭，A2 挂 M2） | 1 |
 | M1 基础骨架 | 迁移 0056、配置项、模块装配、Key CRUD 控制面 + 单测 | 类型检查 + 单测绿；真实 PG 应用迁移 | ✅ **完成**（2026-10-13，证据见下） | 5 |
 | M2 网关连通 | `/v1/models` + 非流式 chat、Bearer 鉴权、错误映射 + e2e | OpenAI SDK 对真实 vLLM 调通（含 401/404 负向） | ✅ **代码与桩验证完成**（2026-10-13）；**真实 vLLM 联调待内网环境**（开发机不可达 10.10.181.82:3040） | 5 |
-| M3 流式与配额 | streaming、RPM/TPM/日配额、429 语义、熔断、无效 Key 的 IP 级预检 | 限流与熔断用例绿；断流取消验证 | 未开始 | 5 |
-| M4 用量与看板 | call_logs 落库、usage_daily 聚合 worker、Console 页面 | 看板数字与 call_logs 对账一致；页面四态齐全 | 未开始（管理面 `/admin/*` 一并落地） | 5 |
+| M3 流式与配额 | streaming、RPM/TPM/日配额、429 语义、熔断、无效 Key 的 IP 级预检、**调用记录写入** | 限流与熔断用例绿；断流取消验证 | ✅ **完成**（2026-10-13，证据见下） | 5 |
+| M4 用量与看板 | `usage_daily` 聚合 worker、Console 页面、`/admin/*` 管理面 | 看板数字与 call_logs 对账一致；页面四态齐全 | 未开始（**记账已随 M3 前移完成**，M4 只剩聚合与呈现） | 5 |
 | M5 监控与上线 | 指标、告警规则、灰度、runbook | 告警演练送达；上线后验证清单执行 | 未开始 | 3 |
 
 **M1 交付记录（2026-10-13）**：
@@ -589,6 +590,19 @@ where employee_id = $1
 | `/v1` body 上限 carve-out 与 413 信封 | `apps/api/src/body-parser.ts` | 端到端断言 413 为 OpenAI 信封 |
 | 配置与编排 | `compose.yaml`、`.env.example`、`main.ts`、`api.module.ts` | 上游基址/超时/限额全部可配 |
 | 质量闸口 | — | typecheck 5 包通过；llm-gateway 单测 61；控制面集成 13；网关集成 10；boundaries 702 模块 0 违规；lint 干净 |
+
+**M3 交付记录（2026-10-13）**：
+
+| 交付物 | 落点 | 证据 |
+| --- | --- | --- |
+| 流式 SSE 透传（注入 `stream_options.include_usage`、首 token/整体超时、中途失败与断流契约） | `llm-gateway.service.ts`、`vllm-upstream.adapter.ts`、`llm-gateway.sink.ts` | 服务单测 10 项 + 端到端 9 项（逐块到达、usage 末块、超时/中途失败/断流的 SSE 形态） |
+| 配额与限流（加权固定窗口 RPM/TPM + 日配额 + 无效 Key 的 IP 预检） | `llm-quota.ts`、`api-key.guard.ts` | 配额单测 9 项；端到端 429 + `Retry-After` |
+| 熔断（阈值/打开时长/半开单探测） | `upstream-circuit-breaker.ts` | 状态机单测 7 项；端到端 503 `circuit_open` |
+| 调用记录（100% 落账，含拒绝与断流） | `llm-call-log.repository.ts`、服务与守卫 | 端到端逐类核对台账（200/429/502/504/499 与 `usage_estimated`） |
+| 业务日口径（上海无 DST，固定 +08 算术） | `llm-business-day.ts` | 单测 6 项 + **真库断言与 PRD 的 SQL 表达式逐点等价** |
+| 质量闸口 | — | typecheck 5 包通过；llm-gateway 单测 **98**；集成 **31**（22 + 9）；boundaries 712 模块 0 违规；lint 干净 |
+
+**M3 实现期发现并修复的缺陷（均由测试暴露）**：① `@Res()` 下框架仍会给 POST 默认 201，`flushHeaders()` 会把它写出去 → 显式 `@HttpCode(200)`；② 断流检测原先挂在**请求**的 `close` 上（请求体读完后不再反映客户端中断）→ 改挂**响应**的 `close` 并用 `writableFinished` 区分正常收尾。
 
 **M2 遗留（如实记录）**：真实 vLLM 联调未做（开发机不通内网 10.10.181.82:3040，实测 8s 超时）；模型 id 与 256k 上下文上限需在联调时以 `GET /v1/models` 核对（名称含空格）。
 
@@ -633,20 +647,20 @@ where employee_id = $1
 | FR-05 | 删除（revoked 终态） | 7.5/8.1 | TC-05 | ✅ M1 已实现（软删幂等） |
 | FR-06 | Bearer 鉴权与 401/403 语义 | 8.2/10.2 | TC-06 | ✅ M2 已实现（六类负向 + 双密钥过渡，端到端已验） |
 | FR-07 | `/v1/models` 透传 | 8.2 | TC-07 | ✅ M2 已实现（端到端已验） |
-| FR-08 | chat/completions（流式+非流式） | 8.2 | TC-08 | 部分：非流式 ✅ M2；流式待 M3 |
-| FR-09 | embeddings | 8.2 | TC-09 | 待开发（M3 与流式一并） |
+| FR-08 | chat/completions（流式+非流式） | 8.2 | TC-08 | ✅ M3 已实现（SSE 逐块透传 + 中途失败/断流契约，端到端已验） |
+| FR-09 | embeddings | 8.2 | TC-09 | ✅ M3 已实现（含记账，端到端已验） |
 | FR-10 | OpenAI 错误信封映射 | 8.2 | TC-10 | ✅ M2 已实现（14 项错误表 + headersSent 分流，端到端已验） |
-| FR-11 | RPM/TPM 限流 | 8.2/9.4 | TC-11 | 待开发 |
-| FR-12 | 日 token 配额 | 8.2/9.4 | TC-12 | 待开发 |
-| FR-13 | 熔断与恢复 | 8.2/十三 | TC-13 | 待开发（M3） |
-| FR-14 | 100% 调用记录 | 9.2/11.3 | TC-14 | 待开发 |
-| FR-15 | 用量汇总与明细 | 8.1/9.3 | TC-15 | 待开发 |
+| FR-11 | RPM/TPM 限流 | 8.2/9.4 | TC-11 | ✅ M3 已实现（加权固定窗口，单测已验） |
+| FR-12 | 日 token 配额 | 8.2/9.4 | TC-12 | ✅ M3 已实现（按员工读调用记录，端到端 429 已验） |
+| FR-13 | 熔断与恢复 | 8.2/十三 | TC-13 | ✅ M3 已实现（状态机单测 + 端到端 503 已验） |
+| FR-14 | 100% 调用记录 | 9.2/11.3 | TC-14 | ✅ M3 已实现写入（成功/失败/拒绝/断流）；**聚合与看板待 M4** |
+| FR-15 | 用量汇总与明细 | 8.1/9.3 | TC-15 | 待开发（M4：读聚合表 + Console） |
 | FR-16 | 管理面（全平台视图与代禁用） | 8.1/10.2 | TC-16 | 待开发 |
 | FR-17 | 生命周期审计 | 10.3 | TC-17 | ✅ M1 已实现（写入安全审计；查询界面沿用既有安全页） |
-| FR-18 | 配置化默认值 | 8.1/十三 | TC-18 | 部分（配置项已落地；默认值消费在 M3） |
+| FR-18 | 配置化默认值 | 8.1/十三 | TC-18 | ✅ 已实现（Key 未设限额时由配额层消费平台默认值） |
 | FR-19 | Key 属性变更（名称/限额/过期） | 8.1 | TC-19 | ✅ M1 已实现 |
 | FR-20 | 幂等与并发语义（CAS、同名防重、活跃上限） | 7.5/8.1/9.1 | TC-20 | ✅ M1 已实现（真库 CAS/部分唯一索引已验） |
-| FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发（M3） |
+| FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | ✅ M3 已实现（自动注入 + 估算兜底 + `usage_estimated` 标记，端到端已验） |
 | FR-22 | 网关面边界（无 CORS、413、`Retry-After` 口径、版本兼容） | 8.2 | TC-22 | 待开发 |
 | FR-23 | 网关与平台既有中间件交互（CSRF 豁免、请求体透传、控制器级错误过滤器、`@Public()` 约束、body 上限、指标口径） | 8.3 | TC-23 | 部分落地（豁免已落地；过滤器与 body carve-out 待 M2） |
 | FR-24 | SSE 端到端链路（nginx 关缓冲与放宽超时，逐块到达验收） | 8.3/十四 | TC-24 | 部分落地（路由与超时已落地并语法校验；端到端验收待 M2） |
