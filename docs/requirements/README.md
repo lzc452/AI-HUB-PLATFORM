@@ -7,7 +7,7 @@
 
 平台服务单企业员工，连接“发现业务问题 → 提交创新需求 → 评审与认领 → 验证和试点 → 应用交付与审核 → 员工使用与反馈 → 数据分析与治理”。也允许员工直接创建应用，不必先创建创新需求。Portal 提供应用及 `skill`、`plugin`、`mcp` 的资源浏览和个人中心，Console 提供企业应用、需求、组织与安全管理。
 
-当前边界为单企业、无 `tenant_id` 的模块化单体，使用 React、NestJS、PostgreSQL、Outbox、Docker Compose 与对象存储。平台管理目录、交付资产及治理流程；目标应用的业务运行和内部授权由目标应用负责。目录可见不等于取得目标系统权限。V2/V3、多租户、微服务、Kubernetes、积分排行榜和 AI 自动审批保留为历史提案，不属于当前交付承诺。
+当前边界为单企业、无 `tenant_id` 的模块化单体，使用 React、NestJS、PostgreSQL、Outbox、Docker Compose 与对象存储。2026-10-13 起在同一单体边界内纳入「本地 vLLM 模型服务与 API Key 管理」（REQ-MDL，见 §3.8），不改变单企业、无租户的部署假设。平台管理目录、交付资产及治理流程；目标应用的业务运行和内部授权由目标应用负责。目录可见不等于取得目标系统权限。V2/V3、多租户、微服务、Kubernetes、积分排行榜和 AI 自动审批保留为历史提案，不属于当前交付承诺。
 
 原设计针对约 600 名员工，提出上线后 30 天发布 10 个应用、月活 50%、80% 审核在 2 个工作日完成、需求转化率 50%、重大安全事故 0，以及可用性 99.5%、RPO 15 分钟、RTO 2 小时。这些是产品/运维目标，尚无本次生产测量或业务签核证明。原“1 个月实施”和“M1–M9 路线图”均为历史排期；后续工作按第 7 节的门禁推进，不据旧日期推断延期或完成。
 
@@ -118,6 +118,19 @@ flowchart LR
 - **REQ-OPS-03 构建与发布**：开发可迁移和初始化 demo；生产 `init:production` 只迁移，不写演示数据。以 package/lockfile、Compose 与 CI 为版本事实；门禁、不可变镜像、迁移兼容与回滚按交付手册执行。
 - **REQ-OPS-04 生产恢复与观测**：双机 PostgreSQL 主备、对象复制、TLS/DNS/fencing、备份恢复、监控告警及事件响应以运维手册为操作依据。模板和本地检查不能替代真实双机、RPO/RTO、告警送达与 UAT 签核证据。
 
+### 3.8 模型服务与 API Key（REQ-MDL）
+
+> 新增于 2026-10-13（`feature/api-platform`）。设计依据：[模型服务 PRD](api-platform-key-management.md) v1.4（定稿）。本节登记需求口径，实现与验收状态见[追踪矩阵](traceability.md)。
+
+- **REQ-MDL-01 自助开通与生命周期**：登录员工可创建、查看、修改属性、禁用、启用、轮换、删除本人 API Key；明文仅在创建/轮换响应中返回一次，库内仅存 HMAC-SHA256 哈希；同一用户未撤销 Key 名称唯一；每人活跃 Key 数量受限；状态变更按 CAS 语义执行并返回 409 冲突码。
+- **REQ-MDL-02 OpenAI 兼容网关**：`/v1/models`、`/v1/chat/completions`（含流式）、`/v1/embeddings` 以 Bearer API Key 鉴权，错误统一为 OpenAI 信封；网关面不开放 CORS，不用于浏览器直连。
+- **REQ-MDL-03 配额与限流**：按 Key 的 RPM/TPM 限流与按员工维度的日 token 配额，超额返回 429 与 `Retry-After`；业务日以 `Asia/Shanghai` 自然日为准。
+- **REQ-MDL-04 调用记录与用量**：100% 调用落账（用户/Key/模型/token/耗时/状态码），上游未返回 usage 时以估算值并显式标记；控制台提供今日/近 7 日/近 30 日用量与调用明细。
+- **REQ-MDL-05 权限与审计**：控制面按 `model_service.*` 权限码授权（本人维度默认授予 `employee`，全平台维度仅超管）；Key 生命周期操作与管理员代操作全部写入安全审计；越权访问按 404 处理，不泄露存在性。
+- **REQ-MDL-06 部署与可观测前置**：`/v1/` 独立 nginx 路由（放宽读超时、关闭响应缓冲）；生产安全中间件对 `/v1` 豁免 CSRF/重放校验；网关指标与告警纳入既有 Prometheus 体系。
+
+本期不含计费扣费、多租户隔离、多模型源混合路由与 vLLM 多机调度（记后续版本池）。
+
 ## 4. 接口、数据与证据如何衔接
 
 | 链路      | 主要 API 入口                                                        | 持久化事实                                                    | 验收取证                                                      |
@@ -129,6 +142,7 @@ flowchart LR
 | 分析      | `/internal/analytics/*`                                              | 行为事件、聚合、指标版本、导出任务、助手审计                  | 源事件与数字对账、脱敏结果、下载授权                          |
 | 通知      | `/internal/notifications/*`、`/internal/portal/notifications/*`      | notifications、Outbox、投递尝试                               | 业务触发 → 真实收件人记录 → summary → 已读持久化              |
 | Portal    | `/internal/portal/*`                                                 | app 复用应用事实；自有资源、收藏/评论、技能包、投票、内容页   | 两端 app 一致及匿名/登录缓存隔离                              |
+| 模型服务  | `/internal/model-service/*`、`/v1/*`                                 | 模型 API Key、调用记录、每日用量聚合、安全审计                | 创建/轮换/禁用的状态与负向鉴权、429 口径、调用记录与看板对账   |
 
 字段枚举和响应形状以[contracts](../../packages/contracts/src/)、当前 controller DTO 和[数据库 schema](../../packages/database/src/schema.ts)为核对入口。本文不复制另一套 DTO；变更字段时同时更新契约、接口说明、需求 ID、验收案例和追踪行。
 
