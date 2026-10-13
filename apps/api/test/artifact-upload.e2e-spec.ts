@@ -195,7 +195,11 @@ describe("artifact upload API", () => {
       ],
     }).compile();
     app = moduleRef.createNestApplication<NestExpressApplication>();
-    configureApiBodyParsers(app as NestExpressApplication, MAX_ARTIFACT_BYTES);
+    configureApiBodyParsers(
+      app as NestExpressApplication,
+      MAX_ARTIFACT_BYTES,
+      10 * 1024 * 1024,
+    );
     await app.init();
   });
 

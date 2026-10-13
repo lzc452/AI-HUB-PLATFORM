@@ -208,6 +208,42 @@ export { ModelServiceKeyController } from "./llm-gateway/model-service-key.contr
 export { ModelServiceKeyService } from "./llm-gateway/model-service-key.service.js";
 export { KyselyModelServiceKeyRepository } from "./llm-gateway/model-service-key.repository.js";
 export { LLM_GATEWAY_SERVICE } from "./llm-gateway/llm-gateway.tokens.js";
+export { LLM_GATEWAY_API_SERVICE } from "./llm-gateway/llm-gateway.tokens.js";
+export {
+  API_KEY_CLOCK,
+  API_KEY_HASHER,
+  MODEL_SERVICE_KEY_REPOSITORY,
+} from "./llm-gateway/llm-gateway.tokens.js";
+export { LlmGatewayController } from "./llm-gateway/llm-gateway.controller.js";
+export { LlmGatewayService } from "./llm-gateway/llm-gateway.service.js";
+export {
+  LlmGatewayExceptionFilter,
+  toGatewayErrorDescriptor,
+} from "./llm-gateway/llm-gateway.exception.filter.js";
+export { ApiKeyGuard, parseBearerToken } from "./llm-gateway/api-key.guard.js";
+export {
+  GATEWAY_ERRORS,
+  GatewayApiError,
+  gatewayError,
+  summarizeUpstreamDetail,
+} from "./llm-gateway/llm-gateway.errors.js";
+export { createVllmUpstream } from "./llm-gateway/vllm-upstream.adapter.js";
+export type {
+  UpstreamResult,
+  UpstreamFailureKind,
+  VllmUpstreamPort,
+  VllmUpstreamOptions,
+} from "./llm-gateway/vllm-upstream.adapter.js";
+export type {
+  ApiKeyContext,
+  GatewayRequest,
+} from "./llm-gateway/api-key.guard.js";
+export type {
+  GatewayErrorDescriptor,
+  GatewayErrorKey,
+  GatewayErrorOptions,
+} from "./llm-gateway/llm-gateway.errors.js";
+export type { LlmGatewayModuleOptions } from "./llm-gateway/llm-gateway.module.js";
 export {
   createApiKeyHasher,
   API_KEY_FORMAT,

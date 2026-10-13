@@ -40,7 +40,7 @@ import {
   type ReadableObjectStoragePort,
   type WebTargetPolicy,
   type PortalService,
-  type ModelServiceKeyServiceConfig,
+  type LlmGatewayModuleOptions,
   PortalModule,
 } from "@ai-hub/server";
 
@@ -122,10 +122,10 @@ export class ApiModule {
      */
     webTargetPolicy?: WebTargetPolicy,
     /**
-     * 模型服务控制面配置（PRD 8.1）。**未提供即不装配该模块**——测试与不部署
+     * 模型服务配置（控制面 PRD 8.1 + 网关面 PRD 8.2）。**未提供即不装配该模块**——测试与不部署
      * 模型服务的环境无需它；生产由 main.ts 从 RuntimeConfig 显式传入。
      */
-    llmGateway?: ModelServiceKeyServiceConfig,
+    llmGateway?: LlmGatewayModuleOptions,
   ): DynamicModule {
     const database =
       typeof databaseOrUrl === "string"

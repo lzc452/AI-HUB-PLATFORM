@@ -91,7 +91,7 @@ describe("需求附件真实扫描与隔离门禁", () => {
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
     });
-    configureApiBodyParsers(app, 64 * 1024 * 1024);
+    configureApiBodyParsers(app, 64 * 1024 * 1024, 10 * 1024 * 1024);
     await app.init();
   }, 180_000);
 

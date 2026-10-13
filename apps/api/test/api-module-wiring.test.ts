@@ -58,6 +58,8 @@ describe("production API module wiring", () => {
             maxTpm: 10_000_000,
             maxDailyTokens: 1_000_000_000,
             maxKeysPerUser: 10,
+            upstreamBaseUrl: "http://10.10.181.82:3040/v1",
+            upstreamTimeoutMs: 120_000,
           },
         ),
       ],

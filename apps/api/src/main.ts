@@ -107,6 +107,9 @@ async function bootstrap() {
       config.webTargetAllowlist,
       // 模型服务控制面（PRD 8.1）：Key 生命周期与配额上限；HMAC 密钥缺失时
       // 创建/轮换会返回明确的领域错误，其余操作仍可用（便于误配置时先禁用/清理）。
+      // 模型服务（控制面 PRD 8.1 + 网关面 PRD 8.2）：Key 生命周期、配额上限与上游地址。
+      // HMAC 密钥缺失时创建/轮换与 /v1 会返回明确错误，控制面其余操作仍可用；
+      // 上游地址缺失时 /v1 返回 503 gateway_not_configured。
       {
         hmacSecret: config.llmGatewayHmacSecret,
         hmacSecretPrevious: config.llmGatewayHmacSecretPrevious,
@@ -114,6 +117,8 @@ async function bootstrap() {
         maxTpm: config.llmMaxTpm,
         maxDailyTokens: config.llmMaxDailyTokens,
         maxKeysPerUser: config.llmMaxKeysPerUser,
+        upstreamBaseUrl: config.llmGatewayUpstreamBaseUrl,
+        upstreamTimeoutMs: config.llmUpstreamTimeoutMs,
       },
     ),
     { logger: new PinoNestLogger(logger) },
@@ -193,7 +198,11 @@ async function bootstrap() {
     enabled: shouldEnableApiDocs(config.nodeEnv, config.enableApiDocs),
   });
   app.enableShutdownHooks(["SIGTERM"]);
-  configureApiBodyParsers(app, config.artifactMaxSizeBytes);
+  configureApiBodyParsers(
+    app,
+    config.artifactMaxSizeBytes,
+    config.llmJsonBodyLimitBytes,
+  );
 
   await app.listen(config.apiPort);
 }

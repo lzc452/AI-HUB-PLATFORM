@@ -63,6 +63,15 @@ export interface ModelServiceKeyRepository {
   insert(input: InsertApiKeyInput): Promise<ApiKeyRecord>;
   findById(keyId: string, employeeId: string): Promise<ApiKeyRecord | null>;
   findByHash(keyHash: string): Promise<ApiKeyRecord | null>;
+  /**
+   * 网关鉴权用：按**候选摘要**查找（双密钥过渡期会给出新/旧两个摘要）。
+   * 命中 `key_hash` 唯一索引，参数化后仍是索引点查。
+   */
+  findByHashes(hashes: readonly string[]): Promise<ApiKeyRecord | null>;
+  /** 员工在职状态（网关鉴权：停用员工名下 Key 一律不可用）。 */
+  findEmployeeStatus(employeeId: string): Promise<string | null>;
+  /** 记录最近一次**成功**调用时刻（best-effort，失败不影响转发结果）。 */
+  touchLastUsedAt(keyId: string, at: Date): Promise<void>;
   findHoldingByName(
     employeeId: string,
     name: string,
@@ -192,6 +201,35 @@ export class KyselyModelServiceKeyRepository
       .where("key_hash", "=", keyHash)
       .executeTakeFirst();
     return row === undefined ? null : toRecord(row as KeyRow);
+  }
+
+  public async findByHashes(
+    hashes: readonly string[],
+  ): Promise<ApiKeyRecord | null> {
+    if (hashes.length === 0) return null;
+    const row = await this.executor
+      .selectFrom("llm_api_keys")
+      .selectAll()
+      .where("key_hash", "in", [...hashes])
+      .executeTakeFirst();
+    return row === undefined ? null : toRecord(row as KeyRow);
+  }
+
+  public async findEmployeeStatus(employeeId: string): Promise<string | null> {
+    const row = await this.executor
+      .selectFrom("employees")
+      .select("status")
+      .where("employee_id", "=", employeeId)
+      .executeTakeFirst();
+    return row?.status ?? null;
+  }
+
+  public async touchLastUsedAt(keyId: string, at: Date): Promise<void> {
+    await this.executor
+      .updateTable("llm_api_keys")
+      .set({ last_used_at: at })
+      .where("key_id", "=", keyId)
+      .execute();
   }
 
   public async findHoldingByName(

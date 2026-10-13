@@ -97,6 +97,25 @@ class FakeRepository implements ModelServiceKeyRepository {
     return found === undefined ? null : { ...found };
   }
 
+  public async findByHashes(
+    hashes: readonly string[],
+  ): Promise<ApiKeyRecord | null> {
+    const found = this.keys.find((key) => hashes.includes(key.keyHash));
+    return found === undefined ? null : { ...found };
+  }
+
+  public async findEmployeeStatus(employeeId: string): Promise<string | null> {
+    return employeeId === actor.employeeId ||
+      employeeId === otherActor.employeeId
+      ? "active"
+      : null;
+  }
+
+  public async touchLastUsedAt(keyId: string, at: Date): Promise<void> {
+    const found = this.keys.find((key) => key.keyId === keyId);
+    if (found !== undefined) found.lastUsedAt = at;
+  }
+
   public async findHoldingByName(
     employeeId: string,
     name: string,

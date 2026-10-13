@@ -22,6 +22,20 @@ x-runtime-environment: &runtime-environment
   # 内网 Web 交付 URL 白名单（规格 §11.3）：JSON，默认与 config 包的内网示例
   # 策略一致——真实部署必须显式配置实际允许的主机名/端口/网段。
   WEB_TARGET_ALLOWLIST: ${WEB_TARGET_ALLOWLIST:-{"protocols":["http","https"],"allowedHostnames":["apps.internal.example.com",".corp.example.com"],"allowedPorts":[80,443,8080,8443],"allowedCidrs":["10.0.0.0/8","172.16.0.0/12","192.168.0.0/16"]}}
+  # 模型服务网关（本地 vLLM，PRD 8.3）。HMAC 密钥生产必须显式配置（此处默认值仅本地）；
+  # 上游为公司 GPU 服务器，开发机不通内网时网关对 /v1 返回 503，不影响平台其余接口。
+  LLM_GATEWAY_HMAC_SECRET: ${LLM_GATEWAY_HMAC_SECRET:-ai-hub-local-llm-hmac-secret-replace-me}
+  LLM_GATEWAY_UPSTREAM_BASE_URL: ${LLM_GATEWAY_UPSTREAM_BASE_URL:-http://10.10.181.82:3040/v1}
+  LLM_DEFAULT_RPM: ${LLM_DEFAULT_RPM:-60}
+  LLM_DEFAULT_TPM: ${LLM_DEFAULT_TPM:-100000}
+  LLM_DEFAULT_DAILY_TOKENS: ${LLM_DEFAULT_DAILY_TOKENS:-2000000}
+  LLM_MAX_RPM: ${LLM_MAX_RPM:-6000}
+  LLM_MAX_TPM: ${LLM_MAX_TPM:-10000000}
+  LLM_MAX_DAILY_TOKENS: ${LLM_MAX_DAILY_TOKENS:-1000000000}
+  LLM_MAX_KEYS_PER_USER: ${LLM_MAX_KEYS_PER_USER:-10}
+  LLM_JSON_BODY_LIMIT_BYTES: ${LLM_JSON_BODY_LIMIT_BYTES:-10485760}
+  LLM_UPSTREAM_TIMEOUT_MS: ${LLM_UPSTREAM_TIMEOUT_MS:-120000}
+  LLM_UPSTREAM_FIRST_TOKEN_TIMEOUT_MS: ${LLM_UPSTREAM_FIRST_TOKEN_TIMEOUT_MS:-30000}
 
 services:
   postgres:
