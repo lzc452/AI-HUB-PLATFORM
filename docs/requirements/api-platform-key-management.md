@@ -2,14 +2,14 @@
 
 | 文档信息 | |
 | --- | --- |
-| 版本 | v1.2（流式契约与配额 SQL 落地形态复审后修订） |
+| 版本 | v1.3（落地形态实证验证后修订，含纠偏） |
 | 日期 | 2026-10-13 |
 | 作者 | 司南（产品经理 Agent） |
 | 状态 | 待复审（本轮评审意见已收敛并修订，见评审记录） |
 | 关联分支 | `feature/api-platform` |
 | 需求基线参考 | `docs/requirements/README.md`（本文不修改基线，评审通过后按基线变更规则回填） |
 
-**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）。
+**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）→ v1.3（2026-10-13）落地形态**实证验证**后修订：配额 SQL 两项验证通过，nginx 结论纠偏（`proxy_read_timeout` 升级为已验证 P0、`proxy_buffering` 降为建议），并更正一处错误表述（业务日错位后果为北京时间 08:00 重置，非「晚上 8 点」）。
 
 **评审记录**：
 
@@ -19,8 +19,9 @@
 | R2 | 数据模型（第 9 章） | 10 | 采纳 9、部分采纳 1（P0 2 条） |
 | R3 | 流式契约落地形态（8.2） | 7 | 全部采纳（P0 4 条 / P1 2 条 / P2 1 条） |
 | R4 | 配额 SQL 落地形态（9.4） | 5 | 全部采纳（P1 3 条 / P2 2 条） |
+| V1 | 实证验证（9.4 配额 SQL / 8.3 nginx） | 4 项 | 2 项证实、1 项定性更正、1 项表述更正 |
 
-R1/R2 明细见 `docs/audit/api-platform-prd-review-2026-10-13.md`；R3/R4 明细（含代码证据与行号）见 `docs/audit/api-platform-prd-landform-recheck-2026-10-13.md`。
+R1/R2 明细见 `docs/audit/api-platform-prd-review-2026-10-13.md`；R3/R4 明细（含代码证据与行号）见 `docs/audit/api-platform-prd-landform-recheck-2026-10-13.md`；V1 原始输出与纠偏留痕见 `docs/audit/api-platform-landform-verification-2026-10-13.md`。
 
 ## 二、背景与目标
 
@@ -336,16 +337,16 @@ active ──disable──► disabled ──enable──► active
 | JSON body 上限 `1mb` | `apps/api/src/body-parser.ts` 的 `JSON_BODY_LIMIT` | 长上下文请求易超限；中间件层超限错误不经全局过滤器，**不产出 OpenAI 信封** | 仿既有 `isRawUploadContentRequest` carve-out 模式，为 `/v1/*` 单独注册解析器（`LLM_JSON_BODY_LIMIT`，默认 10mb），并显式映射 413 + OpenAI 信封 |
 | HTTP 时长指标覆盖整个响应 | `request-context.middleware.ts` 在 `finish`/`close` 记录 | 流式请求的 HTTP 时长包含生成时间，不能用于衡量网关自身开销 | 新增专用指标 `ai_hub_llm_gateway_duration_seconds{phase=ttfb\|total}`；HTTP 指标仅作对照 |
 
-**nginx 必配（SSE 生效前提，对应 FR-24）**：`/v1/` 需独立 location 且关闭缓冲，否则流式响应会被整段缓冲后一次性返回（默认 `proxy_buffering on`、`proxy_read_timeout 60s`）。`infra/docker/nginx.conf` 与 `infra/docker/nginx.production.conf` 均须增加：
+**nginx 必配（对应 FR-24；结论已实证，见验证报告）**：`infra/docker/nginx.conf` 与 `infra/docker/nginx.production.conf` 均须增加 `/v1/` 独立 location。
 
 ```nginx
 location /v1/ {
   proxy_pass http://api:3001;        # dev 配置沿用既有 $api_upstream 变量写法
   proxy_http_version 1.1;
-  proxy_buffering off;               # 关键：否则 SSE 被整段缓冲
-  proxy_cache off;
-  proxy_read_timeout 300s;           # 关键：默认 60s，长生成会断流
-  proxy_send_timeout 300s;
+  proxy_read_timeout 300s;           # 必需：默认 60s，上游空闲超 60s 即断流（实测 +60.07s 切断）
+  proxy_send_timeout 300s;           # 必需：对称放宽
+  proxy_buffering off;               # 建议：响应头提前到首个数据块之前；防御未来压缩/缓存中间层
+  proxy_cache off;                   # 建议：同上
   proxy_set_header Connection "";
   proxy_set_header Host $host;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -353,7 +354,14 @@ location /v1/ {
 }
 ```
 
-**验收要求（M2 退出条件之一）**：以「curl 逐块到达时间戳」与「OpenAI SDK 流式回调间隔」双证据确认缓冲已关闭；**仅本地直连 API 端口通过不算验收**（本地不经 nginx，测不出该问题）。
+**实证结论（nginx 1.29.4，2026-10-13 实测）**：
+
+- **必需项已复现**：默认 `proxy_read_timeout 60s` 时，上游空闲 70s 的连接在 **+60.07s 被切断**（`UND_ERR_SOCKET`）；改为 300s 后存活并正常收到后续事件。LLM 首 token 等待或思考间隔超 60s 会以「半截回答 + 报错」形式暴露给调用方——这是本项被评为 P0 的真实依据。
+- **纠偏**：`proxy_buffering on`（默认）**不会**把小块 SSE 整段缓冲（三组对照实测均按 1s 间隔分块到达；把上游响应类型换成 `text/plain` 结果相同，证明与内容类型无关）。可观测差异仅为**响应头延迟到首个数据块**（+1.05s，对照 `proxy_buffering off` 的 +0.05s），故该项列为建议而非阻断项。
+- **等效第二路径**：上游响应带 `X-Accel-Buffering: no` 时表现与 `proxy_buffering off` 一致——网关对 SSE 响应同时带上该头作为纵深防御（主控制点仍在 nginx 配置）。
+- **路由缺失属配置级故障**：两份配置当前均无 `/v1/`，缺失时请求会落到 `location /` 的 web 上游（返回前端页面而非 401/404）。
+
+**验收要求（M2 退出条件之一）**：以「curl 逐块到达时间戳」与「OpenAI SDK 流式回调间隔」双证据确认链路可用，**并补一条空闲哨兵用例**（上游空闲 > 60s 后仍能收到后续事件）；仅本地直连 API 端口通过不算验收（本地不经 nginx，测不出该类问题）。
 
 ## 九、数据模型
 
@@ -426,9 +434,10 @@ where employee_id = $1
 - **归属日**：以请求开始时刻（`startedAt`）归属业务日，跨零点长请求不重复计入次日。
 - **保留**：`llm_api_call_logs` 保留 180 天（与行为事件一致），`llm_usage_daily` 长期保留；清理任务入 worker（复用现有 retention runner 模式）。
 - **幂等**：Key 创建/轮换/禁用均以数据库约束与状态机保证，无资金操作，不涉及对账。
-- **落地形态（复审 R4）**：
-  - 时区表达式在仓储层封装为**单一常量**，禁止各调用点各写一份；集成测试断言「业务日切换点 = UTC 16:00」；
-  - `(employee_id, requested_at)` 索引可用性以集成测试断言「必须命中 Index Scan」——本机 Docker 不可用，**未做 live `EXPLAIN`，不得视为已验证**；
+- **落地形态（复审 R4；2026-10-13 已实证）**：
+  - 时区表达式在仓储层封装为**单一常量**，禁止各调用点各写一份；业务日切换点 = UTC 16:00 已实测确认（四项边界断言全部通过）；
+  - `(employee_id, requested_at)` 索引命中已实测确认（参数化查询走 Bitmap Index Scan，2.19ms；无索引退化为 Parallel Seq Scan，41.78ms，约 19 倍差距；两次结果对账一致）——集成测试仍须断言计划形态，防后续迁移或统计信息变化导致退化；
+  - **配额口径纠偏**：若误用 UTC 日切分，配额窗口重置发生在北京时间 **08:00**（非零点），并漏算当日 00:00–08:00 的用量（实测该窗口命中 0 行）；
   - 进程内修正按 **Asia/Shanghai 业务日为 key** 缓存，跨日即清零（不依赖进程重启）；多实例演进时移除该机制；
   - 预检语义：**只比对已用量，不做预留**；并发窗口内的少量超额由下一次请求被拒自愈，禁止引入预留导致复杂度与死锁风险；
   - 看板口径：`llm_usage_daily` 聚合延迟上界 5 分钟，页面须标注「非实时配额余量」，避免与鉴权口径混淆。
@@ -606,6 +615,7 @@ where employee_id = $1
 - 指标现状：`packages/server/src/system/observability/metrics.ts`
 - 本轮评审记录：`docs/audit/api-platform-prd-review-2026-10-13.md`
 - 落地形态复审记录（含代码证据与行号）：`docs/audit/api-platform-prd-landform-recheck-2026-10-13.md`
+- 落地形态实证验证报告（含原始输出与纠偏留痕）：`docs/audit/api-platform-landform-verification-2026-10-13.md`
 
 ### 16.3 可测性要求（评审 R2-10）
 
