@@ -160,6 +160,8 @@ describe("模型网关 /v1 端到端（桩上游 + 真库真 Key）", () => {
       maxKeysPerUser: 10,
       upstreamBaseUrl: upstream.baseUrl,
       upstreamTimeoutMs: UPSTREAM_TIMEOUT_MS,
+      firstTokenTimeoutMs: 30_000,
+      quotaDefaults: { rpm: 60, tpm: 100_000, dailyTokens: 2_000_000 },
     };
     moduleRef = await Test.createTestingModule({
       imports: [LlmGatewayModule.register(db, options)],
@@ -355,25 +357,6 @@ describe("模型网关 /v1 端到端（桩上游 + 真库真 Key）", () => {
     expect(response.body).toMatchObject({
       error: { code: "payload_too_large", type: "invalid_request_error" },
     });
-  });
-
-  it("stream=true 在 M3 前显式拒绝，不把流式请求转发给上游", async () => {
-    const apiKey = await createKey("e2e-stream");
-    const before = upstream.received.length;
-    const response = await request(app.getHttpServer())
-      .post("/v1/chat/completions")
-      .set("authorization", `Bearer ${apiKey}`)
-      .send({
-        model: "Qwen3.5 35B A3B",
-        messages: [{ role: "user", content: "x" }],
-        stream: true,
-      })
-      .expect(400);
-
-    expect(response.body).toMatchObject({
-      error: { code: "streaming_not_enabled" },
-    });
-    expect(upstream.received.length).toBe(before);
   });
 
   it("缺少 model 或 messages 返回 400 invalid_request_error", async () => {

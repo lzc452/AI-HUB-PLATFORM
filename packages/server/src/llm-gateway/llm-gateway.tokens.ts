@@ -21,3 +21,15 @@ export const API_KEY_HASHER = Symbol("API_KEY_HASHER");
 
 /** 可注入时钟（测试用；未注册时守卫使用系统时间）。 */
 export const API_KEY_CLOCK = Symbol("API_KEY_CLOCK");
+
+/** 无效凭据的 IP 级预检（M3）。 */
+export const INVALID_KEY_THROTTLE = Symbol("INVALID_KEY_THROTTLE");
+
+/** 调用台账仓储（M3：配额与用量的事实来源）。 */
+export const LLM_CALL_LOG_REPOSITORY = Symbol("LLM_CALL_LOG_REPOSITORY");
+
+/** 配额与限流服务（M3）。 */
+export const LLM_QUOTA_SERVICE = Symbol("LLM_QUOTA_SERVICE");
+
+/** 上游熔断器（M3）。 */
+export const UPSTREAM_CIRCUIT_BREAKER = Symbol("UPSTREAM_CIRCUIT_BREAKER");

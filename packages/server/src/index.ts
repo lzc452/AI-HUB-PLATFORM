@@ -214,6 +214,58 @@ export {
   API_KEY_HASHER,
   MODEL_SERVICE_KEY_REPOSITORY,
 } from "./llm-gateway/llm-gateway.tokens.js";
+export {
+  INVALID_KEY_THROTTLE,
+  LLM_CALL_LOG_REPOSITORY,
+  LLM_QUOTA_SERVICE,
+  UPSTREAM_CIRCUIT_BREAKER,
+} from "./llm-gateway/llm-gateway.tokens.js";
+export { KyselyLlmCallLogRepository } from "./llm-gateway/llm-call-log.repository.js";
+export type {
+  CallLogInput,
+  LlmCallEndpoint,
+  LlmCallLogRepository,
+} from "./llm-gateway/llm-call-log.repository.js";
+export {
+  businessDayKey,
+  businessDayStart,
+  nextBusinessDayStart,
+  secondsUntilNextBusinessDay,
+} from "./llm-gateway/llm-business-day.js";
+export {
+  INVALID_KEY_MAX_ATTEMPTS,
+  INVALID_KEY_WINDOW_MS,
+  LlmQuotaService,
+  createInvalidKeyThrottle,
+  createWeightedFixedWindowCounter,
+  resolveLimits,
+} from "./llm-gateway/llm-quota.js";
+export type {
+  InvalidKeyThrottle,
+  QuotaDefaults,
+  WeightedFixedWindowCounter,
+} from "./llm-gateway/llm-quota.js";
+export { createUpstreamCircuitBreaker } from "./llm-gateway/upstream-circuit-breaker.js";
+export type {
+  CircuitSnapshot,
+  CircuitState,
+  UpstreamCircuitBreaker,
+} from "./llm-gateway/upstream-circuit-breaker.js";
+export { createExpressSink } from "./llm-gateway/llm-gateway.sink.js";
+export type {
+  ExpressLikeRequest,
+  ExpressLikeResponse,
+  GatewayResponseSink,
+} from "./llm-gateway/llm-gateway.sink.js";
+export {
+  estimateUsage,
+  extractCompletionDelta,
+  extractSseUsage,
+  fromUpstreamUsage,
+  normalizeModelName,
+} from "./llm-gateway/llm-usage.js";
+export type { UsageNumbers } from "./llm-gateway/llm-usage.js";
+export type { LlmGatewayServiceOptions } from "./llm-gateway/llm-gateway.service.js";
 export { LlmGatewayController } from "./llm-gateway/llm-gateway.controller.js";
 export { LlmGatewayService } from "./llm-gateway/llm-gateway.service.js";
 export {

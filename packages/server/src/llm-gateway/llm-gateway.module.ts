@@ -1,19 +1,37 @@
 import type { DatabaseSchema } from "@ai-hub/database";
 import { Module, type DynamicModule } from "@nestjs/common";
 import type { Kysely } from "kysely";
+import type { Logger } from "pino";
 import { IdentityModule } from "../identity/identity.module.js";
 import { IdentityService } from "../identity/identity.service.js";
 import { AuditService } from "../system/security/audit.service.js";
 import { KyselyAuditRepository } from "../system/security/audit.repository.js";
 import { createApiKeyHasher } from "./api-key.hasher.js";
+import {
+  KyselyLlmCallLogRepository,
+  type LlmCallLogRepository,
+} from "./llm-call-log.repository.js";
 import { LlmGatewayController } from "./llm-gateway.controller.js";
 import {
   API_KEY_HASHER,
+  INVALID_KEY_THROTTLE,
+  LLM_CALL_LOG_REPOSITORY,
   LLM_GATEWAY_API_SERVICE,
   LLM_GATEWAY_SERVICE,
+  LLM_QUOTA_SERVICE,
   MODEL_SERVICE_KEY_REPOSITORY,
+  UPSTREAM_CIRCUIT_BREAKER,
 } from "./llm-gateway.tokens.js";
-import { LlmGatewayService } from "./llm-gateway.service.js";
+import {
+  LlmGatewayService,
+  type LlmGatewayServiceOptions,
+} from "./llm-gateway.service.js";
+import {
+  createInvalidKeyThrottle,
+  createWeightedFixedWindowCounter,
+  LlmQuotaService,
+  type QuotaDefaults,
+} from "./llm-quota.js";
 import { ModelServiceKeyController } from "./model-service-key.controller.js";
 import {
   KyselyModelServiceKeyRepository,
@@ -24,6 +42,7 @@ import {
   type ModelServiceAuditPort,
   type ModelServiceKeyServiceConfig,
 } from "./model-service-key.service.js";
+import { createUpstreamCircuitBreaker } from "./upstream-circuit-breaker.js";
 import { createVllmUpstream } from "./vllm-upstream.adapter.js";
 
 /**
@@ -43,6 +62,14 @@ export interface LlmGatewayModuleOptions extends ModelServiceKeyServiceConfig {
   upstreamBaseUrl: string | undefined;
   /** 上游整体超时（毫秒）。 */
   upstreamTimeoutMs: number;
+  /** 流式首 token 超时（毫秒）。 */
+  firstTokenTimeoutMs: number;
+  /** Key 未单独设置限额时使用的平台默认值。 */
+  quotaDefaults: QuotaDefaults;
+  /** 熔断阈值与打开时长（默认 5 次 / 30s）。 */
+  circuit?: { failureThreshold?: number; openDurationMs?: number };
+  /** 旁路问题（台账写失败等）的日志出口。 */
+  logger?: Logger | undefined;
 }
 
 @Module({})
@@ -58,6 +85,7 @@ export class LlmGatewayModule {
       providers: buildProviders(
         new KyselyModelServiceKeyRepository(database),
         new AuditService(new KyselyAuditRepository(database)),
+        new KyselyLlmCallLogRepository(database),
         options,
       ),
       exports: [LLM_GATEWAY_SERVICE, LLM_GATEWAY_API_SERVICE],
@@ -68,6 +96,7 @@ export class LlmGatewayModule {
   public static forTest(input: {
     repository: ModelServiceKeyRepository;
     audit: ModelServiceAuditPort;
+    callLogs?: LlmCallLogRepository;
     options: LlmGatewayModuleOptions;
     identity: IdentityService;
   }): DynamicModule {
@@ -75,7 +104,12 @@ export class LlmGatewayModule {
       module: LlmGatewayModule,
       controllers: [ModelServiceKeyController, LlmGatewayController],
       providers: [
-        ...buildProviders(input.repository, input.audit, input.options),
+        ...buildProviders(
+          input.repository,
+          input.audit,
+          input.callLogs ?? emptyCallLogRepository(),
+          input.options,
+        ),
         { provide: IdentityService, useValue: input.identity },
       ],
       exports: [LLM_GATEWAY_SERVICE, LLM_GATEWAY_API_SERVICE],
@@ -86,6 +120,7 @@ export class LlmGatewayModule {
 function buildProviders(
   repository: ModelServiceKeyRepository,
   audit: ModelServiceAuditPort,
+  callLogs: LlmCallLogRepository,
   options: LlmGatewayModuleOptions,
 ) {
   const hasher =
@@ -102,6 +137,23 @@ function buildProviders(
           baseUrl: options.upstreamBaseUrl,
           timeoutMs: options.upstreamTimeoutMs,
         });
+  const quota = new LlmQuotaService({
+    counters: createWeightedFixedWindowCounter(),
+    callLogs,
+    defaults: options.quotaDefaults,
+  });
+  const breaker = createUpstreamCircuitBreaker(options.circuit);
+
+  const gatewayOptions: LlmGatewayServiceOptions = {
+    upstream,
+    keyRepository: repository,
+    callLogs,
+    quota,
+    breaker,
+    upstreamTimeoutMs: options.upstreamTimeoutMs,
+    firstTokenTimeoutMs: options.firstTokenTimeoutMs,
+    ...(options.logger === undefined ? {} : { logger: options.logger }),
+  };
 
   return [
     {
@@ -110,13 +162,30 @@ function buildProviders(
     },
     {
       provide: LLM_GATEWAY_API_SERVICE,
-      useValue: new LlmGatewayService(upstream, repository),
+      useValue: new LlmGatewayService(gatewayOptions),
     },
     // 守卫的依赖拆成显式令牌：`@UseGuards(ApiKeyGuard)` 按类解析时 Nest 会自行构造，
     // 依赖必须能通过令牌解析（useValue 注册守卫类本身会因缺少 metatype 而回退成无参构造）。
     { provide: MODEL_SERVICE_KEY_REPOSITORY, useValue: repository },
     { provide: API_KEY_HASHER, useFactory: () => hasher },
+    { provide: INVALID_KEY_THROTTLE, useValue: createInvalidKeyThrottle() },
+    // 以下三个供测试按令牌取用，也便于未来把配额/熔断接到指标
+    { provide: LLM_CALL_LOG_REPOSITORY, useValue: callLogs },
+    { provide: LLM_QUOTA_SERVICE, useValue: quota },
+    { provide: UPSTREAM_CIRCUIT_BREAKER, useValue: breaker },
   ];
+}
+
+/** 测试缺省：不落台账（调用日志由真库集成测试覆盖）。 */
+function emptyCallLogRepository(): LlmCallLogRepository {
+  return {
+    async insert() {
+      return undefined;
+    },
+    async sumTokensSince() {
+      return 0;
+    },
+  };
 }
 
 export type { ModelServiceAuditPort, ModelServiceKeyRepository };

@@ -47,18 +47,18 @@ export const GATEWAY_ERRORS = {
     code: "invalid_request_error",
     message: "请求体不合法",
   },
-  /** 流式（stream=true）在 M3 开放；在此之前显式拒绝，避免把 SSE 整段读成 JSON 静默出错。 */
-  STREAMING_NOT_ENABLED: {
-    status: 400,
-    type: "invalid_request_error",
-    code: "streaming_not_enabled",
-    message: "当前版本暂不支持流式（stream=true），请设置 stream=false",
-  },
   MODEL_NOT_FOUND: {
     status: 404,
     type: "invalid_request_error",
     code: "model_not_found",
     message: "请求的模型不存在",
+  },
+  /** 平台侧配额/限流（RPM/TPM/日配额），附 `Retry-After`。 */
+  RATE_LIMITED: {
+    status: 429,
+    type: "rate_limit_error",
+    code: "rate_limit_exceeded",
+    message: "超出平台配额限制，请按 Retry-After 稍后重试",
   },
   PAYLOAD_TOO_LARGE: {
     status: 413,
@@ -111,6 +111,8 @@ export interface GatewayErrorDescriptor {
   type: string;
   code: string;
   message: string;
+  /** 仅 429 使用：写入 `Retry-After` 头（秒）。 */
+  retryAfterSeconds?: number | undefined;
 }
 
 /** 上游错误细节（诊断用）：进入 message 但不凭空编造，带上前缀便于定位。 */
@@ -119,6 +121,8 @@ export interface GatewayErrorOptions {
   message?: string | undefined;
   /** 附加到 message 的诊断信息（上游状态码/错误摘要）。 */
   detail?: string | undefined;
+  /** 429 时写入响应头 `Retry-After`（秒）。 */
+  retryAfterSeconds?: number | undefined;
 }
 
 /**
@@ -143,6 +147,9 @@ export class GatewayApiError extends HttpException {
       type: base.type,
       code: base.code,
       message: `${message}${detail}`,
+      ...(options.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: options.retryAfterSeconds }),
     };
     super(
       {

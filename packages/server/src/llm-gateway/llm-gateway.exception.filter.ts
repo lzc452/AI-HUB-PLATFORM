@@ -32,6 +32,7 @@ import {
 interface ResponseLike {
   status(code: number): ResponseLike;
   type(contentType: string): ResponseLike;
+  setHeader(name: string, value: string): unknown;
   send(body: unknown): unknown;
   readonly headersSent?: boolean;
   write(chunk: string): unknown;
@@ -103,6 +104,11 @@ export class LlmGatewayExceptionFilter implements ExceptionFilter {
         },
         "模型网关请求失败",
       );
+    }
+
+    // 429 必须带 Retry-After，客户端（含官方 SDK）据此退避
+    if (descriptor.retryAfterSeconds !== undefined) {
+      response.setHeader("Retry-After", String(descriptor.retryAfterSeconds));
     }
 
     if (response.headersSent === true) {

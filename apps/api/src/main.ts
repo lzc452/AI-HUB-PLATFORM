@@ -119,6 +119,14 @@ async function bootstrap() {
         maxKeysPerUser: config.llmMaxKeysPerUser,
         upstreamBaseUrl: config.llmGatewayUpstreamBaseUrl,
         upstreamTimeoutMs: config.llmUpstreamTimeoutMs,
+        firstTokenTimeoutMs: config.llmUpstreamFirstTokenTimeoutMs,
+        quotaDefaults: {
+          rpm: config.llmDefaultRpm,
+          tpm: config.llmDefaultTpm,
+          dailyTokens: config.llmDefaultDailyTokens,
+        },
+        // 台账写失败等旁路问题走平台统一 logger，避免静默丢账
+        logger,
       },
     ),
     { logger: new PinoNestLogger(logger) },
