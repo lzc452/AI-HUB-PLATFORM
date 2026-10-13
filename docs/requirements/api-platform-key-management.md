@@ -363,6 +363,12 @@ location /v1/ {
 
 **验收要求（M2 退出条件之一）**：以「curl 逐块到达时间戳」与「OpenAI SDK 流式回调间隔」双证据确认链路可用，**并补一条空闲哨兵用例**（上游空闲 > 60s 后仍能收到后续事件）；仅本地直连 API 端口通过不算验收（本地不经 nginx，测不出该类问题）。
 
+**落地状态（2026-10-13）**：
+
+- ✅ **已落地**：① 两份 nginx 配置的 `/v1/` location（含 `proxy_read_timeout 300s` / `proxy_send_timeout 300s` / `proxy_buffering off`）；② 生产安全中间件对 `/v1` 的 CSRF/重放豁免（`API_KEY_AUTH_PATH_PREFIXES`，含前缀边界匹配，`/v1-evil` 不放过；配套 9 个单测）；③ `/v1` **刻意不套** nginx `limit_req`（其 503 + HTML 会破坏 OpenAI 错误信封，配额统一由网关按 Key 维度执行并返回 429 + OpenAI 信封）。
+- ⏳ **待 M2（依赖网关模块存在）**：控制器级 `LlmGatewayExceptionFilter`；`/v1` 的 JSON body 上限 carve-out（当前全局 `1mb`）；网关侧对「无效 Key 洪泛」的 IP 级预检。
+- **已取证**：`nginx -t` 两份配置语法通过；活体 HTTP 验证 `/v1/*` 正常放行、`/v1-evil/*` 与 `/internal/*` 仍返回 403、豁免路径不触达重放存储。
+
 ## 九、数据模型
 
 > 迁移编号 `0056_llm_gateway_foundation.ts`，遵循仓库迁移规范：幂等 DDL（`if not exists`）、文件头注释说明取舍依据。表结构同步登记到 `packages/database/src/schema.ts`。
@@ -555,7 +561,7 @@ where employee_id = $1
 | Alertmanager 告警通道 | 运维 | 并行 | 缺位时降级为看板+日志，不阻塞上线 |
 | 多模型配置 | 平台配置 | 可绕过 | 单模型也可上线，`/v1/models` 透传当前模型 |
 
-**部署前置（复审 R3，缺一不可上线）**：① 两份 nginx 配置增加 `/v1/` location（关闭 `proxy_buffering`、放宽 `proxy_read_timeout`，配置见 8.3）；② 生产安全中间件对 `/v1/*` 的 CSRF/replay 豁免经安全评审并落地；③ 网关控制器级异常过滤器与 `/v1` body parser carve-out 生效。
+**部署前置（复审 R3）**：① ✅ 两份 nginx 配置的 `/v1/` location —— 已落地；② ✅ 生产安全中间件对 `/v1` 的 CSRF/重放豁免 —— 已落地，含单测与活体 HTTP 验证；③ ⏳ 网关控制器级异常过滤器与 `/v1` body parser carve-out —— 随 M2 网关模块落地，**上线前缺一不可**。
 
 **上线与回滚**：nginx `/v1/` 路由与 vLLM 服务配置化开启；灰度按「先管理员 Key → 后全员」；回滚=关闭网关路由 + 禁用新 Key 创建（数据保留，不清库）。
 
@@ -603,8 +609,8 @@ where employee_id = $1
 | FR-20 | 幂等与并发语义（CAS、同名防重、活跃上限） | 7.5/8.1/9.1 | TC-20 | 待开发 |
 | FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发 |
 | FR-22 | 网关面边界（无 CORS、413、`Retry-After` 口径、版本兼容） | 8.2 | TC-22 | 待开发 |
-| FR-23 | 网关与平台既有中间件交互（CSRF 豁免、请求体透传、控制器级错误过滤器、`@Public()` 约束、body 上限、指标口径） | 8.3 | TC-23 | 待开发 |
-| FR-24 | SSE 端到端链路（nginx 关缓冲与放宽超时，逐块到达验收） | 8.3/十四 | TC-24 | 待开发 |
+| FR-23 | 网关与平台既有中间件交互（CSRF 豁免、请求体透传、控制器级错误过滤器、`@Public()` 约束、body 上限、指标口径） | 8.3 | TC-23 | 部分落地（豁免已落地；过滤器与 body carve-out 待 M2） |
+| FR-24 | SSE 端到端链路（nginx 关缓冲与放宽超时，逐块到达验收） | 8.3/十四 | TC-24 | 部分落地（路由与超时已落地并语法校验；端到端验收待 M2） |
 | FR-25 | 配额 SQL 落地断言（业务日边界 = UTC 16:00、索引命中、修正生命周期） | 9.4/16.3 | TC-25 | 待开发 |
 
 ### 16.2 参考材料

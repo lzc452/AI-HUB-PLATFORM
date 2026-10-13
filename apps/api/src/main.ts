@@ -166,6 +166,10 @@ async function bootstrap() {
       ],
     }),
   );
+  // Bearer API Key 端点（/v1，模型网关）默认豁免 CSRF 与重放校验：其凭据是调用方显式
+  // 设置的 Authorization 头，浏览器不会自动携带，CSRF 链路不成立；强制 nonce 头会与
+  // 「完全兼容 OpenAI 格式」互斥。豁免清单见 security/production.middleware.ts 的
+  // API_KEY_AUTH_PATH_PREFIXES；/internal/* 会话端点不受影响。
   app.use(
     createProductionSecurityMiddleware({
       enabled: config.nodeEnv === "production",
