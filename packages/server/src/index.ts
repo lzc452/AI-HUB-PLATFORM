@@ -203,6 +203,43 @@ export { FeedbackModule } from "./feedback/feedback.module.js";
 export { FeedbackService } from "./feedback/feedback.service.js";
 export { KyselyFeedbackRepository } from "./feedback/feedback.repository.js";
 export { FEEDBACK_SERVICE } from "./feedback/feedback.tokens.js";
+export { LlmGatewayModule } from "./llm-gateway/llm-gateway.module.js";
+export { ModelServiceKeyController } from "./llm-gateway/model-service-key.controller.js";
+export { ModelServiceKeyService } from "./llm-gateway/model-service-key.service.js";
+export { KyselyModelServiceKeyRepository } from "./llm-gateway/model-service-key.repository.js";
+export { LLM_GATEWAY_SERVICE } from "./llm-gateway/llm-gateway.tokens.js";
+export {
+  createApiKeyHasher,
+  API_KEY_FORMAT,
+} from "./llm-gateway/api-key.hasher.js";
+export type {
+  ApiKeyHasher,
+  ApiKeyHasherOptions,
+  GeneratedApiKey,
+} from "./llm-gateway/api-key.hasher.js";
+export {
+  MODEL_SERVICE_ERROR_CODES,
+  ModelServiceError,
+} from "./llm-gateway/llm-gateway.types.js";
+export type {
+  ApiKeyEffectiveStatus,
+  ApiKeyLimits,
+  ApiKeyPage,
+  ApiKeyRecord,
+  ApiKeySummary,
+  CreateApiKeyInput,
+  ListApiKeysQuery,
+  ModelServiceErrorCode,
+  UpdateApiKeyInput,
+} from "./llm-gateway/llm-gateway.types.js";
+export type {
+  ModelServiceAuditPort,
+  ModelServiceKeyServiceConfig,
+} from "./llm-gateway/model-service-key.service.js";
+export type {
+  ModelServiceKeyRepository,
+  InsertApiKeyInput,
+} from "./llm-gateway/model-service-key.repository.js";
 export type {
   ApplicationTeamRecord,
   CommentRecord,

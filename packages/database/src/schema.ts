@@ -1023,6 +1023,9 @@ export interface DatabaseSchema {
   portal_resource_comments: PortalResourceCommentsTable;
   portal_content_pages: PortalContentPagesTable;
   portal_curations: PortalCurationsTable;
+  llm_api_keys: LlmApiKeysTable;
+  llm_api_call_logs: LlmApiCallLogsTable;
+  llm_usage_daily: LlmUsageDailyTable;
 }
 
 export interface DingTalkSsoTransactionsTable {
@@ -1043,4 +1046,67 @@ export interface ApplicationDraftsTable {
   draft: unknown;
   created_at: ColumnType<Date, Date | undefined, never>;
   updated_at: ColumnType<Date, Date | undefined, Date | undefined>;
+}
+
+/** 模型 API Key 存储状态；`revoked` 为终态（删除与轮换都会落到该状态）。 */
+export type LlmApiKeyStatus = "active" | "disabled" | "revoked";
+
+/**
+ * 模型服务 API Key（PRD 9.1）。
+ *
+ * `key_hash` 为 HMAC-SHA256 十六进制摘要——明文不出现在库内；`key_prefix` 仅用于展示。
+ * `daily_token_limit` 是 bigint，pg 驱动以字符串返回，仓储层用 `Number(...)` 归一。
+ * 同一员工未撤销 Key 的名称唯一，由部分唯一索引兜底（见迁移 0056）。
+ */
+export interface LlmApiKeysTable {
+  key_id: Generated<string>;
+  employee_id: string;
+  name: string;
+  key_prefix: string;
+  key_hash: string;
+  status: LlmApiKeyStatus;
+  rpm_limit: number | null;
+  tpm_limit: number | null;
+  daily_token_limit: string | null;
+  expires_at: Date | null;
+  last_used_at: Date | null;
+  rotated_from_key_id: string | null;
+  created_at: ColumnType<Date, Date | undefined, never>;
+  updated_at: ColumnType<Date, Date | undefined, Date>;
+  disabled_at: Date | null;
+}
+
+/**
+ * API 调用记录（PRD 9.2）：100% 落账，含被拒绝的调用（tokens 记 0）。
+ * `requested_at` 记录**请求开始时刻**（而非记账时刻），用于业务日归属。
+ */
+export interface LlmApiCallLogsTable {
+  call_id: Generated<string>;
+  key_id: string;
+  employee_id: string;
+  endpoint: string;
+  model: string;
+  stream: boolean;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  duration_ms: number;
+  status_code: number;
+  error_code: string | null;
+  usage_estimated: boolean;
+  trace_id: string | null;
+  requested_at: Date;
+}
+
+/** 每日用量聚合（PRD 9.3）：由 worker 从调用记录汇聚，供看板与趋势查询。 */
+export interface LlmUsageDailyTable {
+  usage_date: string;
+  employee_id: string;
+  key_id: string;
+  model: string;
+  calls: string;
+  error_calls: string;
+  prompt_tokens: string;
+  completion_tokens: string;
+  total_tokens: string;
 }

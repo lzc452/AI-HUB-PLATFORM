@@ -31,6 +31,7 @@ import {
   ObservabilityMetrics,
   ObservabilityModule,
   PermissionGuard,
+  LlmGatewayModule,
   type DatabaseHealthCheck,
   type ObservabilityModuleOptions,
   type IdentityService,
@@ -39,6 +40,7 @@ import {
   type ReadableObjectStoragePort,
   type WebTargetPolicy,
   type PortalService,
+  type ModelServiceKeyServiceConfig,
   PortalModule,
 } from "@ai-hub/server";
 
@@ -119,6 +121,11 @@ export class ApiModule {
      * fail-closed 默认处理（拒绝一切 Web 目标）。
      */
     webTargetPolicy?: WebTargetPolicy,
+    /**
+     * 模型服务控制面配置（PRD 8.1）。**未提供即不装配该模块**——测试与不部署
+     * 模型服务的环境无需它；生产由 main.ts 从 RuntimeConfig 显式传入。
+     */
+    llmGateway?: ModelServiceKeyServiceConfig,
   ): DynamicModule {
     const database =
       typeof databaseOrUrl === "string"
@@ -167,6 +174,9 @@ export class ApiModule {
         ),
         AnalyticsModule.register(database),
         PortalModule.register(database, applicationModule),
+        ...(llmGateway === undefined
+          ? []
+          : [LlmGatewayModule.register(database, llmGateway)]),
         HealthModule.register(createProductionDatabaseCheck(database, metrics)),
       ],
     };

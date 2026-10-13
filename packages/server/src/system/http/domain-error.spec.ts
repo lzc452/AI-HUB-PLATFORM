@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BadRequestException,
   ConflictException,
   HttpStatus,
   NotFoundException,
@@ -69,5 +70,31 @@ describe("领域错误码 → HTTP 语义（P1-5）", () => {
     expect(result.getStatus()).toBe(HttpStatus.CONFLICT);
     // 业务错误码需原样透出，客户端据此识别并重新拉取状态。
     expect(result.message).toBe("DEMAND_CONFLICT");
+  });
+
+  it("模型服务的三个冲突码判定为 409（0056 引入）", () => {
+    for (const code of [
+      "MODEL_KEY_STATE_CONFLICT",
+      "MODEL_KEY_NAME_DUPLICATED",
+      "MODEL_KEY_LIMIT_REACHED",
+    ]) {
+      expect(isConflictCode(code), code).toBe(true);
+      const result = toDomainHttpException(
+        code,
+        () => new BadRequestException("兜底不应被调用"),
+      );
+      expect(result.getStatus()).toBe(HttpStatus.CONFLICT);
+      expect(result.message).toBe(code);
+    }
+  });
+
+  it("模型服务的非冲突码保持兜底语义（404/400 不被吞成 409）", () => {
+    for (const code of [
+      "MODEL_KEY_NOT_FOUND",
+      "MODEL_KEY_INVALID_LIMIT",
+      "MODEL_SERVICE_NOT_CONFIGURED",
+    ]) {
+      expect(isConflictCode(code), code).toBe(false);
+    }
   });
 });

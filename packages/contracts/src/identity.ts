@@ -56,6 +56,13 @@ export const PERMISSIONS = Object.freeze({
   ANALYTICS_IDENTITY_EXPORT: "analytics.identity.export",
   ANALYTICS_ASSISTANT_USE: "analytics.assistant.use",
   ANALYTICS_SCOPE_ALL: "analytics.scope.all",
+  // 模型服务（本地 vLLM API Key 管理与统一网关，见 docs/requirements/api-platform-key-management.md）
+  MODEL_SERVICE_KEY_READ: "model_service.key.read",
+  MODEL_SERVICE_KEY_MANAGE: "model_service.key.manage",
+  MODEL_SERVICE_USAGE_READ: "model_service.usage.read",
+  MODEL_SERVICE_KEY_MANAGE_ALL: "model_service.key.manage_all",
+  MODEL_SERVICE_USAGE_READ_ALL: "model_service.usage.read_all",
+  MODEL_SERVICE_GATEWAY_CONFIG_MANAGE: "model_service.gateway.config.manage",
 } as const);
 
 /**
@@ -125,6 +132,12 @@ export const PERMISSION_LABELS: Readonly<Record<string, string>> =
     [PERMISSIONS.ANALYTICS_IDENTITY_EXPORT]: "身份分析导出",
     [PERMISSIONS.ANALYTICS_ASSISTANT_USE]: "分析助手使用",
     [PERMISSIONS.ANALYTICS_SCOPE_ALL]: "全量分析范围",
+    [PERMISSIONS.MODEL_SERVICE_KEY_READ]: "模型 Key 查看（本人）",
+    [PERMISSIONS.MODEL_SERVICE_KEY_MANAGE]: "模型 Key 管理（本人）",
+    [PERMISSIONS.MODEL_SERVICE_USAGE_READ]: "模型用量查看（本人）",
+    [PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL]: "模型 Key 管理（全平台）",
+    [PERMISSIONS.MODEL_SERVICE_USAGE_READ_ALL]: "模型用量查看（全平台）",
+    [PERMISSIONS.MODEL_SERVICE_GATEWAY_CONFIG_MANAGE]: "模型网关配置管理",
     "*": "全局权限",
   });
 

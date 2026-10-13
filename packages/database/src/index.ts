@@ -28,6 +28,7 @@ export type {
   DatabaseSchema,
   OutboxEventsTable,
   PortalResourceStatus,
+  LlmApiKeyStatus,
 } from "./schema.js";
 export {
   DEMO_ACCOUNT_DEFINITIONS,

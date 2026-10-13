@@ -40,6 +40,10 @@ export const SYSTEM_ROLE_DEFINITIONS: readonly SystemRoleDefinition[] =
         PERMISSIONS.APPLICATION_READ,
         PERMISSIONS.APPLICATION_UPDATE,
         PERMISSIONS.CREATOR_READ,
+        // 模型服务：本人维度的自助 Key 管理与用量查看（PRD §10.2）；全平台维度仅超管
+        PERMISSIONS.MODEL_SERVICE_KEY_READ,
+        PERMISSIONS.MODEL_SERVICE_KEY_MANAGE,
+        PERMISSIONS.MODEL_SERVICE_USAGE_READ,
       ],
     },
     {

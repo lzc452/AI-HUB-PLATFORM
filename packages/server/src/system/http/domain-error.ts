@@ -33,6 +33,12 @@ const INVALID_STATE_CODES: ReadonlySet<string> = new Set([
 const CONFLICT_CODES: ReadonlySet<string> = new Set([
   "DEMAND_CONFLICT",
   "APPLICATION_STATE_CONFLICT",
+  // 模型服务（0056 引入）：状态机非法迁移、同名未撤销 Key、活跃 Key 达上限。
+  // 三者都是「重新读取状态后重试/换参数才有意义」，因此按冲突返回 409；
+  // 未登记会被兜底成 400，客户端不会重试（本文件顶部记录的正是这个事故）。
+  "MODEL_KEY_STATE_CONFLICT",
+  "MODEL_KEY_NAME_DUPLICATED",
+  "MODEL_KEY_LIMIT_REACHED",
 ]);
 
 /**

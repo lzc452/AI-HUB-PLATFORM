@@ -93,6 +93,35 @@ const schema = z.object({
   DINGTALK_CORP_ID: z.string().optional(),
   DINGTALK_REDIRECT_URI: z.string().optional(),
   WEB_TARGET_ALLOWLIST: webTargetAllowlistSchema,
+
+  // ---- 模型服务（本地 vLLM API Key 管理与网关，PRD 8.1/13）----
+  // HMAC 密钥用于对 API Key 做单向摘要：库内只存摘要，明文仅在创建/轮换响应中出现一次。
+  // 刻意**不设为必填**——缺失时由控制面在创建 Key 时返回明确错误，而不是让整个 API 起不来
+  // （生产部署需按 PRD「部署前置」显式配置；双密钥过渡见 LLM_GATEWAY_HMAC_SECRET_PREVIOUS）。
+  LLM_GATEWAY_HMAC_SECRET: z.string().min(32).optional(),
+  LLM_GATEWAY_HMAC_SECRET_PREVIOUS: z.string().min(32).optional(),
+  // 上游未配置即视为网关未启用（M2 起消费）：/v1 返回 503，避免误转发到猜测地址。
+  LLM_GATEWAY_UPSTREAM_BASE_URL: z.string().url().optional(),
+  LLM_DEFAULT_RPM: z.coerce.number().int().min(1).default(60),
+  LLM_DEFAULT_TPM: z.coerce.number().int().min(1).default(100_000),
+  LLM_DEFAULT_DAILY_TOKENS: z.coerce.number().int().min(1).default(2_000_000),
+  LLM_MAX_RPM: z.coerce.number().int().min(1).default(6000),
+  LLM_MAX_TPM: z.coerce.number().int().min(1).default(10_000_000),
+  LLM_MAX_DAILY_TOKENS: z.coerce.number().int().min(1).default(1_000_000_000),
+  LLM_MAX_KEYS_PER_USER: z.coerce.number().int().min(1).default(10),
+  // /v1 的 JSON 体上限需高于全局 1MB（长上下文请求），由 body parser carve-out 消费（M2）。
+  LLM_JSON_BODY_LIMIT_BYTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(64 * 1024 * 1024)
+    .default(10 * 1024 * 1024),
+  LLM_UPSTREAM_TIMEOUT_MS: z.coerce.number().int().min(1_000).default(120_000),
+  LLM_UPSTREAM_FIRST_TOKEN_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .default(30_000),
 });
 
 export interface RuntimeConfig {
@@ -129,6 +158,22 @@ export interface RuntimeConfig {
   dingtalkCorpId: string | undefined;
   dingtalkRedirectUri: string | undefined;
   webTargetAllowlist: WebTargetAllowlist;
+  /** API Key 摘要用 HMAC 密钥；未配置时控制面拒绝创建 Key（返回明确领域错误）。 */
+  llmGatewayHmacSecret: string | undefined;
+  /** 过渡期旧 HMAC 密钥：校验时先新后旧，避免密钥轮换导致全部 Key 一次性失效。 */
+  llmGatewayHmacSecretPrevious: string | undefined;
+  /** vLLM 上游 OpenAI 兼容基址；未配置即视为网关未启用。 */
+  llmGatewayUpstreamBaseUrl: string | undefined;
+  llmDefaultRpm: number;
+  llmDefaultTpm: number;
+  llmDefaultDailyTokens: number;
+  llmMaxRpm: number;
+  llmMaxTpm: number;
+  llmMaxDailyTokens: number;
+  llmMaxKeysPerUser: number;
+  llmJsonBodyLimitBytes: number;
+  llmUpstreamTimeoutMs: number;
+  llmUpstreamFirstTokenTimeoutMs: number;
 }
 
 function readFileSecret(
@@ -259,5 +304,18 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     dingtalkCorpId: value.DINGTALK_CORP_ID,
     dingtalkRedirectUri: value.DINGTALK_REDIRECT_URI,
     webTargetAllowlist: value.WEB_TARGET_ALLOWLIST,
+    llmGatewayHmacSecret: value.LLM_GATEWAY_HMAC_SECRET,
+    llmGatewayHmacSecretPrevious: value.LLM_GATEWAY_HMAC_SECRET_PREVIOUS,
+    llmGatewayUpstreamBaseUrl: value.LLM_GATEWAY_UPSTREAM_BASE_URL,
+    llmDefaultRpm: value.LLM_DEFAULT_RPM,
+    llmDefaultTpm: value.LLM_DEFAULT_TPM,
+    llmDefaultDailyTokens: value.LLM_DEFAULT_DAILY_TOKENS,
+    llmMaxRpm: value.LLM_MAX_RPM,
+    llmMaxTpm: value.LLM_MAX_TPM,
+    llmMaxDailyTokens: value.LLM_MAX_DAILY_TOKENS,
+    llmMaxKeysPerUser: value.LLM_MAX_KEYS_PER_USER,
+    llmJsonBodyLimitBytes: value.LLM_JSON_BODY_LIMIT_BYTES,
+    llmUpstreamTimeoutMs: value.LLM_UPSTREAM_TIMEOUT_MS,
+    llmUpstreamFirstTokenTimeoutMs: value.LLM_UPSTREAM_FIRST_TOKEN_TIMEOUT_MS,
   };
 }

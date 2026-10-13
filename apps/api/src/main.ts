@@ -105,6 +105,16 @@ async function bootstrap() {
       artifactStorage,
       // 内网 Web 交付 URL 白名单（规格 §11.3），由 WEB_TARGET_ALLOWLIST 配置。
       config.webTargetAllowlist,
+      // 模型服务控制面（PRD 8.1）：Key 生命周期与配额上限；HMAC 密钥缺失时
+      // 创建/轮换会返回明确的领域错误，其余操作仍可用（便于误配置时先禁用/清理）。
+      {
+        hmacSecret: config.llmGatewayHmacSecret,
+        hmacSecretPrevious: config.llmGatewayHmacSecretPrevious,
+        maxRpm: config.llmMaxRpm,
+        maxTpm: config.llmMaxTpm,
+        maxDailyTokens: config.llmMaxDailyTokens,
+        maxKeysPerUser: config.llmMaxKeysPerUser,
+      },
     ),
     { logger: new PinoNestLogger(logger) },
   );

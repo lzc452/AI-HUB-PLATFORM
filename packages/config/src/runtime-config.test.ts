@@ -72,7 +72,40 @@ describe("parseRuntimeConfig", () => {
       dingtalkCorpId: undefined,
       dingtalkRedirectUri: undefined,
       webTargetAllowlist: DEFAULT_WEB_TARGET_ALLOWLIST,
+      llmGatewayHmacSecret: undefined,
+      llmGatewayHmacSecretPrevious: undefined,
+      llmGatewayUpstreamBaseUrl: undefined,
+      llmDefaultRpm: 60,
+      llmDefaultTpm: 100_000,
+      llmDefaultDailyTokens: 2_000_000,
+      llmMaxRpm: 6000,
+      llmMaxTpm: 10_000_000,
+      llmMaxDailyTokens: 1_000_000_000,
+      llmMaxKeysPerUser: 10,
+      llmJsonBodyLimitBytes: 10 * 1024 * 1024,
+      llmUpstreamTimeoutMs: 120_000,
+      llmUpstreamFirstTokenTimeoutMs: 30_000,
     });
+  });
+
+  it("解析模型服务限额，并拒绝过短的 HMAC 密钥", () => {
+    const parsed = parseRuntimeConfig({
+      ...BASE_ENV,
+      NODE_ENV: "test",
+      LLM_GATEWAY_HMAC_SECRET: "0123456789012345678901234567890123",
+      LLM_GATEWAY_UPSTREAM_BASE_URL: "http://vllm:8000/v1",
+      LLM_MAX_KEYS_PER_USER: "3",
+    });
+    expect(parsed.llmGatewayUpstreamBaseUrl).toBe("http://vllm:8000/v1");
+    expect(parsed.llmMaxKeysPerUser).toBe(3);
+
+    expect(() =>
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "test",
+        LLM_GATEWAY_HMAC_SECRET: "too-short",
+      }),
+    ).toThrow();
   });
 
   it("defaults the web target allowlist to the intranet example policy", () => {

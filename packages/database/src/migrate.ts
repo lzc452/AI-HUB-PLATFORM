@@ -52,6 +52,7 @@ import * as installerAssetKind from "./migrations/0052_installer_asset_kind.js";
 import * as portalFoundation from "./migrations/0053_portal_foundation.js";
 import * as portalHuntVoteSummary from "./migrations/0054_portal_hunt_vote_summary.js";
 import * as reviewIntegrityAndIndexes from "./migrations/0055_review_integrity_and_indexes.js";
+import * as llmGatewayFoundation from "./migrations/0056_llm_gateway_foundation.js";
 import type { DatabaseSchema } from "./schema.js";
 
 const migrations: Readonly<Record<string, Migration>> = {
@@ -109,6 +110,7 @@ const migrations: Readonly<Record<string, Migration>> = {
   "0053_portal_foundation": portalFoundation,
   "0054_portal_hunt_vote_summary": portalHuntVoteSummary,
   "0055_review_integrity_and_indexes": reviewIntegrityAndIndexes,
+  "0056_llm_gateway_foundation": llmGatewayFoundation,
 };
 
 export async function runMigrations(db: Kysely<DatabaseSchema>): Promise<void> {
