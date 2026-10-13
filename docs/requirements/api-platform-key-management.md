@@ -2,14 +2,14 @@
 
 | 文档信息 | |
 | --- | --- |
-| 版本 | v1.1（接口规范与数据模型细化评审后修订） |
+| 版本 | v1.2（流式契约与配额 SQL 落地形态复审后修订） |
 | 日期 | 2026-10-13 |
 | 作者 | 司南（产品经理 Agent） |
 | 状态 | 待复审（本轮评审意见已收敛并修订，见评审记录） |
 | 关联分支 | `feature/api-platform` |
 | 需求基线参考 | `docs/requirements/README.md`（本文不修改基线，评审通过后按基线变更规则回填） |
 
-**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）。
+**变更记录**：v0.1（2026-10-13）精简版需求梳理 → v1.0（2026-10-13）展开完整 PRD，新增用户场景、功能架构、接口规范、数据模型、安全策略、监控指标、非功能性需求与里程碑 → v1.1（2026-10-13）接口规范与数据模型细化评审后修订（采纳 19 条、部分采纳 1 条，明确 2 条不予采纳及理由）→ v1.2（2026-10-13）流式契约与配额 SQL 落地形态复审后修订（R3 7 条 + R4 5 条全部采纳，其中 4 条 P0 为生产环境阻断项）。
 
 **评审记录**：
 
@@ -17,8 +17,10 @@
 | --- | --- | --- | --- |
 | R1 | 接口规范（第 8 章） | 10 | 全部采纳（P0 2 条 / P1 7 条 / P2 1 条） |
 | R2 | 数据模型（第 9 章） | 10 | 采纳 9、部分采纳 1（P0 2 条） |
+| R3 | 流式契约落地形态（8.2） | 7 | 全部采纳（P0 4 条 / P1 2 条 / P2 1 条） |
+| R4 | 配额 SQL 落地形态（9.4） | 5 | 全部采纳（P1 3 条 / P2 2 条） |
 
-明细、依据与冲突裁决见 `docs/audit/api-platform-prd-review-2026-10-13.md`。
+R1/R2 明细见 `docs/audit/api-platform-prd-review-2026-10-13.md`；R3/R4 明细（含代码证据与行号）见 `docs/audit/api-platform-prd-landform-recheck-2026-10-13.md`。
 
 ## 二、背景与目标
 
@@ -161,6 +163,7 @@ nginx /v1/ ──► apps/api（NestJS）
 | --- | --- |
 | `llm-gateway.module.ts` | 模块装配（controller/service/repository/guard/adapter） |
 | `llm-gateway.controller.ts` | 网关面 `/v1`（`@Public()`，ApiKeyGuard） |
+| `llm-gateway.exception.filter.ts` | 控制器级 OpenAI 错误信封过滤器（见 8.3；覆盖全局 ProblemDetailsFilter，含 `headersSent` 分流） |
 | `model-service-key.controller.ts` | 控制面 `/internal/model-service`（`@Authenticated()` + `@RequiresPermissions`） |
 | `llm-gateway.service.ts` | 转发、流式透传、错误映射、熔断状态 |
 | `api-key.guard.ts` | Bearer 解析、HMAC 校验、状态校验、限额预检 |
@@ -320,6 +323,38 @@ active ──disable──► disabled ──enable──► active
 
 流式约束（评审 R1-08 / R1-09）：SSE 事件格式与 OpenAI 一致（`data: {...}` / `data: [DONE]`）；**网关在调用方未显式设置时自动注入 `stream_options.include_usage = true`**，保证末块返回 usage 用于计量；上游仍未返回 usage 时按本地估算并置 `usage_estimated = true`（见 9.2）；**流式已下发 200 与部分块后上游失败**时不再改 HTTP 状态码，改为下发 `data: {"error": {...}}` 事件且**不发送 `[DONE]`**，调用方据此判定流异常结束；客户端断连时取消上游请求并记账为已取消；熔断对流式同样生效。
 
+### 8.3 网关面与平台既有中间件的交互（落地形态，复审 R3）
+
+> 本节为 R3 复审结论，对应 FR-23。以下机制**均已存在于代码中**；若实现前不对齐，将出现「本地可用、生产不可用」或「请求体被静默改写」。
+
+| 平台既有机制 | 代码证据 | 不处理的后果 | 网关处置（必须） |
+| --- | --- | --- | --- |
+| 生产安全中间件：CSRF + 重放 nonce | `system/security/production.middleware.ts`（对所有 `POST/PUT/PATCH/DELETE` 生效，**无路径过滤**）、`csrf.ts`（要求 `Origin` 与 `PUBLIC_ORIGIN` 全等且 cookie/header 双 token 一致） | 服务端 SDK 不带 Origin/Cookie → **403**；补齐后仍 **409** `REPLAY_HEADERS_REQUIRED`（生产环境 `/v1` 全量不可用；开发环境该中间件关闭，本地测不出） | 为 `/v1/*` 增加**显式豁免**。安全依据：Bearer Key 非环境凭据，浏览器不会自动携带，CSRF 威胁模型不成立；该豁免须经安全评审并在代码注释中写明理由 |
+| 全局 `ValidationPipe({ whitelist: true })` | `apps/api/src/main.ts` 装配，注释明确「未声明校验装饰器的字段会被剔除」 | 网关若声明校验 DTO，`tools`、`response_format`、厂商扩展等字段被静默剔除 → **兼容性静默破坏** | 网关请求体参数**不定型为 DTO**（`Record<string, unknown>` / 原始 `@Req()`），原样透传；仅提取 `model`、`stream` 用于路由与记账 |
+| 全局异常过滤器 `ProblemDetailsFilter` | `system/observability/observability.module.ts` 以 `APP_FILTER` 全局注册，`catch()` 中无条件 `res.status().type().send()` | 网关错误被渲染成 problem+json，破坏 OpenAI 客户端解析；流式已发头后再写响应触发 headers already sent | 新增控制器级 `LlmGatewayExceptionFilter`（Nest 就近生效，覆盖全局）；以 `res.headersSent` 分流：未发头 → OpenAI 信封；已发头 → SSE `data: {"error": …}` 且不发 `[DONE]` |
+| 全局守卫 `PermissionGuard` | `authorization/permission.guard.ts`：无鉴权元数据即 403；`public: true` 直接放行且**不设置 `request.actor`** | 漏标元数据的 `/v1` 路由直接 403；网关误读 actor 会抛 `ACTOR_NOT_AVAILABLE` | 网关控制器类级 `@Public()`；Key 上下文由 `ApiKeyGuard` 自建（挂到 `request.apiKey`）；补「漏标元数据 → 403」的断言用例 |
+| JSON body 上限 `1mb` | `apps/api/src/body-parser.ts` 的 `JSON_BODY_LIMIT` | 长上下文请求易超限；中间件层超限错误不经全局过滤器，**不产出 OpenAI 信封** | 仿既有 `isRawUploadContentRequest` carve-out 模式，为 `/v1/*` 单独注册解析器（`LLM_JSON_BODY_LIMIT`，默认 10mb），并显式映射 413 + OpenAI 信封 |
+| HTTP 时长指标覆盖整个响应 | `request-context.middleware.ts` 在 `finish`/`close` 记录 | 流式请求的 HTTP 时长包含生成时间，不能用于衡量网关自身开销 | 新增专用指标 `ai_hub_llm_gateway_duration_seconds{phase=ttfb\|total}`；HTTP 指标仅作对照 |
+
+**nginx 必配（SSE 生效前提，对应 FR-24）**：`/v1/` 需独立 location 且关闭缓冲，否则流式响应会被整段缓冲后一次性返回（默认 `proxy_buffering on`、`proxy_read_timeout 60s`）。`infra/docker/nginx.conf` 与 `infra/docker/nginx.production.conf` 均须增加：
+
+```nginx
+location /v1/ {
+  proxy_pass http://api:3001;        # dev 配置沿用既有 $api_upstream 变量写法
+  proxy_http_version 1.1;
+  proxy_buffering off;               # 关键：否则 SSE 被整段缓冲
+  proxy_cache off;
+  proxy_read_timeout 300s;           # 关键：默认 60s，长生成会断流
+  proxy_send_timeout 300s;
+  proxy_set_header Connection "";
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+**验收要求（M2 退出条件之一）**：以「curl 逐块到达时间戳」与「OpenAI SDK 流式回调间隔」双证据确认缓冲已关闭；**仅本地直连 API 端口通过不算验收**（本地不经 nginx，测不出该问题）。
+
 ## 九、数据模型
 
 > 迁移编号 `0056_llm_gateway_foundation.ts`，遵循仓库迁移规范：幂等 DDL（`if not exists`）、文件头注释说明取舍依据。表结构同步登记到 `packages/database/src/schema.ts`。
@@ -391,6 +426,12 @@ where employee_id = $1
 - **归属日**：以请求开始时刻（`startedAt`）归属业务日，跨零点长请求不重复计入次日。
 - **保留**：`llm_api_call_logs` 保留 180 天（与行为事件一致），`llm_usage_daily` 长期保留；清理任务入 worker（复用现有 retention runner 模式）。
 - **幂等**：Key 创建/轮换/禁用均以数据库约束与状态机保证，无资金操作，不涉及对账。
+- **落地形态（复审 R4）**：
+  - 时区表达式在仓储层封装为**单一常量**，禁止各调用点各写一份；集成测试断言「业务日切换点 = UTC 16:00」；
+  - `(employee_id, requested_at)` 索引可用性以集成测试断言「必须命中 Index Scan」——本机 Docker 不可用，**未做 live `EXPLAIN`，不得视为已验证**；
+  - 进程内修正按 **Asia/Shanghai 业务日为 key** 缓存，跨日即清零（不依赖进程重启）；多实例演进时移除该机制；
+  - 预检语义：**只比对已用量，不做预留**；并发窗口内的少量超额由下一次请求被拒自愈，禁止引入预留导致复杂度与死锁风险；
+  - 看板口径：`llm_usage_daily` 聚合延迟上界 5 分钟，页面须标注「非实时配额余量」，避免与鉴权口径混淆。
 
 ## 十、安全策略
 
@@ -505,6 +546,8 @@ where employee_id = $1
 | Alertmanager 告警通道 | 运维 | 并行 | 缺位时降级为看板+日志，不阻塞上线 |
 | 多模型配置 | 平台配置 | 可绕过 | 单模型也可上线，`/v1/models` 透传当前模型 |
 
+**部署前置（复审 R3，缺一不可上线）**：① 两份 nginx 配置增加 `/v1/` location（关闭 `proxy_buffering`、放宽 `proxy_read_timeout`，配置见 8.3）；② 生产安全中间件对 `/v1/*` 的 CSRF/replay 豁免经安全评审并落地；③ 网关控制器级异常过滤器与 `/v1` body parser carve-out 生效。
+
 **上线与回滚**：nginx `/v1/` 路由与 vLLM 服务配置化开启；灰度按「先管理员 Key → 后全员」；回滚=关闭网关路由 + 禁用新 Key 创建（数据保留，不清库）。
 
 **上线后验证**：真实 SDK 抽检（流式/非流式）、429 行为复测、看板与日志对账、熔断与告警演练、密钥泄露应急流程走查。
@@ -551,6 +594,9 @@ where employee_id = $1
 | FR-20 | 幂等与并发语义（CAS、同名防重、活跃上限） | 7.5/8.1/9.1 | TC-20 | 待开发 |
 | FR-21 | 流式 usage 保障（`stream_options` 注入与估算标记） | 8.2/9.2 | TC-21 | 待开发 |
 | FR-22 | 网关面边界（无 CORS、413、`Retry-After` 口径、版本兼容） | 8.2 | TC-22 | 待开发 |
+| FR-23 | 网关与平台既有中间件交互（CSRF 豁免、请求体透传、控制器级错误过滤器、`@Public()` 约束、body 上限、指标口径） | 8.3 | TC-23 | 待开发 |
+| FR-24 | SSE 端到端链路（nginx 关缓冲与放宽超时，逐块到达验收） | 8.3/十四 | TC-24 | 待开发 |
+| FR-25 | 配额 SQL 落地断言（业务日边界 = UTC 16:00、索引命中、修正生命周期） | 9.4/16.3 | TC-25 | 待开发 |
 
 ### 16.2 参考材料
 
@@ -559,13 +605,15 @@ where employee_id = $1
 - 错误与限流现状：`packages/server/src/system/http/`、`packages/server/src/system/security/rate-limit.middleware.ts`
 - 指标现状：`packages/server/src/system/observability/metrics.ts`
 - 本轮评审记录：`docs/audit/api-platform-prd-review-2026-10-13.md`
+- 落地形态复审记录（含代码证据与行号）：`docs/audit/api-platform-prd-landform-recheck-2026-10-13.md`
 
 ### 16.3 可测性要求（评审 R2-10）
 
 - **时钟与上游可注入**：沿用 `rate-limit.middleware.ts` 的 `now()` 注入模式，限流窗口、配额重置、过期判定、熔断计时均可在单测中确定性验证，不依赖真实等待；
 - **上游桩**：提供可配置的 vLLM 桩（固定 usage 返回、可注入延迟与 5xx/超时），e2e 不依赖真实 GPU 服务；
 - **必测边界用例**：流式中途失败（TC-13）、客户端断流（TC-08）、跨零点归属日（TC-12）、上游不返回 usage 的估算路径（TC-21）、HMAC 双密钥过渡校验（TC-17）；
-- **对账用例**：看板聚合数字与 `llm_api_call_logs` 逐日对账（TC-15），差异必须为 0（除 `usage_estimated=true` 的估算行单独标注）。
+- **对账用例**：看板聚合数字与 `llm_api_call_logs` 逐日对账（TC-15），差异必须为 0（除 `usage_estimated=true` 的估算行单独标注）；
+- **落地形态用例（复审 R3/R4）**：生产模式中间件下 `POST /v1/*` 可通（TC-23）、SSE 经 nginx 逐块到达（TC-24）、配额 SQL 业务日边界与索引命中（TC-25）。
 
 ---
 
