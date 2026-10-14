@@ -294,7 +294,8 @@ export class KyselyLlmUsageRepository implements LlmUsageRepository {
     fromDate: string;
     toDate: string;
   }): Promise<KeyUsageRow[]> {
-    const scope = this.employeeScope(input.employeeId);
+    // 该查询 join 了 llm_api_keys，employee_id 必须限定到 usage 表
+    const scope = this.employeeScope(input.employeeId, "usage");
     const result = await sql<{
       key_id: string;
       key_name: string | null;
@@ -361,8 +362,18 @@ export class KyselyLlmUsageRepository implements LlmUsageRepository {
     };
   }
 
-  private employeeScope(employeeId: string | null) {
-    return employeeId === null ? sql`` : sql`and employee_id = ${employeeId}`;
+  /**
+   * 生成员工过滤片段。
+   *
+   * **多表 join 的查询必须传 `alias`**：`llm_usage_daily` 与 `llm_api_keys` 都有
+   * `employee_id` 列，不加限定符时 PG 直接报 `column reference "employee_id" is ambiguous`
+   * （实测：`listByKey` 的个人视角 500，平台视角因为不带该条件反而正常）。
+   */
+  private employeeScope(employeeId: string | null, alias?: string) {
+    if (employeeId === null) return sql``;
+    const column =
+      alias === undefined ? sql`employee_id` : sql`${sql.ref(`${alias}.employee_id`)}`;
+    return sql`and ${column} = ${employeeId}`;
   }
 
   public async sumDaily(input: {

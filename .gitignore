@@ -1,5 +1,8 @@
 .worktrees/
 .env
+
+# 本地密钥（登录加密私钥等），绝不可入库
+.secrets/
 node_modules/
 .pnpm-store/
 .turbo/

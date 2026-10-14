@@ -305,6 +305,29 @@ describe("模型用量聚合与查询（真库）", () => {
     expect(all.totalTokens).toBe(160);
   });
 
+  it("本人视角的按 Key 构成：join 后不得出现 employee_id 列歧义", async () => {
+    await aggregator.aggregateDay(TODAY);
+    await aggregator.aggregateDay(YESTERDAY);
+    const scope = { employeeId, fromDate: YESTERDAY, toDate: TODAY };
+
+    // 回归：listByKey 内部 join llm_api_keys 取 Key 名，两张表都有 employee_id，
+    // 若员工过滤片段不加表限定符，PG 会报 "column reference employee_id is ambiguous"
+    // ——此前只有平台视角（不带该条件）被测过，个人视角打进生产才发现（500）。
+    const mineByKey = await usageRepository.listByKey(scope);
+    expect(mineByKey.length).toBeGreaterThan(0);
+    expect(mineByKey.every((row) => row.keyName !== "(已删除)")).toBe(true);
+
+    const mineByModel = await usageRepository.listByModel(scope);
+    expect(mineByModel.length).toBeGreaterThan(0);
+
+    const allByKey = await usageRepository.listByKey({
+      employeeId: null,
+      fromDate: YESTERDAY,
+      toDate: TODAY,
+    });
+    expect(allByKey.length).toBeGreaterThanOrEqual(mineByKey.length);
+  });
+
   it("当日兜底：只聚合了昨天时，看板当日走事实表实时口径并标注", async () => {
     // 清掉今日读模型，模拟「worker 还没跑今天」
     await db

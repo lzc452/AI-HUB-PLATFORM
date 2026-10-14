@@ -1,6 +1,7 @@
 import {
   Catch,
   HttpException,
+  Optional,
   type ArgumentsHost,
   type ExceptionFilter,
 } from "@nestjs/common";
@@ -78,7 +79,20 @@ export function toGatewayErrorDescriptor(
 
 @Catch()
 export class LlmGatewayExceptionFilter implements ExceptionFilter {
-  public constructor(private readonly logger?: Logger) {}
+  /**
+   * `logger` 必须标 `@Optional()`，不能只靠 TS 的可选参数。
+   *
+   * 该过滤器的依赖解析发生在**生产运行时**：`@UseFilters(LlmGatewayExceptionFilter)`
+   * 是类引用，Nest 会按 `design:paramtypes` 解析构造依赖。`Logger` 是 pino 的
+   * interface，运行时元数据里就是 `Object`，未标 `@Optional()` 会直接抛
+   * 「can't resolve dependencies of the LlmGatewayExceptionFilter」而**启动失败**。
+   *
+   * 测试环境掩盖了这个问题的原因：vitest 走 esbuild，**不产出** `design:paramtypes`，
+   * 于是参数不参与注入解析、也不报错；生产的 `@swc-node/register` 会产出元数据。
+   * 因此本类的构造依赖必须显式声明注入方式（`@Optional()` / `@Inject(token)`），
+   * 由 `llm-gateway.enhancer-metadata.spec.ts` 静态守住。
+   */
+  public constructor(@Optional() private readonly logger?: Logger) {}
 
   public catch(exception: unknown, host: ArgumentsHost): void {
     const descriptor = toGatewayErrorDescriptor(exception);
