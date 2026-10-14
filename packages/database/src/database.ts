@@ -42,7 +42,6 @@ function readPositiveInteger(
   if (raw === undefined || raw.trim().length === 0) return fallback;
   const parsed = Number(raw);
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    // eslint-disable-next-line no-console -- 启动期配置问题需可见
     console.warn(
       `[database] ${name}=${JSON.stringify(raw)} 不是正整数，回落到 ${fallback}`,
     );
@@ -106,7 +105,6 @@ export function createDatabase(databaseUrl: string) {
   // 池会自行丢弃坏连接并补建新连接，业务侧感知为一次短暂失败，
   // 而不是一个直接终止进程的未捕获异常。
   pool.on("error", (error: Error) => {
-    // eslint-disable-next-line no-console -- 无 logger 依赖，这里是启动期基础设施
     console.error(
       `[database] 空闲连接错误（已忽略，池会自动重建连接）: ${error.message}`,
     );

@@ -74,6 +74,8 @@ describe("连接池配置（P0-1）", () => {
       event: string,
       listener: (...args: never[]) => void,
     ) {
+      // 这里必须把 this 捕获到外部变量：断言要检查 pool 实例本身
+      // eslint-disable-next-line @typescript-eslint/no-this-alias -- 测试断言需要实例引用
       if (event === "error") captured = this;
       return originalOn.call(
         this,
