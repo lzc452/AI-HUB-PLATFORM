@@ -227,7 +227,9 @@ export function createRouter() {
             },
             {
               element: (
-                <RequirePermission requirement={ROUTE_ACCESS.modelServiceKeyDetail}>
+                <RequirePermission
+                  requirement={ROUTE_ACCESS.modelServiceKeyDetail}
+                >
                   <ModelServiceKeyDetailPage />
                 </RequirePermission>
               ),

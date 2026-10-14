@@ -101,7 +101,9 @@ function baseHandler(path: string, init?: RequestInit): Response {
   }
   if (path.includes("/internal/model-service/keys/key-1")) {
     return Response.json(
-      method === "PATCH" ? { ...KEY_ITEM, limits: { dailyTokens: 500000, rpm: 60, tpm: null } } : KEY_ITEM,
+      method === "PATCH"
+        ? { ...KEY_ITEM, limits: { dailyTokens: 500000, rpm: 60, tpm: null } }
+        : KEY_ITEM,
     );
   }
   if (path.includes("/internal/model-service/usage")) {
@@ -115,11 +117,7 @@ function baseHandler(path: string, init?: RequestInit): Response {
 
 describe("Key 详情页面", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState(
-      {},
-      "",
-      "/console/model-service/key-1",
-    );
+    globalThis.window.history.pushState({}, "", "/console/model-service/key-1");
     setSession({ employeeId: "E0001" });
     stubFetch((path, init) => baseHandler(path, init));
   });
@@ -186,27 +184,23 @@ describe("Key 详情页面", () => {
     });
   });
 
-  it(
-    "Key 不存在时展示无权访问空态",
-    async () => {
-      stubFetch((path) => {
-        if (path.includes("/internal/model-service/keys/key-1")) {
-          return Response.json({}, { status: 404 });
-        }
-        return baseHandler(path);
-      });
-      render(<App />);
+  it("Key 不存在时展示无权访问空态", async () => {
+    stubFetch((path) => {
+      if (path.includes("/internal/model-service/keys/key-1")) {
+        return Response.json({}, { status: 404 });
+      }
+      return baseHandler(path);
+    });
+    render(<App />);
 
-      // 404 同样走共享 QueryClient 默认重试（指数退避约 7s），错误态在重试耗尽后出现
-      expect(
-        await screen.findByText("Key 不存在或无权访问", undefined, {
-          timeout: 15000,
-        }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "返回 Key 列表" }),
-      ).toBeInTheDocument();
-    },
-    20000,
-  );
+    // 404 同样走共享 QueryClient 默认重试（指数退避约 7s），错误态在重试耗尽后出现
+    expect(
+      await screen.findByText("Key 不存在或无权访问", undefined, {
+        timeout: 15000,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "返回 Key 列表" }),
+    ).toBeInTheDocument();
+  }, 20000);
 });

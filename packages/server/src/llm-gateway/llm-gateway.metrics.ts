@@ -71,9 +71,7 @@ export class LlmGatewayMetrics {
   private readonly keysActive: Gauge;
   private readonly keysQuotaCritical: Gauge;
 
-  private readonly collectActiveKeyCount:
-    | (() => Promise<number>)
-    | undefined;
+  private readonly collectActiveKeyCount: (() => Promise<number>) | undefined;
   private readonly collectQuotaCriticalKeyCount:
     | (() => Promise<number>)
     | undefined;
@@ -181,7 +179,10 @@ export class LlmGatewayMetrics {
       Math.max(0, input.durationMs) / 1000,
     );
     if (input.promptTokens > 0) {
-      this.tokens.inc({ model: input.model, type: "prompt" }, input.promptTokens);
+      this.tokens.inc(
+        { model: input.model, type: "prompt" },
+        input.promptTokens,
+      );
     }
     if (input.completionTokens > 0) {
       this.tokens.inc(
@@ -201,7 +202,10 @@ export class LlmGatewayMetrics {
 
   public setCircuitState(state: CircuitState): void {
     this.circuitState.set({ state: "closed" }, state === "closed" ? 1 : 0);
-    this.circuitState.set({ state: "half_open" }, state === "half_open" ? 1 : 0);
+    this.circuitState.set(
+      { state: "half_open" },
+      state === "half_open" ? 1 : 0,
+    );
     this.circuitState.set({ state: "open" }, state === "open" ? 1 : 0);
   }
 
@@ -225,10 +229,7 @@ export class LlmGatewayMetrics {
    */
   private refreshKeyCounts(): Promise<KeyCountSample> {
     const nowMs = this.now();
-    if (
-      this.sample !== null &&
-      nowMs - this.sampleAtMs < this.cacheTtlMs
-    ) {
+    if (this.sample !== null && nowMs - this.sampleAtMs < this.cacheTtlMs) {
       this.applySample(this.sample);
       return Promise.resolve(this.sample);
     }

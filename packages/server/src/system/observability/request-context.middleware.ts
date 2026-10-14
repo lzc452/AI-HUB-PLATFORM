@@ -71,7 +71,9 @@ export class RequestContextMiddleware {
         // 直接当Prometheus 标签会让时间序列无界增长（见 route-normalizer）。
         route: normalizeRouteLabel(
           request.originalUrl ?? request.url,
-          typeof request.route?.path === "string" ? request.route.path : undefined,
+          typeof request.route?.path === "string"
+            ? request.route.path
+            : undefined,
         ),
         statusCode: response.statusCode,
       });

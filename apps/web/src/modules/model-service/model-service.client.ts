@@ -295,7 +295,9 @@ export function getMyKey(keyId: string): Promise<ApiKeySummary> {
   );
 }
 
-export function createApiKey(input: CreateApiKeyInput): Promise<CreateApiKeyResult> {
+export function createApiKey(
+  input: CreateApiKeyInput,
+): Promise<CreateApiKeyResult> {
   return apiFetch<CreateApiKeyResult>("/internal/model-service/keys", {
     body: JSON.stringify(input),
     method: "POST",

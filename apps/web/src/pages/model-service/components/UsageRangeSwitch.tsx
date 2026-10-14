@@ -52,7 +52,12 @@ export function UsageRangeSwitch({ onChange, value }: UsageRangeSwitchProps) {
         onChange={(dates) => {
           const from = dates?.[0];
           const to = dates?.[1];
-          if (from === null || from === undefined || to === null || to === undefined) {
+          if (
+            from === null ||
+            from === undefined ||
+            to === null ||
+            to === undefined
+          ) {
             return;
           }
           const spanDays = to.endOf("day").diff(from.startOf("day"), "day") + 1;

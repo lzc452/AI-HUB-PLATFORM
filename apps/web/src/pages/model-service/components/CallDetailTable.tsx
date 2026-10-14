@@ -98,7 +98,11 @@ export function CallDetailTable({
         <span>
           {formatTokenCount(record.totalTokens)}
           {record.usageEstimated ? (
-            <Tag className="ml-1" color="gold" title="上游未返回 usage，本地估算">
+            <Tag
+              className="ml-1"
+              color="gold"
+              title="上游未返回 usage，本地估算"
+            >
               估算
             </Tag>
           ) : null}
@@ -150,7 +154,10 @@ export function CallDetailTable({
         <Select
           allowClear
           onChange={(value) => onFiltersChange({ model: value })}
-          options={modelOptions.map((model) => ({ label: model, value: model }))}
+          options={modelOptions.map((model) => ({
+            label: model,
+            value: model,
+          }))}
           placeholder="全部模型"
           style={{ width: 220 }}
           value={filters.model ?? null}

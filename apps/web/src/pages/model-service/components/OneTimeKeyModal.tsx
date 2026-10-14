@@ -2,7 +2,10 @@ import { Alert, Button, Modal, Typography } from "antd";
 import { useState } from "react";
 
 import type { CreateApiKeyResult } from "../../../modules/model-service";
-import { showSuccessMessage, showWarningMessage } from "../../../shared/ui/message";
+import {
+  showSuccessMessage,
+  showWarningMessage,
+} from "../../../shared/ui/message";
 
 const { Paragraph, Text } = Typography;
 

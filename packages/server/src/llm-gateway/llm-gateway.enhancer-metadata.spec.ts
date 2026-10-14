@@ -20,7 +20,10 @@ import { describe, expect, it } from "vitest";
  * 因此这里做静态检查：只要参数存在，就必须自带 `@Optional(` 或 `@Inject(`。
  */
 
-const SOURCE_DIR = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/u, "$1");
+const SOURCE_DIR = new URL(".", import.meta.url).pathname.replace(
+  /^\/([A-Za-z]:)/u,
+  "$1",
+);
 
 function enhancerSources(): Array<{ name: string; source: string }> {
   return readdirSync(SOURCE_DIR)
@@ -61,9 +64,7 @@ function constructorParams(source: string): string | null {
 
 /** 去注释：参数里的 JSDoc/行注释含逗号，会干扰按逗号切分。 */
 function stripComments(text: string): string {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//gu, "")
-    .replace(/\/\/[^\n]*/gu, "");
+  return text.replace(/\/\*[\s\S]*?\*\//gu, "").replace(/\/\/[^\n]*/gu, "");
 }
 
 /** 按顶层逗号切分参数（参数里没有嵌套泛型/函数类型，够用且好读）。 */

@@ -140,9 +140,7 @@ describe("模型服务用量看板页面", () => {
     );
     render(<App />);
 
-    expect(
-      await screen.findByText(/当日数据为实时统计/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/当日数据为实时统计/)).toBeInTheDocument();
   });
 
   it("区间无调用时显示空态", async () => {
@@ -166,34 +164,26 @@ describe("模型服务用量看板页面", () => {
     );
     render(<App />);
 
-    expect(
-      await screen.findByText("今日内暂无调用记录"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("今日内暂无调用记录")).toBeInTheDocument();
   });
 
-  it(
-    "加载失败时展示重试入口",
-    async () => {
-      stubFetch((path) =>
-        path.includes("/internal/model-service/usage")
-          ? Response.json({}, { status: 500 })
-          : baseHandler(path),
-      );
-      render(<App />);
+  it("加载失败时展示重试入口", async () => {
+    stubFetch((path) =>
+      path.includes("/internal/model-service/usage")
+        ? Response.json({}, { status: 500 })
+        : baseHandler(path),
+    );
+    render(<App />);
 
-      // 共享 QueryClient 默认重试 3 次（指数退避约 7s），错误态在重试耗尽后才出现
-      expect(
-        await screen.findByText("用量数据加载失败", undefined, {
-          timeout: 15000,
-        }),
-      ).toBeInTheDocument();
-      // antd v6 Button 对两个相邻汉字自动插入空格（「重试」→「重 试」），用正则匹配
-      expect(
-        screen.getByRole("button", { name: /重\s*试/ }),
-      ).toBeInTheDocument();
-    },
-    20000,
-  );
+    // 共享 QueryClient 默认重试 3 次（指数退避约 7s），错误态在重试耗尽后才出现
+    expect(
+      await screen.findByText("用量数据加载失败", undefined, {
+        timeout: 15000,
+      }),
+    ).toBeInTheDocument();
+    // antd v6 Button 对两个相邻汉字自动插入空格（「重试」→「重 试」），用正则匹配
+    expect(screen.getByRole("button", { name: /重\s*试/ })).toBeInTheDocument();
+  }, 20000);
 
   it("切换区间后按新区间重新查询", async () => {
     render(<App />);

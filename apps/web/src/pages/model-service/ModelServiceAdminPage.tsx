@@ -87,7 +87,10 @@ export default function ModelServiceAdminPage() {
   );
   const [keyPage, setKeyPage] = useState(1);
 
-  const platformUsage = usePlatformUsage({ range: "today" }, canReadPlatformUsage);
+  const platformUsage = usePlatformUsage(
+    { range: "today" },
+    canReadPlatformUsage,
+  );
   const keys = useAdminKeys({
     ...(employeeFilter === "" ? {} : { employeeId: employeeFilter }),
     ...(statusFilter === undefined ? {} : { status: statusFilter }),
@@ -173,7 +176,8 @@ export default function ModelServiceAdminPage() {
         }
         const disabling = item.status === "active";
         const pending =
-          changeStatus.isPending && changeStatus.variables?.keyId === item.keyId;
+          changeStatus.isPending &&
+          changeStatus.variables?.keyId === item.keyId;
         return (
           <ConfirmModal
             buttonProps={{
@@ -257,7 +261,9 @@ export default function ModelServiceAdminPage() {
           <Title level={5} className="!mb-3 !mt-0 !text-base">
             平台用量（今日）
           </Title>
-          {platformUsage.isPending ? <Skeleton active paragraph={{ rows: 2 }} /> : null}
+          {platformUsage.isPending ? (
+            <Skeleton active paragraph={{ rows: 2 }} />
+          ) : null}
           {platformUsage.isError ? (
             <Empty description="平台用量加载失败">
               <Button
@@ -285,12 +291,16 @@ export default function ModelServiceAdminPage() {
                 <StatCard
                   icon={<ApiOutlined aria-hidden="true" />}
                   label="输入 Token"
-                  value={formatTokenCount(platformUsage.data.totals.promptTokens)}
+                  value={formatTokenCount(
+                    platformUsage.data.totals.promptTokens,
+                  )}
                 />
                 <StatCard
                   icon={<ThunderboltOutlined aria-hidden="true" />}
                   label="Token 合计"
-                  value={formatTokenCount(platformUsage.data.totals.totalTokens)}
+                  value={formatTokenCount(
+                    platformUsage.data.totals.totalTokens,
+                  )}
                 />
               </div>
               {platformUsage.data.totals.calls === 0 ? (
@@ -360,7 +370,11 @@ export default function ModelServiceAdminPage() {
         {keys.isPending ? <Skeleton active paragraph={{ rows: 5 }} /> : null}
         {keys.isError ? (
           <Empty description="Key 列表加载失败">
-            <Button onClick={() => void keys.refetch()} size="small" type="primary">
+            <Button
+              onClick={() => void keys.refetch()}
+              size="small"
+              type="primary"
+            >
               重试
             </Button>
           </Empty>

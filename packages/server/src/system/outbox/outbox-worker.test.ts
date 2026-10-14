@@ -370,9 +370,7 @@ describe("OutboxWorker", () => {
         complete: vi.fn().mockResolvedValue(undefined),
         fail: vi.fn().mockResolvedValue(undefined),
         quarantine: vi.fn().mockResolvedValue(undefined),
-        heartbeat: vi
-          .fn()
-          .mockRejectedValue(new Error("network blip")),
+        heartbeat: vi.fn().mockRejectedValue(new Error("network blip")),
       };
       let release: (() => void) | undefined;
       const gate = new Promise<void>((resolve) => {
@@ -425,12 +423,12 @@ describe("OutboxWorker", () => {
       const store = {
         claim: vi.fn().mockResolvedValue([event("event-1")]),
         // CAS 失败：事件已被别人接管。
-        complete: vi.fn().mockRejectedValue(
-          new Error("OUTBOX_EVENT_NOT_PROCESSING"),
-        ),
-        fail: vi.fn().mockRejectedValue(
-          new Error("OUTBOX_EVENT_NOT_PROCESSING"),
-        ),
+        complete: vi
+          .fn()
+          .mockRejectedValue(new Error("OUTBOX_EVENT_NOT_PROCESSING")),
+        fail: vi
+          .fn()
+          .mockRejectedValue(new Error("OUTBOX_EVENT_NOT_PROCESSING")),
         quarantine: vi.fn().mockResolvedValue(undefined),
       };
       const worker = new OutboxWorker(store, {

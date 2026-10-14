@@ -81,7 +81,9 @@ export default function ModelServiceKeysPage() {
     scene: "create" | "rotate";
   } | null>(null);
 
-  const handleCreate = async (input: Parameters<typeof createKey.mutateAsync>[0]) => {
+  const handleCreate = async (
+    input: Parameters<typeof createKey.mutateAsync>[0],
+  ) => {
     const result = await createKey.mutateAsync(input);
     setPlaintext({ result, scene: "create" });
   };
@@ -210,7 +212,10 @@ export default function ModelServiceKeysPage() {
   ];
 
   const busy =
-    createKey.isPending || changeStatus.isPending || rotate.isPending || revoke.isPending;
+    createKey.isPending ||
+    changeStatus.isPending ||
+    rotate.isPending ||
+    revoke.isPending;
 
   return (
     <div className="space-y-4 rounded-md bg-white p-4">
@@ -247,7 +252,11 @@ export default function ModelServiceKeysPage() {
       {keys.isPending ? <Skeleton active paragraph={{ rows: 5 }} /> : null}
       {keys.isError ? (
         <Empty description="Key 列表加载失败">
-          <Button onClick={() => void keys.refetch()} size="small" type="primary">
+          <Button
+            onClick={() => void keys.refetch()}
+            size="small"
+            type="primary"
+          >
             重试
           </Button>
         </Empty>
@@ -260,7 +269,9 @@ export default function ModelServiceKeysPage() {
             </Button>
           }
           description={
-            includeRevoked ? "暂无 Key（含已撤销）" : "暂无可用 Key，创建后即可调用网关"
+            includeRevoked
+              ? "暂无 Key（含已撤销）"
+              : "暂无可用 Key，创建后即可调用网关"
           }
         />
       ) : null}

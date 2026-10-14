@@ -372,7 +372,9 @@ export class KyselyLlmUsageRepository implements LlmUsageRepository {
   private employeeScope(employeeId: string | null, alias?: string) {
     if (employeeId === null) return sql``;
     const column =
-      alias === undefined ? sql`employee_id` : sql`${sql.ref(`${alias}.employee_id`)}`;
+      alias === undefined
+        ? sql`employee_id`
+        : sql`${sql.ref(`${alias}.employee_id`)}`;
     return sql`and ${column} = ${employeeId}`;
   }
 

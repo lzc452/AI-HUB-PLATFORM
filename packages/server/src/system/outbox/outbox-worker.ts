@@ -156,9 +156,14 @@ export class OutboxWorker {
     eventId: string,
     claim: { workerId: string; attempt: number },
   ): { stop: () => void } {
-    const renew = (this.store as OutboxStore & {
-      heartbeat?: (id: string, claim: { workerId: string; attempt: number }) => Promise<boolean>;
-    }).heartbeat;
+    const renew = (
+      this.store as OutboxStore & {
+        heartbeat?: (
+          id: string,
+          claim: { workerId: string; attempt: number },
+        ) => Promise<boolean>;
+      }
+    ).heartbeat;
 
     if (this.heartbeatIntervalMs <= 0 || renew === undefined) {
       return { stop: () => undefined };
@@ -166,9 +171,7 @@ export class OutboxWorker {
 
     // unref：心跳定时器不能阻止 Node 进程自然退出，否则测试与优雅停机都会挂住。
     const timer = setInterval(() => {
-      void renew
-        .call(this.store, eventId, claim)
-        .catch(() => undefined);
+      void renew.call(this.store, eventId, claim).catch(() => undefined);
     }, this.heartbeatIntervalMs);
     (timer as unknown as { unref?: () => void }).unref?.();
 
@@ -228,10 +231,7 @@ class OutboxHandlerTimeout extends Error {
  * last_error（且可能含内部细节、长度不受控）。
  */
 function errorCodeOf(error: unknown): string {
-  if (
-    error instanceof OutboxHandlerTimeout &&
-    typeof error.code === "string"
-  ) {
+  if (error instanceof OutboxHandlerTimeout && typeof error.code === "string") {
     return error.code;
   }
   return "OUTBOX_HANDLER_FAILED";

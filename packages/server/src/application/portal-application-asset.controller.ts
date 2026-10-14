@@ -68,6 +68,8 @@ export class PortalApplicationAssetController {
  * 替换为下划线），`filename*=UTF-8''<percent-encoded>` 给现代客户端完整名称。
  */
 function contentDisposition(fileName: string): string {
-  const fallback = fileName.replace(/[^\x20-\x7e]/gu, "_").replace(/["\\]/g, "_");
+  const fallback = fileName
+    .replace(/[^\x20-\x7e]/gu, "_")
+    .replace(/["\\]/g, "_");
   return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }

@@ -11,7 +11,8 @@ import { describe, expect, it } from "vitest";
  * 3. 接线（prometheus rule_files / compose 挂载 / Grafana provisioning）都在位。
  */
 
-const METRICS_SOURCE = "../../packages/server/src/llm-gateway/llm-gateway.metrics.ts";
+const METRICS_SOURCE =
+  "../../packages/server/src/llm-gateway/llm-gateway.metrics.ts";
 const RULES_FILE = "../../infra/monitoring/rules/llm-gateway-alerts.yml";
 const PROMETHEUS_CONFIG = "../../infra/monitoring/prometheus.production.yml";
 const COMPOSE_FILE = "../../compose.production.yaml";

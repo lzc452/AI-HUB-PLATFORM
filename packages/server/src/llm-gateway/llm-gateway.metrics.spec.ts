@@ -62,7 +62,9 @@ describe("LlmGatewayMetrics", () => {
     metrics.recordUpstreamError("timeout");
     metrics.recordUpstreamError("http_5xx");
 
-    expect(await linesOf(metrics, "ai_hub_llm_gateway_rate_limited_total")).toEqual(
+    expect(
+      await linesOf(metrics, "ai_hub_llm_gateway_rate_limited_total"),
+    ).toEqual(
       expect.arrayContaining([
         'ai_hub_llm_gateway_rate_limited_total{reason="daily"} 2',
         'ai_hub_llm_gateway_rate_limited_total{reason="rpm"} 1',
@@ -95,9 +97,9 @@ describe("LlmGatewayMetrics", () => {
     ]);
 
     metrics.setCircuitState("half_open");
-    expect(await linesOf(metrics, "ai_hub_llm_gateway_circuit_state")).toContain(
-      'ai_hub_llm_gateway_circuit_state{state="half_open"} 1',
-    );
+    expect(
+      await linesOf(metrics, "ai_hub_llm_gateway_circuit_state"),
+    ).toContain('ai_hub_llm_gateway_circuit_state{state="half_open"} 1');
   });
 
   it("活跃流式计数 inc/dec 配对", async () => {
@@ -105,9 +107,9 @@ describe("LlmGatewayMetrics", () => {
     metrics.streamStarted();
     metrics.streamStarted();
     metrics.streamEnded();
-    expect(
-      await linesOf(metrics, "ai_hub_llm_active_streams"),
-    ).toEqual(["ai_hub_llm_active_streams 1"]);
+    expect(await linesOf(metrics, "ai_hub_llm_active_streams")).toEqual([
+      "ai_hub_llm_active_streams 1",
+    ]);
   });
 
   it("keys gauge 采集查库并按 TTL 缓存", async () => {

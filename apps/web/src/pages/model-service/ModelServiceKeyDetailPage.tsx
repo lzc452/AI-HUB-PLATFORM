@@ -104,7 +104,10 @@ export default function ModelServiceKeyDetailPage() {
     return (
       <div className="rounded-md bg-white p-4">
         <Empty description="Key 不存在或无权访问">
-          <Button onClick={() => navigate("/model-service/keys")} type="primary">
+          <Button
+            onClick={() => navigate("/model-service/keys")}
+            type="primary"
+          >
             返回 Key 列表
           </Button>
         </Empty>
@@ -168,8 +171,8 @@ export default function ModelServiceKeyDetailPage() {
                 buttonText="轮换"
                 content={
                   <span>
-                    轮换会立即撤销当前 Key 并生成新 Key（无宽限期），
-                    正在使用旧 Key 的服务将马上失效，确认轮换？
+                    轮换会立即撤销当前 Key 并生成新 Key（无宽限期）， 正在使用旧
+                    Key 的服务将马上失效，确认轮换？
                   </span>
                 }
                 onOk={handleRotate}
@@ -243,7 +246,9 @@ export default function ModelServiceKeyDetailPage() {
         <Title level={5} className="!mb-3 !mt-0 !text-base">
           近 30 日用量
         </Title>
-        {usage.isPending ? <Skeleton active paragraph={false} title={false} /> : null}
+        {usage.isPending ? (
+          <Skeleton active paragraph={false} title={false} />
+        ) : null}
         {usage.isError ? (
           <Text style={{ fontSize: 12 }} type="danger">
             用量加载失败

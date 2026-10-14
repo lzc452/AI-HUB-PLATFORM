@@ -188,9 +188,7 @@ describe("模型服务平台管理页面", () => {
       expect(disableCalls.length).toBe(1);
     });
     // 成功后提示并失效缓存（列表重新请求）
-    expect(
-      await screen.findByText("已代员工禁用该 Key"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("已代员工禁用该 Key")).toBeInTheDocument();
     await waitFor(() => {
       const listCalls = vi
         .mocked(fetch)
@@ -207,9 +205,7 @@ describe("模型服务平台管理页面", () => {
 
     // 第二行（disabled）应为「启用」（antd v6 对两个相邻汉字插空格，用正则匹配）
     expect(
-      (
-        await screen.findAllByRole("button", { name: /启\s*用/ })
-      ).length,
+      (await screen.findAllByRole("button", { name: /启\s*用/ })).length,
     ).toBeGreaterThanOrEqual(1);
   });
 

@@ -94,11 +94,7 @@ function baseHandler(path: string, init?: RequestInit): Response {
 
 describe("我的 API Key 页面", () => {
   beforeEach(() => {
-    globalThis.window.history.pushState(
-      {},
-      "",
-      "/console/model-service/keys",
-    );
+    globalThis.window.history.pushState({}, "", "/console/model-service/keys");
     setSession({ employeeId: "E0001" });
     stubFetch((path, init) => baseHandler(path, init));
   });
@@ -158,9 +154,7 @@ describe("我的 API Key 页面", () => {
     });
 
     // 一次性明文弹窗：警示 + 明文值
-    expect(
-      await screen.findByText("Key 创建成功"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Key 创建成功")).toBeInTheDocument();
     expect(screen.getByText(/请立即保存 API Key/)).toBeInTheDocument();
     expect(
       screen.getByText("sk-aihub-PLAINTEXT1234567890"),
@@ -181,7 +175,9 @@ describe("我的 API Key 页面", () => {
       const disableCalls = vi
         .mocked(fetch)
         .mock.calls.filter((call) =>
-          String(call[0]).includes("/internal/model-service/keys/key-1/disable"),
+          String(call[0]).includes(
+            "/internal/model-service/keys/key-1/disable",
+          ),
         );
       expect(disableCalls.length).toBe(1);
     });

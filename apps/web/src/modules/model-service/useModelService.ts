@@ -126,7 +126,9 @@ function adminKeyActionErrorMessage(
   if (error.code === "MODEL_ADMIN_TARGET_NOT_FOUND") {
     return "目标 Key 不存在或已不可管理";
   }
-  return action === "disable" ? "代禁用失败，请稍后重试" : "代启用失败，请稍后重试";
+  return action === "disable"
+    ? "代禁用失败，请稍后重试"
+    : "代启用失败，请稍后重试";
 }
 
 /**
@@ -156,7 +158,9 @@ export function useAdminKeyStatusChange() {
     onSuccess: (_result, input) => {
       void queryClient.invalidateQueries({ queryKey: ["model-service"] });
       showSuccessMessage(
-        input.action === "disable" ? "已代员工禁用该 Key" : "已代员工启用该 Key",
+        input.action === "disable"
+          ? "已代员工禁用该 Key"
+          : "已代员工启用该 Key",
       );
     },
   });

@@ -341,12 +341,14 @@ describe("模型服务 Key 生命周期（PRD 7.5 / 8.1）", () => {
       expiresAt: null,
       rotatedFromKeyId: null,
     });
-    const [record] = await disabled.repository.listByEmployee({
-      employeeId: actor.employeeId,
-      includeRevoked: false,
-      limit: 10,
-      offset: 0,
-    }).then((page) => page.items);
+    const [record] = await disabled.repository
+      .listByEmployee({
+        employeeId: actor.employeeId,
+        includeRevoked: false,
+        limit: 10,
+        offset: 0,
+      })
+      .then((page) => page.items);
 
     await expectErrorCode(
       () => disabled.service.rotateKey(actor, record!.keyId),
@@ -359,9 +361,9 @@ describe("模型服务 Key 生命周期（PRD 7.5 / 8.1）", () => {
     );
     expect(afterDisable.status).toBe("disabled");
     await disabled.service.revokeKey(actor, record!.keyId);
-    expect(
-      (await disabled.service.getKey(actor, record!.keyId)).status,
-    ).toBe("revoked");
+    expect((await disabled.service.getKey(actor, record!.keyId)).status).toBe(
+      "revoked",
+    );
   });
 
   it("创建返回一次性明文，库内只留摘要与前缀", async () => {

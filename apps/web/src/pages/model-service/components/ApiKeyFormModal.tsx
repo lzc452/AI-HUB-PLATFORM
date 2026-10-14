@@ -107,7 +107,8 @@ export function ApiKeyFormModal({
         await onUpdate?.(input);
       } else {
         const input: CreateApiKeyInput = { name: values.name.trim() };
-        if (values.expiresInDays != null) input.expiresInDays = values.expiresInDays;
+        if (values.expiresInDays != null)
+          input.expiresInDays = values.expiresInDays;
         if (values.rpmLimit != null) input.rpmLimit = values.rpmLimit;
         if (values.tpmLimit != null) input.tpmLimit = values.tpmLimit;
         if (values.dailyTokenLimit != null) {
@@ -178,7 +179,9 @@ export function ApiKeyFormModal({
         <Form.Item
           help={
             errors.expiresInDays?.message ??
-            (isEdit ? "留空表示取消有效期（长期有效）" : "留空表示长期有效（1–365 天）")
+            (isEdit
+              ? "留空表示取消有效期（长期有效）"
+              : "留空表示长期有效（1–365 天）")
           }
           label="有效期（天）"
           validateStatus={errors.expiresInDays ? "error" : ""}

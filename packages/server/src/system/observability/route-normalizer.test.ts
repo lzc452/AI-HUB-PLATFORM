@@ -55,9 +55,7 @@ describe("normalizeRouteLabel", () => {
 
   it("无连字符的 32 位 uuid 同样识别", () => {
     expect(
-      normalizeRouteLabel(
-        "/api/applications/9f8b1c2d3e4f4a5b8c9d0e1f2a3b4c5d",
-      ),
+      normalizeRouteLabel("/api/applications/9f8b1c2d3e4f4a5b8c9d0e1f2a3b4c5d"),
     ).toBe(`/api/applications/${ROUTE_LABEL_ID}`);
   });
 
@@ -69,7 +67,9 @@ describe("normalizeRouteLabel", () => {
 
   it("长十六进制（sha256 / hash）替换为 :id", () => {
     expect(
-      normalizeRouteLabel("/api/artifacts/deadbeefcafe0123456789abcdef0123456789abcdef0123456789abcdef"),
+      normalizeRouteLabel(
+        "/api/artifacts/deadbeefcafe0123456789abcdef0123456789abcdef0123456789abcdef",
+      ),
     ).toBe(`/api/artifacts/${ROUTE_LABEL_ID}`);
   });
 

@@ -12,9 +12,7 @@ import { useNavigate } from "react-router-dom";
 
 import { EmptyBlock, StatCard } from "../../components/common";
 import { PERMISSIONS } from "@ai-hub/contracts";
-import {
-  type CallFilters,
-} from "./components/CallDetailTable";
+import { type CallFilters } from "./components/CallDetailTable";
 import { CallDetailTable } from "./components/CallDetailTable";
 import { UsageRangeSwitch } from "./components/UsageRangeSwitch";
 import { UsageTrendChart } from "./components/UsageTrendChart";
@@ -178,9 +176,7 @@ export default function ModelServicePage() {
       ) : null}
 
       {!canReadUsage ? (
-        <EmptyBlock
-          description="您没有个人用量查看权限。如需查看全平台用量，请使用平台管理页面。"
-        />
+        <EmptyBlock description="您没有个人用量查看权限。如需查看全平台用量，请使用平台管理页面。" />
       ) : null}
 
       {canReadUsage && usage.isPending ? (
@@ -189,7 +185,11 @@ export default function ModelServicePage() {
 
       {canReadUsage && usage.isError ? (
         <Empty description="用量数据加载失败">
-          <Button onClick={() => void usage.refetch()} size="small" type="primary">
+          <Button
+            onClick={() => void usage.refetch()}
+            size="small"
+            type="primary"
+          >
             重试
           </Button>
         </Empty>
