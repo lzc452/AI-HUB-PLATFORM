@@ -96,6 +96,17 @@ export const GATEWAY_ERRORS = {
     code: "gateway_not_configured",
     message: "模型网关未配置上游地址，请联系平台管理员",
   },
+  /**
+   * 灰度/回滚总开关关闭（M5）：运维把 `LLM_GATEWAY_ENABLED=false` 时的统一响应。
+   * 与 `gateway_not_configured` 分开：一个是部署缺配置，一个是主动关停，
+   * 排障时一眼可辨（runbook 的回滚步骤即依赖这个区分）。
+   */
+  GATEWAY_DISABLED: {
+    status: 503,
+    type: "service_unavailable",
+    code: "gateway_disabled",
+    message: "模型网关已关停（灰度回滚开关），请联系平台管理员",
+  },
   INTERNAL: {
     status: 500,
     type: "api_error",

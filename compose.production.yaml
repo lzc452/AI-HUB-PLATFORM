@@ -150,6 +150,7 @@ services:
       - prometheus-data:/prometheus
       - ./infra/monitoring/prometheus.production.yml:/etc/prometheus/prometheus.yml:ro
       - ./infra/monitoring/rules/production-alerts.yml:/etc/prometheus/rules/production-alerts.yml:ro
+      - ./infra/monitoring/rules/llm-gateway-alerts.yml:/etc/prometheus/rules/llm-gateway-alerts.yml:ro
     networks: [application]
 
   postgres-exporter:

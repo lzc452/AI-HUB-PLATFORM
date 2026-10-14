@@ -216,12 +216,20 @@ export {
 } from "./llm-gateway/llm-gateway.tokens.js";
 export {
   INVALID_KEY_THROTTLE,
+  GATEWAY_ENABLED,
   LLM_CALL_LOG_REPOSITORY,
+  LLM_GATEWAY_METRICS,
   LLM_QUOTA_SERVICE,
   LLM_USAGE_REPOSITORY,
   LLM_USAGE_SERVICE,
   UPSTREAM_CIRCUIT_BREAKER,
 } from "./llm-gateway/llm-gateway.tokens.js";
+export {
+  LlmGatewayMetrics,
+  type LlmGatewayMetricsPort,
+  type RateLimitReason,
+  type UpstreamErrorReason,
+} from "./llm-gateway/llm-gateway.metrics.js";
 export { KyselyLlmUsageRepository } from "./llm-gateway/llm-usage.repository.js";
 export type {
   AggregationResult,

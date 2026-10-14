@@ -155,6 +155,13 @@ export interface LlmQuotaServiceOptions {
   callLogs: LlmCallLogRepository;
   defaults: QuotaDefaults;
   now?: () => Date;
+  /** M5 指标埋点：限流拒绝时上报（PRD 11.1 `rate_limited_total`）。 */
+  metrics?: LlmQuotaMetricsPort | undefined;
+}
+
+/** 配额服务只依赖的指标端口（避免直接依赖指标实现，便于测试替身）。 */
+export interface LlmQuotaMetricsPort {
+  recordRateLimited(reason: "rpm" | "tpm" | "daily"): void;
 }
 
 export class LlmQuotaService {
@@ -162,12 +169,14 @@ export class LlmQuotaService {
   private readonly callLogs: LlmCallLogRepository;
   private readonly defaults: QuotaDefaults;
   private readonly now: () => Date;
+  private readonly metrics: LlmQuotaMetricsPort | undefined;
 
   public constructor(options: LlmQuotaServiceOptions) {
     this.counters = options.counters;
     this.callLogs = options.callLogs;
     this.defaults = options.defaults;
     this.now = options.now ?? (() => new Date());
+    this.metrics = options.metrics;
   }
 
   /**
@@ -187,6 +196,7 @@ export class LlmQuotaService {
       since: businessDayStart(at),
     });
     if (usedToday + estimatedTokens > limits.dailyTokens) {
+      this.metrics?.recordRateLimited("daily");
       throw gatewayError("RATE_LIMITED", {
         detail: `daily quota exceeded: used ${usedToday}/${limits.dailyTokens} tokens`,
         retryAfterSeconds: secondsUntilNextBusinessDay(at),
@@ -196,6 +206,7 @@ export class LlmQuotaService {
     const rpmKey = `rpm:${apiKey.keyId}`;
     const rpmCount = this.counters.add(rpmKey, 1, RPM_WINDOW_MS, nowMs);
     if (rpmCount > limits.rpm) {
+      this.metrics?.recordRateLimited("rpm");
       throw gatewayError("RATE_LIMITED", {
         detail: `rpm limit exceeded: ${rpmCount}/${limits.rpm} per minute`,
         retryAfterSeconds: this.counters.remainingSeconds(
@@ -209,6 +220,7 @@ export class LlmQuotaService {
     const tpmKey = `tpm:${apiKey.keyId}`;
     const tpmUsed = this.counters.peek(tpmKey, TPM_WINDOW_MS, nowMs);
     if (tpmUsed + estimatedTokens > limits.tpm) {
+      this.metrics?.recordRateLimited("tpm");
       throw gatewayError("RATE_LIMITED", {
         detail: `tpm limit exceeded: ${tpmUsed}+${estimatedTokens}/${limits.tpm} tokens per minute`,
         retryAfterSeconds: this.counters.remainingSeconds(

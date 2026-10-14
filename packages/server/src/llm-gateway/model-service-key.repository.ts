@@ -111,6 +111,8 @@ export interface ModelServiceKeyRepository {
   ): Promise<ApiKeyRecord | null>;
   /** 计数「占位」Key：active + disabled（revoked 不占额度），用于每人上限校验。 */
   countHoldingKeys(employeeId: string): Promise<number>;
+  /** 全平台活跃 Key 计数（M5 指标 `ai_hub_llm_keys_active` 的采集源）。 */
+  countActiveKeys(): Promise<number>;
   listByEmployee(
     input: ListApiKeysInput,
   ): Promise<{ items: ApiKeyRecord[]; total: number }>;
@@ -385,6 +387,16 @@ export class KyselyModelServiceKeyRepository
       .select(({ fn }) => fn.countAll<string>().as("count"))
       .where("employee_id", "=", employeeId)
       .where("status", "in", ["active", "disabled"])
+      .executeTakeFirst();
+    return Number(row?.count ?? 0);
+  }
+
+  /** 走 (status) 上的既有索引；仅在指标采集（15s 一次）时调用。 */
+  public async countActiveKeys(): Promise<number> {
+    const row = await this.executor
+      .selectFrom("llm_api_keys")
+      .select(({ fn }) => fn.countAll<string>().as("count"))
+      .where("status", "=", "active")
       .executeTakeFirst();
     return Number(row?.count ?? 0);
   }

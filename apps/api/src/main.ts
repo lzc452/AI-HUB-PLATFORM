@@ -27,6 +27,10 @@ import {
   ClamAvMalwareScanner,
   DiskObjectStorage,
   GarageObjectStorage,
+  LlmGatewayMetrics,
+  KyselyModelServiceKeyRepository,
+  KyselyLlmUsageRepository,
+  businessDayStart,
   type ReadableObjectStoragePort,
 } from "@ai-hub/server";
 
@@ -39,8 +43,20 @@ async function bootstrap() {
   const logger = createApplicationLogger(config.logLevel);
   const database = createDatabase(config.databaseUrl);
   const replayDatabase = database;
+  // M5：LLM 网关指标（PRD 11.1）。两个采集型 gauge（活跃 Key 数、当日配额临界 Key 数）
+  // 由仓储直接查库，LlmGatewayMetrics 内部带 30s TTL 缓存，不会每次抓取都打库。
+  const llmGatewayMetrics = new LlmGatewayMetrics({
+    collectActiveKeyCount: () =>
+      new KyselyModelServiceKeyRepository(database).countActiveKeys(),
+    collectQuotaCriticalKeyCount: () =>
+      new KyselyLlmUsageRepository(database).countKeysNearDailyLimit({
+        since: businessDayStart(new Date()),
+      }),
+  });
   const metrics = new ObservabilityMetrics({
     collectOutboxCounts: createOutboxCountCollector(database),
+    // 网关 registry 与平台 registry 一起输出到 /internal/metrics，保持单一抓取端点
+    extraRegistries: [llmGatewayMetrics.registry],
   });
   const identityOptions: {
     loginEncryptionPrivateKey?: string;
@@ -125,6 +141,9 @@ async function bootstrap() {
           tpm: config.llmDefaultTpm,
           dailyTokens: config.llmDefaultDailyTokens,
         },
+        // 灰度/回滚总开关（PRD 649）：默认 true，运维置 false 即关停 /v1 与新建凭据
+        enabled: config.llmGatewayEnabled,
+        metrics: llmGatewayMetrics,
         // 台账写失败等旁路问题走平台统一 logger，避免静默丢账
         logger,
       },

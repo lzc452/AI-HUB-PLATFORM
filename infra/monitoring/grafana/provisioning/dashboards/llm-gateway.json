@@ -1,0 +1,146 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "graphTooltip": 1,
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "custom": { "fillOpacity": 10, "stacking": { "mode": "normal" } }, "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum by (status_code) (rate(ai_hub_llm_gateway_requests_total[5m]))",
+          "legendFormat": "{{status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "网关请求速率（按状态码；499 = 客户端断流）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "custom": { "fillOpacity": 10, "stacking": { "mode": "normal" } }, "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum by (model, type) (rate(ai_hub_llm_gateway_tokens_total[5m]))",
+          "legendFormat": "{{model}} · {{type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Token 消耗速率（按模型与类型）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (endpoint, le) (rate(ai_hub_llm_gateway_duration_seconds_bucket[5m])))",
+          "legendFormat": "P50 {{endpoint}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (endpoint, le) (rate(ai_hub_llm_gateway_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95 {{endpoint}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (endpoint, le) (rate(ai_hub_llm_gateway_duration_seconds_bucket[5m])))",
+          "legendFormat": "P99 {{endpoint}}",
+          "refId": "C"
+        }
+      ],
+      "title": "网关处理延迟分位（不含流式生成时间）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(ai_hub_llm_gateway_rate_limited_total[5m]))",
+          "legendFormat": "限流 {{reason}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (reason) (rate(ai_hub_llm_gateway_upstream_errors_total[5m]))",
+          "legendFormat": "上游故障 {{reason}}",
+          "refId": "B"
+        }
+      ],
+      "title": "错误与限流分布（按 reason）",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "topk(5, sum by (model) (rate(ai_hub_llm_gateway_tokens_total[1h])))",
+          "legendFormat": "{{model}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 模型（近 1 小时 token 速率）",
+      "type": "barchart"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "否" }, "1": { "text": "是" } }, "type": "value" },
+            { "options": { "match": "null", "result": { "text": "无数据" } }, "type": "special" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
+      "id": 6,
+      "targets": [
+        { "expr": "ai_hub_llm_gateway_circuit_state{state=\"open\"}", "legendFormat": "熔断打开", "refId": "A" },
+        { "expr": "ai_hub_llm_gateway_circuit_state{state=\"half_open\"}", "legendFormat": "半开", "refId": "B" }
+      ],
+      "title": "熔断状态（打开 / 半开）",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "id": 7,
+      "targets": [
+        { "expr": "ai_hub_llm_active_streams", "legendFormat": "进行中的流式请求", "refId": "A" },
+        { "expr": "ai_hub_llm_keys_active", "legendFormat": "活跃 Key", "refId": "B" },
+        { "expr": "ai_hub_llm_keys_quota_critical", "legendFormat": "当日配额 ≥90% 的 Key", "refId": "C" }
+      ],
+      "title": "并发与容量",
+      "type": "stat"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ai-hub", "llm-gateway"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "browser",
+  "title": "AI Hub · 模型服务网关",
+  "uid": "ai-hub-llm-gateway",
+  "version": 1
+}

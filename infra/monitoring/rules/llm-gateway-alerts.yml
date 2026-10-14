@@ -1,0 +1,107 @@
+groups:
+  - name: ai-hub-llm-gateway
+    interval: 30s
+    rules:
+      # PRD 11.2 第 1 条：5 分钟 5xx+429 占比 > 20%（P1）
+      # 分母含被拒请求（网关 100% 记账口径）；分母为 0 时结果为 NaN，不会误触发。
+      - alert: AiHubLlmGatewayErrorRateHigh
+        expr: |
+          (
+            sum(rate(ai_hub_llm_gateway_requests_total{status_code=~"5..|429"}[5m]))
+            /
+            sum(rate(ai_hub_llm_gateway_requests_total[5m]))
+          ) > 0.2
+          and
+          sum(rate(ai_hub_llm_gateway_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: llm-gateway
+        annotations:
+          summary: LLM 网关错误率超过 20%（5 分钟窗口）
+          description: >-
+            5xx 与 429 占全部网关请求的比例已超过 20%。先看
+            `ai_hub_llm_gateway_rate_limited_total`（配额/限流）与
+            `ai_hub_llm_gateway_upstream_errors_total`（上游故障）拆分原因；
+            响应流程见 docs/runbooks/llm-gateway.md。
+
+      # PRD 11.2 第 2 条：熔断打开持续 5 分钟（P1）
+      - alert: AiHubLlmGatewayCircuitOpen
+        expr: ai_hub_llm_gateway_circuit_state{state="open"} == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: llm-gateway
+        annotations:
+          summary: LLM 网关上游熔断已打开超过 5 分钟
+          description: >-
+            vLLM 上游连续故障触发熔断，`/v1` 正在快速失败（503 circuit_open）。
+            检查 vLLM 进程与 GPU 状态；恢复后熔断会经半开探测自动闭合。
+
+      # PRD 11.2 第 3 条：上游不可用（P1）
+      # 条件精确化：PRD 写「upstream_errors 速率 > 0 且 requests ≈ 0」。
+      # 但被拒请求也计入 requests_total（100% 记账），熔断/限流期间它并不为 0，
+      # 直译会导致规则永不触发；因此用「成功请求（status_code=200）速率为 0」表示
+      # 「还有流量进来，但没有一个成功」——这才是上游不可用的判据。
+      - alert: AiHubLlmGatewayUpstreamUnavailable
+        expr: |
+          sum(rate(ai_hub_llm_gateway_upstream_errors_total[5m])) > 0
+          and
+          sum(rate(ai_hub_llm_gateway_requests_total{status_code="200"}[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: llm-gateway
+        annotations:
+          summary: LLM 网关上游不可用（有错误、无成功）
+          description: >-
+            最近 5 分钟持续出现上游故障且没有任何成功响应。检查 vLLM 可达性
+            （`LLM_GATEWAY_UPSTREAM_BASE_URL`）与网络策略；必要时按 runbook
+            使用回滚开关 `LLM_GATEWAY_ENABLED=false` 止损。
+
+      # PRD 11.2 第 4 条：限流频繁（P3）
+      # 范围说明：PRD 写「单 Key 1 小时内 > 100」，但指标标签不含 key_id
+      # （避免高基数 series 拖垮 Prometheus）。此处为平台级汇总阈值；
+      # 单 Key 维度可在 Console 用量看板或台账 SQL 中下钻。
+      - alert: AiHubLlmGatewayRateLimitedFrequent
+        expr: sum(increase(ai_hub_llm_gateway_rate_limited_total[1h])) > 100
+        labels:
+          severity: warning
+          category: llm-gateway
+        annotations:
+          summary: LLM 网关 1 小时内限流拒绝超过 100 次
+          description: >-
+            多个调用方持续撞限额。按 reason 拆分：daily/rpm 说明用量确实超限
+            （可评估调高限额），tpm 说明大请求集中（建议调用方限流或拆分）。
+
+      # PRD 11.2 第 5 条：配额临近耗尽（P3）
+      # PRD 写「当日用量 > 90% 配额的活跃用户数环比突增」。gauge 无环比语义，
+      # 改用绝对值阈值（≥3 个活跃 Key 进入 90% 区间）——「>0」在单人临界时也报，
+      # 噪声太大；真实消费速率与趋势看 Console 用量看板。
+      - alert: AiHubLlmGatewayQuotaNearlyExhausted
+        expr: ai_hub_llm_keys_quota_critical >= 3
+        for: 15m
+        labels:
+          severity: warning
+          category: llm-gateway
+        annotations:
+          summary: 有 3 个以上活跃 Key 的当日用量已达日配额 90%
+          description: >-
+            多个调用方接近日配额上限，预计当天会开始出现 429（daily）。
+            在 Console「模型服务 · 平台管理」按 Key 核对用量；
+            确需提高时由运维调整该 Key 的 dailyTokenLimit。
+
+      # 补充保护：网关指标整体消失（scrape 失败或指标未接线）。
+      # 不在 PRD 11.2 表内，是为「监控自身失效」加的最低保障——没有它，
+      # 上面四条在指标消失时会静默（不触发比误触发更危险）。
+      - alert: AiHubLlmGatewayMetricsMissing
+        expr: absent(ai_hub_llm_gateway_requests_total)
+        for: 15m
+        labels:
+          severity: warning
+          category: llm-gateway
+        annotations:
+          summary: LLM 网关指标缺失（超过 15 分钟未采集到）
+          description: >-
+            检查 api 容器的 /internal/metrics 是否包含 ai_hub_llm_gateway_* 指标，
+            以及 Prometheus 抓取目标 ai-hub-api 是否健康。

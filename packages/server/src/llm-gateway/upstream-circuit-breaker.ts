@@ -46,6 +46,11 @@ export interface UpstreamCircuitBreakerOptions {
   openDurationMs?: number;
   /** 注入时钟（毫秒），默认 `Date.now`。 */
   now?: () => number;
+  /**
+   * 状态变更回调（M5 指标埋点）：仅在状态**实际变化**时触发，
+   * 读取路径（refresh）不重复触发。初始 closed 不触发（由调用方初始化 gauge）。
+   */
+  onStateChange?: ((state: CircuitState) => void) | undefined;
 }
 
 export function createUpstreamCircuitBreaker(
@@ -54,17 +59,26 @@ export function createUpstreamCircuitBreaker(
   const failureThreshold = options.failureThreshold ?? 5;
   const openDurationMs = options.openDurationMs ?? 30_000;
   const now = options.now ?? Date.now;
+  const onStateChange = options.onStateChange;
 
   let state: CircuitState = "closed";
   let consecutiveFailures = 0;
   let openedUntilMs: number | null = null;
   let probeInFlight = false;
+  let reported: CircuitState = "closed";
+
+  const report = (): void => {
+    if (onStateChange === undefined || reported === state) return;
+    reported = state;
+    onStateChange(state);
+  };
 
   /** 到期自动进入半开：读取路径统一走这里，避免状态滞后。 */
   const refresh = (): void => {
     if (state === "open" && openedUntilMs !== null && now() >= openedUntilMs) {
       state = "half_open";
       probeInFlight = false;
+      report();
     }
   };
 
@@ -72,6 +86,7 @@ export function createUpstreamCircuitBreaker(
     state = "open";
     openedUntilMs = now() + openDurationMs;
     probeInFlight = false;
+    report();
   };
 
   return {
@@ -90,6 +105,7 @@ export function createUpstreamCircuitBreaker(
       consecutiveFailures = 0;
       openedUntilMs = null;
       probeInFlight = false;
+      report();
     },
     onFailure() {
       consecutiveFailures += 1;

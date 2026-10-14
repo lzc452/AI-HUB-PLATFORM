@@ -14,9 +14,11 @@ import {
 import { LlmGatewayController } from "./llm-gateway.controller.js";
 import {
   API_KEY_HASHER,
+  GATEWAY_ENABLED,
   INVALID_KEY_THROTTLE,
   LLM_CALL_LOG_REPOSITORY,
   LLM_GATEWAY_API_SERVICE,
+  LLM_GATEWAY_METRICS,
   LLM_GATEWAY_SERVICE,
   LLM_QUOTA_SERVICE,
   LLM_USAGE_REPOSITORY,
@@ -24,6 +26,7 @@ import {
   MODEL_SERVICE_KEY_REPOSITORY,
   UPSTREAM_CIRCUIT_BREAKER,
 } from "./llm-gateway.tokens.js";
+import type { LlmGatewayMetrics } from "./llm-gateway.metrics.js";
 import {
   KyselyLlmUsageRepository,
   type LlmUsageRepository,
@@ -76,6 +79,11 @@ export interface LlmGatewayModuleOptions extends ModelServiceKeyServiceConfig {
   quotaDefaults: QuotaDefaults;
   /** 熔断阈值与打开时长（默认 5 次 / 30s）。 */
   circuit?: { failureThreshold?: number; openDurationMs?: number };
+  /**
+   * M5 指标实例（PRD 11.1）。由 apps/api 创建并同时合并进 `/internal/metrics`；
+   * 未提供则全链路静默（测试与不部署监控的环境）。
+   */
+  metrics?: LlmGatewayMetrics | undefined;
   /** 旁路问题（台账写失败等）的日志出口。 */
   logger?: Logger | undefined;
 }
@@ -143,6 +151,7 @@ function buildProviders(
   usageRepository: LlmUsageRepository,
   options: LlmGatewayModuleOptions,
 ) {
+  const metrics = options.metrics;
   const hasher =
     options.hmacSecret === undefined
       ? undefined
@@ -161,8 +170,15 @@ function buildProviders(
     counters: createWeightedFixedWindowCounter(),
     callLogs,
     defaults: options.quotaDefaults,
+    ...(metrics === undefined ? {} : { metrics }),
   });
-  const breaker = createUpstreamCircuitBreaker(options.circuit);
+  const breaker = createUpstreamCircuitBreaker({
+    ...options.circuit,
+    // 熔断状态是运维最需要看见的信号之一：状态一变就同步到 gauge
+    ...(metrics === undefined
+      ? {}
+      : { onStateChange: (state) => metrics.setCircuitState(state) }),
+  });
 
   const gatewayOptions: LlmGatewayServiceOptions = {
     upstream,
@@ -172,6 +188,7 @@ function buildProviders(
     breaker,
     upstreamTimeoutMs: options.upstreamTimeoutMs,
     firstTokenTimeoutMs: options.firstTokenTimeoutMs,
+    ...(metrics === undefined ? {} : { metrics }),
     ...(options.logger === undefined ? {} : { logger: options.logger }),
   };
 
@@ -198,6 +215,11 @@ function buildProviders(
     },
     { provide: LLM_QUOTA_SERVICE, useValue: quota },
     { provide: UPSTREAM_CIRCUIT_BREAKER, useValue: breaker },
+    // 灰度/回滚开关：默认开启（undefined 视为 true，与 RuntimeConfig 默认一致）
+    { provide: GATEWAY_ENABLED, useValue: options.enabled !== false },
+    ...(metrics === undefined
+      ? []
+      : [{ provide: LLM_GATEWAY_METRICS, useValue: metrics }]),
   ];
 }
 
@@ -243,6 +265,9 @@ function emptyUsageRepository(): LlmUsageRepository {
     },
     async findUnaggregatedDays() {
       return [];
+    },
+    async countKeysNearDailyLimit() {
+      return 0;
     },
   };
 }

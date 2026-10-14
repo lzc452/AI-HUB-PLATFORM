@@ -237,6 +237,40 @@ describe("ApiKeyGuard（PRD 8.2 鉴权链）", () => {
     );
   });
 
+  it("总开关关闭时返回 503 gateway_disabled（不解析凭据）", async () => {
+    const repository = stubRepository({ found: record() });
+    const guard = new ApiKeyGuard(
+      repository,
+      hasher,
+      permissiveThrottle(),
+      rejectionLogs(),
+      undefined,
+      false,
+    );
+    const { context } = contextFor({ authorization: "Bearer x" });
+    await expectGatewayError(
+      () => guard.canActivate(context),
+      "gateway_disabled",
+      503,
+    );
+  });
+
+  it("总开关未注册（undefined）时按开启处理：仍走常规凭据校验", async () => {
+    const guard = new ApiKeyGuard(
+      stubRepository({ found: null }),
+      hasher,
+      permissiveThrottle(),
+      rejectionLogs(),
+    );
+    const { context } = contextFor({ authorization: "Bearer x" });
+    // 开关未注册不拦截；无效凭据仍是常规的 401
+    await expectGatewayError(
+      () => guard.canActivate(context),
+      "invalid_api_key",
+      401,
+    );
+  });
+
   it("所属员工非在职返回 403 employee_inactive", async () => {
     const guard = new ApiKeyGuard(
       stubRepository({ found: record(), employeeStatus: "disabled" }),

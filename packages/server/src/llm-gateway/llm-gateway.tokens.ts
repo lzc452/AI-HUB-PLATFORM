@@ -39,3 +39,16 @@ export const LLM_USAGE_REPOSITORY = Symbol("LLM_USAGE_REPOSITORY");
 
 /** 用量查询服务（M4：控制台用量视图）。 */
 export const LLM_USAGE_SERVICE = Symbol("LLM_USAGE_SERVICE");
+
+/**
+ * 网关指标（M5，PRD 11.1）。`/v1` 各组件（守卫/网关服务/配额/熔断）共用同一实例，
+ * 由 apps/api 合并进 `/internal/metrics` 输出。
+ */
+export const LLM_GATEWAY_METRICS = Symbol("LLM_GATEWAY_METRICS");
+
+/**
+ * 灰度/回滚总开关（M5，PRD 649 上线计划）：
+ * false 时 `/v1` 全部路由经守卫直接 503，且控制面拒绝新建 Key
+ * （读操作与既有数据不受影响，回滚不需要动 nginx 与数据库）。
+ */
+export const GATEWAY_ENABLED = Symbol("GATEWAY_ENABLED");

@@ -10,6 +10,7 @@ import type { ApiKeyHasher } from "./api-key.hasher.js";
 import {
   API_KEY_CLOCK,
   API_KEY_HASHER,
+  GATEWAY_ENABLED,
   INVALID_KEY_THROTTLE,
   LLM_CALL_LOG_REPOSITORY,
   MODEL_SERVICE_KEY_REPOSITORY,
@@ -118,12 +119,23 @@ export class ApiKeyGuard implements CanActivate {
     @Optional()
     @Inject(API_KEY_CLOCK)
     clock?: () => Date,
+    /**
+     * 灰度/回滚总开关（M5, PRD 649）。`@Optional()`：未注册时按「开启」处理，
+     * 保证既有测试装配（不传该令牌）行为不变。
+     */
+    @Optional()
+    @Inject(GATEWAY_ENABLED)
+    private readonly enabled: boolean | undefined = undefined,
   ) {
     this.now = clock ?? (() => new Date());
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<GatewayRequest>();
+    // 总开关最先判定：关停时不必解析凭据、不必查库，直接 503
+    if (this.enabled === false) {
+      throw gatewayError("GATEWAY_DISABLED");
+    }
     const hasher = this.hasher;
     if (hasher === undefined) {
       throw gatewayError("NOT_CONFIGURED");

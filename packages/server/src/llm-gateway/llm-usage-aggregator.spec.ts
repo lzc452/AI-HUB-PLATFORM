@@ -50,6 +50,9 @@ function repositoryStub(options: { gaps?: string[] } = {}) {
     async findUnaggregatedDays() {
       return options.gaps ?? [];
     },
+    async countKeysNearDailyLimit() {
+      return 0;
+    },
   };
   return { repository, aggregated };
 }

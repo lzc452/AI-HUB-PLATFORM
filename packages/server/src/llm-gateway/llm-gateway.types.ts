@@ -94,6 +94,8 @@ export const MODEL_SERVICE_ERROR_CODES = {
   /** 管理面操作的目标不存在（或该管理员无权访问）。 */
   ADMIN_TARGET_NOT_FOUND: "MODEL_ADMIN_TARGET_NOT_FOUND",
   NOT_CONFIGURED: "MODEL_SERVICE_NOT_CONFIGURED",
+  /** 灰度/回滚开关关闭（M5）：拒绝新建 Key，读操作不受影响。 */
+  DISABLED: "MODEL_SERVICE_DISABLED",
 } as const;
 
 export type ModelServiceErrorCode =

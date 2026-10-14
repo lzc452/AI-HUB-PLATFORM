@@ -109,6 +109,9 @@ function usageStub(options: StubOptions = {}) {
     async findUnaggregatedDays() {
       return [];
     },
+    async countKeysNearDailyLimit() {
+      return 0;
+    },
   };
   return { repository, seen };
 }

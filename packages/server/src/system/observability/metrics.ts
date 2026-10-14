@@ -18,6 +18,11 @@ export interface OutboxCounts {
 
 export interface ObservabilityMetricsOptions {
   collectOutboxCounts?: () => Promise<OutboxCounts>;
+  /**
+   * 外部 Registry（如 LLM 网关指标）：输出时与主 Registry 的文本拼接。
+   * Prometheus 文本格式允许直接拼接多个 registry 的导出（各自带 # HELP/# TYPE）。
+   */
+  extraRegistries?: readonly Registry[];
 }
 
 export function createOutboxCountCollector(
@@ -83,6 +88,7 @@ export interface WorkerMetricsPort {
 
 export class ObservabilityMetrics implements WorkerMetricsPort {
   private readonly registry = new Registry();
+  private readonly extraRegistries: readonly Registry[];
   private readonly activeRequests: Gauge;
   private readonly httpDuration: Histogram<"method" | "route" | "status_code">;
   private readonly databaseReady: Gauge;
@@ -91,6 +97,7 @@ export class ObservabilityMetrics implements WorkerMetricsPort {
   private readonly workerFailures: Counter<"event_type" | "reason">;
 
   public constructor(options: ObservabilityMetricsOptions = {}) {
+    this.extraRegistries = options.extraRegistries ?? [];
     collectDefaultMetrics({
       prefix: "ai_hub_process_",
       register: this.registry,
@@ -180,8 +187,13 @@ export class ObservabilityMetrics implements WorkerMetricsPort {
     }
   }
 
-  public metricsText(): Promise<string> {
-    return this.registry.metrics();
+  public async metricsText(): Promise<string> {
+    const own = await this.registry.metrics();
+    if (this.extraRegistries.length === 0) return own;
+    const extras = await Promise.all(
+      this.extraRegistries.map((registry) => registry.metrics()),
+    );
+    return [own, ...extras].join("\n");
   }
 
   public get contentType(): string {

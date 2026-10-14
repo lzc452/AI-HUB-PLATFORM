@@ -26,6 +26,7 @@ export function toControlPlaneHttpException(error: unknown): never {
       case MODEL_SERVICE_ERROR_CODES.RANGE_INVALID:
         throw new BadRequestException(error.code);
       case MODEL_SERVICE_ERROR_CODES.NOT_CONFIGURED:
+      case MODEL_SERVICE_ERROR_CODES.DISABLED:
         throw new ServiceUnavailableException(error.code);
       default:
         throw toDomainHttpException(

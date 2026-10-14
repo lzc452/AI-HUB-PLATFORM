@@ -32,6 +32,11 @@ export interface ModelServiceKeyServiceConfig {
   maxTpm: number;
   maxDailyTokens: number;
   maxKeysPerUser: number;
+  /**
+   * 灰度/回滚总开关（M5，PRD 649）：false 时拒绝**新建凭据**（创建与轮换），
+   * 读操作与既有 Key 的启停/删除保持可用——回滚要能清理，不能把控制台一起锁死。
+   */
+  enabled?: boolean;
 }
 
 /** 管理面分页结果：在本人视角字段上追加归属人信息。 */
@@ -78,6 +83,7 @@ export class ModelServiceKeyService {
     actor: ActorContext,
     input: CreateApiKeyInput,
   ): Promise<CreateApiKeyResult> {
+    this.assertEnabled();
     const hasher = this.requireHasher();
     this.assertLimits(input);
 
@@ -265,6 +271,7 @@ export class ModelServiceKeyService {
     actor: ActorContext,
     keyId: string,
   ): Promise<CreateApiKeyResult> {
+    this.assertEnabled();
     const hasher = this.requireHasher();
     const record = await this.requireOwnKey(actor, keyId);
     if (record.status === "revoked") {
@@ -430,6 +437,13 @@ export class ModelServiceKeyService {
       previousSecret: this.config.hmacSecretPrevious,
     });
     return this.hasher;
+  }
+
+  /** 关停时拒绝产生新凭据（创建/轮换）；控制台其余能力保持可用以便清理与排障。 */
+  private assertEnabled(): void {
+    if (this.config.enabled === false) {
+      throw new ModelServiceError(MODEL_SERVICE_ERROR_CODES.DISABLED);
+    }
   }
 
   private async requireOwnKey(

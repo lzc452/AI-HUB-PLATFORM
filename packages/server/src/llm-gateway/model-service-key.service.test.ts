@@ -178,6 +178,10 @@ class FakeRepository implements ModelServiceKeyRepository {
     return found === undefined ? null : { ...found };
   }
 
+  public async countActiveKeys(): Promise<number> {
+    return this.keys.filter((key) => key.status === "active").length;
+  }
+
   public async countHoldingKeys(employeeId: string): Promise<number> {
     return this.keys.filter(
       (key) =>
@@ -314,6 +318,52 @@ async function expectErrorCode(
 }
 
 describe("模型服务 Key 生命周期（PRD 7.5 / 8.1）", () => {
+  it("关停时拒绝创建与轮换，但禁用/删除仍可用（回滚要能清理）", async () => {
+    const harness = createHarness({ enabled: false });
+
+    await expectErrorCode(
+      () => harness.service.createKey(actor, { name: "blocked" }),
+      "MODEL_SERVICE_DISABLED",
+    );
+
+    // 既有 Key 的读/禁/删不受影响：先以开启态建一个，再切到关停态操作
+    const open = createHarness();
+    const created = await open.service.createKey(actor, { name: "existing" });
+    const disabled = createHarness({ enabled: false });
+    await disabled.repository.insert({
+      employeeId: actor.employeeId,
+      keyPrefix: created.summary.prefix,
+      keyHash: "hash-existing",
+      name: "existing",
+      rpmLimit: null,
+      tpmLimit: null,
+      dailyTokenLimit: null,
+      expiresAt: null,
+      rotatedFromKeyId: null,
+    });
+    const [record] = await disabled.repository.listByEmployee({
+      employeeId: actor.employeeId,
+      includeRevoked: false,
+      limit: 10,
+      offset: 0,
+    }).then((page) => page.items);
+
+    await expectErrorCode(
+      () => disabled.service.rotateKey(actor, record!.keyId),
+      "MODEL_SERVICE_DISABLED",
+    );
+    // 禁用与删除（撤销）在关停态下依然可用——清理不依赖开关
+    const afterDisable = await disabled.service.disableKey(
+      actor,
+      record!.keyId,
+    );
+    expect(afterDisable.status).toBe("disabled");
+    await disabled.service.revokeKey(actor, record!.keyId);
+    expect(
+      (await disabled.service.getKey(actor, record!.keyId)).status,
+    ).toBe("revoked");
+  });
+
   it("创建返回一次性明文，库内只留摘要与前缀", async () => {
     const harness = createHarness();
     const result = await harness.service.createKey(actor, {

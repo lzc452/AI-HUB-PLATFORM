@@ -133,6 +133,14 @@ export interface LlmUsageRepository {
    * 返回最近 N 天内的缺口日期，供运维补算。
    */
   findUnaggregatedDays(input: { lookbackDays: number }): Promise<string[]>;
+  /**
+   * 当日用量已达日配额 `ratio`（默认 90%）的活跃 Key 数——M5 配额告警的数据源
+   * （PRD 11.2「配额临近耗尽」）。按 Key 聚合事实表，与鉴权口径同源（PRD 9.4）。
+   */
+  countKeysNearDailyLimit(input: {
+    since: Date;
+    ratio?: number;
+  }): Promise<number>;
 }
 
 function toNumber(value: string | number | null): number {
@@ -146,6 +154,33 @@ function toIsoDate(value: string | Date): string {
 
 export class KyselyLlmUsageRepository implements LlmUsageRepository {
   public constructor(private readonly db: Kysely<DatabaseSchema>) {}
+
+  /**
+   * 当日每 Key 已用 token vs 其日配额，返回超阈值的 Key 数。
+   * `llm_api_call_logs(employee_id, requested_at)` 与 `(key_id)` 上已有索引，
+   * 且只扫当日数据；调用方（指标采集）另有 TTL 缓存，不会每次 scrape 都跑。
+   */
+  public async countKeysNearDailyLimit(input: {
+    since: Date;
+    ratio?: number;
+  }): Promise<number> {
+    const ratio = input.ratio ?? 0.9;
+    const rows = await this.db
+      .selectFrom("llm_api_call_logs as l")
+      .innerJoin("llm_api_keys as k", "k.key_id", "l.key_id")
+      .select(({ fn }) => [
+        fn.sum<string>("l.total_tokens").as("used"),
+        "k.daily_token_limit as limit_value",
+      ])
+      .where("k.status", "=", "active")
+      .where("k.daily_token_limit", "is not", null)
+      .where("l.requested_at", ">=", input.since)
+      .groupBy(["k.key_id", "k.daily_token_limit"])
+      .execute();
+    return rows.filter(
+      (row) => Number(row.used) >= ratio * Number(row.limit_value ?? 0),
+    ).length;
+  }
 
   public async aggregateDay(at: Date): Promise<AggregationResult> {
     const start = businessDayStart(at);

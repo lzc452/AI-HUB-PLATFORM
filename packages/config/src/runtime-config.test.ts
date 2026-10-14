@@ -75,6 +75,8 @@ describe("parseRuntimeConfig", () => {
       llmGatewayHmacSecret: undefined,
       llmGatewayHmacSecretPrevious: undefined,
       llmGatewayUpstreamBaseUrl: undefined,
+      // 灰度/回滚开关：默认开启
+      llmGatewayEnabled: true,
       llmDefaultRpm: 60,
       llmDefaultTpm: 100_000,
       llmDefaultDailyTokens: 2_000_000,
@@ -98,6 +100,15 @@ describe("parseRuntimeConfig", () => {
     });
     expect(parsed.llmGatewayUpstreamBaseUrl).toBe("http://vllm:8000/v1");
     expect(parsed.llmMaxKeysPerUser).toBe(3);
+    // 灰度/回滚开关默认开启（功能已上线，开关只用于回滚）
+    expect(parsed.llmGatewayEnabled).toBe(true);
+    expect(
+      parseRuntimeConfig({
+        ...BASE_ENV,
+        NODE_ENV: "test",
+        LLM_GATEWAY_ENABLED: "false",
+      }).llmGatewayEnabled,
+    ).toBe(false);
 
     expect(() =>
       parseRuntimeConfig({

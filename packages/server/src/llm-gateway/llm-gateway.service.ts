@@ -16,6 +16,10 @@ import type { LlmQuotaService } from "./llm-quota.js";
 import type { ModelServiceKeyRepository } from "./model-service-key.repository.js";
 import type { UpstreamCircuitBreaker } from "./upstream-circuit-breaker.js";
 import type {
+  LlmGatewayMetricsPort,
+  UpstreamErrorReason,
+} from "./llm-gateway.metrics.js";
+import type {
   UpstreamResult,
   UpstreamStreamResult,
   VllmUpstreamPort,
@@ -56,6 +60,8 @@ export interface LlmGatewayServiceOptions {
   upstreamTimeoutMs: number;
   firstTokenTimeoutMs: number;
   now?: () => Date;
+  /** M5 指标埋点（PRD 11.1）；未提供则静默（测试与不部署监控的环境）。 */
+  metrics?: LlmGatewayMetricsPort | undefined;
   /** 台账写失败等旁路问题的出口；未提供则静默。 */
   logger?: Logger | undefined;
 }
@@ -73,6 +79,7 @@ export class LlmGatewayService {
   private readonly upstreamTimeoutMs: number;
   private readonly firstTokenTimeoutMs: number;
   private readonly now: () => Date;
+  private readonly metrics: LlmGatewayMetricsPort | undefined;
   private readonly logger: Logger | undefined;
 
   public constructor(options: LlmGatewayServiceOptions) {
@@ -84,6 +91,7 @@ export class LlmGatewayService {
     this.upstreamTimeoutMs = options.upstreamTimeoutMs;
     this.firstTokenTimeoutMs = options.firstTokenTimeoutMs;
     this.now = options.now ?? (() => new Date());
+    this.metrics = options.metrics;
     this.logger = options.logger;
   }
 
@@ -167,6 +175,7 @@ export class LlmGatewayService {
 
     if (!open.ok) {
       this.breaker.onFailure();
+      this.metrics?.recordUpstreamError(upstreamErrorReasonOf(open));
       await this.record({
         apiKey,
         endpoint: "chat_completions",
@@ -188,6 +197,9 @@ export class LlmGatewayService {
     // 纵深防御：即便 nginx 未配 proxy_buffering off，也提示它不要缓冲
     sink.setHeader("x-accel-buffering", "no");
     sink.flushHeaders();
+    // 发头之后才计入「进行中的流式请求」：此前失败的请求没有流可计。
+    // 释放点在下方的 finally（透传循环结束时流即结束，无需等 record/settle）。
+    this.metrics?.streamStarted();
 
     let firstTokenTimer: NodeJS.Timeout | undefined = setTimeout(() => {
       firstTokenTimedOut = true;
@@ -249,6 +261,10 @@ export class LlmGatewayService {
           errorCode: descriptor.code,
         };
         this.breaker.onFailure();
+        // 流已建立后的中断：首 token 超时归 timeout，其余（连接重置/上游关闭）归 network
+        this.metrics?.recordUpstreamError(
+          firstTokenTimedOut ? "timeout" : "network",
+        );
         // 已发头：以 SSE `error` 事件收尾，且**不发 [DONE]**，调用方据此判定异常结束
         sink.writeSse(
           `data: ${JSON.stringify({
@@ -263,6 +279,9 @@ export class LlmGatewayService {
       }
     } finally {
       if (firstTokenTimer !== undefined) clearTimeout(firstTokenTimer);
+      // 与发头处的 streamStarted 配对：透传循环结束（含异常/断流）即释放。
+      // record 与 settle 不在此 finally——它们属于收尾，不属于流式传输本身。
+      this.metrics?.streamEnded();
     }
 
     if (failure === null && clientClosed) {
@@ -324,7 +343,10 @@ export class LlmGatewayService {
         : await upstream.chatCompletions(input.payload);
 
     if (!result.ok) {
-      if (isUpstreamFault(result)) this.breaker.onFailure();
+      if (isUpstreamFault(result)) {
+        this.breaker.onFailure();
+        this.metrics?.recordUpstreamError(upstreamErrorReasonOf(result));
+      }
       await this.record({
         apiKey: input.apiKey,
         endpoint: input.endpoint,
@@ -513,6 +535,16 @@ export class LlmGatewayService {
     errorCode: string | null;
     requestedAt: Date;
   }): Promise<void> {
+    // 指标与台账同一汇聚点（PRD 11.1 与 9.2 口径一致）；指标先记，
+    // 台账是旁路（失败只警告），不能让台账失败连带丢掉指标。
+    this.metrics?.recordCall({
+      durationMs: input.durationMs,
+      endpoint: input.endpoint,
+      model: input.model,
+      promptTokens: input.usage.promptTokens,
+      completionTokens: input.usage.completionTokens,
+      statusCode: input.statusCode,
+    });
     const entry: CallLogInput = {
       keyId: input.apiKey.keyId,
       employeeId: input.apiKey.employeeId,
@@ -564,6 +596,16 @@ function isUpstreamFault(
   if (result.kind !== "http") return false;
   const status = result.status ?? 0;
   return status >= 500;
+}
+
+/** 上游故障 → 指标 reason（PRD 11.1 `upstream_errors_total`）。调用方需先过 isUpstreamFault。 */
+function upstreamErrorReasonOf(result: {
+  kind: string;
+  status?: number;
+}): UpstreamErrorReason {
+  if (result.kind === "timeout") return "timeout";
+  if (result.kind === "network") return "network";
+  return "http_5xx";
 }
 
 function completionTextOf(body: unknown): string {

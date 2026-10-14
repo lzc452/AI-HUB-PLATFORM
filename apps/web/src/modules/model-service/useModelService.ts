@@ -6,7 +6,9 @@ import {
   showSuccessMessage,
   showWarningMessage,
 } from "../../shared/ui/message";
-import { useAuth } from "../auth/useAuth";
+// feature 之间走 barrel：深路径导入被 dependency-cruiser 规则禁止
+// （no-deep-imports-into-web-feature-auth）
+import { useAuth } from "../auth";
 import {
   createApiKey,
   disableAdminKey,

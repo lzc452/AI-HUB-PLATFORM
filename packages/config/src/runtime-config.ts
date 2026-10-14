@@ -7,6 +7,16 @@ const booleanFromEnv = z
   .transform((value) => value === "true");
 
 /**
+ * 默认开启的布尔开关：未设置时按 true 处理。
+ * 用于「功能已上线、只作为回滚手段」的开关（如 `LLM_GATEWAY_ENABLED`）——
+ * 用 `booleanFromEnv` 会让既有部署在未显式设置时突然关停功能。
+ */
+const booleanEnabledByDefaultFromEnv = z
+  .enum(["true", "false"])
+  .default("true")
+  .transform((value) => value === "true");
+
+/**
  * 内网 Web 交付 URL 白名单（规格 §11.3）。结构必须与
  * @ai-hub/server 的 `WebTargetPolicy` 保持兼容（apps/api 装配点
  * 仅做结构化赋值，两包互不依赖）。
@@ -102,6 +112,11 @@ const schema = z.object({
   LLM_GATEWAY_HMAC_SECRET_PREVIOUS: z.string().min(32).optional(),
   // 上游未配置即视为网关未启用（M2 起消费）：/v1 返回 503，避免误转发到猜测地址。
   LLM_GATEWAY_UPSTREAM_BASE_URL: z.string().url().optional(),
+  /**
+   * 灰度/回滚总开关（M5, PRD 649）：false 时 `/v1` 全部路由 503、
+   * 控制面拒绝新建凭据；默认 true（功能已上线，此开关用于回滚而不是启用）。
+   */
+  LLM_GATEWAY_ENABLED: booleanEnabledByDefaultFromEnv,
   LLM_DEFAULT_RPM: z.coerce.number().int().min(1).default(60),
   LLM_DEFAULT_TPM: z.coerce.number().int().min(1).default(100_000),
   LLM_DEFAULT_DAILY_TOKENS: z.coerce.number().int().min(1).default(2_000_000),
@@ -164,6 +179,8 @@ export interface RuntimeConfig {
   llmGatewayHmacSecretPrevious: string | undefined;
   /** vLLM 上游 OpenAI 兼容基址；未配置即视为网关未启用。 */
   llmGatewayUpstreamBaseUrl: string | undefined;
+  /** 灰度/回滚总开关（默认 true）。 */
+  llmGatewayEnabled: boolean;
   llmDefaultRpm: number;
   llmDefaultTpm: number;
   llmDefaultDailyTokens: number;
@@ -307,6 +324,7 @@ export function parseRuntimeConfig(env: NodeJS.ProcessEnv): RuntimeConfig {
     llmGatewayHmacSecret: value.LLM_GATEWAY_HMAC_SECRET,
     llmGatewayHmacSecretPrevious: value.LLM_GATEWAY_HMAC_SECRET_PREVIOUS,
     llmGatewayUpstreamBaseUrl: value.LLM_GATEWAY_UPSTREAM_BASE_URL,
+    llmGatewayEnabled: value.LLM_GATEWAY_ENABLED,
     llmDefaultRpm: value.LLM_DEFAULT_RPM,
     llmDefaultTpm: value.LLM_DEFAULT_TPM,
     llmDefaultDailyTokens: value.LLM_DEFAULT_DAILY_TOKENS,
