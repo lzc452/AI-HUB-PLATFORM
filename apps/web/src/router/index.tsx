@@ -56,6 +56,12 @@ const OrganizationPage = lazy(
 );
 const SecurityPage = lazy(() => import("../pages/security/SecurityPage"));
 const AssistantPage = lazy(() => import("../pages/assistant/AssistantPage"));
+const ModelServicePage = lazy(
+  () => import("../pages/model-service/ModelServicePage"),
+);
+const ModelServiceAdminPage = lazy(
+  () => import("../pages/model-service/ModelServiceAdminPage"),
+);
 
 export function createRouter() {
   const routes = [
@@ -204,6 +210,22 @@ export function createRouter() {
                 </RequirePermission>
               ),
               path: ROUTES.assistant,
+            },
+            {
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.modelServiceAdmin}>
+                  <ModelServiceAdminPage />
+                </RequirePermission>
+              ),
+              path: ROUTES.modelServiceAdmin,
+            },
+            {
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.modelService}>
+                  <ModelServicePage />
+                </RequirePermission>
+              ),
+              path: ROUTES.modelService,
             },
           ],
         },

@@ -2,6 +2,7 @@ import {
   AppstoreAddOutlined,
   AppstoreOutlined,
   BellOutlined,
+  CloudServerOutlined,
   DashboardOutlined,
   ExperimentOutlined,
   SafetyCertificateOutlined,
@@ -95,6 +96,13 @@ export function Navigation() {
       //   path: ROUTES.assistant,
       //   requiredPermissions: ROUTE_ACCESS.assistant,
       // },
+      {
+        icon: <CloudServerOutlined aria-hidden="true" />,
+        key: "model-service",
+        label: "模型服务",
+        path: ROUTES.modelService,
+        requiredPermissions: ROUTE_ACCESS.modelService,
+      },
       {
         icon: <BellOutlined aria-hidden="true" />,
         key: "notifications",

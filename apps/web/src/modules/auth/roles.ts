@@ -77,6 +77,14 @@ export const ROUTE_ACCESS = {
   innovationDetail: { allOf: [PERMISSIONS.DEMAND_READ] },
   marketplace: { allOf: [PERMISSIONS.CATALOG_READ] },
   marketplaceDetail: { allOf: [PERMISSIONS.CATALOG_READ] },
+  modelService: {
+    // 看板数据需 usage.read；仅有 key.manage_all 的管理员也应能进入（页面内引导至平台管理）
+    anyOf: [
+      PERMISSIONS.MODEL_SERVICE_USAGE_READ,
+      PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL,
+    ],
+  },
+  modelServiceAdmin: { allOf: [PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL] },
   notifications: { allOf: [PERMISSIONS.NOTIFICATION_READ] },
   organization: {
     allOf: [

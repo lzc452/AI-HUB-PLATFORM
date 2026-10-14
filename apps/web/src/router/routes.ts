@@ -17,6 +17,8 @@ export const ROUTES = {
   creator: "/creator/:applicationId",
   creatorCreate: "/creator/create",
   assistant: "/assistant",
+  modelService: "/model-service",
+  modelServiceAdmin: "/model-service/admin",
 } as const;
 
 export interface RouteMeta {
@@ -85,5 +87,13 @@ export const ROUTE_META: readonly RouteMeta[] = [
   {
     labels: ["AI 助手"],
     path: ROUTES.assistant,
+  },
+  {
+    labels: ["模型服务", "平台管理"],
+    path: ROUTES.modelServiceAdmin,
+  },
+  {
+    labels: ["模型服务"],
+    path: ROUTES.modelService,
   },
 ] as const;
