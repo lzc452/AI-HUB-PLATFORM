@@ -32,9 +32,12 @@ const identityRepository = {
     return [employeeId === "E900" ? "dept-ops" : "dept-rnd"];
   },
   async listEmployeeRoles(employeeId: string) {
+    // active 必须为 true：IdentityService 会过滤停用角色，缺该字段会被整体剔除
+    // （表现为权限为空 → 403 NOT_AUTHORIZED）
     return [
       {
         roleCode: employeeId === "E900" ? "demand_reviewer" : "employee",
+        active: true,
         permissions:
           employeeId === "E900"
             ? [

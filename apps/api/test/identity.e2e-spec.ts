@@ -233,6 +233,8 @@ describe("identity endpoints", () => {
               "identity.role.read",
               "identity.session.manage",
             ],
+            // 角色列表接口透传 active（停用角色不再计入权限聚合，见 IdentityService）
+            active: true,
           },
         ]);
       });
