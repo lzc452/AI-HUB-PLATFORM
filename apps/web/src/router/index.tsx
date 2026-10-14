@@ -59,6 +59,12 @@ const AssistantPage = lazy(() => import("../pages/assistant/AssistantPage"));
 const ModelServicePage = lazy(
   () => import("../pages/model-service/ModelServicePage"),
 );
+const ModelServiceKeysPage = lazy(
+  () => import("../pages/model-service/ModelServiceKeysPage"),
+);
+const ModelServiceKeyDetailPage = lazy(
+  () => import("../pages/model-service/ModelServiceKeyDetailPage"),
+);
 const ModelServiceAdminPage = lazy(
   () => import("../pages/model-service/ModelServiceAdminPage"),
 );
@@ -218,6 +224,22 @@ export function createRouter() {
                 </RequirePermission>
               ),
               path: ROUTES.modelServiceAdmin,
+            },
+            {
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.modelServiceKeyDetail}>
+                  <ModelServiceKeyDetailPage />
+                </RequirePermission>
+              ),
+              path: ROUTES.modelServiceKeyDetail,
+            },
+            {
+              element: (
+                <RequirePermission requirement={ROUTE_ACCESS.modelServiceKeys}>
+                  <ModelServiceKeysPage />
+                </RequirePermission>
+              ),
+              path: ROUTES.modelServiceKeys,
             },
             {
               element: (

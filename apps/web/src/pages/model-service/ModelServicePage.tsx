@@ -3,6 +3,7 @@ import {
   CloudServerOutlined,
   DashboardOutlined,
   ExclamationCircleOutlined,
+  KeyOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Empty, Skeleton, Table, Typography } from "antd";
@@ -94,6 +95,9 @@ export default function ModelServicePage() {
   const navigate = useNavigate();
   const canReadUsage = hasPermission(PERMISSIONS.MODEL_SERVICE_USAGE_READ);
   const canManageAll = hasPermission(PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL);
+  const canReadKeys =
+    hasPermission(PERMISSIONS.MODEL_SERVICE_KEY_READ) ||
+    hasPermission(PERMISSIONS.MODEL_SERVICE_KEY_MANAGE);
 
   const [usageQuery, setUsageQuery] = useState<UsageQuery>({ range: "today" });
   const [callFilters, setCallFilters] = useState<CallFilters>({});
@@ -144,6 +148,15 @@ export default function ModelServicePage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <UsageRangeSwitch onChange={handleRangeChange} value={usageQuery} />
+          {canReadKeys ? (
+            <Button
+              icon={<KeyOutlined aria-hidden="true" />}
+              onClick={() => navigate("/model-service/keys")}
+              type="default"
+            >
+              我的 Key
+            </Button>
+          ) : null}
           {canManageAll ? (
             <Button
               icon={<CloudServerOutlined aria-hidden="true" />}
@@ -317,10 +330,10 @@ export default function ModelServicePage() {
         </>
       ) : null}
 
-      {canManageAll ? (
+      {canReadKeys ? (
         <Text style={{ fontSize: 12 }} type="secondary">
-          说明：Key 的创建、轮换与删除入口将在后续版本提供；当前页面提供本人用量查看，平台管理页提供全平台
-          Key 代禁用/启用。
+          说明：Key 的创建、轮换与删除请前往「我的 Key」；本页面提供用量查看
+          {canManageAll ? "，平台管理页提供全平台 Key 代禁用/启用" : ""}。
         </Text>
       ) : null}
     </div>

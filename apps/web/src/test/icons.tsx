@@ -53,6 +53,7 @@ export const FolderFilled = TestIcon;
 export const GlobalOutlined = TestIcon;
 export const InfoCircleOutlined = TestIcon;
 export const HeartOutlined = TestIcon;
+export const KeyOutlined = TestIcon;
 export const LeftOutlined = TestIcon;
 export const LikeFilled = TestIcon;
 export const LinkOutlined = TestIcon;

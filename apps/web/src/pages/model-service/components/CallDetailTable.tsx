@@ -20,6 +20,11 @@ export interface CallDetailTableProps {
   filters: CallFilters;
   isError: boolean;
   isPending: boolean;
+  /**
+   * 锁定 Key（Key 详情页场景）：传入后隐藏 Key 筛选，
+   * 明细只展示该 Key（查询 keyId 由调用方在 filters 中固定）。
+   */
+  lockedKeyId?: string | undefined;
   keyOptions: ReadonlyArray<{ label: string; value: string }>;
   modelOptions: readonly string[];
   onFiltersChange: (patch: Partial<CallFilters>) => void;
@@ -51,6 +56,7 @@ export function CallDetailTable({
   isError,
   isPending,
   keyOptions,
+  lockedKeyId,
   modelOptions,
   onFiltersChange,
   onPageChange,
@@ -131,14 +137,16 @@ export function CallDetailTable({
     >
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <span className="text-sm font-medium">调用明细</span>
-        <Select
-          allowClear
-          onChange={(value) => onFiltersChange({ keyId: value })}
-          options={[...keyOptions]}
-          placeholder="全部 Key"
-          style={{ width: 180 }}
-          value={filters.keyId ?? null}
-        />
+        {lockedKeyId === undefined ? (
+          <Select
+            allowClear
+            onChange={(value) => onFiltersChange({ keyId: value })}
+            options={[...keyOptions]}
+            placeholder="全部 Key"
+            style={{ width: 180 }}
+            value={filters.keyId ?? null}
+          />
+        ) : null}
         <Select
           allowClear
           onChange={(value) => onFiltersChange({ model: value })}

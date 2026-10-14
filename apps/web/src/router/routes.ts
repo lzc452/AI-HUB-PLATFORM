@@ -18,6 +18,8 @@ export const ROUTES = {
   creatorCreate: "/creator/create",
   assistant: "/assistant",
   modelService: "/model-service",
+  modelServiceKeys: "/model-service/keys",
+  modelServiceKeyDetail: "/model-service/:keyId",
   modelServiceAdmin: "/model-service/admin",
 } as const;
 
@@ -91,6 +93,14 @@ export const ROUTE_META: readonly RouteMeta[] = [
   {
     labels: ["模型服务", "平台管理"],
     path: ROUTES.modelServiceAdmin,
+  },
+  {
+    labels: ["模型服务", "我的 Key"],
+    path: ROUTES.modelServiceKeys,
+  },
+  {
+    labels: ["模型服务", "Key 详情"],
+    path: ROUTES.modelServiceKeyDetail,
   },
   {
     labels: ["模型服务"],

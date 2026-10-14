@@ -8,15 +8,26 @@ import {
 } from "../../shared/ui/message";
 import { useAuth } from "../auth/useAuth";
 import {
+  createApiKey,
   disableAdminKey,
+  disableApiKey,
   enableAdminKey,
+  enableApiKey,
+  getMyKey,
   getMyUsage,
   getPlatformUsage,
   listAdminKeys,
   listMyCalls,
+  listMyKeys,
+  revokeApiKey,
+  rotateApiKey,
+  updateApiKey,
   type AdminKeyListQuery,
   type AdminUsageQuery,
   type CallListQuery,
+  type CreateApiKeyInput,
+  type MyKeyListQuery,
+  type UpdateApiKeyInput,
   type UsageQuery,
 } from "./model-service.client";
 
@@ -145,6 +156,135 @@ export function useAdminKeyStatusChange() {
       showSuccessMessage(
         input.action === "disable" ? "已代员工禁用该 Key" : "已代员工启用该 Key",
       );
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 本人 Key 生命周期（PRD 8.1）
+// ---------------------------------------------------------------------------
+
+/** 本人 Key 列表（不含明文；默认不含已撤销）。 */
+export function useMyKeys(query: MyKeyListQuery, enabled = true) {
+  const { session } = useAuth();
+  return useQuery({
+    enabled,
+    queryFn: () => listMyKeys(query),
+    queryKey: [
+      "model-service",
+      "my-keys",
+      session?.employeeId ?? null,
+      query.includeRevoked ?? null,
+      query.page ?? null,
+      query.pageSize ?? null,
+    ],
+  });
+}
+
+export function useApiKey(keyId: string | undefined, enabled = true) {
+  return useQuery({
+    enabled: enabled && keyId !== undefined,
+    queryFn: () => getMyKey(keyId as string),
+    queryKey: ["model-service", "my-key", keyId ?? null],
+  });
+}
+
+/** 领域错误码 → 人话（控制面错误码表，PRD 8.1）。 */
+const KEY_ERROR_MESSAGES: Record<string, string> = {
+  MODEL_KEY_NOT_FOUND: "Key 不存在或无权访问",
+  MODEL_KEY_STATE_CONFLICT: "Key 状态已变化，请刷新后重试",
+  MODEL_KEY_NAME_DUPLICATED: "同名 Key 已存在（未撤销的 Key 名称唯一）",
+  MODEL_KEY_LIMIT_REACHED: "已达到每人 Key 数量上限",
+  MODEL_KEY_INVALID_LIMIT: "限额超出允许范围",
+  MODEL_SERVICE_NOT_CONFIGURED: "服务端未配置摘要密钥，暂无法创建 Key",
+};
+
+/**
+ * Key 生命周期 mutations 的统一错误出口：
+ * 领域错误码命中映射表时用 warning 直达原因（这些是用户可自助消化的语义），
+ * 其余（网络/5xx）走通用错误提示。
+ */
+function reportKeyMutationError(error: unknown, fallback: string): void {
+  if (error instanceof ApiError) {
+    const mapped = KEY_ERROR_MESSAGES[error.code];
+    if (mapped !== undefined) {
+      showWarningMessage(mapped);
+      return;
+    }
+  }
+  showErrorMessage(error, fallback);
+}
+
+function invalidateAll(queryClient: ReturnType<typeof useQueryClient>): void {
+  void queryClient.invalidateQueries({ queryKey: ["model-service"] });
+}
+
+export function useCreateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateApiKeyInput) => createApiKey(input),
+    onError: (error) => reportKeyMutationError(error, "创建 Key 失败"),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      showSuccessMessage("Key 已创建，请立即保存明文");
+    },
+  });
+}
+
+export function useUpdateApiKey(keyId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateApiKeyInput) =>
+      updateApiKey(keyId as string, input),
+    onError: (error) => reportKeyMutationError(error, "保存失败"),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      showSuccessMessage("Key 属性已更新");
+    },
+  });
+}
+
+/** 本人视角禁用/启用（与管理面代操作分开：提示语与审计主体不同）。 */
+export function useApiKeyStatusChange() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { keyId: string; action: AdminKeyAction }) =>
+      input.action === "disable"
+        ? disableApiKey(input.keyId)
+        : enableApiKey(input.keyId),
+    onError: (error) => reportKeyMutationError(error, "状态变更失败"),
+    onSuccess: (_result, input) => {
+      invalidateAll(queryClient);
+      showSuccessMessage(
+        input.action === "disable" ? "Key 已禁用" : "Key 已启用",
+      );
+    },
+  });
+}
+
+/**
+ * 轮换：旧 Key 同事务撤销、无宽限期，返回新 Key 明文。
+ * 成功提示不在这里做——调用方需要先弹一次性明文展示框，提示由展示框负责。
+ */
+export function useRotateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyId: string) => rotateApiKey(keyId),
+    onError: (error) => reportKeyMutationError(error, "轮换失败"),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+    },
+  });
+}
+
+export function useRevokeApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyId: string) => revokeApiKey(keyId),
+    onError: (error) => reportKeyMutationError(error, "删除失败"),
+    onSuccess: () => {
+      invalidateAll(queryClient);
+      showSuccessMessage("Key 已删除（撤销）");
     },
   });
 }

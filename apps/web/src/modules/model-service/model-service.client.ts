@@ -229,3 +229,115 @@ export function enableAdminKey(keyId: string): Promise<AdminKeyItem> {
     { method: "POST" },
   );
 }
+
+// ---------------------------------------------------------------------------
+// 本人 Key 生命周期（控制面，PRD 8.1）
+// ---------------------------------------------------------------------------
+
+/** 创建 Key 入参（PRD 8.1）。 */
+export interface CreateApiKeyInput {
+  /** Key 名称，本人内未撤销 Key 唯一（1–64 字符）。 */
+  name: string;
+  /** 有效期天数（1–365）；不传表示长期有效。 */
+  expiresInDays?: number | undefined;
+  /** RPM 上限；不传用平台默认。 */
+  rpmLimit?: number | undefined;
+  /** TPM 上限；不传用平台默认。 */
+  tpmLimit?: number | undefined;
+  /** 每日 token 配额；不传用平台默认。 */
+  dailyTokenLimit?: number | undefined;
+}
+
+/**
+ * 变更 Key 属性入参（PATCH）。
+ * 显式传 `null` 表示回到平台默认；字段省略表示保持原值；不承载状态变更。
+ */
+export interface UpdateApiKeyInput {
+  name?: string | undefined;
+  expiresInDays?: number | null | undefined;
+  rpmLimit?: number | null | undefined;
+  tpmLimit?: number | null | undefined;
+  dailyTokenLimit?: number | null | undefined;
+}
+
+/** 本人 Key 列表查询。 */
+export interface MyKeyListQuery {
+  includeRevoked?: boolean | undefined;
+  page?: number | undefined;
+  pageSize?: number | undefined;
+}
+
+export interface ApiKeyPage {
+  items: ApiKeySummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** 创建/轮换响应：`apiKey` 明文仅这一次返回。 */
+export interface CreateApiKeyResult extends ApiKeySummary {
+  apiKey: string;
+}
+
+export function listMyKeys(query: MyKeyListQuery = {}): Promise<ApiKeyPage> {
+  return apiFetch<ApiKeyPage>(
+    `/internal/model-service/keys${toSearchParams({
+      includeRevoked: query.includeRevoked,
+      page: query.page,
+      pageSize: query.pageSize,
+    })}`,
+  );
+}
+
+export function getMyKey(keyId: string): Promise<ApiKeySummary> {
+  return apiFetch<ApiKeySummary>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}`,
+  );
+}
+
+export function createApiKey(input: CreateApiKeyInput): Promise<CreateApiKeyResult> {
+  return apiFetch<CreateApiKeyResult>("/internal/model-service/keys", {
+    body: JSON.stringify(input),
+    method: "POST",
+  });
+}
+
+export function updateApiKey(
+  keyId: string,
+  input: UpdateApiKeyInput,
+): Promise<ApiKeySummary> {
+  return apiFetch<ApiKeySummary>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}`,
+    { body: JSON.stringify(input), method: "PATCH" },
+  );
+}
+
+export function disableApiKey(keyId: string): Promise<ApiKeySummary> {
+  return apiFetch<ApiKeySummary>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}/disable`,
+    { method: "POST" },
+  );
+}
+
+export function enableApiKey(keyId: string): Promise<ApiKeySummary> {
+  return apiFetch<ApiKeySummary>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}/enable`,
+    { method: "POST" },
+  );
+}
+
+/** 轮换：旧 Key 同事务撤销（无宽限期），返回新 Key 明文。 */
+export function rotateApiKey(keyId: string): Promise<CreateApiKeyResult> {
+  return apiFetch<CreateApiKeyResult>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}/rotate`,
+    { method: "POST" },
+  );
+}
+
+/** 删除即撤销（软删，幂等；204）。 */
+export function revokeApiKey(keyId: string): Promise<void> {
+  return apiFetch<void>(
+    `/internal/model-service/keys/${encodeURIComponent(keyId)}`,
+    { method: "DELETE" },
+  );
+}

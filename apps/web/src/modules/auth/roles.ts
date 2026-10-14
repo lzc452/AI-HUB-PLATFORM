@@ -84,6 +84,13 @@ export const ROUTE_ACCESS = {
       PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL,
     ],
   },
+  modelServiceKeyDetail: { allOf: [PERMISSIONS.MODEL_SERVICE_KEY_READ] },
+  modelServiceKeys: {
+    anyOf: [
+      PERMISSIONS.MODEL_SERVICE_KEY_READ,
+      PERMISSIONS.MODEL_SERVICE_KEY_MANAGE,
+    ],
+  },
   modelServiceAdmin: { allOf: [PERMISSIONS.MODEL_SERVICE_KEY_MANAGE_ALL] },
   notifications: { allOf: [PERMISSIONS.NOTIFICATION_READ] },
   organization: {
